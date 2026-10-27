@@ -1,0 +1,26 @@
+[project]
+name = "sidequest-api"
+version = "0.1.0"
+description = "Litestar API for the SideQuest Guild bot"
+authors = [{ name = "Jacob Coffee", email = "jacob@z7x.org" }]
+requires-python = ">=3.15,<4.0"
+license = { text = "MIT" }
+dependencies = [
+    "sidequest-common",
+    "advanced-alchemy[uuid]>=1.12",
+    "alembic>=1.20",
+    "asyncpg>=0.32",
+    "litestar[standard]>=2.25",
+    "pydantic>=2.14",
+    "pydantic-settings>=2.16",
+]
+
+[project.scripts]
+sidequest-api = "sidequest_api.__main__:main"
+
+[build-system]
+requires = ["uv_build>=0.13.6,<0.14"]
+build-backend = "uv_build"
+
+[tool.uv.sources]
+sidequest-common = { workspace = true }

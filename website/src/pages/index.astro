@@ -1,0 +1,320 @@
+---
+import { getImage, Image } from "astro:assets";
+import JoinPlaque from "../components/JoinPlaque.astro";
+import SiteFooter from "../components/SiteFooter.astro";
+import { DISCORD_INVITE, LAUNCH } from "../config";
+import Site from "../layouts/Site.astro";
+
+import addonsArt from "../../assets/plates/addons-art.png";
+import ctaPlate from "../../assets/plates/cta-plate.png";
+import emblem from "../../assets/plates/emblem.png";
+import heroArtMobile from "../../assets/plates/hero-art-mobile.png";
+import heroArt from "../../assets/plates/hero-art.png";
+import joinArt from "../../assets/plates/join-art.png";
+import guildLogo from "../../assets/brand/sidequest-logo.png";
+import panelJourney from "../../assets/plates/panel-journey.png";
+import panelProgression from "../../assets/plates/panel-progression.png";
+import panelRaid from "../../assets/plates/panel-raid.png";
+import raidsArt from "../../assets/plates/raids-art.png";
+
+const desktopQuery = "(min-width: 901px)";
+const mobileQuery = "(max-width: 900px)";
+const hero = await getImage({ src: heroArt, widths: [1280, 1920, 2400], format: "webp" });
+const heroMobile = await getImage({ src: heroArtMobile, widths: [600, 941], format: "webp" });
+
+const panels = [
+  {
+    art: panelJourney,
+    alt: "A cloaked traveler looks out over a river valley toward a hilltop town.",
+    title: "THE JOURNEY",
+    copy: "Quests, dungeons and professions at your own pace, in good company.",
+  },
+  {
+    art: panelRaid,
+    alt: "A raid group with lion-crested shields faces a towering boss wreathed in blue lightning.",
+    title: "RAID NIGHT",
+    copy: "Scheduled raid nights for semi-core players. Nights and times are set once we choose a region.",
+  },
+  {
+    art: panelProgression,
+    alt: "A knight beside a lion banner watches the sun set over mountains and distant spires.",
+    title: "PROGRESSION",
+    copy: "For players chasing the hardest content, pushing as a team under the same banner.",
+  },
+];
+
+const channels = ["#general", "#rules", "Lobby", "dungeon-1", "dungeon-2", "dungeon-3", "raid-1", "raid-2"];
+---
+
+<Site
+  title="SideQuest · An Alliance guild for World of Warcraft: Forever"
+  description="SideQuest is an Alliance guild for World of Warcraft: Forever. The journey and the raid both count."
+>
+  <Fragment slot="head">
+    <link rel="preload" as="image" imagesrcset={hero.srcSet.attribute} imagesizes="100vw" media={desktopQuery} />
+    <link rel="preload" as="image" imagesrcset={heroMobile.srcSet.attribute} imagesizes="100vw" media={mobileQuery} />
+  </Fragment>
+
+  <header class="site-header">
+    <a class="r nav-crest" href="/#top" aria-label="SideQuest home">
+      <Image class="fit" src={guildLogo} width={160} alt="" loading="eager" />
+    </a>
+    <a class="r nav-wordmark center shade" href="/#top">
+      SIDEQUEST
+    </a>
+    <nav aria-label="Main">
+      <ul class="r nav-links shade">
+        <li>
+          <a href="#how-we-play">How we play</a>
+        </li>
+        <li>
+          <a href="#raids">Raids</a>
+        </li>
+        <li>
+          <a href="#addons">Addons</a>
+        </li>
+        <li>
+          <a href={DISCORD_INVITE}>Discord</a>
+        </li>
+      </ul>
+    </nav>
+  </header>
+
+  <main id="top" tabindex="-1">
+    <div class="frame">
+      <picture class="hero-pic">
+        <source media={mobileQuery} srcset={heroMobile.srcSet.attribute} sizes="100vw" type="image/webp" />
+        <img
+          class="r hero-art fill"
+          src={hero.src}
+          srcset={hero.srcSet.attribute}
+          sizes="100vw"
+          width={heroArt.width}
+          height={heroArt.height}
+          alt="Night over a guild's road: adventurers rest at a campfire under an oak, while across the valley knights march a torchlit road to a golden citadel and gryphon riders circle overhead."
+          fetchpriority="high"
+          decoding="async"
+        />
+      </picture>
+      <span class="r scrim" aria-hidden="true"></span>
+      <span class="r scrim scrim-raid" aria-hidden="true"></span>
+
+      <p class="r side-heading center shade mist" style="--d:1.2s">
+        The side quest:
+      </p>
+      <span class="r side-rule rule-c mist" style="--d:1.3s" aria-hidden="true"></span>
+      <p class="r side-copy center shade mist" style="--d:1.4s">
+        casual, social, whenever you’re on.
+      </p>
+      <p class="r raid-heading center shade mist" style="--d:1.2s">
+        The raid:
+      </p>
+      <span class="r raid-rule rule-c mist" style="--d:1.3s" aria-hidden="true"></span>
+      <p class="r raid-copy center shade mist" style="--d:1.4s">
+        scheduled nights, real progression.
+      </p>
+
+      <Image
+        class="r emblem fit mist"
+        style="--d:.35s"
+        src={emblem}
+        widths={[700, 1400]}
+        sizes="(max-width: 900px) 250px, 22vw"
+        alt=""
+        loading="eager"
+      />
+      <h1 class="r title center shade mist" style="--d:.6s">
+        SIDEQUEST
+      </h1>
+      <span class="r title-rule rule-c mist" style="--d:.8s" aria-hidden="true"></span>
+      <p class="r tagline center shade mist" style="--d:.9s">
+        The journey and the raid both count.
+      </p>
+      <a class="r cta-plate mist" style="--d:1.05s" href={DISCORD_INVITE}>
+        <Image class="fill" src={ctaPlate} width={800} alt="" loading="eager" />
+        <span class="r cta center">
+          <i class="i-discord" aria-hidden="true"></i>
+          Join the Discord
+        </span>
+      </a>
+
+      <span class="r strip-rule rule-c dim" aria-hidden="true"></span>
+      <span class="r strip-orn-left rule" aria-hidden="true"></span>
+      <span class="r strip-orn-right rule flip" aria-hidden="true"></span>
+      <p class="r facts center">
+        <span>An Alliance guild for World of Warcraft: Forever</span>
+        <i class="sep" aria-hidden="true">
+          ·
+        </i>
+        <span>Launch November 4, 2026</span>
+        <i class="sep" aria-hidden="true">
+          ·
+        </i>
+        <span>Ruleset TBD</span>
+        <i class="sep" aria-hidden="true">
+          ·
+        </i>
+        <span>Region TBD</span>
+      </p>
+    </div>
+
+    <section id="how-we-play" class="play wrap" aria-labelledby="h-how">
+      <div class="heading rise">
+        <span class="rule" aria-hidden="true"></span>
+        <h2 id="h-how">HOW WE PLAY</h2>
+        <span class="rule flip" aria-hidden="true"></span>
+      </div>
+      <div class="play-grid">
+        {panels.map((panel) => (
+          <article class="panel rise">
+            <div class="panel-art">
+              <Image src={panel.art} widths={[600, 900, 1200]} sizes="(max-width: 900px) 100vw, 31vw" alt={panel.alt} />
+            </div>
+            <h3>{panel.title}</h3>
+            <span class="rule-c" aria-hidden="true" />
+            <p>{panel.copy}</p>
+          </article>
+        ))}
+      </div>
+    </section>
+
+    <section id="raids" class="band wrap" aria-labelledby="h-raids">
+      <figure class="band-art rise">
+        <Image
+          src={raidsArt}
+          widths={[600, 1024]}
+          sizes="(max-width: 900px) 100vw, 40vw"
+          alt="A raid party gathers at the foot of a torchlit stair below a mountain gate hung with lion banners."
+        />
+      </figure>
+      <div class="band-body rise">
+        <div class="heading start">
+          <h2 id="h-raids">RAIDS</h2>
+          <span class="rule flip" aria-hidden="true"></span>
+        </div>
+        <p class="lede">
+          Raid nights are planned as a guild. Once SideQuest settles its region and ruleset, the schedule goes up here
+          and in the Discord.
+        </p>
+        <dl class="ledger">
+          <div>
+            <dt class="caps">Raid nights</dt>
+            <dd class="tbd">To be announced</dd>
+          </div>
+          <div>
+            <dt class="caps">Sign-ups</dt>
+            <dd>Open on this page after launch, one per raid night.</dd>
+          </div>
+          <div>
+            <dt class="caps">Raid charts</dt>
+            <dd>Assignments and positions for each fight, posted here before the pull.</dd>
+          </div>
+          <div>
+            <dt class="caps">Who raids</dt>
+            <dd>Semi-core nights on a set schedule, and a progression group for the hardest content.</dd>
+          </div>
+        </dl>
+        <p class="aside">
+          Raid voice lives in <b>raid-1</b> and <b>raid-2</b> on the Discord.
+        </p>
+      </div>
+    </section>
+
+    <section id="addons" class="band mirror wrap" aria-labelledby="h-addons">
+      <figure class="band-art rise">
+        <Image
+          src={addonsArt}
+          widths={[600, 1024]}
+          sizes="(max-width: 900px) 100vw, 40vw"
+          alt="A tinkerer's desk by a moonlit window, covered in tomes, maps, brass gears and a lantern."
+        />
+      </figure>
+      <div class="band-body rise">
+        <div class="heading start">
+          <h2 id="h-addons">ADDONS</h2>
+          <span class="rule flip" aria-hidden="true"></span>
+        </div>
+        <p class="lede">The guild's own addons will download from here, so everyone raids on the same setup.</p>
+        <dl class="ledger">
+          <div>
+            <dt class="caps">Guild addons</dt>
+            <dd class="tbd">Not yet published</dd>
+          </div>
+          <div>
+            <dt class="caps">Each release</dt>
+            <dd>A download link, the version, and install notes, listed on this page.</dd>
+          </div>
+          <div>
+            <dt class="caps">Announcements</dt>
+            <dd>New versions are posted in the Discord when they land.</dd>
+          </div>
+        </dl>
+      </div>
+    </section>
+
+    <section id="join" class="join" aria-labelledby="h-join">
+      <Image
+        class="join-art"
+        src={joinArt}
+        widths={[1200, 2172]}
+        sizes="100vw"
+        alt="At dawn a gryphon perches on a watchtower flying a lion banner, above a road that winds toward a lakeside citadel."
+      />
+      <div class="join-body wrap rise">
+        <div class="heading">
+          <span class="rule" aria-hidden="true"></span>
+          <h2 id="h-join">THE ROAD OPENS</h2>
+          <span class="rule flip" aria-hidden="true"></span>
+        </div>
+        <p class="join-date">
+          November 4, 2026<span data-days></span>
+        </p>
+        <p class="join-copy">
+          Early name reservation opened October 27. Come meet the guild in the Discord before launch.
+        </p>
+        <JoinPlaque />
+        <p class="channels-label caps">In the Discord</p>
+        <ul class="channels caps" aria-label="Discord channels">
+          {channels.map((channel) => (
+            <li>{channel}</li>
+          ))}
+        </ul>
+      </div>
+    </section>
+  </main>
+
+  <SiteFooter />
+
+  <script define:vars={{ launch: LAUNCH }}>
+    // Days until launch, in whole calendar days (the launch hour is not announced).
+    const launchDay = new Date(launch.year, launch.month - 1, launch.day);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const days = Math.round((launchDay.getTime() - today.getTime()) / 864e5);
+    const slot = document.querySelector("[data-days]");
+    if (slot) {
+      slot.textContent =
+        days > 1
+          ? ` · ${days} days away`
+          : days === 1
+            ? " · tomorrow"
+            : days === 0
+              ? " · today"
+              : " · the road is open";
+    }
+
+    // Sections rise as they enter; without JS, or with reduced motion, they are simply there.
+    document.documentElement.classList.add("js");
+    const io = new IntersectionObserver(
+      (entries) =>
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("in");
+            io.unobserve(entry.target);
+          }
+        }),
+      { rootMargin: "0px 0px -10% 0px" },
+    );
+    document.querySelectorAll(".rise").forEach((el) => io.observe(el));
+  </script>
+</Site>

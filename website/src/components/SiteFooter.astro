@@ -1,0 +1,34 @@
+---
+import { Image } from "astro:assets";
+import { DISCORD_INVITE } from "../config";
+import guildLogo from "../../assets/brand/sidequest-logo.png";
+---
+
+<footer class="foot wrap">
+  <span class="rule-c" aria-hidden="true"></span>
+  <div class="foot-row">
+    <a class="brand" href="/#top">
+      <Image src={guildLogo} width={112} alt="" />
+      <span>SIDEQUEST</span>
+    </a>
+    <ul class="foot-nav caps">
+      <li>
+        <a href="/#how-we-play">How we play</a>
+      </li>
+      <li>
+        <a href="/#raids">Raids</a>
+      </li>
+      <li>
+        <a href="/#addons">Addons</a>
+      </li>
+      <li>
+        <a href={DISCORD_INVITE}>Discord</a>
+      </li>
+    </ul>
+    <p class="foot-meta caps">Alliance · World of Warcraft: Forever</p>
+  </div>
+  <p class="legal">
+    SideQuest is a player-run guild, not affiliated with or endorsed by Blizzard Entertainment. World of Warcraft is a
+    trademark of Blizzard Entertainment, Inc. All artwork on this site is original.
+  </p>
+</footer>

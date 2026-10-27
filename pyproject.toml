@@ -1,0 +1,116 @@
+# SideQuest Guild workspace: one Litestar backend (api/) for the Discord bot (bot/), the website (website/), and addons.
+# Bot -> API over HTTP (X-API-Key); API -> PostgreSQL via advanced-alchemy.
+
+[tool.uv.workspace]
+members = [
+    "packages/sidequest-common",
+    "api",
+    "bot",
+]
+
+[dependency-groups]
+dev = [
+    "aiosqlite>=0.22.1",
+    "coverage>=7.10",
+    "pytest>=9.1",
+    "pytest-asyncio>=1.4",
+    "pytest-cov>=7.0",
+    "pytest-mock>=3.15",
+    "pytest-socket>=0.7",
+    "respx>=0.23",
+    "codespell>=2.4",
+    "prek>=0.5",
+    "ruff>=0.17",
+    "pyrefly>=1.4.0",
+]
+
+[tool.codespell]
+quiet-level = 3
+skip = "uv.lock,./website,./.venv"
+ignore-words-list = "selectin"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+pythonpath = ["."]
+norecursedirs = [".*", "*.egg-info", ".git", ".venv", "node_modules", "website", "htmlcov"]
+addopts = [
+    "--strict-markers",
+    "--tb=short",
+    "--import-mode=importlib",
+    "-p", "no:doctest",
+    "--disable-socket",
+    "--allow-unix-socket",
+]
+markers = [
+    "integration: needs external services",
+]
+# aiosqlite under pytest: SQLAlchemy reports GC'd pool connections between tests even though each app's pool
+# is empty after shutdown (verified outside pytest). Test-only; production runs on Postgres.
+filterwarnings = [
+    "ignore:The garbage collector is trying to clean up non-checked-in connection:sqlalchemy.exc.SAWarning",
+]
+log_level = "WARNING"
+
+[tool.coverage.run]
+source = ["sidequest_common", "sidequest_api", "sidequest_bot"]
+omit = ["*/migrations/*"]
+branch = true
+
+[tool.pyrefly]
+project-includes = ["packages/sidequest-common/src", "api/src", "bot/src", "tests"]
+project-excludes = ["website/**", "tests/unit/bot/**", "api/src/sidequest_api/lib/migrations/**"]
+search-path = ["packages/sidequest-common/src", "api/src", "bot/src"]
+python-version = "3.15.0"
+python-interpreter-path = ".venv/bin/python3"
+baseline = "pyrefly-baseline.json"
+
+[tool.ruff]
+line-length = 120
+target-version = "py315"
+src = ["packages/sidequest-common/src", "api/src", "bot/src", "tests"]
+extend-exclude = ["website"]
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+    "ANN401",
+    "COM812",
+    "CPY001",
+    "D105",
+    "D107",
+    "D203",
+    "D213",
+    "ERA001",
+    "FIX002",
+    "ISC001",
+    "PLR0913",
+    "RUF012",
+    "TD",
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.mccabe]
+max-complexity = 12
+
+[tool.ruff.lint.isort]
+known-first-party = ["sidequest_common", "sidequest_api", "sidequest_bot", "tests"]
+
+[tool.ruff.lint.flake8-type-checking]
+runtime-evaluated-base-classes = [
+    "pydantic.BaseModel",
+    "pydantic_settings.BaseSettings",
+    "advanced_alchemy.base.UUIDAuditBase",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"**/__main__.py" = ["PLC0415"]  # lazy imports keep `--help`/startup errors cheap
+"api/src/sidequest_api/app.py" = ["PLC0415"]
+"api/src/sidequest_api/domain/**/controllers.py" = ["TC001", "TC002", "TC003"]  # Litestar resolves handler annotations at runtime
+"api/src/sidequest_api/lib/migrations/**" = ["ALL"]  # alembic-generated
+"tests/**" = [
+    "ANN", "ARG", "D", "DTZ", "EM", "FBT", "INP", "PLC", "PLR", "PLR2004", "PT011", "S", "SLF", "TC", "TRY",
+]

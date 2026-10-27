@@ -1,0 +1,466 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SideQuest · Trail Guide</title>
+<meta name="description" content="SideQuest is an Alliance guild for World of Warcraft: Forever. Casual nights, scheduled raids, and real progression, on one road.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@500;600;700;800;900&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400;1,8..60,500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink: #141513;
+  --ink-2: #3b3d38;
+  --paper: #f6f6f1;
+  --band: #121311;
+  --trail: #c4122f;
+  --trail-deep: #9a0d24;
+  --water: #4b84b1;
+  --water-ink: #1c4a70;
+  --meadow: #a9c07e;
+  --forest: #3f6a3c;
+  --rule: #d9d9d0;
+  --sans: "Schibsted Grotesk", system-ui, sans-serif;
+  --serif: "Source Serif 4", Georgia, serif;
+  --band-h: clamp(84px, 9vw, 120px);
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+html { scrollbar-color: var(--ink-2) var(--paper); }
+body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--serif); font-size: 1.0625rem; line-height: 1.55; -webkit-font-smoothing: antialiased; }
+::selection { background: var(--trail); color: #fff; }
+a { color: inherit; }
+:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+.band :focus-visible, .register :focus-visible { outline-color: #fff; }
+.num { font-family: var(--sans); font-variant-numeric: lining-nums; }
+
+/* ——— Unigrid band ——— */
+.band {
+  position: relative; z-index: 5;
+  height: var(--band-h);
+  background: var(--band); color: #f2f2ec;
+  display: grid; grid-template-columns: 1fr auto; align-items: center;
+  padding: 0 clamp(20px, 3vw, 48px);
+}
+.band__title { font-family: var(--sans); font-weight: 900; font-size: clamp(2rem, 4.4vw, 3.75rem); letter-spacing: -0.035em; line-height: 1; margin: 0; }
+.band__meta { font-family: var(--sans); font-size: .875rem; line-height: 1.35; text-align: right; color: #c9c9bf; display: flex; gap: clamp(16px, 2.4vw, 40px); align-items: center; }
+.band__meta strong { color: #fff; font-weight: 700; display: block; }
+.band__meta nav { display: flex; gap: 20px; }
+.band__meta nav a { text-decoration: none; font-weight: 600; color: #f2f2ec; padding: 6px 0; border-bottom: 1px solid transparent; transition: border-color .2s; }
+.band__meta nav a:hover { border-color: currentColor; }
+
+/* ——— Map stage ——— */
+.stage { position: sticky; top: 0; height: 100vh; height: 100svh; overflow: hidden; background: var(--paper); z-index: 1; }
+#map { position: absolute; left: 0; top: 0; transform-origin: 0 0; overflow: visible; }
+#map text { font-family: var(--sans); }
+.overlay { position: absolute; inset: 0; pointer-events: none; width: 100%; height: 100%; }
+.furniture { position: absolute; right: clamp(16px, 2.4vw, 36px); bottom: clamp(16px, 2.4vw, 32px); display: flex; align-items: flex-end; gap: 18px; font-family: var(--sans); font-size: .75rem; font-weight: 600; color: var(--ink); pointer-events: none; }
+.furniture svg { display: block; }
+.ticks { position: absolute; inset: 0; pointer-events: none; }
+
+.steps { position: relative; z-index: 3; margin-top: -100vh; margin-top: -100svh; }
+.step { min-height: 100vh; min-height: 100svh; display: flex; align-items: center; padding: calc(var(--band-h) * .2) clamp(20px, 3vw, 48px); }
+.step:first-child { min-height: calc(100svh - var(--band-h)); }
+.step:last-child { min-height: 120vh; }
+
+/* ——— Brochure panel ——— */
+.panel {
+  width: min(400px, 100%);
+  background: var(--paper);
+  box-shadow: 0 1px 0 rgba(0,0,0,.06), 0 18px 40px -18px rgba(20,24,16,.45);
+}
+.panel__bar { background: var(--band); color: #f2f2ec; display: flex; justify-content: space-between; align-items: baseline; padding: 10px 18px 9px; font-family: var(--sans); font-size: .8125rem; font-weight: 600; letter-spacing: .01em; }
+.panel__bar .num { font-weight: 700; }
+.panel__body { padding: 24px 24px 26px; }
+.panel h1, .panel h2 { font-family: var(--sans); font-weight: 800; letter-spacing: -0.03em; line-height: 1.02; margin: 0 0 14px; text-wrap: balance; }
+.panel h1 { font-size: clamp(2.1rem, 3.2vw, 2.75rem); }
+.panel h2 { font-size: clamp(1.7rem, 2.4vw, 2.125rem); }
+.panel p { margin: 0 0 14px; color: var(--ink-2); max-width: 60ch; }
+.panel p:last-child { margin-bottom: 0; }
+.facts { display: grid; grid-template-columns: repeat(3, auto); justify-content: start; gap: 6px 26px; margin: 20px 0 22px; padding: 14px 0 0; border-top: 1px solid var(--rule); }
+.facts dt { font-family: var(--sans); font-size: .6875rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #6a6c64; }
+.facts dd { margin: 0; font-family: var(--sans); font-weight: 700; font-size: 1rem; }
+.facts dd.tbd { color: var(--trail); }
+
+.btn { display: inline-flex; align-items: center; gap: 12px; background: var(--trail); color: #fff; text-decoration: none; font-family: var(--sans); font-weight: 700; font-size: 1.0625rem; letter-spacing: -0.005em; padding: 14px 20px 14px 22px; transition: background-color .25s cubic-bezier(.2,.7,.2,1), gap .35s cubic-bezier(.2,.7,.2,1); }
+.btn svg { transition: transform .35s cubic-bezier(.2,.7,.2,1); }
+.btn:hover { background: var(--trail-deep); }
+.btn:hover svg { transform: translateX(3px); }
+.register-line { font-family: var(--sans); font-size: .8125rem; color: #6a6c64; margin-top: 12px; }
+
+/* ——— Sections below the map ——— */
+.after { position: relative; z-index: 4; background: var(--paper); }
+.wrap { width: min(1180px, 100% - clamp(40px, 6vw, 96px)); margin: 0 auto; }
+.section { padding: clamp(72px, 9vw, 128px) 0 clamp(56px, 7vw, 96px); }
+.section h2 { font-family: var(--sans); font-weight: 800; font-size: clamp(2.25rem, 4.6vw, 3.75rem); letter-spacing: -0.035em; line-height: 1; margin: 0 0 16px; text-wrap: balance; }
+.section > .wrap > p.lede { max-width: 56ch; color: var(--ink-2); font-size: 1.1875rem; margin: 0 0 48px; }
+
+.junctions { border-top: 3px solid var(--ink); }
+.junction { display: grid; grid-template-columns: 64px minmax(0, 1.2fr) minmax(0, 2fr) auto; gap: 24px; align-items: center; padding: 26px 0; border-bottom: 1px solid var(--rule); }
+.junction__arrow { width: 44px; height: 44px; display: grid; place-items: center; background: var(--ink); color: var(--paper); }
+.junction h3 { font-family: var(--sans); font-weight: 800; font-size: 1.5rem; letter-spacing: -0.02em; margin: 0; }
+.junction p { margin: 0; color: var(--ink-2); }
+.junction__status { font-family: var(--sans); font-weight: 700; font-size: .8125rem; letter-spacing: .04em; text-transform: uppercase; color: #6a6c64; border: 1px solid currentColor; padding: 6px 10px; white-space: nowrap; }
+
+.legend { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: clamp(32px, 6vw, 96px); align-items: start; }
+.legend__table { width: 100%; border-collapse: collapse; font-family: var(--sans); }
+.legend__table caption { text-align: left; font-weight: 800; font-size: .8125rem; letter-spacing: .08em; text-transform: uppercase; padding-bottom: 12px; border-bottom: 3px solid var(--ink); }
+.legend__table td { padding: 13px 0; border-bottom: 1px solid var(--rule); vertical-align: middle; }
+.legend__table td:first-child { width: 44px; }
+.legend__table td:last-child { text-align: right; color: #6a6c64; font-size: .875rem; }
+.legend__name { font-weight: 700; font-size: 1.0625rem; }
+
+.register { background: var(--band); color: #f2f2ec; }
+.register .wrap { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 48px; align-items: end; padding: clamp(72px, 9vw, 128px) 0; }
+.register h2 { font-family: var(--sans); font-weight: 900; font-size: clamp(2.5rem, 5.6vw, 4.75rem); letter-spacing: -0.04em; line-height: .98; margin: 0; text-wrap: balance; }
+.register p { color: #c9c9bf; margin: 0 0 24px; max-width: 44ch; }
+.foot { border-top: 1px solid #2d2f2a; color: #8d8f86; font-family: var(--sans); font-size: .8125rem; padding: 22px 0 28px; }
+.foot .wrap { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+
+@media (max-width: 760px) {
+  .band { grid-template-columns: 1fr auto; height: auto; padding-top: 16px; padding-bottom: 14px; gap: 12px; }
+  .band__title { font-size: 2.125rem; }
+  .band__meta { text-align: right; font-size: .75rem; }
+  .band__meta > div:nth-child(2) { display: none; }
+  .band__meta nav { display: none; }
+  .step { align-items: flex-end; padding-bottom: 28px; }
+  .step:first-child { align-items: flex-end; }
+  .panel__body { padding: 20px 20px 22px; }
+  .facts { grid-template-columns: repeat(3, auto); gap: 4px 18px; }
+  .junction { grid-template-columns: 44px minmax(0, 1fr); gap: 8px 16px; }
+  .junction__arrow { width: 36px; height: 36px; grid-row: span 3; align-self: start; }
+  .junction__status { justify-self: start; }
+  .legend, .register .wrap { grid-template-columns: 1fr; }
+  .furniture .scale { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .btn, .btn svg { transition: none; }
+}
+</style>
+</head>
+<body>
+<header class="band">
+  <p class="band__title">SideQuest</p>
+  <div class="band__meta">
+    <div><strong>An Alliance guild</strong>World of Warcraft: Forever</div>
+    <div><strong class="num" id="countdown">Launches Nov 4, 2026</strong>Name reservation is open</div>
+    <nav aria-label="Sections">
+      <a href="#junctions">What’s coming</a>
+      <a href="#camps">Camps</a>
+      <a class="js-join" href="#join-discord">Join</a>
+    </nav>
+  </div>
+</header>
+
+<div class="stage" id="stage" aria-hidden="true">
+  <svg id="map" xmlns="http://www.w3.org/2000/svg" width="3000" height="2000" viewBox="0 0 3000 2000"></svg>
+  <svg class="overlay" id="overlay"><line id="leader" stroke="#141513" stroke-width="1.25" x1="0" y1="0" x2="0" y2="0" opacity="0"/><circle id="leaderDot" r="4" fill="#141513" opacity="0"/></svg>
+  <div class="furniture">
+    <svg class="scale" width="132" height="30" viewBox="0 0 132 30" aria-hidden="true"><g fill="#141513"><rect x="1" y="14" width="32" height="6"/><rect x="65" y="14" width="32" height="6"/></g><rect x="1" y="14" width="128" height="6" fill="none" stroke="#141513" stroke-width="1.5"/><g font-family="Schibsted Grotesk, sans-serif" font-size="10" font-weight="700" fill="#141513"><text x="0" y="10">0</text><text x="58" y="10">½</text><text x="112" y="10">1 mi</text></g></svg>
+    <svg width="34" height="46" viewBox="0 0 34 46" aria-hidden="true"><path d="M17 4 L27 38 L17 31 L7 38 Z" fill="#141513"/><path d="M17 4 L17 31 L7 38 Z" fill="#f6f6f1"/><path d="M17 4 L27 38 L17 31 L7 38 Z" fill="none" stroke="#141513" stroke-width="1.5" stroke-linejoin="round"/><text x="17" y="46" text-anchor="middle" font-family="Schibsted Grotesk, sans-serif" font-size="10" font-weight="800" fill="#141513">N</text></svg>
+  </div>
+</div>
+
+<main class="steps" id="steps">
+  <section class="step" data-node="trailhead" aria-labelledby="h-trailhead">
+    <div class="panel">
+      <div class="panel__bar"><span>Trailhead</span><span class="num">mi 0.0</span></div>
+      <div class="panel__body">
+        <h1 id="h-trailhead">A guild for the long way round.</h1>
+        <p>SideQuest is an Alliance guild for World of Warcraft: Forever. Casual nights, scheduled raids, and real progression, all on one road. The journey and the raid both count.</p>
+        <dl class="facts">
+          <div><dt>Launch</dt><dd class="num">Nov 4, 2026</dd></div>
+          <div><dt>Ruleset</dt><dd class="tbd">TBD</dd></div>
+          <div><dt>Region</dt><dd class="tbd">TBD</dd></div>
+        </dl>
+        <a class="btn js-join" href="#join-discord">Join the Discord
+          <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M2 9h12M9 3.5 14.5 9 9 14.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="square"/></svg>
+        </a>
+        <p class="register-line">Sign the trail register: everyone starts in the Lobby.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="step" data-node="spur" aria-labelledby="h-spur">
+    <div class="panel">
+      <div class="panel__bar"><span>The side trail</span><span class="num">mi 1.4</span></div>
+      <div class="panel__body">
+        <h2 id="h-spur">Take the scenic route.</h2>
+        <p>Leveling together, dungeon runs, fishing at the lake, arguing about professions. No sign-up sheet, no attendance. Show up when you can.</p>
+        <p>This is most of the guild, most of the time.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="step" data-node="climb" aria-labelledby="h-climb">
+    <div class="panel">
+      <div class="panel__bar"><span>The climb</span><span class="num">mi 3.1</span></div>
+      <div class="panel__body">
+        <h2 id="h-climb">Raid night, on the calendar.</h2>
+        <p>A scheduled raid with a real roster. Semi-core: we show up prepared and on time, and life still comes first.</p>
+        <p>Night and time are TBD. We’ll pick them together in the Discord before launch.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="step" data-node="summit" aria-labelledby="h-summit">
+    <div class="panel">
+      <div class="panel__bar"><span>The summit</span><span class="num">mi 4.6</span></div>
+      <div class="panel__body">
+        <h2 id="h-summit">And for those who want the top.</h2>
+        <p>A progression group for players who want to push: tighter execution, the same guild. You can be on the side trail on Tuesday and the summit on Thursday.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="step" data-node="overview" aria-label="The whole route">
+    <div class="panel">
+      <div class="panel__bar"><span>The whole route</span><span class="num">4.6 mi</span></div>
+      <div class="panel__body">
+        <h2>One road, every pace.</h2>
+        <p>The side trail and the summit start from the same trailhead. Take whichever you want, and switch whenever you like.</p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div class="after">
+  <section class="section" id="junctions" aria-labelledby="h-junctions">
+    <div class="wrap">
+      <h2 id="h-junctions">Junctions ahead</h2>
+      <p class="lede">The member tools open after launch. They’ll live here, one click from the guide.</p>
+      <div class="junctions">
+        <div class="junction">
+          <span class="junction__arrow"><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><path d="M4 11h13M11.5 5.5 17 11l-5.5 5.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="square"/></svg></span>
+          <h3>Addons</h3>
+          <p>The guild’s own addons, versioned, with install notes.</p>
+          <span class="junction__status">Not yet open</span>
+        </div>
+        <div class="junction">
+          <span class="junction__arrow"><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><path d="M5 17 16 6M8 6h8v8" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="square"/></svg></span>
+          <h3>Raid charts</h3>
+          <p>Positions and assignments for each boss, readable on a second monitor.</p>
+          <span class="junction__status">Not yet open</span>
+        </div>
+        <div class="junction">
+          <span class="junction__arrow"><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><path d="M11 18V5M5.5 10.5 11 5l5.5 5.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="square"/></svg></span>
+          <h3>Raid signups</h3>
+          <p>Sign up for a raid night and see who else is coming.</p>
+          <span class="junction__status">Not yet open</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="camps" aria-labelledby="h-camps">
+    <div class="wrap legend">
+      <div>
+        <h2 id="h-camps">Camps along the way</h2>
+        <p class="lede" style="margin-bottom:0">Every camp on the map is a channel in our Discord. Drop into the Lobby to say hello, or find the group that’s already out on the trail.</p>
+      </div>
+      <table class="legend__table">
+        <caption>Legend</caption>
+        <tbody>
+          <tr><td><svg width="26" height="22" viewBox="0 0 26 22" aria-hidden="true"><path d="M13 2 24 20H2Z" fill="#c4122f"/><path d="M13 9 17 20H9Z" fill="#f6f6f1"/></svg></td><td class="legend__name">Lobby</td><td>Voice · trailhead</td></tr>
+          <tr><td><svg width="26" height="22" viewBox="0 0 26 22" aria-hidden="true"><path d="M13 2 24 20H2Z" fill="#141513"/><path d="M13 9 17 20H9Z" fill="#f6f6f1"/></svg></td><td class="legend__name">dungeon-1 · dungeon-2 · dungeon-3</td><td>Voice · side trail</td></tr>
+          <tr><td><svg width="26" height="22" viewBox="0 0 26 22" aria-hidden="true"><path d="M13 2 24 20H2Z" fill="#141513"/><path d="M13 9 17 20H9Z" fill="#f6f6f1"/></svg></td><td class="legend__name">raid-1 · raid-2</td><td>Voice · the climb</td></tr>
+          <tr><td><svg width="26" height="22" viewBox="0 0 26 22" aria-hidden="true"><rect x="3" y="3" width="20" height="16" fill="none" stroke="#141513" stroke-width="2"/><path d="M7 9h12M7 13h8" stroke="#141513" stroke-width="2"/></svg></td><td class="legend__name">general · rules</td><td>Text · ranger station</td></tr>
+          <tr><td><svg width="26" height="22" viewBox="0 0 26 22" aria-hidden="true"><path d="M1 11h24" stroke="#c4122f" stroke-width="4"/></svg></td><td class="legend__name">Main road</td><td>Raids</td></tr>
+          <tr><td><svg width="26" height="22" viewBox="0 0 26 22" aria-hidden="true"><path d="M1 11h24" stroke="#c4122f" stroke-width="3" stroke-dasharray="5 4"/></svg></td><td class="legend__name">Side trail</td><td>Everything else</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="register" id="join" aria-labelledby="h-join">
+    <div class="wrap">
+      <h2 id="h-join">The trail starts in the Discord.</h2>
+      <div>
+        <p>Say hi in the Lobby, help pick raid night, and grab your name before November 4.</p>
+        <a class="btn js-join" href="#join-discord">Join the Discord
+          <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M2 9h12M9 3.5 14.5 9 9 14.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="square"/></svg>
+        </a>
+      </div>
+    </div>
+    <div class="foot"><div class="wrap"><span>SideQuest · An Alliance guild for World of Warcraft: Forever</span><span>A player guild. Not affiliated with Blizzard Entertainment.</span></div></div>
+  </section>
+</div>
+
+<script type="module">
+// The user supplies the real invite URL; every join link reads from here.
+const DISCORD_INVITE = "#join-discord";
+document.querySelectorAll(".js-join").forEach(a => (a.href = DISCORD_INVITE));
+
+import { contours } from "https://cdn.jsdelivr.net/npm/d3-contour@4/+esm";
+import { geoPath, geoIdentity } from "https://cdn.jsdelivr.net/npm/d3-geo@3/+esm";
+import { line, curveCatmullRom } from "https://cdn.jsdelivr.net/npm/d3-shape@3/+esm";
+
+// Countdown in the band (days only; the launch hour isn't confirmed).
+const launch = new Date(2026, 10, 4);
+const days = Math.ceil((launch - new Date()) / 864e5);
+if (days > 0) document.getElementById("countdown").textContent = `Launches Nov 4, 2026 · ${days} day${days === 1 ? "" : "s"}`;
+
+// ——— Terrain: seeded gradient noise + authored landforms ———
+// The route is designed in a 3000×2000 area; the printed sheet extends past it so the camera never meets the edge.
+const DW = 3000, DH = 2000, OX = 600, OY = 400, W = DW + 2 * OX, H = DH + 2 * OY, GX = 420, GY = 280, K = W / GX;
+const X = x => OX + x * DW, Y = y => OY + y * DH;
+function rng(a) { return () => { a |= 0; a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+const rand = rng(1104);
+const perm = new Uint8Array(512); { const p = [...Array(256).keys()]; for (let i = 255; i > 0; i--) { const j = Math.floor(rand() * (i + 1)); [p[i], p[j]] = [p[j], p[i]]; } for (let i = 0; i < 512; i++) perm[i] = p[i & 255]; }
+const grad = (h, x, y) => { const g = h & 7; const u = g < 4 ? x : y, v = g < 4 ? y : x; return ((g & 1) ? -u : u) + ((g & 2) ? -2 * v : 2 * v); };
+const fade = t => t * t * t * (t * (t * 6 - 15) + 10);
+function noise(x, y) { const X = Math.floor(x) & 255, Y = Math.floor(y) & 255; x -= Math.floor(x); y -= Math.floor(y); const u = fade(x), v = fade(y); const a = perm[X] + Y, b = perm[X + 1] + Y; const l1 = grad(perm[a], x, y) + u * (grad(perm[b], x - 1, y) - grad(perm[a], x, y)); const l2 = grad(perm[a + 1], x, y - 1) + u * (grad(perm[b + 1], x - 1, y - 1) - grad(perm[a + 1], x, y - 1)); return (l1 + v * (l2 - l1)) / 2.2; }
+const fbm = (x, y) => { let s = 0, a = .5, f = 1; for (let o = 0; o < 5; o++) { s += a * noise(x * f, y * f); a *= .5; f *= 2.03; } return s; };
+const gauss = (x, y, cx, cy, r) => Math.exp(-(((x - cx) ** 2) + ((y - cy) * 1.5) ** 2) / (2 * r * r));
+function segDist(x, y, ax, ay, bx, by) { const dx = bx - ax, dy = by - ay; const t = Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / (dx * dx + dy * dy))); return Math.hypot(x - (ax + t * dx), (y - (ay + t * dy)) * 1.5); }
+function height(x, y) {
+  let h = .30;
+  h += .62 * gauss(x, y, .80, .24, .13);
+  h += .30 * Math.exp(-(segDist(x, y, .44, .66, .80, .24) ** 2) / (2 * .085 * .085));
+  h += .22 * gauss(x, y, .10, .12, .16) + .16 * gauss(x, y, .95, .78, .14);
+  h -= .34 * gauss(x, y, .30, .48, .085);
+  h += .20 * fbm(x * 5.2 + 3, y * 5.2 + 7) + .05 * fbm(x * 18, y * 18);
+  return h;
+}
+const values = new Float64Array(GX * GY);
+for (let j = 0; j < GY; j++) for (let i = 0; i < GX; i++) values[j * GX + i] = height((i / (GX - 1) * W - OX) / DW, (j / (GY - 1) * H - OY) / DH);
+
+const SEA = .2;
+const bands = [SEA, .27, .33, .39, .45, .51, .57, .63, .69, .75, .81, .87, .93, .99, 1.05, 1.11, 1.17];
+const fills = ["#b4c88a", "#a3bd78", "#8eaf68", "#77a05b", "#5f8c4e", "#4d7a43", "#3f6a3c", "#4b6540", "#5d6d4a", "#707a57", "#838766", "#969577", "#a8a689", "#bab79c", "#cbc8b0", "#dbd8c6", "#ebe9dc"];
+const lines = ["#8ea366", "#82a05e", "#6f9452", "#5e8648", "#4b733f", "#3b6234", "#30552f", "#3c5334", "#4a5a3c", "#5b6447", "#6c7054", "#7d7d63", "#8e8d73", "#a09e86", "#b2af98", "#c3c0ab", "#d4d1c0"];
+
+const NS = "http://www.w3.org/2000/svg";
+const map = document.getElementById("map");
+map.setAttribute("width", W); map.setAttribute("height", H); map.setAttribute("viewBox", `0 0 ${W} ${H}`);
+const el = (tag, attrs = {}, parent = map) => { const n = document.createElementNS(NS, tag); for (const k in attrs) n.setAttribute(k, attrs[k]); parent.appendChild(n); return n; };
+const path = geoPath(geoIdentity().scale(K));
+const gen = contours().size([GX, GY]);
+
+// Ground below the lowest land band is water-meadow; lake is anything under SEA.
+el("rect", { width: W, height: H, fill: "#9fb977" });
+const terrain = el("g");
+bands.forEach((t, i) => {
+  const d = path(gen.contour(values, t));
+  el("path", { d, fill: fills[i], stroke: lines[i], "stroke-width": i % 4 === 3 ? 2.2 : 1.1, "stroke-linejoin": "round" }, terrain);
+});
+// Lake: carve water by drawing the inverse (values below SEA) via negated field.
+const neg = values.map(v => -v);
+const water = el("g");
+el("path", { d: path(gen.contour(neg, -SEA)), fill: "#4b84b1", stroke: "#2f6593", "stroke-width": 2.5 }, water);
+[-.17, -.14, -.11].forEach((t, i) => el("path", { d: path(gen.contour(neg, t)), fill: "none", stroke: "#8db6d6", "stroke-width": 1.4, opacity: .7 - i * .12 }, water));
+
+// Edge graticule ticks (map furniture, drawn in map space so it travels with the sheet).
+const ticks = el("g", { stroke: "#141513", "stroke-width": 1.5, opacity: .35 });
+for (let x = 0; x <= W; x += 150) el("line", { x1: x, y1: 0, x2: x, y2: x % 750 === 0 ? 26 : 12 }, ticks);
+for (let y = 0; y <= H; y += 150) el("line", { x1: 0, y1: y, x2: y % 750 === 0 ? 26 : 12, y2: y }, ticks);
+
+// ——— Route ———
+const P = (x, y) => [X(x), Y(y)];
+const mainPts = [P(.13, .84), P(.19, .76), P(.26, .69), P(.36, .655), P(.45, .60), P(.53, .52), P(.60, .44), P(.665, .37), P(.72, .31), P(.785, .255)];
+const spurPts = [P(.26, .69), P(.18, .62), P(.155, .50), P(.19, .37), P(.29, .31), P(.40, .345), P(.445, .45), P(.45, .60)];
+const curve = line().curve(curveCatmullRom.alpha(.5));
+const routes = el("g");
+const defs = el("defs");
+const mask = el("mask", { id: "spurMask", maskUnits: "userSpaceOnUse", x: 0, y: 0, width: W, height: H }, defs);
+const spurMaskPath = el("path", { d: curve(spurPts), fill: "none", stroke: "#fff", "stroke-width": 20, "stroke-linecap": "round" }, mask);
+el("path", { d: curve(spurPts), fill: "none", stroke: "#f6f6f1", "stroke-width": 11, "stroke-linecap": "round", "stroke-linejoin": "round", mask: "url(#spurMask)", opacity: .9 }, routes);
+el("path", { d: curve(spurPts), fill: "none", stroke: "#c4122f", "stroke-width": 5.5, "stroke-dasharray": "16 11", mask: "url(#spurMask)" }, routes);
+const mainCasing = el("path", { d: curve(mainPts), fill: "none", stroke: "#f6f6f1", "stroke-width": 14, "stroke-linecap": "round", "stroke-linejoin": "round" }, routes);
+const mainLine = el("path", { d: curve(mainPts), fill: "none", stroke: "#c4122f", "stroke-width": 7, "stroke-linecap": "round", "stroke-linejoin": "round" }, routes);
+const mainLen = mainLine.getTotalLength(), spurLen = spurMaskPath.getTotalLength();
+[mainCasing, mainLine].forEach(p => { p.style.strokeDasharray = mainLen; });
+spurMaskPath.style.strokeDasharray = spurLen;
+
+// ——— Labels & camps ———
+const labels = el("g");
+const label = (txt, x, y, o = {}) => { const t = el("text", { x: X(x), y: Y(y), "text-anchor": o.anchor || "middle", "font-size": o.size || 30, "font-weight": o.weight || 700, fill: o.fill || "#141513", "letter-spacing": o.track || 0, "font-style": o.italic ? "italic" : "normal", "font-family": o.serif ? "Source Serif 4, serif" : "Schibsted Grotesk, sans-serif", "paint-order": "stroke", stroke: o.halo || "rgba(246,246,241,.85)", "stroke-width": o.haloW ?? 7, "stroke-linejoin": "round" }, labels); t.textContent = txt; return t; };
+label("E L W Y N N", .50, .80, { size: 96, weight: 800, fill: "rgba(20,21,19,.15)", track: 40, halo: "none", haloW: 0 });
+label("Crystal Lake", .30, .485, { size: 40, italic: true, serif: true, weight: 500, fill: "#123d61", halo: "none", haloW: 0 });
+label("Goldshire", .385, .695, { size: 30 });
+el("circle", { cx: X(.37), cy: Y(.667), r: 9, fill: "#141513", stroke: "#f6f6f1", "stroke-width": 4 }, labels);
+label("to Stormwind", .085, .065, { size: 26, anchor: "start", weight: 600 });
+el("path", { d: `M${X(.07)} ${Y(.075)} l-38 -38 m0 22 v-22 h22`, stroke: "#141513", "stroke-width": 4, fill: "none" }, labels);
+label("Summit", .785, .215, { size: 34, weight: 800 });
+el("path", { d: `M${X(.785) - 16} ${Y(.255) + 14} l16 -28 l16 28 z`, fill: "#141513" }, labels);
+
+const camp = (name, x, y, red, anchor = "start", dx = 26) => {
+  const cx = X(x), cy = Y(y);
+  el("path", { d: `M${cx} ${cy - 22} L${cx + 20} ${cy + 12} H${cx - 20} Z`, fill: red ? "#c4122f" : "#141513", stroke: "#f6f6f1", "stroke-width": 4, "stroke-linejoin": "round" }, labels);
+  el("path", { d: `M${cx} ${cy - 8} L${cx + 7} ${cy + 12} H${cx - 7} Z`, fill: "#f6f6f1" }, labels);
+  const t = label(name, x, y, { size: 26, anchor, weight: 700 }); t.setAttribute("x", cx + (anchor === "end" ? -dx : dx)); t.setAttribute("y", cy + 10);
+};
+camp("Lobby", .115, .865, true, "end");
+camp("dungeon-1", .14, .585, false, "end");
+camp("dungeon-2", .175, .345, false, "end");
+camp("dungeon-3", .41, .315, false);
+camp("raid-1", .605, .465, false);
+camp("raid-2", .69, .36, false);
+
+// Station building for text channels near the trailhead.
+el("rect", { x: X(.16), y: Y(.875), width: 34, height: 26, fill: "#f6f6f1", stroke: "#141513", "stroke-width": 4 }, labels);
+label("general · rules", .16 + 44 / DW, .875 + 22 / DH, { size: 22, anchor: "start", weight: 600 });
+
+// Neatline: the sheet's printed border, so the paper margin reads as part of the map.
+el("rect", { x: -3, y: -3, width: W + 6, height: H + 6, fill: "none", stroke: "#141513", "stroke-width": 6 });
+el("rect", { x: -22, y: -22, width: W + 44, height: H + 44, fill: "none", stroke: "#141513", "stroke-width": 1.5 });
+
+// ——— Camera ———
+const nodes = { trailhead: P(.13, .84), spur: P(.17, .48), climb: P(.60, .44), summit: P(.785, .255), overview: P(.45, .55) };
+const targets = { trailhead: [.19, .72, .56], spur: [.22, .50, .44], climb: [.60, .45, .46], summit: [.76, .28, .40], overview: [.50, .50, 1.12] };
+const reveal = { trailhead: [.22, 0], spur: [.22, 1], climb: [.72, 1], summit: [1, 1], overview: [1, 1] };
+const stage = document.getElementById("stage");
+const steps = [...document.querySelectorAll(".step")];
+const leader = document.getElementById("leader"), leaderDot = document.getElementById("leaderDot");
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const ease = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+const lerp = (a, b, t) => a + (b - a) * t;
+let introT = reduce ? 1 : 0;
+
+function frame() {
+  const vw = stage.clientWidth, vh = stage.clientHeight, mobile = vw < 760;
+  const mid = innerHeight * .5;
+  const centers = steps.map(s => { const r = s.getBoundingClientRect(); return r.top + r.height / 2; });
+  let i = 0; while (i < steps.length - 1 && centers[i + 1] <= mid) i++;
+  let t = 0;
+  if (i < steps.length - 1 && centers[i] <= mid) t = Math.min(1, Math.max(0, (mid - centers[i]) / (centers[i + 1] - centers[i])));
+  if (centers[0] > mid) t = 0;
+  const hold = ease(Math.min(1, Math.max(0, (t - .2) / .6)));
+  const a = steps[i].dataset.node, b = steps[Math.min(i + 1, steps.length - 1)].dataset.node;
+  let [cx, cy, span] = targets[a].map((v, k) => lerp(v, targets[b][k], hold));
+  let [mr, sr] = reveal[a].map((v, k) => lerp(v, reveal[b][k], hold));
+  const it = ease(introT);
+  span = lerp(1.0, span, it); cx = lerp(.5, cx, it); cy = lerp(.55, cy, it); mr *= it; sr *= Math.min(1, it);
+
+  const s = vw / (DW * span) * (mobile ? 2.1 : 1);
+  const fx = mobile ? vw / 2 : vw * .66, fy = mobile ? vh * .26 : vh * .5;
+  const tx = fx - X(cx) * s, ty = fy - Y(cy) * s;
+  map.style.transform = `translate(${tx}px, ${ty}px) scale(${s})`;
+  mainLine.style.strokeDashoffset = mainCasing.style.strokeDashoffset = mainLen * (1 - mr);
+  spurMaskPath.style.strokeDashoffset = spurLen * (1 - sr);
+
+  // Leader from the active panel to its node.
+  const active = hold < .5 ? steps[i] : steps[Math.min(i + 1, steps.length - 1)];
+  const panel = active.querySelector(".panel");
+  const node = nodes[active.dataset.node];
+  const sr0 = stage.getBoundingClientRect(), pr = panel.getBoundingClientRect();
+  const nx = tx + node[0] * s, ny = ty + node[1] * s;
+  const px = mobile ? pr.left + pr.width / 2 - sr0.left : pr.right - sr0.left, py = mobile ? pr.top - sr0.top : pr.top + 22 - sr0.top;
+  const vis = active.dataset.node !== "overview" && pr.bottom > sr0.top + 40 && pr.top < sr0.bottom - 40 ? 1 : 0;
+  leader.setAttribute("x1", px); leader.setAttribute("y1", py); leader.setAttribute("x2", nx); leader.setAttribute("y2", ny);
+  leaderDot.setAttribute("cx", nx); leaderDot.setAttribute("cy", ny);
+  leader.setAttribute("opacity", vis * it); leaderDot.setAttribute("opacity", vis * it);
+}
+let queued = false;
+const request = () => { if (!queued) { queued = true; requestAnimationFrame(() => { queued = false; frame(); }); } };
+addEventListener("scroll", request, { passive: true });
+addEventListener("resize", request);
+if (!reduce) {
+  const t0 = performance.now();
+  const tick = now => { introT = Math.min(1, (now - t0) / 2600); frame(); if (introT < 1) requestAnimationFrame(tick); };
+  requestAnimationFrame(tick);
+} else frame();
+</script>
+</body>
+</html>

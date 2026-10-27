@@ -1,0 +1,1125 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>SideQuest — Chapter: SideQuest (Strategy Guide)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow+Condensed:ital,wght@0,500;0,600;0,700;1,600&family=PT+Serif:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet" />
+<style>
+  /* ============================================================
+     SideQuest — "The Official Strategy Guide" prototype
+     Fonts: Anton (chapter display), Barlow Condensed (running
+     heads / tables / labels), PT Serif (body copy).
+     ============================================================ */
+
+  :root{
+    --navy: #14233f;
+    --navy-deep: #0d1830;
+    --gold: #e9b23a;
+    --gold-deep: #b9811c;
+    --red: #c8381f;
+    --red-deep: #9c2814;
+    --green: #2f6b3a;
+    --green-deep: #234f2b;
+    --paper: #f7f8fa;
+    --paper-tint: #eef1f5;
+    --paper-tint-2: #e4e9ef;
+    --ink: #131a26;
+    --ink-soft: #3c4759;
+    --rule: #c7ced9;
+
+    --display: "Anton", "Arial Narrow Bold", sans-serif;
+    --cond: "Barlow Condensed", sans-serif;
+    --serif: "PT Serif", Georgia, serif;
+
+    color-scheme: light;
+  }
+
+  *, *::before, *::after{ box-sizing: border-box; }
+  html{ -webkit-text-size-adjust: 100%; }
+
+  body{
+    margin: 0;
+    background: var(--navy-deep);
+    background-image:
+      radial-gradient(circle at 20% 10%, rgba(233,178,58,0.06), transparent 45%),
+      radial-gradient(circle at 80% 85%, rgba(200,56,31,0.07), transparent 50%);
+    color: var(--ink);
+    font-family: var(--serif);
+    font-size: 16px;
+    line-height: 1.55;
+  }
+
+  ::selection{ background: var(--gold); color: var(--navy-deep); }
+
+  ::-webkit-scrollbar{ width: 14px; height: 14px; }
+  ::-webkit-scrollbar-track{ background: var(--navy-deep); }
+  ::-webkit-scrollbar-thumb{
+    background: var(--gold-deep);
+    border: 3px solid var(--navy-deep);
+    border-radius: 8px;
+  }
+  ::-webkit-scrollbar-thumb:hover{ background: var(--gold); }
+  * { scrollbar-color: var(--gold-deep) var(--navy-deep); scrollbar-width: thin; }
+
+  a{ color: inherit; }
+
+  :focus-visible{
+    outline: 3px solid var(--red);
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+
+  button:focus-visible, a:focus-visible{
+    outline: 3px solid var(--red);
+    outline-offset: 2px;
+  }
+
+  h1, h2, h3{
+    font-family: var(--display);
+    font-weight: 400;
+    letter-spacing: 0.005em;
+    margin: 0;
+    text-wrap: balance;
+  }
+
+  .tnum{ font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; }
+
+  /* ---------- halftone print texture ---------- */
+  .halftone{
+    position: relative;
+  }
+  .halftone::after{
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background-image: radial-gradient(circle, rgba(19,26,38,0.10) 1px, transparent 1.3px);
+    background-size: 6px 6px;
+    mix-blend-mode: multiply;
+    opacity: 0.55;
+  }
+
+  /* ============================================================
+     Book shell
+     ============================================================ */
+
+  .book{
+    max-width: 1320px;
+    margin: 0 auto;
+    padding: 28px 20px 0;
+  }
+
+  .book-top{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 0 6px 18px;
+    color: var(--paper-tint);
+    font-family: var(--cond);
+  }
+  .book-title{
+    font-size: 0.85rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--gold);
+    font-weight: 600;
+  }
+  .book-sub{
+    font-size: 0.78rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(247,248,250,0.55);
+  }
+
+  /* a "spread" = two facing pages + gutter shadow, on a dark shelf */
+  .spread{
+    position: relative;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    background: var(--paper);
+    box-shadow:
+      0 30px 60px -20px rgba(0,0,0,0.55),
+      0 10px 24px -12px rgba(0,0,0,0.5);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 34px;
+  }
+  .spread::before{
+    /* gutter shadow down the middle */
+    content: "";
+    position: absolute;
+    top: 0; bottom: 0;
+    left: 50%;
+    width: 46px;
+    margin-left: -23px;
+    background: linear-gradient(90deg,
+      transparent 0%,
+      rgba(0,0,0,0.10) 38%,
+      rgba(0,0,0,0.16) 50%,
+      rgba(0,0,0,0.10) 62%,
+      transparent 100%);
+    pointer-events: none;
+    z-index: 5;
+  }
+
+  .page{
+    position: relative;
+    padding: 30px 38px 56px;
+    min-height: 620px;
+    display: flex;
+    flex-direction: column;
+  }
+  .page--left{ padding-right: 44px; }
+  .page--right{ padding-left: 44px; }
+
+  .running-head{
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-family: var(--cond);
+    font-size: 0.68rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    border-bottom: 1.5px solid var(--navy);
+    padding-bottom: 7px;
+    margin-bottom: 16px;
+  }
+  .running-head b{
+    color: var(--navy);
+    font-weight: 700;
+  }
+
+  .folio{
+    position: absolute;
+    bottom: 20px;
+    font-family: var(--cond);
+    font-weight: 700;
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    color: var(--ink-soft);
+  }
+  .page--left .folio{ left: 38px; }
+  .page--right .folio{ right: 38px; }
+
+  /* chapter tab on the page edge */
+  .chapter-tab{
+    position: absolute;
+    top: 86px;
+    right: -1px;
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    background: var(--navy);
+    color: var(--paper);
+    font-family: var(--cond);
+    font-weight: 700;
+    font-size: 0.78rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    padding: 14px 7px;
+    border-radius: 3px 0 0 3px;
+    box-shadow: -3px 4px 10px -4px rgba(0,0,0,0.4);
+    z-index: 6;
+  }
+  .chapter-tab span{ color: var(--gold); }
+
+  @media (max-width: 860px){
+    .spread{ grid-template-columns: 1fr; }
+    .spread::before{ display: none; }
+    .page--left{ padding-right: 24px; border-bottom: 2px dashed var(--rule); }
+    .page--right{ padding-left: 24px; }
+    .page{ padding: 26px 24px 54px; min-height: 0; }
+    .chapter-tab{ top: 60px; }
+  }
+
+  /* On mobile, the hero spread shows the chapter/CTA page first,
+     then the map page — so Join the Discord isn't buried below a
+     tall map. Other spreads keep natural left-then-right order. */
+  @media (max-width: 860px){
+    .spread--hero .page--left{
+      order: 2;
+      border-bottom: none;
+      border-top: 2px dashed var(--rule);
+      padding-top: 24px;
+    }
+    .spread--hero .page--right{ order: 1; }
+  }
+
+  /* ============================================================
+     Hero spread — map + chapter intro
+     ============================================================ */
+
+  .map-wrap{
+    position: relative;
+    width: 100%;
+    aspect-ratio: 3 / 4;
+    border: 2px solid var(--navy);
+    border-radius: 4px;
+    overflow: hidden;
+    background: #efe9d6;
+    box-shadow: inset 0 0 0 6px var(--paper);
+  }
+  .map-wrap svg{ position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+
+  .map-caption{
+    font-family: var(--cond);
+    font-size: 0.78rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin-top: 10px;
+    text-align: center;
+  }
+  .map-caption b{ color: var(--navy); }
+
+  .callout{
+    position: absolute;
+    width: 34px; height: 34px;
+    margin-left: -17px; margin-top: -17px;
+    border-radius: 50%;
+    background: var(--red);
+    color: var(--paper);
+    border: 2.5px solid var(--paper);
+    font-family: var(--display);
+    font-size: 1.05rem;
+    display: flex; align-items: center; justify-content: center;
+    text-decoration: none;
+    box-shadow: 0 3px 8px -2px rgba(0,0,0,0.45);
+    transition: transform 0.18s cubic-bezier(.2,.8,.2,1), background 0.18s ease;
+    z-index: 4;
+  }
+  .callout:hover, .callout:focus-visible, .callout.is-active{
+    background: var(--gold-deep);
+    transform: scale(1.14);
+  }
+  .callout:focus-visible{ outline-offset: 4px; }
+
+  /* right page: legend table + stat box + tip */
+  .chapter-head{
+    font-size: clamp(2.1rem, 3.4vw, 3.1rem);
+    color: var(--navy);
+    line-height: 1.02;
+    margin-bottom: 4px;
+  }
+  .chapter-head small{
+    display: block;
+    font-family: var(--cond);
+    font-size: 0.95rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--red);
+    margin-top: 6px;
+  }
+
+  .lede{
+    margin: 8px 0 14px;
+    font-size: 1.02rem;
+    color: var(--ink);
+    max-width: 62ch;
+  }
+
+  table.statbox{
+    width: 100%;
+    border-collapse: collapse;
+    border: 2px solid var(--navy);
+    margin: 4px 0 16px;
+    font-family: var(--cond);
+    font-size: 0.93rem;
+  }
+  table.statbox caption{
+    text-align: left;
+    background: var(--navy);
+    color: var(--paper);
+    font-family: var(--cond);
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-size: 0.74rem;
+    padding: 6px 12px;
+    caption-side: top;
+  }
+  table.statbox tr{ border-bottom: 1px solid var(--paper-tint-2); }
+  table.statbox tr:last-child{ border-bottom: none; }
+  table.statbox tr:nth-child(even){ background: var(--paper-tint); }
+  table.statbox th{
+    text-align: left;
+    width: 38%;
+    padding: 6px 12px;
+    font-weight: 700;
+    color: var(--navy);
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    font-size: 0.78rem;
+    vertical-align: top;
+  }
+  table.statbox td{
+    padding: 6px 14px 6px 12px;
+    color: var(--ink);
+    font-family: var(--serif);
+    font-size: 0.92rem;
+  }
+  table.statbox td.tbd{ color: var(--red-deep); font-weight: 700; font-family: var(--cond); letter-spacing: 0.04em; }
+
+  table.legend{
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--cond);
+    font-size: 0.9rem;
+    margin-bottom: 22px;
+  }
+  table.legend th{
+    text-align: left;
+    padding: 6px 8px;
+    border-bottom: 2px solid var(--navy);
+    color: var(--navy);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-size: 0.72rem;
+  }
+  table.legend td{
+    padding: 7px 8px;
+    border-bottom: 1px solid var(--paper-tint-2);
+    color: var(--ink);
+  }
+  table.legend tr{ transition: background 0.18s ease; }
+  table.legend tr.is-active{ background: #fdf0d2; }
+  table.legend .num{
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 22px; height: 22px; border-radius: 50%;
+    background: var(--red); color: var(--paper);
+    font-family: var(--display); font-size: 0.78rem;
+  }
+  table.legend a{ text-decoration: none; font-weight: 700; color: var(--navy); }
+  table.legend a:hover, table.legend a:focus-visible{ color: var(--red); text-decoration: underline; }
+
+  .cta{
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--red);
+    color: var(--paper);
+    font-family: var(--cond);
+    font-weight: 700;
+    font-size: 1.05rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    text-decoration: none;
+    padding: 14px 24px;
+    border: 2px solid var(--navy-deep);
+    border-radius: 3px;
+    box-shadow: 0 6px 16px -6px rgba(200,56,31,0.55), 0 2px 0 var(--navy-deep);
+    transition: transform 0.16s cubic-bezier(.2,.8,.2,1), box-shadow 0.16s ease, background 0.16s ease;
+  }
+  .cta:hover{
+    background: var(--red-deep);
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px -6px rgba(200,56,31,0.6), 0 2px 0 var(--navy-deep);
+  }
+  .cta:active{ transform: translateY(0); }
+  .cta svg{ width: 20px; height: 20px; flex: none; }
+
+  .sidebar{
+    border: 1.5px solid var(--navy);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-top: 24px;
+  }
+  .sidebar-tab{
+    font-family: var(--cond);
+    font-weight: 700;
+    font-size: 0.74rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--paper);
+    padding: 6px 12px;
+  }
+  .sidebar-body{
+    padding: 12px 14px 14px;
+    font-size: 0.92rem;
+    color: var(--ink);
+  }
+  .sidebar--tip .sidebar-tab{ background: var(--green); }
+  .sidebar--tip .sidebar-body{ background: #eaf3ea; }
+  .sidebar--warning .sidebar-tab{ background: var(--gold-deep); color: var(--navy-deep); }
+  .sidebar--warning .sidebar-body{ background: #fdf2dd; }
+
+  /* ============================================================
+     How We Play — boss strategy phases
+     ============================================================ */
+
+  .phase-grid{
+    display: grid;
+    gap: 18px;
+  }
+  .phase{
+    border: 1.5px solid var(--navy);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .phase-head{
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    background: var(--navy);
+    color: var(--paper);
+    padding: 9px 14px;
+  }
+  .phase-head h3{
+    font-size: 1.15rem;
+    letter-spacing: 0.01em;
+  }
+  .phase-head span{
+    font-family: var(--cond);
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--gold);
+  }
+  .phase-body{ padding: 14px 16px 16px; background: var(--paper); }
+  .phase-body p{ margin: 0 0 10px; max-width: 62ch; }
+  .phase-stats{
+    font-family: var(--cond);
+    font-size: 0.82rem;
+    letter-spacing: 0.02em;
+    color: var(--ink-soft);
+    text-transform: uppercase;
+    border-top: 1px dashed var(--rule);
+    padding-top: 8px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+  }
+  .phase-stats b{ color: var(--navy); }
+
+  /* ============================================================
+     Preview spread (addon / raid chart / signups)
+     ============================================================ */
+
+  .preview-flag{
+    display: inline-block;
+    font-family: var(--cond);
+    font-weight: 700;
+    font-size: 0.7rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--navy-deep);
+    background: var(--gold);
+    padding: 3px 9px;
+    border-radius: 2px;
+    margin-bottom: 10px;
+  }
+
+  .item-entry{
+    border: 1.5px solid var(--navy);
+    border-radius: 3px;
+    margin-bottom: 24px;
+  }
+  .item-entry-head{
+    background: var(--green);
+    color: var(--paper);
+    font-family: var(--cond);
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    padding: 9px 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 10px;
+  }
+  .item-entry-head span{ font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase; color: #cfe8cf; }
+
+  table.item-stats{
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--cond);
+    font-size: 0.9rem;
+  }
+  table.item-stats tr{ border-bottom: 1px solid var(--paper-tint-2); }
+  table.item-stats tr:nth-child(even){ background: var(--paper-tint); }
+  table.item-stats th{
+    text-align: left; width: 34%;
+    padding: 7px 12px;
+    color: var(--navy);
+    text-transform: uppercase;
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+  }
+  table.item-stats td{ padding: 7px 12px 7px 0; color: var(--ink); font-family: var(--serif); font-size: 0.92rem; }
+
+  .boss-room{
+    position: relative;
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    border: 2px solid var(--navy);
+    border-radius: 4px;
+    overflow: hidden;
+    background: #e9eef3;
+    margin-bottom: 14px;
+  }
+  .boss-room svg{ position: absolute; inset: 0; width: 100%; height: 100%; }
+
+  table.roster{
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--cond);
+    font-size: 0.88rem;
+  }
+  table.roster thead th{
+    text-align: left;
+    background: var(--navy);
+    color: var(--paper);
+    padding: 8px 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-size: 0.7rem;
+  }
+  table.roster tbody tr:nth-child(even){ background: var(--paper-tint); }
+  table.roster tbody td{
+    padding: 7px 10px;
+    border-bottom: 1px solid var(--paper-tint-2);
+    color: var(--ink);
+  }
+  table.roster td.status-confirmed{ color: var(--green-deep); font-weight: 700; }
+  table.roster td.status-tentative{ color: var(--gold-deep); font-weight: 700; }
+  table.roster td.status-open{ color: var(--ink-soft); font-style: italic; }
+
+  .preview-grid{
+    display: grid;
+    gap: 26px;
+  }
+
+  /* ============================================================
+     Close / index spread
+     ============================================================ */
+
+  .close-page{
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    min-height: 420px;
+  }
+  .close-page h2{ font-size: clamp(2rem, 4vw, 3rem); color: var(--navy); margin-bottom: 14px; }
+  .continued{
+    font-family: var(--cond);
+    font-size: 0.95rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin-top: 18px;
+  }
+  .continued b{ color: var(--red); }
+
+  .index-list{
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    font-family: var(--cond);
+    font-size: 0.95rem;
+  }
+  .index-list li{
+    display: flex;
+    justify-content: space-between;
+    padding: 9px 0;
+    border-bottom: 1px dotted var(--rule);
+    color: var(--ink);
+  }
+  .index-list li span.status{
+    color: var(--red-deep);
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 0.78rem;
+    letter-spacing: 0.06em;
+  }
+
+  footer.endpage{
+    text-align: center;
+    padding: 30px 20px 50px;
+    font-family: var(--cond);
+    font-size: 0.78rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(247,248,250,0.4);
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; scroll-behavior: auto !important; }
+  }
+</style>
+</head>
+<body>
+
+<!--
+  DISCORD_INVITE is the single source of truth for the Join action.
+  TODO(sidequest): replace "#join-discord" with the real Discord
+  invite URL once it exists, then every .js-discord-link href
+  below updates automatically on load.
+-->
+<script>
+  const DISCORD_INVITE = "#join-discord";
+</script>
+
+<div class="book">
+  <div class="book-top">
+    <span class="book-title">World of Warcraft: Forever — Strategy Guide</span>
+    <span class="book-sub">Guilds · Alliance Edition</span>
+  </div>
+
+  <!-- ============================================================
+       SPREAD 1 — Hero: map (left) + chapter intro (right)
+       ============================================================ -->
+  <section class="spread halftone spread--hero" aria-labelledby="chapter-heading">
+    <div class="chapter-tab">Ch. <span>SideQuest</span></div>
+
+    <div class="page page--left">
+      <div class="running-head"><b>World of Warcraft: Forever</b><span>Guilds</span></div>
+
+      <div class="map-wrap">
+        <svg id="map" viewBox="0 0 600 800" role="img" aria-label="Stylized map titled SideQuest: Getting In, showing a route along a guide road from the Lobby through Raid Gate and Addon Workshop to Signup Post.">
+          <defs>
+            <linearGradient id="lake" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#a7cbe8" />
+              <stop offset="1" stop-color="#6ea3cf" />
+            </linearGradient>
+            <symbol id="tree" viewBox="0 0 20 30">
+              <path d="M10 2 L18 17 L13.5 17 L19 27 L1 27 L6.5 17 L2 17 Z" fill="#4f7d45" />
+              <rect x="8.5" y="27" width="3" height="3" fill="#6b4a2d" />
+            </symbol>
+          </defs>
+
+          <rect x="0" y="0" width="600" height="800" fill="#efe9d6" />
+
+          <!-- faint contour lines -->
+          <ellipse cx="110" cy="705" rx="78" ry="46" fill="none" stroke="#cdbf9a" stroke-width="1.2" opacity="0.45" />
+          <ellipse cx="110" cy="705" rx="112" ry="68" fill="none" stroke="#cdbf9a" stroke-width="1.2" opacity="0.3" />
+          <ellipse cx="300" cy="600" rx="90" ry="50" fill="none" stroke="#cdbf9a" stroke-width="1.2" opacity="0.35" />
+          <ellipse cx="470" cy="330" rx="70" ry="42" fill="none" stroke="#cdbf9a" stroke-width="1.2" opacity="0.35" />
+
+          <!-- lake: shoreline + ripple hatch -->
+          <path d="M358 58 C 332 96 340 150 382 178 C 424 204 482 198 514 166 C 548 134 546 86 510 62 C 478 40 394 34 358 58 Z" fill="url(#lake)" />
+          <path d="M358 58 C 332 96 340 150 382 178 C 424 204 482 198 514 166 C 548 134 546 86 510 62 C 478 40 394 34 358 58 Z" fill="none" stroke="#3f6f99" stroke-width="2.5" />
+          <path d="M385 88 q14 10 28 0 q14 -10 28 0" fill="none" stroke="#5a8fb8" stroke-width="1.4" opacity="0.6" />
+          <path d="M378 115 q14 10 28 0 q14 -10 28 0 q14 -10 28 0" fill="none" stroke="#5a8fb8" stroke-width="1.4" opacity="0.6" />
+          <path d="M392 142 q14 10 28 0 q14 -10 28 0" fill="none" stroke="#5a8fb8" stroke-width="1.4" opacity="0.55" />
+
+          <!-- road bed — the route runs directly on top of this -->
+          <path d="M118 652 C 170 560 220 520 258 462 C 300 400 360 330 420 258 C 460 212 492 180 520 148" fill="none" stroke="#9c8358" stroke-width="16" stroke-linecap="round" opacity="0.5" />
+          <path d="M118 652 C 170 560 220 520 258 462 C 300 400 360 330 420 258 C 460 212 492 180 520 148" fill="none" stroke="#cdb183" stroke-width="13" stroke-linecap="round" />
+
+          <!-- forest clusters, authored once as a tree symbol -->
+          <g>
+            <use href="#tree" transform="translate(36,752) scale(1.05)" />
+            <use href="#tree" transform="translate(58,722) scale(0.9)" />
+            <use href="#tree" transform="translate(82,762) scale(1.1)" />
+            <use href="#tree" transform="translate(98,708) scale(0.95)" />
+            <use href="#tree" transform="translate(120,738) scale(0.85)" />
+            <use href="#tree" transform="translate(52,684) scale(1)" />
+            <use href="#tree" transform="translate(76,696) scale(0.9)" />
+            <use href="#tree" transform="translate(134,700) scale(1.05)" />
+            <use href="#tree" transform="translate(26,712) scale(0.8)" />
+            <use href="#tree" transform="translate(94,676) scale(0.9)" />
+            <use href="#tree" transform="translate(148,728) scale(1)" />
+            <use href="#tree" transform="translate(16,738) scale(0.85)" />
+          </g>
+          <g>
+            <use href="#tree" transform="translate(268,598) scale(1)" />
+            <use href="#tree" transform="translate(296,566) scale(0.9)" />
+            <use href="#tree" transform="translate(326,606) scale(1.1)" />
+            <use href="#tree" transform="translate(306,628) scale(0.85)" />
+            <use href="#tree" transform="translate(278,630) scale(1)" />
+            <use href="#tree" transform="translate(346,580) scale(0.95)" />
+            <use href="#tree" transform="translate(240,610) scale(0.8)" />
+            <use href="#tree" transform="translate(318,562) scale(1)" />
+            <use href="#tree" transform="translate(256,562) scale(0.9)" />
+          </g>
+          <g>
+            <use href="#tree" transform="translate(458,352) scale(0.9)" />
+            <use href="#tree" transform="translate(480,322) scale(1)" />
+            <use href="#tree" transform="translate(500,358) scale(0.85)" />
+            <use href="#tree" transform="translate(438,330) scale(0.95)" />
+            <use href="#tree" transform="translate(468,300) scale(0.8)" />
+          </g>
+
+          <!-- dashed quest route (base, always fully visible) -->
+          <path id="routeBase" d="M118 652 C 170 560 220 520 258 462 C 300 400 360 330 420 258 C 460 212 492 180 520 148"
+                fill="none" stroke="#6b5d3c" stroke-width="2.5" stroke-dasharray="2 9" stroke-linecap="round" opacity="0.7" />
+          <!-- dashed quest route (draws on load / highlights on hover) -->
+          <path id="routeDraw" d="M118 652 C 170 560 220 520 258 462 C 300 400 360 330 420 258 C 460 212 492 180 520 148"
+                fill="none" stroke="#c8381f" stroke-width="3.5" stroke-dasharray="2 10" stroke-linecap="round" />
+
+          <!-- map flavor labels -->
+          <text x="118" y="700" text-anchor="middle" font-family="Barlow Condensed, sans-serif" font-weight="700" font-size="13" letter-spacing="0.6" fill="#14233f" stroke="#efe9d6" stroke-width="3" paint-order="stroke">THE LOBBY</text>
+          <text x="196" y="462" text-anchor="end" font-family="Barlow Condensed, sans-serif" font-weight="700" font-size="13" letter-spacing="0.6" fill="#14233f" stroke="#efe9d6" stroke-width="3" paint-order="stroke">RAID GATE</text>
+          <text x="420" y="226" text-anchor="middle" font-family="Barlow Condensed, sans-serif" font-weight="700" font-size="13" letter-spacing="0.6" fill="#14233f" stroke="#efe9d6" stroke-width="3" paint-order="stroke">ADDON WORKSHOP</text>
+          <text x="520" y="114" text-anchor="middle" font-family="Barlow Condensed, sans-serif" font-weight="700" font-size="13" letter-spacing="0.6" fill="#14233f" stroke="#efe9d6" stroke-width="3" paint-order="stroke">SIGNUP POST</text>
+
+          <!-- compass rose -->
+          <g transform="translate(60,738)">
+            <circle r="26" fill="#f7f8fa" stroke="#14233f" stroke-width="1.5" />
+            <line x1="0" y1="-21" x2="0" y2="21" stroke="#14233f" stroke-width="1" />
+            <line x1="-21" y1="0" x2="21" y2="0" stroke="#14233f" stroke-width="1" />
+            <path d="M0 -21 L5 -7 L0 -11 L-5 -7 Z" fill="#c8381f" />
+            <text x="0" y="-29" text-anchor="middle" font-family="Barlow Condensed, sans-serif" font-weight="700" font-size="11" fill="#14233f">N</text>
+          </g>
+
+          <!-- scale bar -->
+          <g transform="translate(360,738)">
+            <line x1="0" y1="0" x2="120" y2="0" stroke="#14233f" stroke-width="2" />
+            <line x1="0" y1="-5" x2="0" y2="5" stroke="#14233f" stroke-width="2" />
+            <line x1="60" y1="-4" x2="60" y2="4" stroke="#14233f" stroke-width="1.5" />
+            <line x1="120" y1="-5" x2="120" y2="5" stroke="#14233f" stroke-width="2" />
+            <text x="0" y="17" font-family="Barlow Condensed, sans-serif" font-weight="600" font-size="10" fill="#14233f">0</text>
+            <text x="120" y="17" text-anchor="end" font-family="Barlow Condensed, sans-serif" font-weight="600" font-size="10" fill="#14233f">1 ZONE</text>
+          </g>
+
+          <text x="300" y="786" text-anchor="middle" font-family="Barlow Condensed, sans-serif" font-weight="700" font-size="19" letter-spacing="2" fill="#14233f">SIDEQUEST: GETTING IN</text>
+        </svg>
+
+        <a href="#join-discord" class="callout js-discord-link" data-step="1" style="left:19.7%; top:81.5%;" aria-describedby="legend-1">
+          <span aria-hidden="true">1</span><span class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);">Discord — join</span>
+        </a>
+        <a href="#how-we-play" class="callout" data-step="2" style="left:43%; top:57.75%;" aria-describedby="legend-2">
+          <span aria-hidden="true">2</span>
+        </a>
+        <a href="#preview-addon" class="callout" data-step="3" style="left:70%; top:32.25%;" aria-describedby="legend-3">
+          <span aria-hidden="true">3</span>
+        </a>
+        <a href="#preview-signups" class="callout" data-step="4" style="left:86.7%; top:18.5%;" aria-describedby="legend-4">
+          <span aria-hidden="true">4</span>
+        </a>
+      </div>
+      <p class="map-caption">Fig. 1 — <b>SideQuest: Getting In.</b> Hover or focus a marker to trace the route.</p>
+
+      <div class="folio tnum">014</div>
+    </div>
+
+    <div class="page page--right">
+      <div class="running-head"><span>Alliance Edition</span><b>SideQuest</b></div>
+
+      <h1 id="chapter-heading" class="chapter-head">Chapter: SideQuest<small>A guild worth the walk</small></h1>
+
+      <p class="lede">Every guide has a guild chapter eventually. Here's ours: an Alliance guild for World of Warcraft: Forever, built on the idea that the road to the dungeon counts for something too. Below, the quick route in — then the longer campaign.</p>
+
+      <table class="statbox">
+        <caption>Guild Stat Block</caption>
+        <tbody>
+          <tr><th scope="row">Faction</th><td>Alliance</td></tr>
+          <tr><th scope="row">Ruleset</th><td class="tbd">TBD</td></tr>
+          <tr><th scope="row">Region</th><td class="tbd">TBD</td></tr>
+          <tr><th scope="row">Launch</th><td class="tnum">November 4, 2026</td></tr>
+          <tr><th scope="row">Group size</th><td>Everyone who shows up</td></tr>
+          <tr><th scope="row">Rewards</th><td>Friends, loot, and a Discord worth leaving on</td></tr>
+        </tbody>
+      </table>
+
+      <a href="#join-discord" class="cta js-discord-link">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8 5l9 7-9 7V5z" fill="currentColor"/></svg>
+        Join the Discord
+      </a>
+
+      <table class="legend" style="margin-top: 16px;">
+        <thead>
+          <tr><th scope="col">No.</th><th scope="col">Landmark</th><th scope="col">Status</th></tr>
+        </thead>
+        <tbody>
+          <tr id="legend-1" data-step="1"><td><span class="num">1</span></td><td><a href="#join-discord" class="js-discord-link">Discord — join</a></td><td>Open now</td></tr>
+          <tr id="legend-2" data-step="2"><td><span class="num">2</span></td><td><a href="#how-we-play">Raid nights</a></td><td class="tbd">TBD</td></tr>
+          <tr id="legend-3" data-step="3"><td><span class="num">3</span></td><td><a href="#preview-addon">Addons</a></td><td>Coming</td></tr>
+          <tr id="legend-4" data-step="4"><td><span class="num">4</span></td><td><a href="#preview-signups">Signups</a></td><td>Coming</td></tr>
+        </tbody>
+      </table>
+
+      <div class="sidebar sidebar--tip">
+        <div class="sidebar-tab">Tip</div>
+        <div class="sidebar-body">Name reservation opened October 27. Grab your name, then come say hi in the Lobby.</div>
+      </div>
+
+      <div class="folio tnum">015</div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       SPREAD 2 — How We Play (boss-strategy phases)
+       ============================================================ -->
+  <section class="spread halftone" id="how-we-play" aria-labelledby="hwp-heading">
+    <div class="chapter-tab">Ch. <span>How We Play</span></div>
+
+    <div class="page page--left">
+      <div class="running-head"><b>World of Warcraft: Forever</b><span>Guilds</span></div>
+
+      <h2 id="hwp-heading" class="chapter-head" style="font-size: clamp(1.8rem, 3vw, 2.6rem);">Boss Strategy: How We Play<small>Three phases, one encounter</small></h2>
+
+      <p class="lede">Think of membership as a fight with phases. You don't have to clear every phase to belong here — but if you want to, the path's clearly marked.</p>
+
+      <div class="sidebar sidebar--warning">
+        <div class="sidebar-tab">Warning</div>
+        <div class="sidebar-body">May cause alts, 1 a.m. "one more pull," and strong opinions about buff food.</div>
+      </div>
+
+      <div class="folio tnum">016</div>
+    </div>
+
+    <div class="page page--right">
+      <div class="running-head"><span>Alliance Edition</span><b>How We Play</b></div>
+
+      <div class="phase-grid">
+        <div class="phase">
+          <div class="phase-head"><h3>Phase 1 — The Journey</h3><span>Casual · Social</span></div>
+          <div class="phase-body">
+            <p>No pre-reqs, no gear checks. Leveling, exploring, world content — the stuff that's just more fun with company. Show up when you can, no questions asked.</p>
+            <div class="phase-stats"><span><b>Difficulty:</b> Welcoming</span><span><b>Attendance:</b> Whenever you're free</span><span><b>Loot:</b> The journey itself</span></div>
+          </div>
+        </div>
+        <div class="phase">
+          <div class="phase-head"><h3>Phase 2 — Raid Night</h3><span>Semi-core · Scheduled</span></div>
+          <div class="phase-body">
+            <p>A standing group that shows up on purpose, learns the pulls, and clears content together — without demanding your whole week to do it.</p>
+            <div class="phase-stats"><span><b>Difficulty:</b> Scheduled</span><span><b>Attendance:</b> Most weeks</span><span><b>Loot:</b> Master-looted, split fair</span></div>
+          </div>
+        </div>
+        <div class="phase">
+          <div class="phase-head"><h3>Phase 3 — Progression</h3><span>Core · Committed</span></div>
+          <div class="phase-body">
+            <p>The sweaty part, by choice. For the group chasing server-relevant kills and tighter execution — same guild, same Discord, different gear.</p>
+            <div class="phase-stats"><span><b>Difficulty:</b> Progression</span><span><b>Attendance:</b> Committed</span><span><b>Loot:</b> Prioritized for progression</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="folio tnum">017</div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       SPREAD 3 — Preview: sample data (addon / raid chart / signups)
+       ============================================================ -->
+  <section class="spread halftone" aria-labelledby="preview-heading">
+    <div class="chapter-tab">Ch. <span>Appendix</span></div>
+
+    <div class="page page--left">
+      <div class="running-head"><b>World of Warcraft: Forever</b><span>Guilds</span></div>
+
+      <h2 id="preview-heading" class="chapter-head" style="font-size: clamp(1.8rem, 3vw, 2.6rem);">Appendix: Tools of the Guild<small>Preview — sample data</small></h2>
+      <span class="preview-flag">Preview · sample data</span>
+
+      <p class="lede">These pages aren't live yet, but here's the shape of them: an addon, a raid chart, a signup sheet — all in the guide's own vocabulary.</p>
+
+      <div class="item-entry" id="preview-addon">
+        <div class="item-entry-head">Item: SideQuest Companion <span>Sample entry</span></div>
+        <table class="item-stats">
+          <tbody>
+            <tr><th scope="row">Type</th><td>Raid utility addon</td></tr>
+            <tr><th scope="row">Version</th><td class="tbd">TBD</td></tr>
+            <tr><th scope="row">Download</th><td>Coming soon</td></tr>
+            <tr><th scope="row">Notes</th><td>Handles signups, assignments, and the inevitable "who has a res."</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="folio tnum">018</div>
+    </div>
+
+    <div class="page page--right">
+      <div class="running-head"><span>Alliance Edition</span><b>Appendix</b></div>
+
+      <div class="preview-grid">
+        <div>
+          <span class="preview-flag">Preview · sample positions</span>
+          <h3 style="font-size:1.1rem; color:var(--navy); font-family:var(--cond); font-weight:700; letter-spacing:0.02em; margin:0 0 10px;">Sample Pull: Boss Room Layout</h3>
+          <div class="boss-room">
+            <svg viewBox="0 0 400 300" role="img" aria-label="Sample boss room layout with eight numbered raid positions, for illustration only.">
+              <rect x="0" y="0" width="400" height="300" fill="#dfe6ee" />
+              <circle cx="200" cy="150" r="118" fill="#cfd9e4" stroke="#8ea0b6" stroke-width="2" stroke-dasharray="4 6" />
+              <circle cx="200" cy="150" r="26" fill="#9aa9bd" />
+              <g font-family="Anton" font-size="14" fill="#f7f8fa" text-anchor="middle">
+                <circle cx="200" cy="90" r="13" fill="#c8381f" /><text x="200" y="95">1</text>
+                <circle cx="200" cy="210" r="13" fill="#c8381f" /><text x="200" y="215">2</text>
+                <circle cx="140" cy="150" r="13" fill="#2f6b3a" /><text x="140" y="155">3</text>
+                <circle cx="260" cy="150" r="13" fill="#2f6b3a" /><text x="260" y="155">4</text>
+                <circle cx="150" cy="95" r="13" fill="#14233f" /><text x="150" y="100">5</text>
+                <circle cx="250" cy="95" r="13" fill="#14233f" /><text x="250" y="100">6</text>
+                <circle cx="150" cy="205" r="13" fill="#b9811c" /><text x="150" y="210">7</text>
+                <circle cx="250" cy="205" r="13" fill="#b9811c" /><text x="250" y="210">8</text>
+              </g>
+            </svg>
+          </div>
+          <table class="legend" style="margin-bottom: 26px;">
+            <thead><tr><th scope="col">No.</th><th scope="col">Role</th><th scope="col">Assignment</th></tr></thead>
+            <tbody>
+              <tr><td><span class="num" style="background:#c8381f;">1</span></td><td>Tank</td><td class="tbd">TBD</td></tr>
+              <tr><td><span class="num" style="background:#c8381f;">2</span></td><td>Off-tank</td><td class="tbd">TBD</td></tr>
+              <tr><td><span class="num" style="background:#2f6b3a;">3</span></td><td>Melee DPS</td><td class="tbd">TBD</td></tr>
+              <tr><td><span class="num" style="background:#2f6b3a;">4</span></td><td>Melee DPS</td><td class="tbd">TBD</td></tr>
+              <tr><td><span class="num" style="background:#14233f;">5</span></td><td>Ranged DPS</td><td class="tbd">TBD</td></tr>
+              <tr><td><span class="num" style="background:#14233f;">6</span></td><td>Ranged DPS</td><td class="tbd">TBD</td></tr>
+              <tr><td><span class="num" style="background:#b9811c;">7</span></td><td>Healer</td><td class="tbd">TBD</td></tr>
+              <tr><td><span class="num" style="background:#b9811c;">8</span></td><td>Healer</td><td class="tbd">TBD</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div id="preview-signups">
+          <span class="preview-flag">Preview · sample data</span>
+          <h3 style="font-size:1.1rem; color:var(--navy); font-family:var(--cond); font-weight:700; letter-spacing:0.02em; margin:0 0 10px;">Sample Roster: Signups</h3>
+          <table class="roster">
+            <thead>
+              <tr><th scope="col">Player</th><th scope="col">Class</th><th scope="col">Role</th><th scope="col">Status</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Sample 1</td><td>Warrior</td><td>Tank</td><td class="status-confirmed">Confirmed</td></tr>
+              <tr><td>Sample 2</td><td>Priest</td><td>Healer</td><td class="status-tentative">Tentative</td></tr>
+              <tr><td>Sample 3</td><td>Mage</td><td>Ranged DPS</td><td class="status-confirmed">Confirmed</td></tr>
+              <tr><td>Sample 4</td><td>Rogue</td><td>Melee DPS</td><td class="status-open">Open</td></tr>
+              <tr><td>Sample 5</td><td>Druid</td><td>Healer</td><td class="status-confirmed">Confirmed</td></tr>
+              <tr><td>Sample 6</td><td>Hunter</td><td>Ranged DPS</td><td class="status-open">Open</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="folio tnum">019</div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       SPREAD 4 — Close / index
+       ============================================================ -->
+  <section class="spread halftone" aria-labelledby="close-heading">
+    <div class="chapter-tab">Ch. <span>Index</span></div>
+
+    <div class="page page--left close-page">
+      <div class="running-head"><b>World of Warcraft: Forever</b><span>Guilds</span></div>
+
+      <h2 id="close-heading">That's the chapter.<br/>The rest is live.</h2>
+      <p class="lede">The guide stops here; the guild doesn't. Join the Discord and pick up where this page leaves off.</p>
+
+      <a href="#join-discord" class="cta js-discord-link">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8 5l9 7-9 7V5z" fill="currentColor"/></svg>
+        Join the Discord
+      </a>
+
+      <p class="continued"><b>Continued</b> on Discord →</p>
+
+      <div class="folio tnum">020</div>
+    </div>
+
+    <div class="page page--right">
+      <div class="running-head"><span>Alliance Edition</span><b>Index</b></div>
+
+      <h3 style="font-size:1.3rem; color:var(--navy); font-family:var(--cond); font-weight:700; letter-spacing:0.02em; margin-bottom:16px;">Also in this guide</h3>
+      <ul class="index-list">
+        <li><span>Discord — Lobby, dungeon runs, raid voice</span><span class="status">Open</span></li>
+        <li><span>Raid nights — ruleset &amp; region</span><span class="status">TBD</span></li>
+        <li><span>Addon downloads</span><span class="status">Coming</span></li>
+        <li><span>Raid charts</span><span class="status">Coming</span></li>
+        <li><span>Signups</span><span class="status">Coming</span></li>
+      </ul>
+
+      <div class="folio tnum">021</div>
+    </div>
+  </section>
+
+  <footer class="endpage">World of Warcraft: Forever — Strategy Guide · Guilds Chapter · SideQuest, Alliance</footer>
+</div>
+
+<script>
+  (function(){
+    // Wire every Join control to the single DISCORD_INVITE constant.
+    document.querySelectorAll('.js-discord-link').forEach(function(el){
+      el.setAttribute('href', DISCORD_INVITE);
+    });
+
+    var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    var routeDraw = document.getElementById('routeDraw');
+    var legendRows = document.querySelectorAll('table.legend tr[data-step]');
+    var callouts = document.querySelectorAll('.callout[data-step]');
+
+    if (routeDraw) {
+      var total = routeDraw.getTotalLength();
+      routeDraw.style.strokeDasharray = total;
+      routeDraw.style.strokeDashoffset = total;
+
+      // Fraction of the route "owned" by each step (1..4), evenly spaced.
+      var stepCount = 4;
+
+      function setProgress(fraction, animate){
+        var offset = total * (1 - fraction);
+        if (animate && !reduceMotion) {
+          routeDraw.style.transition = 'stroke-dashoffset 0.6s cubic-bezier(.2,.8,.2,1)';
+        } else {
+          routeDraw.style.transition = 'none';
+        }
+        routeDraw.style.strokeDashoffset = offset;
+      }
+
+      function resetToStart(animate){
+        if (animate && !reduceMotion) {
+          routeDraw.style.transition = 'stroke-dashoffset 0.4s ease';
+        } else {
+          routeDraw.style.transition = 'none';
+        }
+        routeDraw.style.strokeDashoffset = total;
+      }
+
+      // One authored moment: draw the full route once on load.
+      requestAnimationFrame(function(){
+        if (reduceMotion) {
+          setProgress(1, false);
+        } else {
+          routeDraw.style.transition = 'stroke-dashoffset 1.4s cubic-bezier(.2,.8,.2,1)';
+          routeDraw.style.strokeDashoffset = 0;
+          setTimeout(function(){
+            routeDraw.style.transition = 'none';
+          }, 1500);
+        }
+      });
+
+      callouts.forEach(function(c){
+        var step = parseInt(c.getAttribute('data-step'), 10);
+        var fraction = step / stepCount;
+
+        function activate(){
+          setProgress(fraction, true);
+          legendRows.forEach(function(r){ r.classList.toggle('is-active', r.getAttribute('data-step') === String(step)); });
+          callouts.forEach(function(o){ o.classList.toggle('is-active', o === c); });
+        }
+        function deactivate(){
+          if (!reduceMotion) { setProgress(1, true); } else { setProgress(1, false); }
+          legendRows.forEach(function(r){ r.classList.remove('is-active'); });
+          callouts.forEach(function(o){ o.classList.remove('is-active'); });
+        }
+
+        c.addEventListener('mouseenter', activate);
+        c.addEventListener('mouseleave', deactivate);
+        c.addEventListener('focus', activate);
+        c.addEventListener('blur', deactivate);
+      });
+
+      legendRows.forEach(function(row){
+        var step = row.getAttribute('data-step');
+        var link = row.querySelector('a');
+        if (!link) return;
+        link.addEventListener('mouseenter', function(){
+          row.classList.add('is-active');
+          callouts.forEach(function(c){ c.classList.toggle('is-active', c.getAttribute('data-step') === step); });
+          setProgress(parseInt(step,10) / 4, true);
+        });
+        link.addEventListener('mouseleave', function(){
+          row.classList.remove('is-active');
+          callouts.forEach(function(c){ c.classList.remove('is-active'); });
+          setProgress(1, true);
+        });
+      });
+    }
+  })();
+</script>
+
+</body>
+</html>

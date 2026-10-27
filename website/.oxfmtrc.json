@@ -1,0 +1,6 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "printWidth": 120,
+  "astro": true,
+  "ignorePatterns": [".impeccable/**", "dist/**", ".astro/**", "package-lock.json"]
+}

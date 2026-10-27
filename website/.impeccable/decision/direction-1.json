@@ -1,0 +1,157 @@
+{
+  "title": "SideQuest: choose the visual world",
+  "question": "The roll landed on Ready Check: the guild site built from the raid interface every WoW player reads on raid night. Keep it, take an alternate, or re-roll.",
+  "options": [
+    {
+      "id": "assigned",
+      "label": "Ready Check",
+      "kicker": "THE ROLL",
+      "lineage": "The raid UI on raid night: raid frames, ready check, pull timers, class and item-quality colors",
+      "thesis": "The site is the guild's raid interface, and the first thing it does is ask you to click Ready.",
+      "palette": ["#0a0e1c", "#ffd100", "#a335ee", "#0070dd", "#1eff00", "#ff4800"],
+      "materials": ["translucent tooltip panels with a fine double border", "raid-frame health bars in class colors", "timer bars that drain", "raid target markers (skull, star, moon…)"],
+      "viewport": "A real ready-check dialog ('SideQuest has initiated a ready check') as the hero CTA: Ready opens the Discord, Not Ready scrolls down to learn more. Behind it, a 40-slot raid frame grid with nearly every slot an open, designed ghost frame. A live pull-timer bar drains toward the Nov 4 launch. A giant raid-warning headline sits over it all.",
+      "risk": "It's the tool the audience already uses, so it could read as a costume or as sweaty. Dark ground sits near the 'near-black + neon' rut; item-quality colors have to carry it.",
+      "raised": [
+        {"from": "signals-instruments-seven-segment-alarm-clock", "raise": "Unlit is designed too: open raid slots are drawn as deliberately as filled ones, and that is how we recruit."},
+        {"from": "clouds-storms-auroras-iridescent-cloud-edge", "raise": "Color stays on edges and names (frame borders, item titles, chat channels). Body text stays achromatic, the way tooltips work."},
+        {"from": "editorial-sequence-montage-botanical-folio-season", "raise": "One fixed-scale raid grid persists down the page, and its fill-state tells the guild's timeline: forming, launch, dungeons, Molten Core."},
+        {"from": "dream-surreal-impossible-worlds-alphabet-storm", "raise": "Raid-warning text at monumental scale is the headline voice, never a timid H1."},
+        {"from": "ikeda-datamatics", "raise": "Density courage: raid charts and signups use real tabular density instead of a card grid."},
+        {"from": "pop-culture-shelf-pulp-rocketship-plate", "raise": "One trajectory: the launch pull-timer bar is the page's single motion vector, and every later timer rides the same track."}
+      ],
+      "comp": ".impeccable/mocks/decision/assigned.webp",
+      "wireframe": {"cols": 12, "rows": 10, "regions": [
+        {"label": "timer bar: launch", "x": 0, "y": 0, "w": 12, "h": 1, "accent": true},
+        {"label": "RAID WARNING headline", "x": 1, "y": 1, "w": 10, "h": 2},
+        {"label": "40-slot raid frames (ghost slots)", "x": 0, "y": 3, "w": 7, "h": 6},
+        {"label": "Ready check: Ready / Not Ready", "x": 7, "y": 4, "w": 5, "h": 3, "accent": true},
+        {"label": "guild chat log", "x": 7, "y": 7, "w": 5, "h": 2},
+        {"label": "next section: role tooltips", "x": 0, "y": 9, "w": 12, "h": 1}
+      ]}
+    },
+    {
+      "id": "model-pick",
+      "label": "The Official Strategy Guide",
+      "kicker": "IMPECCABLE’S PICK",
+      "lineage": "The 2004 printed WoW strategy guide: glossy spreads, numbered boss maps, loot tables, Tip sidebars",
+      "thesis": "SideQuest as a chapter in the guidebook every veteran owned: the guild documented like a dungeon.",
+      "palette": ["#14233f", "#e9b23a", "#c8381f", "#f2efe6", "#2f6b3a"],
+      "materials": ["glossy coated paper", "four-color process print", "numbered map callouts", "ruled loot tables"],
+      "viewport": "An open guide spread: left page 'Chapter: SideQuest' with a numbered callout map (1 = Discord, 2 = raids, 3 = addons). Right page has a 'Recommended level / group size / rewards' stat box with Join Discord as the reward, and a Tip sidebar.",
+      "risk": "My top-ranked candidate, and the familiar one. Print spreads can drift toward editorial-magazine habits, and it resonates most with veterans.",
+      "comp": ".impeccable/mocks/decision/model-pick.webp",
+      "wireframe": {"cols": 12, "rows": 10, "regions": [
+        {"label": "running head / chapter tab", "x": 0, "y": 0, "w": 12, "h": 1},
+        {"label": "numbered callout map", "x": 0, "y": 1, "w": 6, "h": 8, "accent": true},
+        {"label": "chapter title", "x": 6, "y": 1, "w": 6, "h": 2},
+        {"label": "stat box + Join Discord", "x": 6, "y": 3, "w": 6, "h": 3, "accent": true},
+        {"label": "Tip sidebar", "x": 6, "y": 6, "w": 6, "h": 3},
+        {"label": "gutter", "x": 5, "y": 1, "w": 1, "h": 8}
+      ]}
+    },
+    {
+      "id": "challenger-botanical-folio",
+      "label": "Seasonal Folio",
+      "verdict": "declined",
+      "lineage": "botanical folio of one subject across fixed-scale stages",
+      "thesis": "One character drawn at levels 1, 20, 40, and 60 on one baseline.",
+      "palette": ["#f1ead8", "#3f6b3a", "#b3261e", "#1c1a17"],
+      "materials": ["engraved plates", "sepia hairlines"],
+      "viewport": "Four fixed-scale plates of a hero leveling up, captions beneath.",
+      "case": "Fuses onto the journey, but players don't recognize the form, and it never shows raids, addons, or signups.",
+      "risk": "Cream plate ground: a known rut, and quiet for a guild.",
+      "kept": "Fixed-scale sequence: the raid grid keeps one scale while its fill-state tells the timeline.",
+      "hero": "https://impeccable.style/worlds/cards/editorial-sequence-montage-botanical-folio-season-hero.webp"
+    },
+    {
+      "id": "challenger-pulp-rocket",
+      "label": "Pulp Plate",
+      "verdict": "declined",
+      "lineage": "pulp magazine interior plate",
+      "thesis": "A gryphon crossing a red sky on a diagonal, its title lettered at speed.",
+      "palette": ["#b5361f", "#1d2a4d", "#e8d8a8", "#8a8f99"],
+      "materials": ["airbrush", "pulp paper"],
+      "viewport": "Diagonal flight plate with the guild name in streamlined caps.",
+      "case": "Spectacle without guild function. Loses on recognition and on clarity.",
+      "risk": "Becomes a painted poster with no working parts.",
+      "kept": "One trajectory: the launch timer is the page's single motion vector.",
+      "hero": "https://impeccable.style/worlds/cards/pop-culture-shelf-pulp-rocketship-plate-hero.webp"
+    },
+    {
+      "id": "challenger-cloud-edge",
+      "label": "Iridescent Edge",
+      "verdict": "declined",
+      "lineage": "cloud iridescence",
+      "thesis": "Achromatic field, spectral color only at the edges.",
+      "palette": ["#f7f8fa", "#59606b", "#8fe3c8", "#e9a3c0", "#9b7fe0"],
+      "materials": ["cloud white", "hairline spectra"],
+      "viewport": "White field, guild name ringed by a thin spectral fringe.",
+      "case": "No WoW identity at all. Loses on both axes.",
+      "risk": "Reads as a wellness brand.",
+      "kept": "Color lives only on edges and names. Body text stays neutral.",
+      "hero": "https://impeccable.style/worlds/cards/clouds-storms-auroras-iridescent-cloud-edge-hero.webp"
+    },
+    {
+      "id": "challenger-alphabet-storm",
+      "label": "Alphabet Storm",
+      "verdict": "declined",
+      "lineage": "type behaving as weather",
+      "thesis": "Floating combat text as matter: words that hit, crit, and scatter.",
+      "palette": ["#fafafa", "#0d0d0d", "#c0c4cc", "#8a8d93"],
+      "materials": ["monumental grotesk", "particle type"],
+      "viewport": "SIDEQUEST bursts into scrolling combat text across white.",
+      "case": "Clever, but it never shows how the guild works.",
+      "risk": "Pure spectacle that tanks performance.",
+      "kept": "Monumental type: the raid-warning headline at full scale.",
+      "hero": "https://impeccable.style/worlds/cards/dream-surreal-impossible-worlds-alphabet-storm-hero.webp"
+    },
+    {
+      "id": "challenger-seven-segment",
+      "label": "Segment Display",
+      "verdict": "declined",
+      "lineage": "seven-segment clocks and scoreboards",
+      "thesis": "Launch countdown as a scoreboard, ghost segments and all.",
+      "palette": ["#0b0b0b", "#ff2a1a", "#2a0d0b", "#ffb000"],
+      "materials": ["LED segments", "matte black"],
+      "viewport": "Giant red countdown digits with Join below.",
+      "case": "A strong countdown, but it isn't Azeroth. Loses on recognition and on clarity.",
+      "risk": "A single-gimmick page.",
+      "kept": "Unlit is designed: empty raid slots are drawn as deliberately as filled ones.",
+      "hero": "https://impeccable.style/worlds/cards/signals-instruments-seven-segment-alarm-clock-hero.webp"
+    },
+    {
+      "id": "challenger-datamatics",
+      "label": "Datamatics",
+      "verdict": "declined",
+      "lineage": "Ikeda barcode data fields",
+      "thesis": "The combat log as a black-and-white data sublime.",
+      "palette": ["#000000", "#ffffff"],
+      "materials": ["barcode bars", "monospace numerics"],
+      "viewport": "Strobing log columns with the guild name inverted.",
+      "case": "Cold. Casual members won't see themselves in it.",
+      "risk": "Feels like a parse site, the 'too sweaty' failure.",
+      "kept": "Density courage in raid charts and signups.",
+      "hero": "https://impeccable.style/worlds/cards/ikeda-datamatics-hero.webp"
+    }
+  ],
+  "reroll": {"registers": ["safer", "bolder"]},
+  "buildPath": {"value": "code"},
+  "canon": true,
+  "canonCard": {
+    "label": "The category standard",
+    "thesis": "The classic guild site, built to a high standard: cinematic hero, crest, schedule, recruitment, Join.",
+    "palette": ["#0d0f14", "#c9a14a", "#1e3a6e", "#e8e2d4"],
+    "materials": ["full-bleed key art", "engraved serif caps", "stone-and-gold panels"],
+    "viewport": "Full-bleed atmospheric art, centered crest and guild name, Join Discord button, then About / Raids / Recruitment sections.",
+    "risk": "This is the generic fantasy-MMO template you asked to avoid, and it needs key art we don't have.",
+    "comp": ".impeccable/mocks/decision/canon.webp",
+    "wireframe": {"cols": 12, "rows": 10, "regions": [
+      {"label": "nav", "x": 0, "y": 0, "w": 12, "h": 1},
+      {"label": "full-bleed key art + crest", "x": 0, "y": 1, "w": 12, "h": 6, "accent": true},
+      {"label": "Join Discord", "x": 4, "y": 5, "w": 4, "h": 1},
+      {"label": "about / raids / recruitment", "x": 0, "y": 7, "w": 12, "h": 3}
+    ]}
+  },
+  "steer": true
+}

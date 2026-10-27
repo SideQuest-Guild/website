@@ -1,0 +1,21 @@
+---
+import { Image } from "astro:assets";
+import { DISCORD_INVITE } from "../config";
+import ctaPlate from "../../assets/plates/cta-plate.png";
+
+interface Props {
+  label?: string;
+  href?: string;
+}
+
+const { label = "Join the Discord", href = DISCORD_INVITE } = Astro.props;
+const isJoin = href === DISCORD_INVITE;
+---
+
+<a class="plaque" href={href}>
+  <Image src={ctaPlate} width={800} alt="" />
+  <span>
+    {isJoin && <i class="i-discord" aria-hidden="true"></i>}
+    {label}
+  </span>
+</a>

@@ -1,0 +1,46 @@
+{
+  "errors": [
+    {
+      "column": 33,
+      "path": "bot/src/sidequest_bot/plugins/logging.py",
+      "name": "bad-argument-type",
+      "concise_description": "Argument `AppCommand | AutoModRule | Emoji | Guild | GuildChannel | GuildSticker | Invite | Member | Object | PartialIntegration | Role | ScheduledEvent | StageInstance | Thread | User | Webhook | None` is not assignable to parameter `user` with type `Member | User` in function `sidequest_bot.lib.embeds.user_line`",
+      "severity": "error"
+    },
+    {
+      "column": 15,
+      "path": "bot/src/sidequest_bot/plugins/role_menus.py",
+      "name": "bad-override",
+      "concise_description": "Class member `RoleMenuButton.callback` overrides parent class `DynamicItem` in an inconsistent manner",
+      "severity": "error"
+    },
+    {
+      "column": 57,
+      "path": "packages/sidequest-common/src/sidequest_common/settings.py",
+      "name": "bad-argument-type",
+      "concise_description": "Argument `str` is not assignable to parameter `extra` with type `Literal['allow', 'forbid', 'ignore'] | None` in function `pydantic_settings.main.SettingsConfigDict.__init__`",
+      "severity": "error"
+    },
+    {
+      "column": 58,
+      "path": "packages/sidequest-common/src/sidequest_common/settings.py",
+      "name": "bad-argument-type",
+      "concise_description": "Argument `str` is not assignable to parameter `extra` with type `Literal['allow', 'forbid', 'ignore'] | None` in function `pydantic_settings.main.SettingsConfigDict.__init__`",
+      "severity": "error"
+    },
+    {
+      "column": 62,
+      "path": "packages/sidequest-common/src/sidequest_common/settings.py",
+      "name": "bad-argument-type",
+      "concise_description": "Argument `str` is not assignable to parameter `extra` with type `Literal['allow', 'forbid', 'ignore'] | None` in function `pydantic_settings.main.SettingsConfigDict.__init__`",
+      "severity": "error"
+    },
+    {
+      "column": 36,
+      "path": "tests/unit/api/test_role_menus.py",
+      "name": "unbound-name",
+      "concise_description": "`menu` may be uninitialized",
+      "severity": "error"
+    }
+  ]
+}

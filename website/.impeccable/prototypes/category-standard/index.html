@@ -1,0 +1,1082 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SideQuest — An Alliance Guild for World of Warcraft: Forever</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0d0f14;
+    --bg-deep: #07080b;
+    --gold: #c9a14a;
+    --gold-bright: #e3c27c;
+    --gold-dim: #8a6f36;
+    --blue: #1e3a6e;
+    --blue-deep: #11213f;
+    --blue-bright: #3a5c9e;
+    --ink: #e8e2d4;
+    --ink-dim: #b7ab8f;
+    --ink-faint: #8c8370;
+    --line: rgba(201,161,74,0.28);
+    --line-soft: rgba(201,161,74,0.14);
+    --shadow: 0 18px 40px rgba(0,0,0,0.55);
+    --shadow-soft: 0 10px 24px rgba(0,0,0,0.45);
+    --radius: 2px;
+    --measure: 68ch;
+    --display: 'Cinzel', 'Times New Roman', serif;
+    --body: 'EB Garamond', 'Iowan Old Style', 'Georgia', serif;
+  }
+
+  *{ box-sizing: border-box; }
+  html{ scroll-behavior: auto; }
+  html.smooth{ scroll-behavior: smooth; }
+
+  body{
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--body);
+    font-size: 18px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::selection{ background: var(--gold); color: var(--bg-deep); }
+
+  ::-webkit-scrollbar{ width: 12px; height: 12px; }
+  ::-webkit-scrollbar-track{ background: var(--bg-deep); }
+  ::-webkit-scrollbar-thumb{ background: var(--gold-dim); border: 3px solid var(--bg-deep); border-radius: 8px; }
+  ::-webkit-scrollbar-thumb:hover{ background: var(--gold); }
+  html{ scrollbar-color: var(--gold-dim) var(--bg-deep); scrollbar-width: thin; }
+
+  :focus{ outline: none; }
+  :focus-visible{
+    outline: 2px solid var(--gold-bright);
+    outline-offset: 3px;
+    border-radius: 1px;
+  }
+
+  a{ color: inherit; text-decoration: none; }
+
+  img, svg{ display: block; max-width: 100%; }
+
+  .tnum{ font-variant-numeric: tabular-nums; }
+
+  h1,h2,h3{
+    font-family: var(--display);
+    font-weight: 700;
+    text-transform: uppercase;
+    margin: 0;
+    letter-spacing: 0.06em;
+  }
+
+  p{ margin: 0; }
+
+  .container{
+    max-width: 1180px;
+    margin: 0 auto;
+    padding-inline: clamp(24px, 5vw, 64px);
+  }
+
+  .visually-hidden{
+    position: absolute; width: 1px; height: 1px; overflow: hidden;
+    clip: rect(0,0,0,0); white-space: nowrap; border: 0; padding: 0; margin: -1px;
+  }
+
+  /* ---------- Nav ---------- */
+  .nav{
+    position: fixed;
+    inset: 0 0 auto 0;
+    z-index: 50;
+    background: linear-gradient(to bottom, rgba(7,8,11,0.92), rgba(7,8,11,0.78));
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .nav-row{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 64px;
+  }
+  .nav-brand{
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-family: var(--display);
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    font-size: 0.95rem;
+    color: var(--ink);
+  }
+  .nav-brand .crest-mini{ width: 30px; height: 36px; flex: none; }
+  .nav-links{
+    display: flex;
+    gap: clamp(18px, 3vw, 34px);
+    list-style: none;
+    margin: 0; padding: 0;
+  }
+  .nav-links a{
+    font-size: 0.82rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+    position: relative;
+    padding-bottom: 4px;
+    transition: color 0.2s ease;
+  }
+  .nav-links a::after{
+    content: "";
+    position: absolute;
+    left: 0; right: 100%;
+    bottom: 0;
+    height: 1px;
+    background: var(--gold-bright);
+    transition: right 0.25s cubic-bezier(.16,1,.3,1);
+  }
+  .nav-links a:hover{ color: var(--ink); }
+  .nav-links a:hover::after{ right: 0; }
+  .nav-cta{
+    display: none;
+  }
+  .btn{
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 26px;
+    font-family: var(--display);
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    border: 1px solid transparent;
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+  }
+  .btn-primary{
+    background: var(--gold);
+    color: var(--bg-deep);
+    box-shadow: var(--shadow-soft);
+  }
+  .btn-primary:hover{
+    background: var(--gold-bright);
+    transform: translateY(-2px);
+    box-shadow: 0 16px 30px rgba(0,0,0,0.5);
+  }
+  .btn-primary:active{ transform: translateY(0); }
+  .btn-ghost{
+    background: transparent;
+    color: var(--ink);
+    border-color: var(--line);
+  }
+  .btn-ghost:hover{
+    border-color: var(--gold-bright);
+    color: var(--gold-bright);
+  }
+  .btn-nav{ padding: 9px 20px; font-size: 0.72rem; }
+  .btn-disabled{
+    background: rgba(232,226,212,0.06);
+    color: var(--ink-faint);
+    border: 1px dashed var(--line);
+    cursor: not-allowed;
+  }
+  .btn-disabled:hover{ transform: none; box-shadow: none; }
+
+  @media (min-width: 860px){
+    .nav-cta{ display: inline-flex; }
+  }
+  @media (max-width: 859px){
+    .nav-links{ display: none; }
+  }
+
+  /* ---------- Hero ---------- */
+  .hero{
+    position: relative;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    background: radial-gradient(ellipse at 50% 18%, #1a2338 0%, #0d0f14 55%, #07080b 100%);
+  }
+  .landscape{
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+  }
+  .landscape-layer{
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    will-change: transform;
+  }
+  .landscape svg{ width: 100%; height: 100%; }
+
+  .motes{ position: absolute; inset: 0; z-index: 1; pointer-events: none; }
+  .mote{
+    position: absolute;
+    width: 3px; height: 3px;
+    border-radius: 50%;
+    background: var(--gold-bright);
+    opacity: 0.35;
+    animation: drift linear infinite;
+    box-shadow: 0 0 6px rgba(227,194,124,0.6);
+  }
+  @keyframes drift{
+    0%{ transform: translateY(0) translateX(0); opacity: 0; }
+    10%{ opacity: 0.45; }
+    90%{ opacity: 0.3; }
+    100%{ transform: translateY(-120px) translateX(18px); opacity: 0; }
+  }
+
+  .hero-content{
+    position: relative;
+    z-index: 2;
+    text-align: center;
+    padding: 140px 24px 80px;
+    max-width: 760px;
+  }
+  .crest-hero{
+    width: clamp(120px, 16vw, 180px);
+    height: auto;
+    margin: 0 auto 28px;
+    filter: drop-shadow(0 12px 30px rgba(0,0,0,0.6));
+  }
+  .site-title{
+    font-size: clamp(2.6rem, 7vw, 4.6rem);
+    letter-spacing: 0.16em;
+    color: var(--ink);
+    text-shadow: 0 1px 0 rgba(255,255,255,0.14), 0 2px 1px rgba(0,0,0,0.5), 0 10px 26px rgba(0,0,0,0.6);
+    line-height: 1.05;
+  }
+  .site-sub{
+    margin-top: 10px;
+    font-family: var(--display);
+    font-size: 0.78rem;
+    letter-spacing: 0.4em;
+    color: var(--gold);
+    text-transform: uppercase;
+  }
+  .pitch{
+    margin-top: 26px;
+    font-size: clamp(1.05rem, 1.6vw, 1.3rem);
+    font-style: italic;
+    color: var(--ink-dim);
+    max-width: 44ch;
+    margin-inline: auto;
+    line-height: 1.5;
+  }
+  .hero-actions{
+    margin-top: 36px;
+    display: flex;
+    gap: 18px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .launch-line{
+    margin-top: 34px;
+    font-size: 0.82rem;
+    letter-spacing: 0.08em;
+    color: var(--ink-faint);
+  }
+  .launch-line .tnum{ color: var(--gold-bright); }
+  .launch-sub{
+    margin-top: 6px;
+    font-size: 0.74rem;
+    color: var(--ink-faint);
+    opacity: 0.8;
+  }
+
+  .scroll-cue{
+    position: absolute;
+    bottom: 28px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 2;
+    width: 18px;
+    height: 30px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+  }
+  .scroll-cue::before{
+    content: "";
+    position: absolute;
+    top: 6px; left: 50%;
+    width: 3px; height: 6px;
+    background: var(--gold-bright);
+    border-radius: 2px;
+    transform: translateX(-50%);
+    animation: scrollcue 1.8s ease-in-out infinite;
+  }
+  @keyframes scrollcue{
+    0%,100%{ transform: translate(-50%, 0); opacity: 1; }
+    50%{ transform: translate(-50%, 10px); opacity: 0.3; }
+  }
+
+  /* ---------- Sections general ---------- */
+  section{ position: relative; }
+  .section-pad{ padding: clamp(80px, 11vw, 140px) 0; }
+  .section-head{
+    max-width: 640px;
+    margin-bottom: clamp(48px, 7vw, 76px);
+  }
+  .section-head h2{
+    font-size: clamp(1.9rem, 3.4vw, 2.6rem);
+    letter-spacing: 0.1em;
+    color: var(--ink);
+  }
+  .section-head .rule{
+    width: 64px; height: 2px;
+    background: var(--gold);
+    margin: 18px 0 0;
+  }
+  .section-head p{
+    margin-top: 20px;
+    color: var(--ink-dim);
+    font-size: 1.08rem;
+    max-width: var(--measure);
+  }
+
+  .about{ background: var(--bg); }
+  .about .section-head{ margin-bottom: clamp(30px, 4vw, 46px); }
+
+  .pillar{
+    display: grid;
+    grid-template-columns: minmax(200px, 300px) 1fr;
+    gap: clamp(20px, 3vw, 40px);
+    align-items: center;
+    padding-block: clamp(20px, 3vw, 32px);
+  }
+  .pillar + .pillar{ border-top: 1px solid var(--line-soft); }
+  .pillar.reverse .pillar-art{ order: 2; }
+  .pillar.reverse .pillar-text{ order: 1; }
+  .pillar-art{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .pillar-art svg{ width: 100%; max-width: 240px; height: auto; color: var(--gold); }
+  .pillar-art .roundel{ stroke: var(--line); fill: rgba(201,161,74,0.05); }
+  .pillar-text h3{
+    font-size: clamp(1.3rem, 2vw, 1.6rem);
+    letter-spacing: 0.1em;
+    color: var(--gold-bright);
+  }
+  .pillar-text p{
+    margin-top: 10px;
+    color: var(--ink-dim);
+    font-size: 1.05rem;
+    max-width: 52ch;
+  }
+  @media (max-width: 720px){
+    .pillar, .pillar.reverse{
+      grid-template-columns: 1fr;
+      text-align: center;
+    }
+    .pillar.reverse .pillar-art, .pillar.reverse .pillar-text{ order: initial; }
+    .pillar-art svg{ max-width: 170px; }
+    .pillar-text p{ margin-inline: auto; }
+  }
+
+  /* ---------- Raids & Recruitment ---------- */
+  .raids{ background: linear-gradient(180deg, var(--bg) 0%, var(--bg-deep) 100%); border-top: 1px solid var(--line-soft); border-bottom: 1px solid var(--line-soft); }
+
+  .raids-grid{
+    display: grid;
+    grid-template-columns: 1.1fr 0.9fr;
+    gap: clamp(32px, 4vw, 56px);
+  }
+  @media (max-width: 920px){
+    .raids-grid{ grid-template-columns: 1fr; }
+  }
+
+  .panel{
+    background: rgba(201,161,74,0.03);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: clamp(24px, 3vw, 36px);
+  }
+  .panel h3{
+    font-size: 1.05rem;
+    letter-spacing: 0.1em;
+    color: var(--gold);
+    margin-bottom: 18px;
+  }
+  .panel h3 .status-tbd{
+    font-family: var(--body);
+    font-style: italic;
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: 0;
+    color: var(--ink-faint);
+    font-size: 0.88rem;
+  }
+
+  table{ width: 100%; border-collapse: collapse; }
+  .schedule-table th, .schedule-table td{
+    text-align: left;
+    padding: 12px 10px;
+    border-bottom: 1px solid var(--line-soft);
+    font-size: 0.98rem;
+  }
+  .schedule-table th{
+    font-family: var(--display);
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    font-weight: 600;
+  }
+  .schedule-table td{ color: var(--ink-dim); }
+  .schedule-table td.pending{ color: var(--gold-dim); font-style: italic; }
+
+  .meta-list{
+    list-style: none;
+    margin: 18px 0 0;
+    padding: 0;
+    display: flex;
+    gap: 28px;
+    flex-wrap: wrap;
+  }
+  .meta-list li{
+    font-size: 0.86rem;
+    color: var(--ink-faint);
+  }
+  .meta-list b{ color: var(--ink-dim); font-weight: 600; }
+
+  .role-list{ list-style: none; margin: 0; padding: 0; }
+  .role-list li{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .role-list li:last-child{ border-bottom: none; }
+  .role-id{ display: flex; align-items: center; gap: 14px; }
+  .role-id svg{ width: 26px; height: 26px; color: var(--gold); flex: none; }
+  .role-name{ font-size: 1rem; color: var(--ink); }
+  .role-status{
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.78rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--gold-bright);
+  }
+  .role-status::before{
+    content: "";
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--gold-bright);
+    box-shadow: 0 0 6px rgba(227,194,124,0.7);
+  }
+
+  .preview-tag{
+    display: inline-block;
+    margin-top: 48px;
+    margin-bottom: 20px;
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    border: 1px solid var(--line);
+    padding: 6px 12px;
+    border-radius: 999px;
+  }
+
+  .tools-grid{
+    display: grid;
+    grid-template-columns: 1.2fr 0.8fr;
+    gap: clamp(24px, 3vw, 40px);
+  }
+  @media (max-width: 920px){ .tools-grid{ grid-template-columns: 1fr; } }
+
+  .addon-row{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 16px 0;
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .addon-row:last-child{ border-bottom: none; }
+  .addon-name{ color: var(--ink); font-size: 1rem; }
+  .addon-desc{ color: var(--ink-faint); font-size: 0.86rem; margin-top: 3px; }
+
+  .chart-thumb{
+    border: 1px solid var(--line);
+    padding: 20px;
+    border-radius: var(--radius);
+    background: rgba(30,58,110,0.08);
+  }
+  .chart-thumb svg{ width: 100%; height: auto; }
+  .chart-caption{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 14px;
+    gap: 12px;
+  }
+  .chart-caption span{ font-size: 0.84rem; color: var(--ink-faint); }
+
+  .signup-table th, .signup-table td{
+    padding: 10px 8px;
+    font-size: 0.92rem;
+    border-bottom: 1px solid var(--line-soft);
+    text-align: left;
+  }
+  .signup-table th{
+    font-family: var(--display);
+    font-size: 0.68rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+  .signup-table td.empty-slot{ color: var(--ink-faint); font-style: italic; }
+
+  /* ---------- Closing banner ---------- */
+  .closing{
+    position: relative;
+    padding: clamp(90px, 12vw, 150px) 0;
+    text-align: center;
+    overflow: hidden;
+    background: radial-gradient(ellipse at 50% 120%, rgba(30,58,110,0.55), transparent 60%), var(--bg-deep);
+  }
+  .closing-ornament{
+    position: absolute;
+    inset: 0;
+    opacity: 0.5;
+    pointer-events: none;
+  }
+  .closing-content{ position: relative; z-index: 1; }
+  .crest-closing{ width: 80px; height: auto; margin: 0 auto 24px; }
+  .closing h2{
+    font-size: clamp(1.9rem, 3.6vw, 2.8rem);
+    letter-spacing: 0.1em;
+  }
+  .closing p{
+    margin-top: 16px;
+    color: var(--ink-dim);
+    max-width: 46ch;
+    margin-inline: auto;
+    font-size: 1.08rem;
+  }
+  .closing .hero-actions{ margin-top: 32px; }
+
+  /* ---------- Footer ---------- */
+  footer{
+    background: var(--bg-deep);
+    border-top: 1px solid var(--line-soft);
+    padding: 64px 0 36px;
+  }
+  .footer-grid{
+    display: grid;
+    grid-template-columns: 1.3fr 1fr 1fr;
+    gap: 40px;
+  }
+  @media (max-width: 720px){
+    .footer-grid{ grid-template-columns: 1fr; gap: 32px; }
+  }
+  .footer-brand{
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-family: var(--display);
+    letter-spacing: 0.14em;
+    font-size: 1rem;
+    color: var(--ink);
+  }
+  .footer-brand .crest-mini{ width: 28px; height: 34px; }
+  .footer-tag{ margin-top: 14px; color: var(--ink-faint); font-size: 0.9rem; max-width: 36ch; }
+  .footer-col h4{
+    font-family: var(--display);
+    font-size: 0.74rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 14px;
+  }
+  .footer-col ul{ list-style: none; margin: 0; padding: 0; }
+  .footer-col li{ margin-bottom: 8px; font-size: 0.9rem; color: var(--ink-dim); }
+  .footer-col a:hover{ color: var(--gold-bright); }
+  .footer-col .chan-kind{ color: var(--ink-faint); font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.08em; display: block; margin: 14px 0 6px; }
+  .footer-col .chan-kind:first-child{ margin-top: 0; }
+  .footer-bottom{
+    margin-top: 48px;
+    padding-top: 24px;
+    border-top: 1px solid var(--line-soft);
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    font-size: 0.8rem;
+    color: var(--ink-faint);
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; scroll-behavior: auto !important; }
+    .landscape-layer{ transform: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<!--
+  DISCORD_INVITE: single source of truth for the Join action.
+  TODO(guild-admin): replace with the real Discord invite URL once the server invite is generated.
+-->
+<script>
+  const DISCORD_INVITE = "#join-discord";
+</script>
+
+<!-- ============ Reusable crest markup (shield + lion rampant + quest-marker) ============ -->
+
+<nav class="nav" aria-label="Primary">
+  <div class="container nav-row">
+    <a href="#top" class="nav-brand">
+      <svg class="crest-mini" viewBox="0 0 200 240" role="img" aria-label="SideQuest crest">
+        <path d="M100 8 L188 34 L188 118 C188 170 150 210 100 232 C50 210 12 170 12 118 L12 34 Z" fill="#13203e" stroke="#c9a14a" stroke-width="5"/>
+        <polygon points="100,70 114.5,92.9 141,86 135.1,113.5 158,128 135.1,142.5 141,169 114.5,163.1 100,186 85.5,163.1 59,169 64.9,142.5 42,128 64.9,113.5 59,87 85.5,92.9" fill="#c9a14a"/>
+        <circle cx="100" cy="128" r="34" fill="#13203e" stroke="#c9a14a" stroke-width="2.5"/>
+        <circle cx="83" cy="120" r="5" fill="#c9a14a"/>
+        <circle cx="117" cy="120" r="5" fill="#c9a14a"/>
+        <path d="M93 130 L107 130 L100 142 Z" fill="#c9a14a"/>
+        <path d="M86 152 C92 157 108 157 114 152" fill="none" stroke="#c9a14a" stroke-width="3" stroke-linecap="round"/>
+        <g stroke="#c9a14a" stroke-width="3" stroke-linecap="round">
+          <path d="M100 20 L100 34 M93 27 L107 27"/>
+        </g>
+        <circle cx="100" cy="27" r="3" fill="none" stroke="#c9a14a" stroke-width="2"/>
+      </svg>
+      SideQuest
+    </a>
+    <ul class="nav-links">
+      <li><a href="#top">Home</a></li>
+      <li><a href="#about">About</a></li>
+      <li><a href="#raids">Raids</a></li>
+      <li><a href="#addons">Addons</a></li>
+      <li><a id="nav-join" href="#join-discord">Join</a></li>
+    </ul>
+    <a id="nav-cta" class="btn btn-primary btn-nav nav-cta" href="#join-discord">Join the Discord</a>
+  </div>
+</nav>
+
+<main id="top">
+
+  <!-- ============ HERO ============ -->
+  <header class="hero" id="home">
+    <div class="landscape" aria-hidden="true">
+      <div class="landscape-layer" data-depth="0.02">
+        <svg viewBox="0 0 1440 900" preserveAspectRatio="xMidYMax slice">
+          <defs>
+            <radialGradient id="moonGlow" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="#f3e7c6" stop-opacity="0.9"/>
+              <stop offset="45%" stop-color="#e3c27c" stop-opacity="0.35"/>
+              <stop offset="100%" stop-color="#e3c27c" stop-opacity="0"/>
+            </radialGradient>
+            <linearGradient id="skyTop" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#161d30"/>
+              <stop offset="100%" stop-color="#0d0f14"/>
+            </linearGradient>
+          </defs>
+          <rect width="1440" height="900" fill="url(#skyTop)"/>
+          <circle cx="1080" cy="150" r="130" fill="url(#moonGlow)"/>
+          <circle cx="1080" cy="150" r="46" fill="#efe3c3"/>
+          <g fill="#121a2c" opacity="0.9">
+            <polygon points="300,420 312,300 324,420"/>
+            <polygon points="330,420 342,280 354,420"/>
+            <polygon points="620,420 628,340 636,420"/>
+            <polygon points="650,420 662,310 674,420"/>
+            <polygon points="900,420 910,330 920,420"/>
+          </g>
+        </svg>
+      </div>
+      <div class="landscape-layer" data-depth="0.05">
+        <svg viewBox="0 0 1440 900" preserveAspectRatio="xMidYMax slice">
+          <polygon points="0,460 120,380 230,440 340,360 460,450 600,370 740,460 880,390 1020,450 1160,380 1300,450 1440,400 1440,900 0,900" fill="#192444" opacity="0.95"/>
+        </svg>
+      </div>
+      <div class="landscape-layer" data-depth="0.09">
+        <svg viewBox="0 0 1440 900" preserveAspectRatio="xMidYMax slice">
+          <polygon points="0,560 160,470 300,540 480,440 640,540 820,460 980,540 1150,470 1300,540 1440,480 1440,900 0,900" fill="#131b33" opacity="0.97"/>
+          <g fill="#0f1527" opacity="0.9">
+            <rect x="560" y="430" width="10" height="60"/>
+            <polygon points="555,430 565,400 575,430"/>
+            <rect x="585" y="450" width="8" height="40"/>
+            <polygon points="581,450 589,426 597,450"/>
+          </g>
+        </svg>
+      </div>
+      <div class="landscape-layer" data-depth="0.03">
+        <svg viewBox="0 0 1440 900" preserveAspectRatio="xMidYMax slice">
+          <rect x="0" y="470" width="1440" height="90" fill="#0d0f14" opacity="0.55" filter="url(#fogblur)"/>
+          <defs>
+            <filter id="fogblur" x="-20%" y="-20%" width="140%" height="140%">
+              <feGaussianBlur stdDeviation="22"/>
+            </filter>
+          </defs>
+        </svg>
+      </div>
+      <div class="landscape-layer" data-depth="0.14">
+        <svg viewBox="0 0 1440 900" preserveAspectRatio="xMidYMax slice">
+          <polygon points="0,650 140,580 320,640 500,560 700,650 900,570 1100,650 1300,580 1440,640 1440,900 0,900" fill="#090c15"/>
+        </svg>
+      </div>
+    </div>
+    <div class="motes" aria-hidden="true">
+      <span class="mote" style="left:18%; bottom:10%; animation-duration:9s; animation-delay:0s;"></span>
+      <span class="mote" style="left:32%; bottom:4%; animation-duration:12s; animation-delay:1.4s;"></span>
+      <span class="mote" style="left:47%; bottom:14%; animation-duration:10s; animation-delay:3s;"></span>
+      <span class="mote" style="left:61%; bottom:6%; animation-duration:13s; animation-delay:0.6s;"></span>
+      <span class="mote" style="left:74%; bottom:12%; animation-duration:11s; animation-delay:2.2s;"></span>
+      <span class="mote" style="left:85%; bottom:8%; animation-duration:9.5s; animation-delay:4s;"></span>
+    </div>
+
+    <div class="hero-content">
+      <svg class="crest-hero" viewBox="0 0 200 240" role="img" aria-label="SideQuest crest: a shield bearing a rampant lion beneath a quest marker">
+        <path d="M100 8 L188 34 L188 118 C188 170 150 210 100 232 C50 210 12 170 12 118 L12 34 Z" fill="#13203e" stroke="#c9a14a" stroke-width="5"/>
+        <path d="M100 8 L188 34 L188 118 C188 170 150 210 100 232 C50 210 12 170 12 118 L12 34 Z" fill="none" stroke="#e3c27c" stroke-width="1" opacity="0.4" transform="translate(0,2) scale(0.97)" transform-origin="100 120"/>
+        <polygon points="100,70 114.5,92.9 141,86 135.1,113.5 158,128 135.1,142.5 141,169 114.5,163.1 100,186 85.5,163.1 59,169 64.9,142.5 42,128 64.9,113.5 59,87 85.5,92.9" fill="#c9a14a"/>
+        <circle cx="100" cy="128" r="34" fill="#13203e" stroke="#c9a14a" stroke-width="2.5"/>
+        <circle cx="83" cy="120" r="5" fill="#c9a14a"/>
+        <circle cx="117" cy="120" r="5" fill="#c9a14a"/>
+        <path d="M93 130 L107 130 L100 142 Z" fill="#c9a14a"/>
+        <path d="M86 152 C92 157 108 157 114 152" fill="none" stroke="#c9a14a" stroke-width="3" stroke-linecap="round"/>
+        <g stroke="#c9a14a" stroke-width="3" stroke-linecap="round">
+          <path d="M100 18 L100 36 M91 27 L109 27 M93.5 20.5 L106.5 33.5 M106.5 20.5 L93.5 33.5"/>
+        </g>
+        <circle cx="100" cy="27" r="4" fill="none" stroke="#c9a14a" stroke-width="2.4"/>
+      </svg>
+      <h1 class="site-title">SideQuest</h1>
+      <p class="site-sub">An Alliance Guild</p>
+      <p class="pitch">An Alliance guild for World of Warcraft: Forever — built so the journey and the raid both count.</p>
+      <div class="hero-actions">
+        <a class="btn btn-primary" id="hero-join" href="#join-discord">Join the Discord</a>
+        <a class="btn btn-ghost" href="#about">Learn more</a>
+      </div>
+      <p class="launch-line">WoW Forever launches <span class="tnum">November 4, 2026</span>.</p>
+      <p class="launch-sub">Name reservation opened <span class="tnum">October 27, 2026</span>.</p>
+    </div>
+
+    <div class="scroll-cue" aria-hidden="true"></div>
+  </header>
+
+  <!-- ============ ABOUT ============ -->
+  <section class="about section-pad" id="about">
+    <div class="container">
+      <div class="section-head">
+        <h2>About the Guild</h2>
+        <div class="rule"></div>
+        <p>Three pillars, one roster. Whether you're here for the company or the kill, SideQuest holds the door open.</p>
+      </div>
+
+      <div class="pillar">
+        <div class="pillar-art" aria-hidden="true">
+          <svg viewBox="0 0 160 160" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+            <circle class="roundel" cx="80" cy="80" r="72" stroke-width="1.5"/>
+            <path d="M80 126 C60 114 46 94 49 70 C50 58 58 50 67 53 C62 38 70 25 80 20 C90 25 98 38 93 53 C102 50 110 58 111 70 C114 94 100 114 80 126 Z"/>
+            <path d="M80 126 L80 142"/>
+            <path d="M50 142 L110 142"/>
+            <path d="M38 142 L122 142"/>
+            <circle cx="80" cy="76" r="4" fill="currentColor" stroke="none"/>
+          </svg>
+        </div>
+        <div class="pillar-text">
+          <h3>Social</h3>
+          <p>No attendance quota to belong here. Drop into Lobby, run old content for the story, or just talk shop between dungeons — the guild is a place first and a roster second.</p>
+        </div>
+      </div>
+
+      <div class="pillar reverse">
+        <div class="pillar-art" aria-hidden="true">
+          <svg viewBox="0 0 160 160" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+            <circle class="roundel" cx="80" cy="80" r="72" stroke-width="1.5"/>
+            <path d="M80 24 L80 136"/>
+            <path d="M80 36 C60 36 42 44 27 57 C42 65 60 68 80 65 C100 68 118 65 133 57 C118 44 100 36 80 36 Z"/>
+            <path d="M80 86 C65 86 52 91 42 98 C52 104 65 107 80 106 C95 107 108 104 118 98 C108 91 95 86 80 86 Z"/>
+            <path d="M62 136 L98 136"/>
+          </svg>
+        </div>
+        <div class="pillar-text">
+          <h3>Raiding</h3>
+          <p>A semi-core raid team that shows up on a schedule and clears with intent. Structured enough to plan around, relaxed enough that one missed week won't cost you your spot.</p>
+        </div>
+      </div>
+
+      <div class="pillar">
+        <div class="pillar-art" aria-hidden="true">
+          <svg viewBox="0 0 160 160" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+            <circle class="roundel" cx="80" cy="80" r="72" stroke-width="1.5"/>
+            <path d="M26 128 L26 106 L56 106 L56 86 L86 86 L86 64 L116 64 L116 42 L140 42"/>
+            <path d="M130 32 L140 42 L130 52"/>
+            <path d="M26 144 L140 144"/>
+          </svg>
+        </div>
+        <div class="pillar-text">
+          <h3>Progression</h3>
+          <p>For the roster chasing the next kill, progression raiding is here too — same guild, same Discord, a harder lockout. Pick the lane that fits your week; both count.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ RAIDS & RECRUITMENT ============ -->
+  <section class="raids section-pad" id="raids">
+    <div class="container">
+      <div class="section-head">
+        <h2>Raids &amp; Recruitment</h2>
+        <div class="rule"></div>
+        <p>SideQuest hasn't picked a ruleset or region yet — Forever's rulesets lock in closer to launch. Here's the shape of what's coming.</p>
+      </div>
+
+      <div class="raids-grid">
+        <div class="panel">
+          <h3>Raid schedule <span class="status-tbd">— TBD</span></h3>
+          <table class="schedule-table tnum">
+            <thead>
+              <tr><th>Raid night</th><th>Day</th><th>Time</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Raid Night 1</td><td class="pending">TBD</td><td class="pending">TBD</td></tr>
+              <tr><td>Raid Night 2</td><td class="pending">TBD</td><td class="pending">TBD</td></tr>
+            </tbody>
+          </table>
+          <ul class="meta-list">
+            <li><b>Ruleset:</b> TBD</li>
+            <li><b>Region:</b> TBD</li>
+          </ul>
+        </div>
+
+        <div class="panel">
+          <h3>Recruitment</h3>
+          <ul class="role-list">
+            <li>
+              <span class="role-id">
+                <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M16 5 L26 9 L26 16 C26 22 21.5 26.5 16 28 C10.5 26.5 6 22 6 16 L6 9 Z"/>
+                </svg>
+                <span class="role-name">Tank</span>
+              </span>
+              <span class="role-status">Open</span>
+            </li>
+            <li>
+              <span class="role-id">
+                <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M16 27 C9 22 5 17.5 5 12.6 C5 9 7.8 6.5 11 6.5 C13.2 6.5 15 7.7 16 9.4 C17 7.7 18.8 6.5 21 6.5 C24.2 6.5 27 9 27 12.6 C27 17.5 23 22 16 27 Z"/>
+                </svg>
+                <span class="role-name">Healer</span>
+              </span>
+              <span class="role-status">Open</span>
+            </li>
+            <li>
+              <span class="role-id">
+                <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M8 24 L22 10 M22 10 L22 6 M22 10 L26 10 M15 17 L10 22"/>
+                </svg>
+                <span class="role-name">DPS</span>
+              </span>
+              <span class="role-status">Open</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <span class="preview-tag" id="addons">Preview — sample data</span>
+
+      <div class="tools-grid">
+        <div class="panel">
+          <h3>Addon downloads</h3>
+          <div class="addon-row">
+            <div>
+              <div class="addon-name">SideQuest Raid Tools</div>
+              <div class="addon-desc">Assignments, cooldown tracking, and callouts synced to the roster.</div>
+            </div>
+            <button class="btn btn-disabled" type="button" disabled>Coming soon</button>
+          </div>
+          <div class="addon-row">
+            <div>
+              <div class="addon-name">SideQuest Bulletin</div>
+              <div class="addon-desc">In-game guild announcements and signup reminders.</div>
+            </div>
+            <button class="btn btn-disabled" type="button" disabled>Coming soon</button>
+          </div>
+          <div class="addon-row">
+            <div>
+              <div class="addon-name">SideQuest Loot Log</div>
+              <div class="addon-desc">Transparent loot history, exportable for officers.</div>
+            </div>
+            <button class="btn btn-disabled" type="button" disabled>Coming soon</button>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3>Raid chart</h3>
+          <div class="chart-thumb">
+            <svg viewBox="0 0 320 200" aria-label="Sample raid position chart">
+              <rect x="0" y="0" width="320" height="200" fill="none"/>
+              <g stroke="#2a3a5c" stroke-width="1">
+                <line x1="0" y1="50" x2="320" y2="50"/>
+                <line x1="0" y1="100" x2="320" y2="100"/>
+                <line x1="0" y1="150" x2="320" y2="150"/>
+                <line x1="80" y1="0" x2="80" y2="200"/>
+                <line x1="160" y1="0" x2="160" y2="200"/>
+                <line x1="240" y1="0" x2="240" y2="200"/>
+              </g>
+              <polygon points="160,150 180,170 160,190 140,170" fill="#1e3a6e" stroke="#c9a14a" stroke-width="2"/>
+              <circle cx="60" cy="40" r="9" fill="#c9a14a"/>
+              <circle cx="110" cy="40" r="9" fill="#c9a14a"/>
+              <circle cx="40" cy="90" r="9" fill="#3a5c9e"/>
+              <circle cx="90" cy="90" r="9" fill="#3a5c9e"/>
+              <circle cx="200" cy="40" r="9" fill="#e8e2d4" opacity="0.85"/>
+              <circle cx="250" cy="40" r="9" fill="#e8e2d4" opacity="0.85"/>
+              <circle cx="220" cy="90" r="9" fill="#e8e2d4" opacity="0.85"/>
+              <circle cx="270" cy="90" r="9" fill="#e8e2d4" opacity="0.85"/>
+            </svg>
+          </div>
+          <div class="chart-caption">
+            <span>Sample position chart — not a real assignment</span>
+            <button class="btn btn-disabled" type="button" disabled>View chart</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-top: 32px;">
+        <h3>Signups <span class="status-tbd">— sample</span></h3>
+        <table class="signup-table">
+          <thead><tr><th>Role</th><th>Name</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr><td>Tank</td><td class="empty-slot">— empty —</td><td>Open</td></tr>
+            <tr><td>Healer</td><td class="empty-slot">— empty —</td><td>Open</td></tr>
+            <tr><td>DPS (1)</td><td class="empty-slot">— empty —</td><td>Open</td></tr>
+            <tr><td>DPS (2)</td><td class="empty-slot">— empty —</td><td>Open</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ CLOSING ============ -->
+  <section class="closing" id="join-discord">
+    <svg class="closing-ornament" viewBox="0 0 1440 400" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <polygon points="0,320 180,260 360,310 540,240 720,300 900,250 1080,310 1260,260 1440,300 1440,400 0,400" fill="#0d0f14"/>
+
+    </svg>
+    <div class="container closing-content">
+      <svg class="crest-closing" viewBox="0 0 200 240" role="img" aria-label="SideQuest crest">
+        <path d="M100 8 L188 34 L188 118 C188 170 150 210 100 232 C50 210 12 170 12 118 L12 34 Z" fill="#13203e" stroke="#c9a14a" stroke-width="5"/>
+        <g fill="#c9a14a">
+          <polygon points="100,55 112,74.3 131,69 126.3,88.3 143,100 126.3,111.7 131,131 112,125.7 100,145 88,125.7 69,131 73.7,111.7 57,100 73.7,88.3 69,69 88,74.3" transform="translate(0,15) scale(0.72)" transform-origin="100 100"/>
+        </g>
+        <circle cx="100" cy="128" r="24" fill="#13203e" stroke="#c9a14a" stroke-width="2"/>
+        <circle cx="90" cy="123" r="3.5" fill="#c9a14a"/>
+        <circle cx="110" cy="123" r="3.5" fill="#c9a14a"/>
+        <path d="M95 128 L105 128 L100 136 Z" fill="#c9a14a"/>
+        <circle cx="100" cy="27" r="4" fill="none" stroke="#c9a14a" stroke-width="2.4"/>
+        <path d="M100 18 L100 36 M91 27 L109 27" stroke="#c9a14a" stroke-width="3" stroke-linecap="round"/>
+      </svg>
+      <h2>Your spot's open.</h2>
+      <p>Come say hello in Lobby, ask about the raid team, or just lurk until you're ready. Either way, start in Discord.</p>
+      <div class="hero-actions">
+        <a class="btn btn-primary" id="closing-join" href="#join-discord">Join the Discord</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ FOOTER ============ -->
+  <footer>
+    <div class="container">
+      <div class="footer-grid">
+        <div>
+          <div class="footer-brand">
+            <svg class="crest-mini" viewBox="0 0 200 240" role="img" aria-label="SideQuest crest">
+              <path d="M100 8 L188 34 L188 118 C188 170 150 210 100 232 C50 210 12 170 12 118 L12 34 Z" fill="#13203e" stroke="#c9a14a" stroke-width="5"/>
+              <polygon points="100,70 114.5,92.9 141,86 135.1,113.5 158,128 135.1,142.5 141,169 114.5,163.1 100,186 85.5,163.1 59,169 64.9,142.5 42,128 64.9,113.5 59,87 85.5,92.9" fill="#c9a14a"/>
+              <circle cx="100" cy="128" r="34" fill="#13203e" stroke="#c9a14a" stroke-width="2.5"/>
+              <circle cx="83" cy="120" r="5" fill="#c9a14a"/>
+              <circle cx="117" cy="120" r="5" fill="#c9a14a"/>
+              <path d="M93 130 L107 130 L100 142 Z" fill="#c9a14a"/>
+              <path d="M86 152 C92 157 108 157 114 152" fill="none" stroke="#c9a14a" stroke-width="3" stroke-linecap="round"/>
+            </svg>
+            SideQuest
+          </div>
+          <p class="footer-tag">An Alliance guild for World of Warcraft: Forever. Casual, scheduled, and progression raiding — one roster, no gatekeeping between them.</p>
+        </div>
+        <div class="footer-col">
+          <h4>Discord Channels</h4>
+          <span class="chan-kind">Voice</span>
+          <ul>
+            <li>Lobby</li>
+            <li>dungeon-1</li>
+            <li>dungeon-2</li>
+            <li>dungeon-3</li>
+            <li>raid-1</li>
+            <li>raid-2</li>
+          </ul>
+          <span class="chan-kind">Text</span>
+          <ul>
+            <li>general</li>
+            <li>rules</li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4>Site</h4>
+          <ul>
+            <li><a href="#top">Home</a></li>
+            <li><a href="#about">About</a></li>
+            <li><a href="#raids">Raids</a></li>
+            <li><a href="#addons">Addons</a></li>
+            <li><a href="#join-discord">Join</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>SideQuest is a player-run community guild and is not affiliated with Blizzard Entertainment.</span>
+        <span>&copy; 2026 SideQuest</span>
+      </div>
+    </div>
+  </footer>
+</main>
+
+<script>
+  (function(){
+    // Wire every Join control to the single invite constant.
+    var joinIds = ["nav-join", "nav-cta", "hero-join", "closing-join"];
+    joinIds.forEach(function(id){
+      var el = document.getElementById(id);
+      if (el) el.setAttribute("href", DISCORD_INVITE);
+    });
+
+    var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    if (!reduceMotion) {
+      document.documentElement.classList.add("smooth");
+    }
+
+    var layers = document.querySelectorAll(".landscape-layer");
+    var ticking = false;
+    function applyParallax(){
+      var y = window.scrollY;
+      layers.forEach(function(layer){
+        var depth = parseFloat(layer.getAttribute("data-depth")) || 0;
+        layer.style.transform = "translateY(" + (y * depth) + "px)";
+      });
+      ticking = false;
+    }
+    function onScroll(){
+      if (reduceMotion) return;
+      if (!ticking){
+        window.requestAnimationFrame(applyParallax);
+        ticking = true;
+      }
+    }
+    window.addEventListener("scroll", onScroll, { passive: true });
+  })();
+</script>
+
+</body>
+</html>

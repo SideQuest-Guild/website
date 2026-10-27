@@ -1,0 +1,41 @@
+---
+import { getImage } from "astro:assets";
+import "../styles/site.css";
+import groundPlate from "../../assets/plates/strip-ground.png";
+import guildLogo from "../../assets/brand/sidequest-logo.png";
+import displayFont from "../fonts/LibertinusSerifDisplay.woff2?url";
+import bodyFont from "../fonts/EBGaramond.woff2?url";
+
+interface Props {
+  title: string;
+  description: string;
+}
+
+const { title, description } = Astro.props;
+// The charcoal ground tiles at 512px; one 1024px WebP covers 2x screens.
+const ground = await getImage({ src: groundPlate, width: 1024, format: "webp", quality: 82 });
+const favicon = await getImage({ src: guildLogo, width: 32, format: "png" });
+const touchIcon = await getImage({ src: guildLogo, width: 180, format: "png" });
+---
+
+<!doctype html>
+<html lang="en" style={`--ground: url(${ground.src})`}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <meta name="theme-color" content="#151515" />
+    <link rel="icon" type="image/png" href={favicon.src} />
+    <link rel="apple-touch-icon" href={touchIcon.src} />
+    <link rel="preload" as="font" type="font/woff2" href={displayFont} crossorigin />
+    <link rel="preload" as="font" type="font/woff2" href={bodyFont} crossorigin />
+    <slot name="head" />
+  </head>
+  <body>
+    <a class="skip" href="#top">
+      Skip to content
+    </a>
+    <slot />
+  </body>
+</html>

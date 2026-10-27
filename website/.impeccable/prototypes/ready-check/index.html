@@ -1,0 +1,1122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>SideQuest — Ready Check</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:ital,wght@0,400;0,500;0,600;0,700;1,500&family=Yeseva+One&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --navy-rgb: 8,11,22;
+    --panel-bg: rgba(8,11,22,0.93);
+    --panel-bg-soft: rgba(10,14,27,0.86);
+    --border-outer: rgba(0,0,0,0.9);
+    --border-inner: rgba(182,190,204,0.55);
+    --border-inner-dim: rgba(140,148,164,0.3);
+    --gold: #ffd100;
+    --gold-dim: #c9a227;
+    --gold-soft: #e6cc80;
+    --body-gray: #c7c9d3;
+    --body-gray-dim: #8d91a0;
+    --raid-warning: #ff4800;
+    --chat-guild: #40ff40;
+    --chat-officer: #40c040;
+    --chat-raid: #ff7f00;
+    --chat-system: #ffff00;
+    --q-poor: #9d9d9d;
+    --q-common: #ffffff;
+    --q-uncommon: #1eff00;
+    --q-rare: #0070dd;
+    --q-epic: #a335ee;
+    --q-legendary: #ff8000;
+    --c-warrior: #C79C6E;
+    --c-paladin: #F58CBA;
+    --c-hunter: #ABD473;
+    --c-rogue: #FFF569;
+    --c-priest: #FFFFFF;
+    --c-mage: #69CCF0;
+    --c-warlock: #9482C9;
+    --c-druid: #FF7D0A;
+    --c-you: #ffd100;
+    --font-ui: "Archivo Narrow", "Arial Narrow", Arial, sans-serif;
+    --font-display: "Yeseva One", Georgia, serif;
+    --radius: 3px;
+  }
+
+  *{ box-sizing: border-box; }
+  html{ scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce){
+    html{ scroll-behavior: auto; }
+    *{ animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
+  }
+
+  body{
+    margin:0;
+    background: #060811;
+    color: var(--body-gray);
+    font-family: var(--font-ui);
+    font-size: 16px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::selection{ background: var(--gold); color: #1a1403; }
+
+  ::-webkit-scrollbar{ width: 12px; height: 12px; }
+  ::-webkit-scrollbar-track{ background: #0a0e1c; }
+  ::-webkit-scrollbar-thumb{ background: linear-gradient(180deg,#3a3f52,#20232f); border: 1px solid rgba(0,0,0,0.8); border-radius: 2px; }
+  ::-webkit-scrollbar-thumb:hover{ background: linear-gradient(180deg,#4a4f66,#282c3a); }
+  html{ scrollbar-color: #3a3f52 #0a0e1c; }
+
+  a{ color: var(--gold); }
+  :focus-visible{
+    outline: 2px solid var(--gold);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  button{ font-family: inherit; }
+
+  .tabular{ font-variant-numeric: tabular-nums; }
+
+  /* ---------- background field ---------- */
+  .scene-field{
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background:
+      radial-gradient(ellipse 120% 70% at 50% -10%, rgba(40,52,88,0.5), transparent 60%),
+      linear-gradient(180deg, #0a0d1a 0%, #070912 55%, #05060c 100%);
+  }
+  .scene-field svg{ position:absolute; inset:0; width:100%; height:100%; opacity:0.5; }
+
+  /* ---------- DBM-style timer bar ---------- */
+  .dbm-bar{
+    position: relative;
+    width: 100%;
+    background: #04050a;
+    border-bottom: 1px solid rgba(0,0,0,0.9);
+  }
+  .dbm-bar__track{
+    position: relative;
+    height: 2.75rem;
+    background: linear-gradient(180deg, rgba(20,24,40,0.9), rgba(10,12,22,0.9));
+    overflow: hidden;
+  }
+  .dbm-bar__fill{
+    position:absolute;
+    inset: 0;
+    width: 100%;
+    background: linear-gradient(180deg, #b3360f 0%, #ff4800 45%, #7a2305 100%);
+    transform-origin: left center;
+    transition: width 1s linear;
+  }
+  .dbm-bar__fill::after{
+    content:"";
+    position:absolute; inset:0;
+    background: linear-gradient(180deg, rgba(255,255,255,0.22), transparent 55%);
+  }
+  .dbm-bar__sheen{
+    position:absolute; inset:0;
+    background-image: repeating-linear-gradient(90deg, rgba(0,0,0,0.12) 0 1px, transparent 1px 28px);
+  }
+  .dbm-bar__content{
+    position: relative;
+    z-index: 2;
+    height: 100%;
+    max-width: 90rem;
+    margin: 0 auto;
+    padding: 0 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+  .dbm-bar__label{
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    color: #fff3d6;
+    text-shadow: 0 1px 0 rgba(0,0,0,0.95), 0 0 6px rgba(0,0,0,0.6);
+    font-size: 0.95rem;
+    white-space: nowrap;
+  }
+  .dbm-bar__time{
+    font-weight: 700;
+    color: #fff;
+    text-shadow: 0 1px 0 rgba(0,0,0,0.95), 0 0 6px rgba(0,0,0,0.6);
+    font-size: 0.95rem;
+    white-space: nowrap;
+  }
+  .dbm-bar__date{
+    color: #ffe9bd;
+    opacity: 0.9;
+  }
+
+  /* ---------- hero ---------- */
+  .hero{
+    position: relative;
+    padding: 4.5rem 1.5rem 5rem;
+    max-width: 78rem;
+    margin: 0 auto;
+    text-align: center;
+  }
+  .hero__headline{
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-size: clamp(2.6rem, 7vw, 6rem);
+    line-height: 1.02;
+    letter-spacing: -0.01em;
+    color: var(--raid-warning);
+    text-shadow:
+      -2px 0 0 #1a0400, 2px 0 0 #1a0400, 0 -2px 0 #1a0400, 0 2px 0 #1a0400,
+      -2px -2px 0 #1a0400, 2px -2px 0 #1a0400, -2px 2px 0 #1a0400, 2px 2px 0 #1a0400,
+      6px 8px 14px rgba(0,0,0,0.5);
+    margin: 0 0 1rem;
+  }
+  .hero__sub{
+    max-width: 44rem;
+    margin: 0 auto 3rem;
+    color: var(--body-gray);
+    font-size: 1.15rem;
+    text-wrap: balance;
+  }
+  .hero__sub strong{ color: #fff; font-weight: 600; }
+
+  /* ---------- raid frame grid ---------- */
+  .raid-section-label{
+    font-family: var(--font-ui);
+    font-weight: 700;
+    font-size: 0.8rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--body-gray-dim);
+    margin: 0 0 1rem;
+  }
+  .raid-grid{
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.6rem 0.5rem;
+    margin: 0 auto 2.5rem;
+    max-width: 68rem;
+  }
+  .raid-group{
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .raid-group__label{
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: var(--body-gray-dim);
+    text-align: left;
+    padding-left: 2px;
+    margin-bottom: 1px;
+  }
+  .raid-frame{
+    appearance: none;
+    width: 128px;
+    min-height: 38px;
+    padding: 3px 6px;
+    background: rgba(16,20,34,0.8);
+    border: 1px solid rgba(0,0,0,0.85);
+    border-radius: 2px;
+    box-shadow: inset 0 0 0 1px rgba(150,158,176,0.18);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: default;
+    position: relative;
+    text-align: left;
+    color: inherit;
+  }
+  .raid-frame__icon{
+    flex: none;
+    width: 16px;
+    height: 16px;
+    opacity: 0.55;
+  }
+  .raid-frame__icon svg{ width:100%; height:100%; fill: var(--body-gray-dim); }
+  .raid-frame__bars{
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .raid-frame__name{
+    font-size: 0.66rem;
+    font-weight: 500;
+    color: var(--body-gray-dim);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 2px;
+  }
+  .raid-frame__hp{
+    height: 7px;
+    border-radius: 1px;
+    background: repeating-linear-gradient(90deg, rgba(120,128,148,0.18) 0 1px, transparent 1px 6px), rgba(60,64,80,0.35);
+    border: 1px dashed rgba(140,148,166,0.35);
+    position: relative;
+    overflow: hidden;
+  }
+  .raid-frame__hp-fill{
+    position: absolute;
+    inset: 0;
+    width: 0%;
+    background: var(--frame-color, var(--gold));
+    border-radius: 1px;
+  }
+  .raid-frame--open .raid-frame__name{ font-style: italic; }
+
+  .raid-frame--you{
+    border-color: rgba(255,209,0,0.55);
+    box-shadow: inset 0 0 0 1px rgba(255,209,0,0.45), 0 0 0 1px rgba(255,209,0,0.15);
+  }
+  .raid-frame--you .raid-frame__name{ color: var(--gold); font-weight: 700; font-style: normal; }
+  .raid-frame--you .raid-frame__hp{ border-style: solid; border-color: rgba(255,209,0,0.4); }
+
+  .raid-frame__check{
+    flex: none;
+    width: 14px;
+    height: 14px;
+    opacity: 0;
+    transform: scale(0.5);
+    transition: opacity .35s ease, transform .35s cubic-bezier(.2,.9,.3,1.3);
+  }
+  .raid-frame__check svg{ width: 100%; height: 100%; fill: var(--q-uncommon); }
+
+  .raid-frame.is-ready .raid-frame__hp-fill{
+    width: 100%;
+    transition: width .6s cubic-bezier(.2,.8,.2,1);
+  }
+  .raid-frame.is-ready .raid-frame__check{
+    opacity: 1;
+    transform: scale(1);
+  }
+  .raid-frame.is-ready .raid-frame__icon svg{ fill: var(--gold); opacity: 1; }
+
+  /* tooltip for raid frames */
+  .raid-frame{ position: relative; }
+  .raid-frame .wow-tooltip{
+    position: absolute;
+    left: 50%;
+    bottom: calc(100% + 8px);
+    transform: translateX(-50%) translateY(4px);
+    width: 200px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .15s ease, transform .15s ease;
+    z-index: 30;
+  }
+  .raid-frame:hover .wow-tooltip,
+  .raid-frame:focus-visible .wow-tooltip{
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  .wow-tooltip-panel{
+    background: var(--panel-bg);
+    border: 1px solid var(--border-outer);
+    border-radius: 4px;
+    box-shadow: inset 0 0 0 1px var(--border-inner), 0 10px 24px rgba(0,0,0,0.55);
+    padding: 0.55rem 0.7rem;
+    text-align: left;
+  }
+  .wow-tooltip-title{
+    font-family: var(--font-display);
+    font-size: 0.85rem;
+    color: var(--gold);
+    margin: 0 0 0.25rem;
+    line-height: 1.2;
+  }
+  .wow-tooltip-body{
+    font-size: 0.78rem;
+    color: var(--body-gray);
+    margin: 0;
+  }
+
+
+  /* ---------- compact raid grid (mobile) ---------- */
+  .raid-grid-compact{
+    display: none;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.6rem;
+    margin: 0 0 1rem;
+  }
+  .raid-tile{
+    background: rgba(16,20,34,0.8);
+    border: 1px solid rgba(0,0,0,0.85);
+    border-radius: 3px;
+    box-shadow: inset 0 0 0 1px rgba(150,158,176,0.18);
+    padding: 0.4rem 0.5rem;
+  }
+  .raid-tile__label{
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    color: var(--body-gray-dim);
+    margin: 0 0 0.35rem;
+  }
+  .raid-tile__bars{
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .raid-tile__bar{
+    height: 6px;
+    border-radius: 1px;
+    background: repeating-linear-gradient(90deg, rgba(120,128,148,0.18) 0 1px, transparent 1px 5px), rgba(60,64,80,0.35);
+    border: 1px dashed rgba(140,148,166,0.35);
+    position: relative;
+    overflow: hidden;
+  }
+  .raid-tile__bar--you{
+    border-style: solid;
+    border-color: rgba(255,209,0,0.6);
+  }
+  .raid-tile__bar-fill{
+    position: absolute;
+    inset: 0;
+    width: 0%;
+    background: var(--gold);
+  }
+  .raid-tile__bar--you.is-ready .raid-tile__bar-fill{
+    width: 100%;
+    transition: width .6s cubic-bezier(.2,.8,.2,1);
+  }
+  /* ---------- ready check dialog ---------- */
+  .ready-check{
+    position: relative;
+    z-index: 3;
+    max-width: 30rem;
+    margin: -3rem auto 2.5rem;
+    background: var(--panel-bg);
+    border: 1px solid var(--border-outer);
+    border-radius: 6px;
+    box-shadow: inset 0 0 0 1px var(--border-inner), 0 4px 0 rgba(0,0,0,0.5), 0 30px 50px rgba(0,0,0,0.65);
+    padding: 1.5rem 1.75rem 1.75rem;
+    text-align: center;
+  }
+  .ready-check__title{
+    font-family: var(--font-display);
+    color: var(--raid-warning);
+    font-size: 1.15rem;
+    text-shadow: 0 1px 0 #1a0400;
+    margin: 0 0 0.3rem;
+  }
+  .ready-check__sub{
+    font-size: 0.85rem;
+    color: var(--body-gray-dim);
+    margin: 0 0 1.2rem;
+  }
+  .ready-check__actions{
+    display: flex;
+    gap: 0.9rem;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .wow-button{
+    appearance: none;
+    border: 2px solid #000;
+    border-radius: 3px;
+    padding: 0.65rem 1.9rem;
+    font-family: var(--font-ui);
+    font-weight: 700;
+    font-size: 0.95rem;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+    transition: transform .08s ease, box-shadow .15s ease, filter .15s ease;
+  }
+  .wow-button--ready{
+    color: #fff3d6;
+    background: linear-gradient(180deg, #7a2a12 0%, #4a1608 55%, #2c0c04 100%);
+    box-shadow: inset 0 0 0 1px rgba(255,180,90,0.35), inset 0 1px 0 rgba(255,255,255,0.12), 0 3px 0 rgba(0,0,0,0.7);
+  }
+  .wow-button--ready:hover, .wow-button--ready:focus-visible{
+    filter: brightness(1.14);
+    box-shadow: inset 0 0 0 1px rgba(255,209,0,0.6), inset 0 1px 0 rgba(255,255,255,0.18), 0 3px 0 rgba(0,0,0,0.7);
+  }
+  .wow-button--ready:active{ transform: translateY(2px); box-shadow: inset 0 0 0 1px rgba(255,180,90,0.35), 0 1px 0 rgba(0,0,0,0.7); }
+  .wow-button--not{
+    color: #cfd3df;
+    background: linear-gradient(180deg, #2a2d3a 0%, #181a24 55%, #0d0e14 100%);
+    box-shadow: inset 0 0 0 1px rgba(170,176,196,0.25), inset 0 1px 0 rgba(255,255,255,0.08), 0 3px 0 rgba(0,0,0,0.7);
+  }
+  .wow-button--not:hover, .wow-button--not:focus-visible{
+    filter: brightness(1.18);
+  }
+  .wow-button--not:active{ transform: translateY(2px); box-shadow: inset 0 0 0 1px rgba(170,176,196,0.25), 0 1px 0 rgba(0,0,0,0.7); }
+
+  /* ---------- guild chat log ---------- */
+  .chat-log{
+    max-width: 30rem;
+    margin: 0 auto;
+    background: var(--panel-bg-soft);
+    border: 1px solid var(--border-outer);
+    border-radius: 4px;
+    box-shadow: inset 0 0 0 1px var(--border-inner-dim);
+    padding: 0.75rem 0.9rem;
+    text-align: left;
+    font-size: 0.82rem;
+  }
+  .chat-log__line{ margin: 0 0 0.3rem; }
+  .chat-log__line:last-child{ margin-bottom: 0; }
+  .chat-log__speaker{ color: var(--chat-guild); font-weight: 700; }
+  .chat-log__channel{ color: var(--chat-guild); }
+  .chat-log__text{ color: #d9dbe4; }
+  .chat-log__line--system .chat-log__text{ color: var(--chat-system); }
+  .chat-log__line--new{ animation: chatIn .3s ease both; }
+  @keyframes chatIn{ from{ opacity:0; transform: translateY(3px); } to{ opacity:1; transform:none; } }
+
+  /* ---------- generic section rhythm ---------- */
+  section{ padding: 4.5rem 1.5rem; max-width: 78rem; margin: 0 auto; }
+  .section-heading{
+    font-family: var(--font-display);
+    color: var(--gold);
+    font-size: clamp(1.6rem, 3vw, 2.2rem);
+    text-shadow: 0 1px 0 #000;
+    margin: 0 0 0.6rem;
+    text-align: center;
+  }
+  .section-dek{
+    text-align: center;
+    max-width: 40rem;
+    margin: 0 auto 3rem;
+    color: var(--body-gray-dim);
+  }
+
+  /* ---------- item tooltips (how we play) ---------- */
+  .item-stack{
+    position: relative;
+    max-width: 44rem;
+    margin: 0 auto;
+  }
+  .item-tooltip{
+    position: relative;
+    width: calc(100% - var(--stagger-x, 0px));
+    background: var(--panel-bg);
+    border: 1px solid var(--border-outer);
+    border-radius: 5px;
+    box-shadow: inset 0 0 0 1px var(--border-inner), 0 16px 32px rgba(0,0,0,0.55);
+    padding: 1rem 1.15rem 1.1rem;
+    margin-left: var(--stagger-x, 0px);
+    margin-bottom: -2.2rem;
+  }
+  .item-tooltip:nth-child(1){ --stagger-x: 0rem; z-index: 1; }
+  .item-tooltip:nth-child(2){ --stagger-x: 3.5rem; z-index: 2; }
+  .item-tooltip:nth-child(3){ --stagger-x: 7rem; z-index: 3; margin-bottom: 0; }
+  .item-tooltip__name{
+    font-family: var(--font-display);
+    font-size: 1.05rem;
+    margin: 0 0 0.15rem;
+  }
+  .item-tooltip__kind{
+    font-size: 0.72rem;
+    color: var(--body-gray-dim);
+    margin: 0 0 0.6rem;
+  }
+  .item-tooltip__line{
+    font-size: 0.82rem;
+    color: var(--body-gray);
+    margin: 0 0 0.3rem;
+  }
+  .item-tooltip__flavor{
+    font-style: italic;
+    color: var(--gold-soft);
+    font-size: 0.8rem;
+    margin: 0.6rem 0 0;
+  }
+  .q-uncommon{ color: var(--q-uncommon); }
+  .q-rare{ color: var(--q-rare); }
+  .q-epic{ color: var(--q-epic); }
+
+  /* ---------- preview strip ---------- */
+  .preview-label{
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #1a1403;
+    background: var(--gold);
+    padding: 0.2rem 0.55rem;
+    border-radius: 2px;
+    margin: 0 auto 2rem;
+    display: table;
+  }
+  .preview-grid{
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+    align-items: start;
+  }
+  @media (max-width: 960px){
+    .preview-grid{ grid-template-columns: 1fr; }
+  }
+  .panel{
+    background: var(--panel-bg);
+    border: 1px solid var(--border-outer);
+    border-radius: 5px;
+    box-shadow: inset 0 0 0 1px var(--border-inner);
+    padding: 1.1rem 1.2rem 1.3rem;
+  }
+  .panel__title{
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--body-gray-dim);
+    margin: 0 0 0.9rem;
+  }
+
+  /* addon item */
+  .addon-item__name{ font-family: var(--font-display); font-size: 1rem; color: var(--q-epic); margin: 0 0 0.15rem; }
+  .addon-item__meta{ font-size: 0.75rem; color: var(--body-gray-dim); margin: 0 0 0.7rem; }
+  .addon-item__desc{ font-size: 0.82rem; margin: 0 0 1rem; }
+  .download-btn{
+    display: inline-block;
+    font-weight: 700;
+    font-size: 0.82rem;
+    color: #1a1403;
+    background: linear-gradient(180deg, #ffe066, var(--gold));
+    border: 1px solid #000;
+    border-radius: 3px;
+    padding: 0.45rem 1rem;
+    text-decoration: none;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.4);
+  }
+  .download-btn:hover, .download-btn:focus-visible{ filter: brightness(1.08); }
+
+  /* raid chart floor plan */
+  .floorplan-wrap{ display:flex; flex-direction:column; gap:0.8rem; }
+  .floorplan{ width:100%; height:auto; background: rgba(4,6,12,0.6); border: 1px solid rgba(0,0,0,0.8); border-radius: 4px; }
+  .marker-legend{ display:flex; flex-wrap:wrap; gap:0.5rem; }
+  .marker-legend span{ display:flex; align-items:center; gap:4px; font-size:0.68rem; color: var(--body-gray-dim); }
+  .marker-legend svg{ width:14px; height:14px; }
+
+  /* roster table */
+  .roster-table{ width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+  .roster-table caption{ text-align:left; font-size: 0.75rem; color: var(--body-gray-dim); margin-bottom: 0.6rem; }
+  .roster-table th{
+    text-align: left;
+    font-weight: 700;
+    color: var(--body-gray-dim);
+    font-size: 0.68rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 0.35rem 0.5rem;
+    border-bottom: 1px solid rgba(140,148,166,0.3);
+  }
+  .roster-table td{
+    padding: 0.4rem 0.5rem;
+    border-bottom: 1px solid rgba(140,148,166,0.12);
+  }
+  .roster-table tr:last-child td{ border-bottom: none; }
+  .roster-role-icon{ width:13px; height:13px; vertical-align:-2px; margin-right:5px; fill: var(--body-gray-dim); }
+  .status-ready{ color: var(--q-uncommon); font-weight:600; }
+  .status-tentative{ color: var(--chat-raid); font-weight:600; }
+  .status-open{ color: var(--body-gray-dim); font-style: italic; }
+  .roster-table td.num{ font-variant-numeric: tabular-nums; }
+
+  /* ---------- journey timeline ---------- */
+  .journey-label{
+    text-align: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--body-gray-dim);
+    margin: 0 0 1.25rem;
+  }
+  .journey{
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 2.75rem;
+    margin-top: 0.5rem;
+  }
+  .journey__stage{ text-align: center; }
+  .journey__stage-label{ font-size: 0.8rem; font-weight: 600; color: var(--body-gray); margin-bottom: 0.6rem; }
+  .journey__cells{ display:grid; grid-template-columns: repeat(4,14px); gap:4px; }
+  .journey__cell{ width:14px; height:14px; border-radius:1px; background: rgba(120,128,148,0.18); border: 1px dashed rgba(140,148,166,0.3); }
+  .journey__cell.on{ background: var(--gold); border-style: solid; border-color: rgba(0,0,0,0.6); }
+
+  /* ---------- close CTA ---------- */
+  .close-cta{ text-align:center; }
+  .chat-input-bar{
+    max-width: 34rem;
+    margin: 2.5rem auto 0;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    background: var(--panel-bg);
+    border: 1px solid var(--border-outer);
+    border-radius: 4px;
+    box-shadow: inset 0 0 0 1px var(--border-inner);
+    padding: 0.7rem 0.9rem;
+  }
+  .chat-input-bar__prompt{ color: var(--chat-guild); font-weight: 700; font-size: 0.95rem; white-space: nowrap; }
+  .chat-input-bar a{
+    flex: 1;
+    text-align: left;
+    color: #e9ebf2;
+    font-size: 0.95rem;
+    text-decoration: none;
+    padding: 0.3rem 0;
+  }
+  .chat-input-bar a:hover, .chat-input-bar a:focus-visible{ color: #fff; }
+  .chat-input-bar__caret{
+    display:inline-block; width:7px; height:1.05em; background: var(--gold); vertical-align:-3px; margin-left:3px;
+    animation: caretBlink 1s steps(1) infinite;
+  }
+  @media (prefers-reduced-motion: reduce){ .chat-input-bar__caret{ animation: none; opacity: 0.8; } }
+  @keyframes caretBlink{ 50%{ opacity: 0; } }
+
+  footer{
+    text-align: center;
+    padding: 2.5rem 1.5rem 3.5rem;
+    color: var(--body-gray-dim);
+    font-size: 0.78rem;
+  }
+
+  @media (max-width: 640px){
+    .dbm-bar__content{ padding: 0 0.85rem; }
+    .dbm-bar__label{ font-size: 0.8rem; }
+    .dbm-bar__time{ font-size: 0.8rem; }
+    .hero{
+      padding: 3rem 1rem 3.5rem;
+      display: grid;
+      grid-template-areas:
+        "headline"
+        "sub"
+        "ready"
+        "raidlabel"
+        "raidgrid"
+        "chat";
+      row-gap: 1.75rem;
+    }
+    .hero__headline{ grid-area: headline; }
+    .hero__sub{ grid-area: sub; margin-bottom: 0; }
+    .ready-check{ grid-area: ready; margin: 0 auto; }
+    .raid-section-label{ grid-area: raidlabel; margin: 0; }
+    .raid-grid{ display: none; }
+    .raid-grid-compact{ display: grid; grid-area: raidgrid; }
+    .chat-log{ grid-area: chat; }
+    .item-tooltip:nth-child(2){ --stagger-x: 1.2rem; }
+    .item-tooltip:nth-child(3){ --stagger-x: 2.2rem; }
+    section{ padding: 3.5rem 1rem; }
+  }
+</style>
+</head>
+<body>
+
+<!--
+  DISCORD_INVITE: replace this placeholder with the real SideQuest Discord
+  invite URL once it exists. Every "Join the Discord" control reads from
+  this single constant.
+-->
+<div class="scene-field" aria-hidden="true">
+  <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMax slice">
+    <path d="M0,620 L80,580 160,610 240,560 320,600 400,540 480,590 560,520 640,575 720,530 800,585 880,540 960,595 1040,545 1120,600 1200,555 1280,610 1360,560 1440,600 1520,565 1600,605 L1600,900 0,900 Z" fill="#0d1120" opacity="0.6"/>
+    <path d="M0,700 L100,660 220,690 340,650 460,700 580,655 700,695 820,650 940,700 1060,660 1180,700 1300,655 1420,695 1600,660 L1600,900 0,900 Z" fill="#090c17" opacity="0.8"/>
+    <g fill="none" stroke="#2a3250" stroke-width="1" opacity="0.35">
+      <path d="M60,160 Q400,120 760,180 T1540,150"/>
+      <path d="M40,260 Q420,220 820,270 T1560,240"/>
+      <path d="M20,360 Q460,320 880,360 T1580,330"/>
+    </g>
+  </svg>
+</div>
+
+<div class="dbm-bar">
+  <div class="dbm-bar__track">
+    <div class="dbm-bar__fill" id="launchFill"><div class="dbm-bar__sheen"></div></div>
+    <div class="dbm-bar__content">
+      <span class="dbm-bar__label">WoW Forever launch</span>
+      <span class="dbm-bar__time tabular"><span class="dbm-bar__date">Nov 4, 2026</span> — <span id="launchCountdown">calculating…</span></span>
+    </div>
+  </div>
+</div>
+
+<header class="hero">
+  <h1 class="hero__headline">SIDEQUEST IS FORMING</h1>
+  <p class="hero__sub">An Alliance guild for <strong>World of Warcraft: Forever</strong> — casual nights, semi-core raiding, and real progression, all under one roof. Ruleset and region: <strong>TBD</strong>. The roster below is open.</p>
+
+  <p class="raid-section-label" id="raid-grid-label">SideQuest Roster — 40 slots, 8 groups</p>
+  <div class="raid-grid" role="group" aria-labelledby="raid-grid-label" id="raidGrid"></div>
+  <div class="raid-grid-compact" role="group" aria-label="SideQuest roster — open groups" id="raidGridCompact"></div>
+
+  <div class="ready-check">
+    <p class="ready-check__title">SideQuest has initiated a ready check.</p>
+    <p class="ready-check__sub">Groups 1–8 are open. Answer the call.</p>
+    <div class="ready-check__actions">
+      <a href="#join-discord" id="readyBtn" class="wow-button wow-button--ready">Ready</a>
+      <a href="#how-we-play" id="notReadyBtn" class="wow-button wow-button--not">Not Ready</a>
+    </div>
+  </div>
+
+  <div class="chat-log" id="chatLog" aria-label="Guild chat log">
+    <p class="chat-log__line"><span class="chat-log__channel">[Guild]</span> <span class="chat-log__speaker">SideQuest:</span> <span class="chat-log__text">welcome in. we're casual on weeknights, semi-core on raid night, and we still push progression — pick what fits your week.</span></p>
+    <p class="chat-log__line"><span class="chat-log__channel">[Guild]</span> <span class="chat-log__speaker">SideQuest:</span> <span class="chat-log__text">Alliance, Forever, launching Nov 4. ruleset and region are TBD — we're deciding together before launch.</span></p>
+    <p class="chat-log__line"><span class="chat-log__channel">[Guild]</span> <span class="chat-log__speaker">SideQuest:</span> <span class="chat-log__text">the journey counts as much as the kill. come level with us, come raid with us, or both.</span></p>
+  </div>
+</header>
+
+<section id="how-we-play" aria-labelledby="how-we-play-heading">
+  <h2 class="section-heading" id="how-we-play-heading">How We Play</h2>
+  <p class="section-dek">Three things SideQuest is, read the way the game reads an item.</p>
+  <div class="item-stack">
+    <article class="item-tooltip">
+      <p class="item-tooltip__name q-uncommon">[The Side Quest]</p>
+      <p class="item-tooltip__kind">Guild Activity — Casual</p>
+      <p class="item-tooltip__line">Binds when joined</p>
+      <p class="item-tooltip__line">Use: Log on, level, explore, dungeon-hop. No sign-up required.</p>
+      <p class="item-tooltip__flavor">"Not every night needs a plan."</p>
+    </article>
+    <article class="item-tooltip">
+      <p class="item-tooltip__name q-rare">[Raid Night]</p>
+      <p class="item-tooltip__kind">Guild Activity — Semi-Core</p>
+      <p class="item-tooltip__line">Binds when joined</p>
+      <p class="item-tooltip__line">Use: Scheduled raiding with a real roster. Night TBD — join the Discord to help pick it.</p>
+      <p class="item-tooltip__flavor">"Show up, pull your weight, go home."</p>
+    </article>
+    <article class="item-tooltip">
+      <p class="item-tooltip__name q-epic">[Progression]</p>
+      <p class="item-tooltip__kind">Guild Activity — Core</p>
+      <p class="item-tooltip__line">Binds when joined</p>
+      <p class="item-tooltip__line">Use: Clear it, learn it, clear it faster. Molten Core and beyond, whenever Forever gets there.</p>
+      <p class="item-tooltip__flavor">"The destination matters too."</p>
+    </article>
+  </div>
+</section>
+
+<section id="preview" aria-labelledby="preview-heading">
+  <h2 class="section-heading" id="preview-heading">What's Coming</h2>
+  <p class="preview-label">Preview: sample data</p>
+  <div class="preview-grid">
+
+    <div class="panel">
+      <p class="panel__title">Addon</p>
+      <p class="addon-item__name">[SideQuest Raid Tools]</p>
+      <p class="addon-item__meta">Epic · Version TBD · Compatible: Forever</p>
+      <p class="addon-item__desc">Our own raid-frame and assignment addon, built for SideQuest's roster once we have one to build for.</p>
+      <a class="download-btn" href="#join-discord">Download</a>
+    </div>
+
+    <div class="panel">
+      <p class="panel__title">Raid Chart</p>
+      <div class="floorplan-wrap">
+        <svg class="floorplan" viewBox="0 0 320 220" role="img" aria-label="Sample boss-room floor plan with position markers">
+          <rect x="4" y="4" width="312" height="212" rx="6" fill="rgba(255,255,255,0.02)" stroke="rgba(140,148,166,0.35)" />
+          <circle cx="160" cy="110" r="88" fill="none" stroke="rgba(140,148,166,0.2)" stroke-dasharray="3 4" />
+          <circle cx="160" cy="110" r="14" fill="rgba(255,72,0,0.12)" stroke="rgba(255,72,0,0.5)" />
+          <g id="chartMarkers"></g>
+        </svg>
+        <div class="marker-legend" id="markerLegend" aria-hidden="true"></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <p class="panel__title">Signup — Ready Check Roster</p>
+      <table class="roster-table">
+        <caption>Sample roster, not a real raid.</caption>
+        <thead>
+          <tr><th>#</th><th>Role</th><th>Class</th><th>Status</th></tr>
+        </thead>
+        <tbody id="rosterBody"></tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <p class="journey-label">The Plan</p>
+  <div class="journey" aria-label="SideQuest's planned stages">
+    <div class="journey__stage">
+      <p class="journey__stage-label">Forming</p>
+      <div class="journey__cells" data-on="4"></div>
+    </div>
+    <div class="journey__stage">
+      <p class="journey__stage-label">Launch — Nov 4</p>
+      <div class="journey__cells" data-on="8"></div>
+    </div>
+    <div class="journey__stage">
+      <p class="journey__stage-label">Dungeons</p>
+      <div class="journey__cells" data-on="12"></div>
+    </div>
+    <div class="journey__stage">
+      <p class="journey__stage-label">Molten Core</p>
+      <div class="journey__cells" data-on="16"></div>
+    </div>
+  </div>
+</section>
+
+<section id="join-discord" class="close-cta" aria-labelledby="join-heading">
+  <h2 class="section-heading" id="join-heading">One More Ready Check</h2>
+  <p class="section-dek">That's the pitch. Groups 1–8, open. Ruleset and region TBD, decided together. Launch Nov 4.</p>
+  <div class="ready-check__actions">
+    <a href="#join-discord" id="readyBtn2" class="wow-button wow-button--ready">Ready</a>
+  </div>
+  <div class="chat-input-bar">
+    <span class="chat-input-bar__prompt">/join</span>
+    <a href="#join-discord" id="joinChatLink">SideQuest<span class="chat-input-bar__caret" aria-hidden="true"></span></a>
+  </div>
+</section>
+
+<footer>SideQuest — Alliance, World of Warcraft: Forever. Ruleset and region TBD.</footer>
+
+<script>
+(function(){
+  "use strict";
+
+  // Replace with the real SideQuest Discord invite URL when it exists.
+  var DISCORD_INVITE = "#join-discord";
+
+  var prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  document.querySelectorAll('a[href="#join-discord"]').forEach(function(a){
+    a.setAttribute("href", DISCORD_INVITE);
+  });
+
+  // ---------- icons ----------
+  var ICON_TANK = '<svg viewBox="0 0 24 24"><path d="M12 2l8 3v6c0 5-3.5 9-8 11-4.5-2-8-6-8-11V5l8-3z"/></svg>';
+  var ICON_HEALER = '<svg viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 1 3 3v4h4a3 3 0 0 1 0 6h-4v4a3 3 0 0 1-6 0v-4H5a3 3 0 0 1 0-6h4V5a3 3 0 0 1 3-3z"/></svg>';
+  var ICON_DPS = '<svg viewBox="0 0 24 24"><path d="M20.3 2.3a1 1 0 0 1 1.4 1.4l-9.7 9.7-1.4-1.4 9.7-9.7zM10.6 13l1.4 1.4-6.2 6.2H3v-2.8l6.2-6.2z"/></svg>';
+
+  var ROLES = [
+    { key:"tank", icon: ICON_TANK, label:"Tank" },
+    { key:"healer", icon: ICON_HEALER, label:"Healer" },
+    { key:"dps", icon: ICON_DPS, label:"DPS" }
+  ];
+  var CLASS_COLORS = ["c-warrior","c-paladin","c-hunter","c-rogue","c-priest","c-mage","c-warlock","c-druid"];
+  var CLASS_NAMES = { "c-warrior":"Warrior","c-paladin":"Paladin","c-hunter":"Hunter","c-rogue":"Rogue","c-priest":"Priest","c-mage":"Mage","c-warlock":"Warlock","c-druid":"Druid" };
+
+  function roleForSlot(i){
+    // 2 tanks, 8 healers, 30 dps per 40-slot raid, spread evenly.
+    if (i === 0 || i === 20) return ROLES[0];
+    if (i % 5 === 1) return ROLES[1];
+    return ROLES[2];
+  }
+
+  // ---------- build raid grid ----------
+  var raidGrid = document.getElementById("raidGrid");
+  var frag = document.createDocumentFragment();
+  var slotIndex = 0;
+  for (var g = 1; g <= 8; g++){
+    var col = document.createElement("div");
+    col.className = "raid-group";
+    var label = document.createElement("p");
+    label.className = "raid-group__label";
+    label.textContent = "Group " + g;
+    col.appendChild(label);
+
+    for (var r = 1; r <= 5; r++){
+      var role = roleForSlot(slotIndex);
+      var isYou = (g === 1 && r === 1);
+      var frame = document.createElement("button");
+      frame.type = "button";
+      frame.className = "raid-frame raid-frame--open" + (isYou ? " raid-frame--you" : "");
+      var classVar = CLASS_COLORS[slotIndex % CLASS_COLORS.length];
+      frame.style.setProperty("--frame-color", isYou ? "var(--c-you)" : "var(--" + classVar + ")");
+
+      var ttTitle = isYou ? "Group 1, Slot 1 — You?" : "Group " + g + ", Slot " + r + " — " + role.label;
+      var ttBody = isYou
+        ? "This is where you'd stand. Click Ready and find out."
+        : "Open " + role.label.toLowerCase() + " slot. Prove it on the pull.";
+
+      frame.id = isYou ? "slot-you" : "";
+      frame.setAttribute("aria-label", ttTitle + ". " + ttBody);
+      frame.innerHTML =
+        '<span class="raid-frame__icon">' + role.icon + '</span>' +
+        '<span class="raid-frame__bars">' +
+          '<span class="raid-frame__name">' + (isYou ? "You?" : "Open") + '</span>' +
+          '<span class="raid-frame__hp"><span class="raid-frame__hp-fill"></span></span>' +
+        '</span>' +
+        '<span class="raid-frame__check"><svg viewBox="0 0 24 24"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg></span>' +
+        '<span class="wow-tooltip"><span class="wow-tooltip-panel"><p class="wow-tooltip-title">' + ttTitle + '</p><p class="wow-tooltip-body">' + ttBody + '</p></span></span>';
+
+      col.appendChild(frame);
+      slotIndex++;
+    }
+    frag.appendChild(col);
+  }
+  raidGrid.appendChild(frag);
+
+  // ---------- build compact raid grid (mobile) ----------
+  var raidGridCompact = document.getElementById("raidGridCompact");
+  var compactFrag = document.createDocumentFragment();
+  for (var cg = 1; cg <= 8; cg++){
+    var tile = document.createElement("div");
+    tile.className = "raid-tile";
+    var tileLabel = document.createElement("p");
+    tileLabel.className = "raid-tile__label";
+    tileLabel.textContent = "G" + cg;
+    tile.appendChild(tileLabel);
+
+    var barsWrap = document.createElement("div");
+    barsWrap.className = "raid-tile__bars";
+    for (var cr = 1; cr <= 5; cr++){
+      var isYouTile = (cg === 1 && cr === 1);
+      var bar = document.createElement("span");
+      bar.className = "raid-tile__bar" + (isYouTile ? " raid-tile__bar--you" : "");
+      if (isYouTile){
+        bar.id = "slot-you-compact";
+        bar.setAttribute("aria-label", "Group 1, Slot 1 — You?");
+      } else {
+        bar.setAttribute("aria-hidden", "true");
+      }
+      bar.innerHTML = '<span class="raid-tile__bar-fill"></span>';
+      barsWrap.appendChild(bar);
+    }
+    tile.appendChild(barsWrap);
+    compactFrag.appendChild(tile);
+  }
+  raidGridCompact.appendChild(compactFrag);
+
+  // ---------- countdown / drain bar ----------
+  var LAUNCH = new Date("2026-11-04T00:00:00Z");
+  var RESERVATION_OPEN = new Date("2026-10-27T00:00:00Z");
+  var fillEl = document.getElementById("launchFill");
+  var countdownEl = document.getElementById("launchCountdown");
+
+  function updateCountdown(){
+    var now = new Date();
+    var totalMs = LAUNCH - RESERVATION_OPEN;
+    var remainingMs = LAUNCH - now;
+    if (remainingMs < 0) remainingMs = 0;
+    var remainPct = totalMs > 0 ? Math.max(0, Math.min(100, (remainingMs / totalMs) * 100)) : 0;
+    fillEl.style.width = remainPct + "%";
+
+    var days = Math.floor(remainingMs / 86400000);
+    var hours = Math.floor((remainingMs % 86400000) / 3600000);
+    countdownEl.textContent = remainingMs <= 0 ? "live now" : (days + "d " + hours + "h remaining");
+  }
+  updateCountdown();
+  setInterval(updateCountdown, 60000);
+
+  // ---------- ready check signature interaction ----------
+  var slotYou = document.getElementById("slot-you");
+  var slotYouCompact = document.getElementById("slot-you-compact");
+  var chatLog = document.getElementById("chatLog");
+  var readyLinks = [document.getElementById("readyBtn"), document.getElementById("readyBtn2")];
+  var notReadyBtn = document.getElementById("notReadyBtn");
+  var systemLineAdded = false;
+
+  function appendSystemLine(){
+    if (systemLineAdded) return;
+    systemLineAdded = true;
+    var p = document.createElement("p");
+    p.className = "chat-log__line chat-log__line--system chat-log__line--new";
+    p.innerHTML = '<span class="chat-log__text">[You] are Ready.</span>';
+    chatLog.appendChild(p);
+  }
+
+  function previewFill(on){
+    if (slotYou) slotYou.classList.toggle("is-ready", on);
+    if (slotYouCompact) slotYouCompact.classList.toggle("is-ready", on);
+  }
+
+  readyLinks.forEach(function(btn){
+    if (!btn) return;
+    btn.addEventListener("mouseenter", function(){ previewFill(true); });
+    btn.addEventListener("mouseleave", function(){ if (!btn.dataset.clicked) previewFill(false); });
+    btn.addEventListener("focus", function(){ previewFill(true); });
+    btn.addEventListener("blur", function(){ if (!btn.dataset.clicked) previewFill(false); });
+
+    btn.addEventListener("click", function(e){
+      btn.dataset.clicked = "1";
+      previewFill(true);
+      appendSystemLine();
+      if (prefersReducedMotion) return; // let the default navigation happen immediately
+      e.preventDefault();
+      var href = btn.getAttribute("href");
+      setTimeout(function(){ window.location.href = href; }, 650);
+    });
+  });
+
+  if (notReadyBtn){
+    notReadyBtn.addEventListener("click", function(e){
+      e.preventDefault();
+      document.getElementById("how-we-play").scrollIntoView({ behavior: prefersReducedMotion ? "auto" : "smooth" });
+    });
+  }
+
+  // ---------- raid chart markers ----------
+  var MARKERS = {
+    star: '<path d="M8 0l2.1 5.1L16 5.9l-4.3 3.6L13 16 8 12.6 3 16l1.3-6.5L0 5.9l5.9-.8z" fill="#ffd100"/>',
+    circle: '<circle cx="8" cy="8" r="7" fill="none" stroke="#ff7f00" stroke-width="2"/>',
+    diamond: '<rect x="3" y="3" width="10" height="10" fill="#9482C9" transform="rotate(45 8 8)"/>',
+    triangle: '<path d="M8 1 15 15 1 15z" fill="#1eff00"/>',
+    moon: '<path d="M11 1.5A7 7 0 1 0 11 14.5 5.5 5.5 0 1 1 11 1.5Z" fill="#f4f4f4"/>',
+    square: '<rect x="2" y="2" width="12" height="12" fill="none" stroke="#69CCF0" stroke-width="2"/>',
+    cross: '<path d="M2 2 14 14 M14 2 2 14" stroke="#ff4800" stroke-width="2.4" fill="none"/>',
+    skull: '<g fill="#dcdcdc"><ellipse cx="8" cy="7" rx="6" ry="5.5"/><rect x="3.5" y="10.5" width="9" height="4" rx="1"/></g><circle cx="5.7" cy="7" r="1.3" fill="#0a0e1c"/><circle cx="10.3" cy="7" r="1.3" fill="#0a0e1c"/>'
+  };
+  var legend = document.getElementById("markerLegend");
+  Object.keys(MARKERS).forEach(function(name){
+    var span = document.createElement("span");
+    span.innerHTML = '<svg viewBox="0 0 16 16">' + MARKERS[name] + '</svg>' + name;
+    legend.appendChild(span);
+  });
+
+  var chartPositions = [
+    { x: 100, y: 70, m: "star" },
+    { x: 220, y: 70, m: "circle" },
+    { x: 100, y: 150, m: "diamond" },
+    { x: 220, y: 150, m: "triangle" },
+    { x: 160, y: 40, m: "skull" }
+  ];
+  var chartMarkers = document.getElementById("chartMarkers");
+  chartPositions.forEach(function(p){
+    var g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    g.setAttribute("transform", "translate(" + (p.x - 8) + "," + (p.y - 8) + ")");
+    g.innerHTML = MARKERS[p.m];
+    chartMarkers.appendChild(g);
+  });
+
+  // ---------- roster sample table ----------
+  var ROLE_ICON = { tank: ICON_TANK, healer: ICON_HEALER, dps: ICON_DPS };
+  var sampleRoster = [
+    { role:"tank", cls:"c-warrior", status:"ready" },
+    { role:"tank", cls:"c-druid", status:"tentative" },
+    { role:"healer", cls:"c-paladin", status:"ready" },
+    { role:"healer", cls:"c-priest", status:"open" },
+    { role:"dps", cls:"c-hunter", status:"ready" },
+    { role:"dps", cls:"c-mage", status:"open" },
+    { role:"dps", cls:"c-rogue", status:"open" },
+    { role:"dps", cls:"c-warlock", status:"open" }
+  ];
+  var rosterBody = document.getElementById("rosterBody");
+  sampleRoster.forEach(function(row, i){
+    var tr = document.createElement("tr");
+    var statusClass = row.status === "ready" ? "status-ready" : row.status === "tentative" ? "status-tentative" : "status-open";
+    var statusText = row.status === "ready" ? "Ready" : row.status === "tentative" ? "Tentative" : "Open";
+    tr.innerHTML =
+      '<td class="num">' + (i + 1) + '</td>' +
+      '<td><svg class="roster-role-icon" viewBox="0 0 24 24">' + ROLE_ICON[row.role] + '</svg>' + row.role.charAt(0).toUpperCase() + row.role.slice(1) + '</td>' +
+      '<td style="color:var(--' + row.cls + ')">' + CLASS_NAMES[row.cls] + '</td>' +
+      '<td class="' + statusClass + '">' + statusText + '</td>';
+    rosterBody.appendChild(tr);
+  });
+
+  // ---------- journey timeline fill ----------
+  document.querySelectorAll(".journey__cells").forEach(function(el){
+    var on = parseInt(el.getAttribute("data-on"), 10) || 0;
+    var html = "";
+    for (var i = 0; i < 16; i++){
+      html += '<span class="journey__cell' + (i < on ? " on" : "") + '"></span>';
+    }
+    el.innerHTML = html;
+  });
+
+})();
+</script>
+
+</body>
+</html>

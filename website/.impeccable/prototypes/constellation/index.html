@@ -1,0 +1,1289 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SideQuest — An Alliance guild for World of Warcraft: Forever</title>
+<meta name="description" content="SideQuest: an Alliance guild for World of Warcraft: Forever. Casual, semi-core, and progression raiding under one roof. The journey and the raid both count.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Gloock&family=Hanken+Grotesk:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --teal-deep: #0b2a36;
+    --teal-ground: #123a4a;
+    --teal-glow: #184a5e;
+    --gold: #d9b25f;
+    --gold-pale: #ecdcb6;
+    --gold-bright: #f3e2b3;
+    --vermilion: #b8452f;
+    --ink: #f1ead9;
+    --ink-dim: #c7d8d9;
+    --ink-faint: #8fa7ac;
+    --hairline: rgba(217,178,95,0.28);
+    --hairline-soft: rgba(217,178,95,0.14);
+    --radius-s: 3px;
+    --measure: 66ch;
+    --ease: cubic-bezier(.16,.84,.3,1);
+    --font-display: "Gloock", "Iowan Old Style", "Palatino Linotype", serif;
+    --font-sans: "Hanken Grotesk", "Segoe UI", sans-serif;
+  }
+
+  *, *::before, *::after{ box-sizing: border-box; }
+  html{ color-scheme: dark; }
+  body{
+    margin:0;
+    background: var(--teal-ground);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    font-size: 16px;
+    line-height: 1.6;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::selection{ background: var(--gold); color: var(--teal-deep); }
+
+  ::-webkit-scrollbar{ width: 12px; }
+  ::-webkit-scrollbar-track{ background: var(--teal-deep); }
+  ::-webkit-scrollbar-thumb{ background: var(--hairline-soft); border: 3px solid var(--teal-deep); border-radius: 8px; }
+  ::-webkit-scrollbar-thumb:hover{ background: var(--hairline); }
+  * { scrollbar-color: var(--hairline) var(--teal-deep); scrollbar-width: thin; }
+
+  a{ color: inherit; }
+
+  :focus{ outline: none; }
+  :focus-visible{
+    outline: 1.5px solid var(--gold-bright);
+    outline-offset: 3px;
+    border-radius: var(--radius-s);
+  }
+
+  h1, h2, h3{
+    font-family: var(--font-display);
+    font-weight: 400;
+    color: var(--gold-pale);
+    letter-spacing: -0.01em;
+    margin: 0;
+  }
+
+  p{ margin: 0; }
+
+  .measure{ max-width: var(--measure); }
+
+  /* ---------- layout shell ---------- */
+  .wrap{
+    max-width: 1180px;
+    margin: 0 auto;
+    padding-inline: clamp(20px, 5vw, 64px);
+  }
+
+  /* ---------- hero / sky ---------- */
+  .hero{
+    position: relative;
+    height: 100vh;
+    height: 100dvh;
+    min-height: 600px;
+    overflow: hidden;
+    isolation: isolate;
+  }
+
+  #sky{
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  .hero-vignette{
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(ellipse 85% 65% at 50% 30%, transparent 55%, rgba(6,22,29,0.5) 100%);
+    z-index: 1;
+  }
+
+  .topnav{
+    position: relative;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: clamp(18px, 3vw, 32px) clamp(20px, 5vw, 56px) 0;
+  }
+
+  .wordmark{
+    font-family: var(--font-display);
+    font-size: 1.15rem;
+    letter-spacing: 0.02em;
+    color: var(--gold-pale);
+  }
+
+  .nav-cta{
+    text-decoration: none;
+    font-family: var(--font-sans);
+    font-size: 0.82rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--gold-pale);
+    border: 1px solid var(--hairline);
+    padding: 9px 18px;
+    border-radius: var(--radius-s);
+    transition: border-color .3s var(--ease), color .3s var(--ease), background-color .3s var(--ease);
+  }
+  .nav-cta:hover, .nav-cta:focus-visible{
+    border-color: var(--gold);
+    background: rgba(217,178,95,0.08);
+    color: var(--gold-bright);
+  }
+
+  .hero-copy{
+    position: relative;
+    z-index: 3;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 20px;
+    padding: 0 clamp(20px, 6vw, 40px);
+    margin-top: clamp(3vh, 6vh, 7vh);
+  }
+
+  .epoch{
+    font-family: var(--font-sans);
+    font-style: italic;
+    font-size: 0.82rem;
+    letter-spacing: 0.08em;
+    color: var(--ink-faint);
+  }
+
+  .hero-copy h1{
+    font-size: clamp(2.9rem, 9vw, 5.2rem);
+    line-height: 0.96;
+  }
+
+  .tagline{
+    font-size: clamp(0.95rem, 2vw, 1.1rem);
+    color: var(--ink-dim);
+    max-width: 36ch;
+    line-height: 1.55;
+  }
+
+  /* flat gold-leaf buttons, squared off, consistent with plate frames */
+  .btn-primary{
+    position: relative;
+    margin-top: 4px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+    font-family: var(--font-sans);
+    font-weight: 600;
+    font-size: 0.92rem;
+    letter-spacing: 0.03em;
+    color: var(--teal-deep);
+    background: var(--gold);
+    padding: 14px 28px;
+    border-radius: var(--radius-s);
+    box-shadow: 0 6px 16px -9px rgba(0,0,0,0.55);
+    transition: transform .3s var(--ease), background-color .3s var(--ease), box-shadow .3s var(--ease);
+  }
+  .btn-primary::before{
+    content: "";
+    position: absolute;
+    inset: 3px;
+    border: 1px solid rgba(11,42,54,0.32);
+    pointer-events: none;
+  }
+  .btn-primary:hover, .btn-primary:focus-visible{
+    background: var(--gold-bright);
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px -8px rgba(0,0,0,0.6);
+  }
+  .btn-primary svg{ width: 13px; height: 13px; position: relative; }
+  .btn-primary span{ position: relative; }
+
+  .btn-ghost{
+    display: inline-flex;
+    align-items: center;
+    text-decoration: none;
+    font-family: var(--font-sans);
+    font-weight: 600;
+    font-size: 0.92rem;
+    letter-spacing: 0.03em;
+    color: var(--gold-pale);
+    border: 1px solid var(--hairline);
+    padding: 13px 26px;
+    border-radius: var(--radius-s);
+    transition: border-color .3s var(--ease), background-color .3s var(--ease), color .3s var(--ease);
+  }
+  .btn-ghost:hover, .btn-ghost:focus-visible{
+    border-color: var(--gold);
+    background: rgba(217,178,95,0.08);
+    color: var(--gold-bright);
+  }
+
+  .star-hotspot{
+    position: absolute;
+    z-index: 4;
+    width: 34px;
+    height: 34px;
+    left: 58%;
+    top: 70%;
+    transform: translate(-50%, -50%);
+    background: transparent;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    padding: 0;
+  }
+  .star-hotspot:focus-visible{
+    outline: 1.5px solid var(--vermilion);
+    outline-offset: 4px;
+  }
+
+  .annotation{
+    position: absolute;
+    z-index: 3;
+    left: 63%;
+    top: 58%;
+    width: max-content;
+    max-width: 210px;
+    pointer-events: none;
+  }
+  .annotation .leader-svg{ position: absolute; overflow: visible; }
+  .annotation p{
+    font-family: var(--font-sans);
+    font-style: italic;
+    font-size: 0.78rem;
+    letter-spacing: 0.01em;
+    color: var(--ink-dim);
+    line-height: 1.4;
+  }
+
+  /* ---------- shared section chrome ---------- */
+  main{ position: relative; }
+
+  section{
+    padding: clamp(72px, 11vw, 132px) 0;
+  }
+
+  .section-head{
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-bottom: clamp(40px, 6vw, 64px);
+    text-align: center;
+    align-items: center;
+  }
+  .section-head h2{
+    font-size: clamp(1.9rem, 4vw, 2.6rem);
+  }
+  .section-head p{
+    color: var(--ink-dim);
+    max-width: 52ch;
+    font-size: 0.98rem;
+  }
+
+  hr.rule{
+    border: none;
+    border-top: 1px solid var(--hairline-soft);
+    margin: 0 auto;
+    width: 120px;
+  }
+
+  /* ---------- how we play: atlas plates ---------- */
+  .plates{
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: clamp(24px, 3vw, 40px);
+  }
+  @media (max-width: 860px){
+    .plates{ grid-template-columns: 1fr; max-width: 420px; margin: 0 auto; }
+  }
+
+  .plate{
+    margin: 0;
+    padding: 0;
+  }
+  .plate-frame{
+    position: relative;
+    border: 1px solid var(--hairline);
+    padding: 30px 18px 18px;
+    background: linear-gradient(180deg, rgba(217,178,95,0.035), transparent 40%);
+  }
+  .plate-frame::before{
+    content: "";
+    position: absolute;
+    inset: 6px;
+    border: 1px solid var(--hairline-soft);
+    pointer-events: none;
+  }
+  .plate-frame svg{ display: block; width: 100%; height: auto; }
+
+  .plate-num{
+    position: absolute;
+    top: 10px;
+    left: 15px;
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: 0.7rem;
+    letter-spacing: 0.06em;
+    color: var(--ink-faint);
+    z-index: 1;
+  }
+
+  .plate figcaption{
+    margin-top: 18px;
+    text-align: center;
+  }
+  .plate-title{
+    font-family: var(--font-display);
+    font-size: 1.15rem;
+    color: var(--gold-pale);
+    letter-spacing: 0.01em;
+  }
+  .plate-body{
+    margin-top: 10px;
+    font-size: 0.9rem;
+    color: var(--ink-dim);
+    line-height: 1.6;
+  }
+
+  /* ---------- coming after launch: index table ---------- */
+  .index-table{
+    width: 100%;
+    border-collapse: collapse;
+    max-width: 760px;
+    margin: 0 auto;
+  }
+  .index-table th{
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    padding: 0 14px 12px;
+    border-bottom: 1px solid var(--hairline);
+  }
+  .index-table th:last-child, .index-table td:last-child{ text-align: right; }
+  .index-table th:first-child, .index-table td:first-child{ width: 3.5em; }
+  .index-table td{
+    padding: 16px 14px;
+    border-bottom: 1px solid var(--hairline-soft);
+    font-size: 0.96rem;
+    vertical-align: baseline;
+  }
+  .index-table td.num{
+    font-family: var(--font-sans);
+    color: var(--ink-faint);
+    font-variant-numeric: tabular-nums;
+  }
+  .index-table .feature-name{ color: var(--gold-pale); }
+  .index-table .preview-tag{
+    display: inline-block;
+    margin-left: 10px;
+    font-style: italic;
+    font-size: 0.76rem;
+    color: var(--ink-faint);
+  }
+  .index-table td.opens{
+    font-variant-numeric: tabular-nums;
+    color: var(--ink-dim);
+    white-space: nowrap;
+  }
+
+  @media (max-width: 560px){
+    .index-table thead{ display: none; }
+    .index-table, .index-table tbody, .index-table tr, .index-table td{ display: block; width: 100%; }
+    .index-table tr{ padding: 14px 0; border-bottom: 1px solid var(--hairline-soft); }
+    .index-table td{ border: none; padding: 3px 0; }
+    .index-table td.opens{ text-align: left; }
+    .index-table td.opens::before{ content: "Opens — "; color: var(--ink-faint); font-style: italic; }
+  }
+
+  /* ---------- legend ---------- */
+  .legend-grid{
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 1px;
+    background: var(--hairline-soft);
+    border: 1px solid var(--hairline-soft);
+    max-width: 880px;
+    margin: 0 auto;
+  }
+  .legend-item{
+    background: var(--teal-ground);
+    padding: 20px 20px 18px;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .legend-item svg{ flex: none; margin-top: 3px; }
+  .legend-copy .designation{
+    font-family: var(--font-display);
+    font-size: 0.98rem;
+    color: var(--gold-pale);
+  }
+  .legend-copy .designation em{
+    font-style: normal;
+    font-family: var(--font-sans);
+    color: var(--ink-faint);
+  }
+  .legend-copy .kind{
+    display: block;
+    margin-top: 3px;
+    font-size: 0.74rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+
+  /* ---------- close ---------- */
+  .close-section{
+    text-align: center;
+    padding-bottom: clamp(100px, 14vw, 160px);
+  }
+  .close-figure{
+    width: min(620px, 88vw);
+    margin: 0 auto clamp(28px, 5vw, 44px);
+  }
+  .close-figure svg{ display: block; width: 100%; height: auto; }
+  .close-section h2{
+    font-size: clamp(1.9rem, 4vw, 2.6rem);
+    margin-bottom: 14px;
+  }
+  .close-section p{
+    color: var(--ink-dim);
+    max-width: 42ch;
+    margin: 0 auto 30px;
+    font-size: 0.98rem;
+  }
+
+  .lion-ghost{ fill: none; stroke: var(--gold); stroke-width: 0.85; opacity: 0.09; }
+  .lion-line{
+    fill: none;
+    stroke: var(--gold);
+    stroke-width: 0.55;
+    opacity: 0.55;
+  }
+  .lion-star-lit{ fill: var(--gold-bright); stroke: none; }
+  .lion-star-unlit{ fill: var(--teal-ground); stroke: var(--gold); stroke-width: 0.6; opacity: 0.75; }
+  .lion-star-yours{
+    fill: var(--teal-ground);
+    stroke: var(--vermilion);
+    stroke-width: 0.8;
+    transition: fill 1.1s var(--ease);
+  }
+  .lion-line-yours{
+    stroke: var(--vermilion);
+    stroke-width: 0.6;
+    opacity: 0.35;
+    stroke-dasharray: 3 2.4;
+    transition: opacity 1s var(--ease), stroke-dasharray 1s var(--ease), stroke-width 1s var(--ease);
+  }
+  .close-figure.ignite .lion-star-yours{ fill: var(--gold-bright); }
+  .close-figure.ignite .lion-line-yours{ opacity: 0.9; stroke-dasharray: 1 0; stroke-width: 0.9; }
+
+  footer{
+    border-top: 1px solid var(--hairline-soft);
+    padding: 26px clamp(20px, 5vw, 56px) 34px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    font-size: 0.78rem;
+    color: var(--ink-faint);
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <canvas id="sky" aria-hidden="true"></canvas>
+  <div class="hero-vignette" aria-hidden="true"></div>
+
+  <nav class="topnav">
+    <span class="wordmark">SideQuest</span>
+    <a class="js-discord-link nav-cta" href="#join-discord">Join the Discord</a>
+  </nav>
+
+  <div class="hero-copy">
+    <p class="epoch">Epoch: November 4, 2026</p>
+    <h1>SideQuest</h1>
+    <p class="tagline">An Alliance guild for World of Warcraft: Forever. The journey and the raid both count.</p>
+    <a class="js-discord-link btn-primary" id="heroJoin" href="#join-discord">
+      <span>Join the Discord</span>
+      <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>
+  </div>
+
+  <button class="star-hotspot" id="yoursStar" type="button" aria-label="Your star, unlit — your place in the Lion"></button>
+  <div class="annotation" id="yoursAnnotation">
+    <svg class="leader-svg" id="leaderSvg" width="60" height="60" aria-hidden="true">
+      <line x1="0" y1="0" x2="38" y2="20" stroke="var(--gold)" stroke-width="1" opacity="0.5"/>
+    </svg>
+    <p>Unlit: your place in the Lion</p>
+  </div>
+</header>
+
+<main>
+
+  <section class="how-we-play">
+    <div class="wrap">
+      <div class="section-head">
+        <h2>How we play</h2>
+        <p>Three small asterisms, plotted the way the night itself keeps them — distinct skies, one chart.</p>
+      </div>
+
+      <div class="plates">
+        <figure class="plate">
+          <div class="plate-frame">
+            <span class="plate-num">I</span>
+            <svg viewBox="0 0 200 150" aria-hidden="true">
+              <g stroke="var(--gold)" stroke-width="0.5" opacity="0.28">
+                <line x1="10" y1="6" x2="10" y2="10"/><line x1="30" y1="6" x2="30" y2="10"/><line x1="50" y1="6" x2="50" y2="10"/>
+                <line x1="70" y1="6" x2="70" y2="10"/><line x1="90" y1="6" x2="90" y2="10"/><line x1="110" y1="6" x2="110" y2="10"/>
+                <line x1="130" y1="6" x2="130" y2="10"/><line x1="150" y1="6" x2="150" y2="10"/><line x1="170" y1="6" x2="170" y2="10"/><line x1="190" y1="6" x2="190" y2="10"/>
+                <line x1="10" y1="144" x2="10" y2="140"/><line x1="30" y1="144" x2="30" y2="140"/><line x1="50" y1="144" x2="50" y2="140"/>
+                <line x1="70" y1="144" x2="70" y2="140"/><line x1="90" y1="144" x2="90" y2="140"/><line x1="110" y1="144" x2="110" y2="140"/>
+                <line x1="130" y1="144" x2="130" y2="140"/><line x1="150" y1="144" x2="150" y2="140"/><line x1="170" y1="144" x2="170" y2="140"/><line x1="190" y1="144" x2="190" y2="140"/>
+              </g>
+              <g fill="var(--gold-pale)" opacity="0.4">
+                <circle cx="18" cy="24" r="0.7"/><circle cx="46" cy="18" r="0.9"/><circle cx="160" cy="30" r="0.7"/>
+                <circle cx="178" cy="60" r="0.8"/><circle cx="24" cy="100" r="0.7"/><circle cx="168" cy="118" r="0.9"/>
+                <circle cx="150" cy="132" r="0.6"/><circle cx="34" cy="60" r="0.6"/><circle cx="60" cy="130" r="0.7"/>
+                <circle cx="140" cy="20" r="0.6"/><circle cx="12" cy="70" r="0.8"/><circle cx="188" cy="90" r="0.6"/>
+              </g>
+              <g class="plate-ghost" fill="none" stroke="var(--gold)" stroke-width="0.9" opacity="0.14">
+                <circle cx="100" cy="38" r="5"/>
+                <path d="M100,43 C98,58 104,72 98,88"/>
+                <path d="M98,88 C94,100 90,110 84,124"/>
+                <path d="M98,88 C102,100 108,112 112,126"/>
+                <path d="M99,55 C112,58 122,54 130,34"/>
+                <path d="M130,34 L126,130"/>
+              </g>
+              <path d="M100,38 L130,34 L99,66 L84,124 L112,126 L126,130" fill="none" stroke="var(--gold)" stroke-width="0.7" stroke-dasharray="1 4" opacity="0.55"/>
+              <circle cx="100" cy="38" r="3.2" fill="var(--gold-bright)"/>
+              <circle cx="130" cy="34" r="2.1" fill="var(--gold-pale)" opacity="0.85"/>
+              <circle cx="99" cy="66" r="1.7" fill="var(--gold-pale)" opacity="0.65"/>
+              <circle cx="84" cy="124" r="1.8" fill="var(--gold-pale)" opacity="0.7"/>
+              <circle cx="112" cy="126" r="2.1" fill="var(--gold-pale)" opacity="0.8"/>
+              <circle cx="126" cy="130" r="1.6" fill="var(--gold-pale)" opacity="0.6"/>
+            </svg>
+          </div>
+          <figcaption>
+            <span class="plate-title">The Wanderer</span>
+            <p class="plate-body">Casual and social. No set path through the week — just whoever's on, a dungeon worth finishing, a joke worth staying for.</p>
+          </figcaption>
+        </figure>
+
+        <figure class="plate">
+          <div class="plate-frame">
+            <span class="plate-num">II</span>
+            <svg viewBox="0 0 200 150" aria-hidden="true">
+              <g stroke="var(--gold)" stroke-width="0.5" opacity="0.28">
+                <line x1="10" y1="6" x2="10" y2="10"/><line x1="30" y1="6" x2="30" y2="10"/><line x1="50" y1="6" x2="50" y2="10"/>
+                <line x1="70" y1="6" x2="70" y2="10"/><line x1="90" y1="6" x2="90" y2="10"/><line x1="110" y1="6" x2="110" y2="10"/>
+                <line x1="130" y1="6" x2="130" y2="10"/><line x1="150" y1="6" x2="150" y2="10"/><line x1="170" y1="6" x2="170" y2="10"/><line x1="190" y1="6" x2="190" y2="10"/>
+                <line x1="10" y1="144" x2="10" y2="140"/><line x1="30" y1="144" x2="30" y2="140"/><line x1="50" y1="144" x2="50" y2="140"/>
+                <line x1="70" y1="144" x2="70" y2="140"/><line x1="90" y1="144" x2="90" y2="140"/><line x1="110" y1="144" x2="110" y2="140"/>
+                <line x1="130" y1="144" x2="130" y2="140"/><line x1="150" y1="144" x2="150" y2="140"/><line x1="170" y1="144" x2="170" y2="140"/><line x1="190" y1="144" x2="190" y2="140"/>
+              </g>
+              <g fill="var(--gold-pale)" opacity="0.4">
+                <circle cx="20" cy="30" r="0.8"/><circle cx="40" cy="112" r="0.6"/><circle cx="170" cy="100" r="0.8"/>
+                <circle cx="182" cy="40" r="0.7"/><circle cx="16" cy="90" r="0.6"/><circle cx="160" cy="18" r="0.7"/>
+                <circle cx="30" cy="56" r="0.9"/><circle cx="178" cy="132" r="0.6"/><circle cx="14" cy="136" r="0.7"/>
+              </g>
+              <g class="plate-ghost" fill="none" stroke="var(--gold)" stroke-width="0.9" opacity="0.14">
+                <line x1="55" y1="130" x2="55" y2="48"/>
+                <line x1="145" y1="130" x2="145" y2="48"/>
+                <path d="M53,48 C75,36 125,36 147,48"/>
+                <path d="M100,36 L100,14 L120,24 Z"/>
+              </g>
+              <path d="M55,48 L100,40 L145,48 M55,48 L55,130 M145,48 L145,130 M100,40 L120,24" fill="none" stroke="var(--gold)" stroke-width="0.7" opacity="0.5"/>
+              <circle cx="55" cy="48" r="2" fill="var(--gold-pale)" opacity="0.85"/>
+              <circle cx="145" cy="48" r="2" fill="var(--gold-pale)" opacity="0.85"/>
+              <circle cx="120" cy="24" r="3.2" fill="var(--gold-bright)"/>
+              <circle cx="100" cy="40" r="1.7" fill="var(--gold-pale)" opacity="0.65"/>
+              <circle cx="55" cy="130" r="1.7" fill="var(--gold-pale)" opacity="0.6"/>
+              <circle cx="145" cy="130" r="1.7" fill="var(--gold-pale)" opacity="0.6"/>
+            </svg>
+          </div>
+          <figcaption>
+            <span class="plate-title">The Raid</span>
+            <p class="plate-body">Semi-core and scheduled. A standing night, a known roster, steady work toward a pull everyone's actually ready for.</p>
+          </figcaption>
+        </figure>
+
+        <figure class="plate">
+          <div class="plate-frame">
+            <span class="plate-num">III</span>
+            <svg viewBox="0 0 200 150" aria-hidden="true">
+              <g stroke="var(--gold)" stroke-width="0.5" opacity="0.28">
+                <line x1="10" y1="6" x2="10" y2="10"/><line x1="30" y1="6" x2="30" y2="10"/><line x1="50" y1="6" x2="50" y2="10"/>
+                <line x1="70" y1="6" x2="70" y2="10"/><line x1="90" y1="6" x2="90" y2="10"/><line x1="110" y1="6" x2="110" y2="10"/>
+                <line x1="130" y1="6" x2="130" y2="10"/><line x1="150" y1="6" x2="150" y2="10"/><line x1="170" y1="6" x2="170" y2="10"/><line x1="190" y1="6" x2="190" y2="10"/>
+                <line x1="10" y1="144" x2="10" y2="140"/><line x1="30" y1="144" x2="30" y2="140"/><line x1="50" y1="144" x2="50" y2="140"/>
+                <line x1="70" y1="144" x2="70" y2="140"/><line x1="90" y1="144" x2="90" y2="140"/><line x1="110" y1="144" x2="110" y2="140"/>
+                <line x1="130" y1="144" x2="130" y2="140"/><line x1="150" y1="144" x2="150" y2="140"/><line x1="170" y1="144" x2="170" y2="140"/><line x1="190" y1="144" x2="190" y2="140"/>
+              </g>
+              <g fill="var(--gold-pale)" opacity="0.4">
+                <circle cx="20" cy="110" r="0.7"/><circle cx="178" cy="110" r="0.7"/><circle cx="30" cy="50" r="0.8"/>
+                <circle cx="170" cy="46" r="0.6"/><circle cx="60" cy="30" r="0.7"/><circle cx="150" cy="20" r="0.9"/>
+                <circle cx="14" cy="60" r="0.6"/><circle cx="186" cy="68" r="0.7"/><circle cx="54" cy="136" r="0.6"/>
+              </g>
+              <g class="plate-ghost" fill="none" stroke="var(--gold)" stroke-width="0.9" opacity="0.14">
+                <path d="M40,130 L96,26 L132,78 L162,130"/>
+                <path d="M70,92 L96,26 L118,68"/>
+              </g>
+              <path d="M96,26 L132,78 M96,26 L70,92 M40,130 L162,130" fill="none" stroke="var(--gold)" stroke-width="0.7" opacity="0.5"/>
+              <circle cx="96" cy="26" r="3.2" fill="var(--gold-bright)"/>
+              <circle cx="132" cy="78" r="2" fill="var(--gold-pale)" opacity="0.8"/>
+              <circle cx="70" cy="92" r="1.8" fill="var(--gold-pale)" opacity="0.7"/>
+              <circle cx="40" cy="130" r="1.7" fill="var(--gold-pale)" opacity="0.6"/>
+              <circle cx="162" cy="130" r="1.7" fill="var(--gold-pale)" opacity="0.6"/>
+            </svg>
+          </div>
+          <figcaption>
+            <span class="plate-title">The Summit</span>
+            <p class="plate-body">Progression. The sharpest point of the chart — strategy, repetition, the kind of clear reserved for the hardest pulls.</p>
+          </figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <hr class="rule">
+
+  <section class="coming">
+    <div class="wrap">
+      <div class="section-head">
+        <h2>Coming after launch</h2>
+        <p>Entries charted but not yet risen. Dates are set to the atlas convention for unknown epochs.</p>
+      </div>
+
+      <table class="index-table">
+        <thead>
+          <tr>
+            <th>No.</th>
+            <th>Feature</th>
+            <th>Opens</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="num">01</td>
+            <td><span class="feature-name">Addon downloads</span><span class="preview-tag">preview</span></td>
+            <td class="opens">TBD</td>
+          </tr>
+          <tr>
+            <td class="num">02</td>
+            <td><span class="feature-name">Raid charts</span><span class="preview-tag">preview</span></td>
+            <td class="opens">TBD</td>
+          </tr>
+          <tr>
+            <td class="num">03</td>
+            <td><span class="feature-name">Raid signups</span><span class="preview-tag">preview</span></td>
+            <td class="opens">TBD</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <hr class="rule">
+
+  <section class="legend">
+    <div class="wrap">
+      <div class="section-head">
+        <h2>The channels, charted</h2>
+        <p>Our Discord, catalogued by brightness — a Bayer designation for every room.</p>
+      </div>
+
+      <div class="legend-grid">
+        <div class="legend-item">
+          <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><circle cx="9" cy="9" r="4.2" fill="var(--gold-bright)"/></svg>
+          <div class="legend-copy">
+            <span class="designation">α <em>Lobby</em></span>
+            <span class="kind">Voice · magnitude 1</span>
+          </div>
+        </div>
+        <div class="legend-item">
+          <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><circle cx="9" cy="9" r="3.3" fill="var(--gold-pale)"/></svg>
+          <div class="legend-copy">
+            <span class="designation">β <em>raid-1</em></span>
+            <span class="kind">Voice · magnitude 2</span>
+          </div>
+        </div>
+        <div class="legend-item">
+          <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><circle cx="9" cy="9" r="3.3" fill="var(--gold-pale)"/></svg>
+          <div class="legend-copy">
+            <span class="designation">γ <em>raid-2</em></span>
+            <span class="kind">Voice · magnitude 2</span>
+          </div>
+        </div>
+        <div class="legend-item">
+          <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><circle cx="9" cy="9" r="2.4" fill="var(--gold-pale)" opacity="0.8"/></svg>
+          <div class="legend-copy">
+            <span class="designation">δ <em>dungeon-1</em></span>
+            <span class="kind">Voice · magnitude 3</span>
+          </div>
+        </div>
+        <div class="legend-item">
+          <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><circle cx="9" cy="9" r="2.4" fill="var(--gold-pale)" opacity="0.8"/></svg>
+          <div class="legend-copy">
+            <span class="designation">ε <em>dungeon-2</em></span>
+            <span class="kind">Voice · magnitude 3</span>
+          </div>
+        </div>
+        <div class="legend-item">
+          <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><circle cx="9" cy="9" r="2.4" fill="var(--gold-pale)" opacity="0.8"/></svg>
+          <div class="legend-copy">
+            <span class="designation">ζ <em>dungeon-3</em></span>
+            <span class="kind">Voice · magnitude 3</span>
+          </div>
+        </div>
+        <div class="legend-item">
+          <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><circle cx="9" cy="9" r="1.8" fill="var(--gold-pale)" opacity="0.6"/></svg>
+          <div class="legend-copy">
+            <span class="designation">η <em>general</em></span>
+            <span class="kind">Text · magnitude 4</span>
+          </div>
+        </div>
+        <div class="legend-item">
+          <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><circle cx="9" cy="9" r="1.8" fill="var(--gold-pale)" opacity="0.6"/></svg>
+          <div class="legend-copy">
+            <span class="designation">θ <em>rules</em></span>
+            <span class="kind">Text · magnitude 4</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="rule">
+
+  <section class="close-section">
+    <div class="wrap">
+      <div class="close-figure" id="closeFigure">
+        <svg viewBox="0 0 120 64" aria-hidden="true">
+          <path class="lion-ghost" d="M3,42 C0,32 3,16 19,5 C30,-2 40,4 45,15 C58,9 78,9 94,15 C104,18 109,26 106,36 C103,45 96,52 86,56 C72,59 58,58 44,52 C36,57 26,60 18,60 C10,58 4,52 3,44 Z"/>
+
+          <g class="lion-line">
+            <line x1="4" y1="40" x2="16" y2="35"/>
+            <line x1="16" y1="35" x2="12" y2="23"/>
+            <line x1="12" y1="23" x2="19" y2="11"/>
+            <line x1="19" y1="11" x2="29" y2="5"/>
+            <line x1="29" y1="5" x2="37" y2="10"/>
+            <line x1="37" y1="10" x2="41" y2="16"/>
+            <line x1="41" y1="16" x2="64" y2="15"/>
+            <line x1="64" y1="15" x2="88" y2="17"/>
+            <line x1="88" y1="17" x2="97" y2="24"/>
+            <line x1="97" y1="24" x2="114" y2="9"/>
+            <line x1="41" y1="16" x2="36" y2="29"/>
+            <line x1="36" y1="29" x2="43" y2="55"/>
+            <line x1="88" y1="17" x2="68" y2="52"/>
+          </g>
+          <line x1="36" y1="29" x2="25" y2="58" class="lion-line-yours" pathLength="1"/>
+
+          <circle cx="4" cy="40" r="1.1" class="lion-star-lit"/>
+          <circle cx="16" cy="35" r="1.5" class="lion-star-lit"/>
+          <circle cx="12" cy="23" r="1.1" class="lion-star-lit"/>
+          <circle cx="19" cy="11" r="1.1" class="lion-star-lit"/>
+          <circle cx="29" cy="5" r="1.1" class="lion-star-lit"/>
+          <circle cx="37" cy="10" r="1.1" class="lion-star-lit"/>
+          <circle cx="41" cy="16" r="1.4" class="lion-star-lit"/>
+          <circle cx="64" cy="15" r="1.1" class="lion-star-lit"/>
+          <circle cx="88" cy="17" r="1.1" class="lion-star-lit"/>
+          <circle cx="97" cy="24" r="1.1" class="lion-star-lit"/>
+          <circle cx="114" cy="9" r="1.5" class="lion-star-lit"/>
+          <circle cx="36" cy="29" r="1.1" class="lion-star-lit"/>
+          <circle cx="43" cy="55" r="1.1" class="lion-star-lit"/>
+          <circle cx="68" cy="52" r="1.1" class="lion-star-lit"/>
+          <circle cx="25" cy="58" r="1.3" class="lion-star-yours"/>
+        </svg>
+      </div>
+      <h2>One star left unlit.</h2>
+      <p class="measure" style="margin-inline:auto;">The Lion is nearly whole. The last point in the chart is the one you haven't taken yet.</p>
+      <a class="js-discord-link btn-primary" id="closeJoin" href="#join-discord">
+        <span>Join the Discord</span>
+        <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </a>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <span>SideQuest — Alliance, World of Warcraft: Forever</span>
+  <span>Ruleset &amp; region: TBD</span>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+
+  // Single source of truth for the invite link. Replace once Discord supplies one.
+  const DISCORD_INVITE = "#join-discord";
+  document.querySelectorAll(".js-discord-link").forEach(function(el){ el.setAttribute("href", DISCORD_INVITE); });
+
+  const reduceMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+  let reduceMotion = reduceMotionQuery.matches;
+  reduceMotionQuery.addEventListener("change", function(e){ reduceMotion = e.matches; });
+
+  /* ---------------- seeded RNG ---------------- */
+  function mulberry32(seed){
+    return function(){
+      seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
+      let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  const rand = mulberry32(0xC0FFEE);
+
+  /* ---------------- lion asterism: recumbent, facing left, classical sickle mane ---------------- */
+  const VIEW_W = 120, VIEW_H = 64;
+
+  const LION_POINTS = {
+    nose:         [4, 40],
+    maneBase:     [16, 35],
+    mane1:        [12, 23],
+    mane2:        [19, 11],
+    mane3:        [29, 5],
+    mane4:        [37, 10],
+    shoulder:     [41, 16],
+    backMid:      [64, 15],
+    haunch:       [88, 17],
+    tailBase:     [97, 24],
+    tailTip:      [114, 9],
+    chest:        [36, 29],
+    forepawFront: [25, 58],
+    forepawBack:  [43, 55],
+    hindpaw:      [68, 52]
+  };
+  const SEGMENTS = [
+    ["nose","maneBase"], ["maneBase","mane1"], ["mane1","mane2"], ["mane2","mane3"], ["mane3","mane4"], ["mane4","shoulder"],
+    ["shoulder","backMid"], ["backMid","haunch"],
+    ["haunch","tailBase"], ["tailBase","tailTip"],
+    ["shoulder","chest"], ["chest","forepawFront"], ["chest","forepawBack"],
+    ["haunch","hindpaw"]
+  ];
+  const LIT_KEYS = new Set(["maneBase", "shoulder", "tailTip"]);
+  const YOURS_KEY = "forepawFront";
+  const YOURS_SEGMENT = ["chest", "forepawFront"];
+
+  // Hevelius-style ghosted outline behind the star figure: one closed cubic-bezier silhouette.
+  const GHOST_PATH = {
+    start: [3, 42],
+    curves: [
+      [0, 32, 3, 16, 19, 5],
+      [30, -2, 40, 4, 45, 15],
+      [58, 9, 78, 9, 94, 15],
+      [104, 18, 109, 26, 106, 36],
+      [103, 45, 96, 52, 86, 56],
+      [72, 59, 58, 58, 44, 52],
+      [36, 57, 26, 60, 18, 60],
+      [10, 58, 4, 52, 3, 44]
+    ]
+  };
+
+  /* ---------------- canvas setup ---------------- */
+  const canvas = document.getElementById("sky");
+  const ctx = canvas.getContext("2d");
+  const hero = document.querySelector(".hero");
+  const heroCopy = document.querySelector(".hero-copy");
+  let W = 0, H = 0, DPR = 1;
+
+  let starLayers = [];
+  function buildStars(){
+    starLayers = [
+      { count: 900, rMin: 0.3, rMax: 0.75, parallax: 10, twinkleChance: 0.03, stars: [] },
+      { count: 650, rMin: 0.6, rMax: 1.15, parallax: 20, twinkleChance: 0.06, stars: [] },
+      { count: 260, rMin: 1.0, rMax: 1.9,  parallax: 34, twinkleChance: 0.12, stars: [] }
+    ];
+    starLayers.forEach(function(layer){
+      for (let i = 0; i < layer.count; i++){
+        const mag = Math.pow(rand(), 3);
+        const r = layer.rMin + mag * (layer.rMax - layer.rMin);
+        const warm = rand() < 0.78;
+        layer.stars.push({
+          x: rand(), y: rand(),
+          r: r,
+          baseAlpha: 0.25 + mag * 0.65,
+          hue: warm ? (38 + rand() * 14) : (198 + rand() * 20),
+          sat: warm ? (55 + rand() * 20) : (28 + rand() * 18),
+          light: warm ? (72 + rand() * 16) : (82 + rand() * 10),
+          twinkle: rand() < layer.twinkleChance,
+          phase: rand() * Math.PI * 2,
+          speed: 0.6 + rand() * 1.1
+        });
+      }
+    });
+  }
+  buildStars();
+
+  function resize(){
+    const rect = hero.getBoundingClientRect();
+    W = rect.width; H = rect.height;
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.round(W * DPR);
+    canvas.height = Math.round(H * DPR);
+    canvas.style.width = W + "px";
+    canvas.style.height = H + "px";
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    layout();
+    positionAnnotation();
+  }
+
+  /* ---------------- stage / layout: constellation sits in clear space below the title block ---------------- */
+  let stage = { cx: 0, cy: 0, rim: 0, x: 0, y: 0, w: 0, h: 0 };
+  function layout(){
+    const heroRect = hero.getBoundingClientRect();
+    const copyRect = heroCopy.getBoundingClientRect();
+    const titleBottom = copyRect.bottom - heroRect.top;
+    const wide = W >= 760;
+    const marginTop = wide ? 40 : 30;
+    const marginBottom = 28;
+    const marginSide = 24;
+
+    const availTop = titleBottom + marginTop;
+    const availBottom = H - marginBottom;
+    const availH = Math.max(availBottom - availTop, 140);
+    const availW = W - marginSide * 2;
+
+    let stageW = Math.min(availW, availH * (VIEW_W / VIEW_H));
+    let stageH = stageW * (VIEW_H / VIEW_W);
+    if (stageH > availH){ stageH = availH; stageW = stageH * (VIEW_W / VIEW_H); }
+
+    let cx = wide ? Math.min(W * 0.66, W - stageW / 2 - marginSide) : W / 2;
+    cx = Math.max(cx, stageW / 2 + marginSide);
+    const slack = Math.max(availH - stageH, 0);
+    const cy = availTop + stageH / 2 + slack * (wide ? 0.3 : 0.12);
+
+    const x = cx - stageW / 2;
+    const y = cy - stageH / 2;
+    const rim = Math.max(stageW, stageH) * 0.62;
+
+    stage = { cx: cx, cy: cy, rim: rim, x: x, y: y, w: stageW, h: stageH };
+  }
+
+  function mapPoint(lx, ly){
+    return {
+      x: stage.x + (lx / VIEW_W) * stage.w,
+      y: stage.y + (ly / VIEW_H) * stage.h
+    };
+  }
+
+  function positionAnnotation(){
+    const starHotspot = document.getElementById("yoursStar");
+    const annotation = document.getElementById("yoursAnnotation");
+    const leaderSvg = document.getElementById("leaderSvg");
+    const pt = mapPoint(LION_POINTS[YOURS_KEY][0], LION_POINTS[YOURS_KEY][1]);
+
+    starHotspot.style.left = pt.x + "px";
+    starHotspot.style.top = pt.y + "px";
+
+    const narrow = W < 560;
+    const dx = narrow ? -14 : 32;
+    const dy = narrow ? -44 : -56;
+    let annX = pt.x + dx;
+    let annY = pt.y + dy;
+    annX = Math.max(14, Math.min(annX, W - 200));
+    annY = Math.max(14, Math.min(annY, H - 50));
+
+    annotation.style.left = annX + "px";
+    annotation.style.top = annY + "px";
+
+    const leaderDx = pt.x - annX;
+    const leaderDy = pt.y - annY;
+    const leaderW = Math.max(Math.abs(leaderDx), 4);
+    const leaderH = Math.max(Math.abs(leaderDy), 4);
+    leaderSvg.setAttribute("width", leaderW);
+    leaderSvg.setAttribute("height", leaderH);
+    leaderSvg.style.left = (leaderDx < 0 ? leaderDx : 0) + "px";
+    leaderSvg.style.top = (leaderDy < 0 ? leaderDy : 0) + "px";
+    const line = leaderSvg.querySelector("line");
+    const x1 = leaderDx < 0 ? leaderW : 0;
+    const y1 = leaderDy < 0 ? leaderH : 0;
+    const x2 = leaderDx < 0 ? 0 : leaderW;
+    const y2 = leaderDy < 0 ? 0 : leaderH;
+    line.setAttribute("x1", x1); line.setAttribute("y1", y1);
+    line.setAttribute("x2", x2); line.setAttribute("y2", y2);
+  }
+
+  /* ---------------- interaction state ---------------- */
+  let rotTarget = 0, rotCurrent = 0;
+  let pointerTarget = { x: 0, y: 0 }, pointerCurrent = { x: 0, y: 0 };
+  let igniteTarget = 0, igniteCurrent = 0;
+  const activeIgniters = new Set();
+
+  function setIgnite(id, on){
+    if (on) activeIgniters.add(id); else activeIgniters.delete(id);
+    igniteTarget = activeIgniters.size > 0 ? 1 : 0;
+  }
+
+  window.addEventListener("scroll", function(){
+    if (reduceMotion) return;
+    const s = Math.max(0, Math.min(window.scrollY, 500));
+    rotTarget = (s / 500) * (5 * Math.PI / 180);
+  }, { passive: true });
+
+  hero.addEventListener("pointermove", function(e){
+    if (reduceMotion) return;
+    const rect = hero.getBoundingClientRect();
+    pointerTarget.x = ((e.clientX - rect.left) / rect.width - 0.5) * 2;
+    pointerTarget.y = ((e.clientY - rect.top) / rect.height - 0.5) * 2;
+  });
+  hero.addEventListener("pointerleave", function(){
+    pointerTarget.x = 0; pointerTarget.y = 0;
+  });
+
+  ["heroJoin", "yoursStar"].forEach(function(id){
+    const el = document.getElementById(id);
+    el.addEventListener("mouseenter", function(){ setIgnite(id, true); });
+    el.addEventListener("mouseleave", function(){ setIgnite(id, false); });
+    el.addEventListener("focus", function(){ setIgnite(id, true); });
+    el.addEventListener("blur", function(){ setIgnite(id, false); });
+  });
+
+  const closeFigure = document.getElementById("closeFigure");
+  const closeJoin = document.getElementById("closeJoin");
+  function setCloseIgnite(on){ closeFigure.classList.toggle("ignite", on); }
+  closeJoin.addEventListener("mouseenter", function(){ setCloseIgnite(true); });
+  closeJoin.addEventListener("mouseleave", function(){ setCloseIgnite(false); });
+  closeJoin.addEventListener("focus", function(){ setCloseIgnite(true); });
+  closeJoin.addEventListener("blur", function(){ setCloseIgnite(false); });
+
+  /* ---------------- drawing ---------------- */
+  function drawGround(){
+    const g = ctx.createRadialGradient(W/2, H*0.42, 0, W/2, H*0.42, Math.max(W, H) * 0.75);
+    g.addColorStop(0, "#184a5e");
+    g.addColorStop(0.55, "#123a4a");
+    g.addColorStop(1, "#0b2733");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  function drawGrid(){
+    const cx = stage.cx, cy = stage.cy, rim = stage.rim;
+    ctx.save();
+    ctx.strokeStyle = "rgba(217,178,95,0.22)";
+    ctx.lineWidth = 0.75;
+    ctx.beginPath();
+    ctx.arc(cx, cy, rim, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.strokeStyle = "rgba(217,178,95,0.08)";
+    [0.4, 0.68].forEach(function(f){
+      ctx.beginPath();
+      ctx.arc(cx, cy, rim * f, 0, Math.PI * 2);
+      ctx.stroke();
+    });
+
+    ctx.strokeStyle = "rgba(217,178,95,0.05)";
+    ctx.lineWidth = 0.6;
+    for (let a = 0; a < 360; a += 30){
+      const rad = a * Math.PI / 180;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(cx + Math.cos(rad) * rim, cy + Math.sin(rad) * rim);
+      ctx.stroke();
+    }
+
+    ctx.strokeStyle = "rgba(217,178,95,0.38)";
+    ctx.lineWidth = 0.75;
+    for (let a = 0; a < 360; a += 10){
+      const rad = a * Math.PI / 180;
+      const long = a % 90 === 0;
+      const r1 = rim + 2;
+      const r2 = rim + (long ? 12 : 6);
+      ctx.beginPath();
+      ctx.moveTo(cx + Math.cos(rad) * r1, cy + Math.sin(rad) * r1);
+      ctx.lineTo(cx + Math.cos(rad) * r2, cy + Math.sin(rad) * r2);
+      ctx.stroke();
+    }
+
+    ctx.fillStyle = "rgba(236,220,182,0.42)";
+    ctx.font = "9px 'Gloock', serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    [[0,"0°"],[90,"90°"],[180,"180°"],[270,"270°"]].forEach(function(entry){
+      const rad = entry[0] * Math.PI / 180;
+      const r = rim + 24;
+      ctx.fillText(entry[1], cx + Math.cos(rad) * r, cy + Math.sin(rad) * r);
+    });
+
+    ctx.strokeStyle = "rgba(217,178,95,0.1)";
+    ctx.lineWidth = 0.6;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, rim * 0.92, rim * 0.3, -0.18, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  function drawStars(now){
+    starLayers.forEach(function(layer){
+      const px = reduceMotion ? 0 : pointerCurrent.x * layer.parallax;
+      const py = reduceMotion ? 0 : pointerCurrent.y * layer.parallax;
+      ctx.save();
+      ctx.translate(px, py);
+      layer.stars.forEach(function(s){
+        let alpha = s.baseAlpha;
+        if (s.twinkle && !reduceMotion){
+          alpha *= 0.72 + Math.sin(now * 0.001 * s.speed + s.phase) * 0.28;
+        }
+        const x = s.x * W, y = s.y * H;
+        ctx.beginPath();
+        ctx.fillStyle = "hsla(" + s.hue + "," + s.sat + "%," + s.light + "%," + Math.max(0, alpha) + ")";
+        ctx.arc(x, y, s.r, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.restore();
+    });
+  }
+
+  function drawGhostLion(){
+    ctx.save();
+    ctx.beginPath();
+    const s = mapPoint(GHOST_PATH.start[0], GHOST_PATH.start[1]);
+    ctx.moveTo(s.x, s.y);
+    GHOST_PATH.curves.forEach(function(c){
+      const p1 = mapPoint(c[0], c[1]);
+      const p2 = mapPoint(c[2], c[3]);
+      const p3 = mapPoint(c[4], c[5]);
+      ctx.bezierCurveTo(p1.x, p1.y, p2.x, p2.y, p3.x, p3.y);
+    });
+    ctx.closePath();
+    ctx.strokeStyle = "rgba(217,178,95,0.09)";
+    ctx.lineWidth = 0.9;
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawLion(){
+    ctx.save();
+    ctx.lineCap = "round";
+
+    SEGMENTS.forEach(function(seg){
+      const isYours = (seg[0] === YOURS_SEGMENT[0] && seg[1] === YOURS_SEGMENT[1]) ||
+                       (seg[1] === YOURS_SEGMENT[0] && seg[0] === YOURS_SEGMENT[1]);
+      const a = mapPoint(LION_POINTS[seg[0]][0], LION_POINTS[seg[0]][1]);
+      const b = mapPoint(LION_POINTS[seg[1]][0], LION_POINTS[seg[1]][1]);
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(b.x, b.y);
+      if (isYours){
+        const gap = 8 - igniteCurrent * 8;
+        ctx.setLineDash([3, Math.max(gap, 0)]);
+        ctx.strokeStyle = "rgba(217,178,95," + (0.14 + igniteCurrent * 0.8) + ")";
+        ctx.lineWidth = 1 + igniteCurrent * 0.8;
+      } else {
+        ctx.setLineDash([]);
+        ctx.strokeStyle = "rgba(217,178,95,0.24)";
+        ctx.lineWidth = 0.9;
+      }
+      ctx.stroke();
+      ctx.setLineDash([]);
+    });
+
+    Object.keys(LION_POINTS).forEach(function(key){
+      const p = mapPoint(LION_POINTS[key][0], LION_POINTS[key][1]);
+      const isLit = LIT_KEYS.has(key);
+      const isYours = key === YOURS_KEY;
+      const baseR = (W < 560 ? 2.1 : 2.6) + (isLit ? 1 : 0);
+
+      if (isYours){
+        const haloR = baseR * (2.2 + igniteCurrent * 3.4);
+        if (igniteCurrent > 0.01){
+          const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, haloR);
+          g.addColorStop(0, "rgba(243,226,179," + (0.55 * igniteCurrent) + ")");
+          g.addColorStop(1, "rgba(243,226,179,0)");
+          ctx.beginPath();
+          ctx.fillStyle = g;
+          ctx.arc(p.x, p.y, haloR, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.beginPath();
+        ctx.fillStyle = "rgba(243,226,179," + Math.min(igniteCurrent * 1.2, 1) + ")";
+        ctx.arc(p.x, p.y, baseR * (1 + igniteCurrent * 0.5), 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = "rgba(184,69,47,0.9)";
+        ctx.arc(p.x, p.y, baseR * (1 + igniteCurrent * 0.5), 0, Math.PI * 2);
+        ctx.stroke();
+      } else if (isLit){
+        const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, baseR * 3.4);
+        g.addColorStop(0, "rgba(243,226,179,0.4)");
+        g.addColorStop(1, "rgba(243,226,179,0)");
+        ctx.beginPath();
+        ctx.fillStyle = g;
+        ctx.arc(p.x, p.y, baseR * 3.4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.fillStyle = "rgba(243,226,179,0.95)";
+        ctx.arc(p.x, p.y, baseR, 0, Math.PI * 2);
+        ctx.fill();
+      } else {
+        ctx.beginPath();
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = "rgba(217,178,95,0.6)";
+        ctx.fillStyle = "rgba(18,58,74,0.9)";
+        ctx.arc(p.x, p.y, baseR, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+      }
+    });
+
+    ctx.restore();
+  }
+
+  function frame(now){
+    const lerpF = reduceMotion ? 1 : 0.08;
+    rotCurrent += (rotTarget - rotCurrent) * lerpF;
+    pointerCurrent.x += (pointerTarget.x - pointerCurrent.x) * lerpF;
+    pointerCurrent.y += (pointerTarget.y - pointerCurrent.y) * lerpF;
+    igniteCurrent += (igniteTarget - igniteCurrent) * (reduceMotion ? 1 : 0.1);
+
+    drawGround();
+
+    ctx.save();
+    ctx.translate(stage.cx, stage.cy);
+    ctx.rotate(rotCurrent);
+    ctx.translate(-stage.cx, -stage.cy);
+    drawGrid();
+    drawStars(now);
+    drawGhostLion();
+    drawLion();
+    ctx.restore();
+
+    requestAnimationFrame(frame);
+  }
+
+  let resizeRaf = null;
+  function scheduleResize(){
+    if (resizeRaf) cancelAnimationFrame(resizeRaf);
+    resizeRaf = requestAnimationFrame(resize);
+  }
+  window.addEventListener("resize", scheduleResize);
+  window.addEventListener("load", scheduleResize);
+  if (document.fonts && document.fonts.ready){ document.fonts.ready.then(scheduleResize); }
+
+  resize();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

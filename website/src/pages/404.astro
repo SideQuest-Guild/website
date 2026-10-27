@@ -1,0 +1,36 @@
+---
+import { Image } from "astro:assets";
+import JoinPlaque from "../components/JoinPlaque.astro";
+import SiteFooter from "../components/SiteFooter.astro";
+import Site from "../layouts/Site.astro";
+import joinArt from "../../assets/plates/join-art.png";
+---
+
+<Site title="Off the map · SideQuest" description="This page isn't on the SideQuest map.">
+  <main id="top" tabindex="-1" class="join lost">
+    <Image
+      class="join-art"
+      src={joinArt}
+      widths={[1200, 2172]}
+      sizes="100vw"
+      alt="A gryphon perches on a watchtower above a road that winds toward a lakeside citadel."
+      loading="eager"
+    />
+    <div class="join-body wrap">
+      <div class="heading">
+        <span class="rule" aria-hidden="true"></span>
+        <h1>OFF THE MAP</h1>
+        <span class="rule flip" aria-hidden="true"></span>
+      </div>
+      <p class="join-copy">This road doesn't lead anywhere yet. The guild is back at the start.</p>
+      <JoinPlaque label="Back to SideQuest" href="/" />
+    </div>
+  </main>
+  <SiteFooter />
+</Site>
+
+<style>
+  .lost {
+    padding-top: clamp(24px, 4vw, 64px);
+  }
+</style>

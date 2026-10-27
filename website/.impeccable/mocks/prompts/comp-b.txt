@@ -1,0 +1,11 @@
+A desktop landing page for SideQuest, an Alliance guild for World of Warcraft: Forever, rendered edge to edge at 1440x900 with crisp readable text and no browser window or device around it. The attached image is style inspiration only (a dark fantasy gaming theme): adapt its painterly art direction and refined type into a real working guild site; do not copy its layout, art or text.
+
+The visitor is a WoW player deciding whether to join. The page must say who the guild is and get them into the Discord.
+
+Leads with a figure: an original painted Alliance knight in blue-and-gold plate, seen from behind, standing on a ridge beside a resting gryphon at night, looking toward a distant glowing fortress gate across a valley of forest and mist. The figure fills the right two thirds. On the left, left-aligned: "SIDEQUEST" in large thin widely tracked serif capitals, the line "Casual nights, scheduled raids and real progression, under one banner.", a solid gold button "Join the Discord" and a quiet outlined button "How we play".
+Along the bottom of the hero, three small dated markers: "Name reservation · open now", "Launch · Nov 4, 2026", "First raid night · TBD".
+Below, the start of a dark charcoal content column framed by tall painted side panels, headed "Coming after launch", listing "Addon downloads", "Raid charts" and "Raid signups", each marked "Not yet open".
+
+Frame: a small white lion crest with the word SideQuest top left; navigation "Home, How we play, Raids, Addons"; a "Join the Discord" button top right.
+
+Visual law: Alliance night blue and charcoal ground, gold light as the single accent, painterly concept art with real drawing skill, thin elegant serif display type.

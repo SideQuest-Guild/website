@@ -1,0 +1,111 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  PYTHONDONTWRITEBYTECODE: 1
+  FORCE_COLOR: 1
+
+jobs:
+  python-quality:
+    name: Python lint, format, types
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install uv (Python from .python-version)
+        uses: astral-sh/setup-uv@v10
+        with:
+          enable-cache: true
+
+      - name: Sync workspace
+        run: uv sync --all-packages --locked
+
+      - name: Ruff format
+        run: uv run --no-sync ruff format --check --diff .
+
+      - name: Ruff lint
+        run: uv run --no-sync ruff check --output-format=github .
+
+      - name: Pyrefly (fails on errors not in pyrefly-baseline.json)
+        run: uv run --no-sync pyrefly check
+
+      - name: Codespell
+        run: uv run --no-sync codespell
+
+  python-test:
+    name: Python tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install uv (Python from .python-version)
+        uses: astral-sh/setup-uv@v10
+        with:
+          enable-cache: true
+
+      - name: Sync workspace
+        run: uv sync --all-packages --locked
+
+      - name: Pytest
+        run: uv run --no-sync pytest -q -W error::DeprecationWarning --cov --cov-report=term-missing --cov-report=xml
+
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-xml
+          path: coverage.xml
+          if-no-files-found: ignore
+          retention-days: 14
+
+  website:
+    name: Website lint, format, types, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: website
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install Node (website/mise.toml)
+        uses: jdx/mise-action@v5
+        with:
+          working_directory: website
+          cache: true
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: oxfmt
+        run: npx oxfmt --check
+
+      - name: oxlint
+        run: npx oxlint --deny-warnings --format=github
+
+      - name: Astro check
+        run: npx astro check
+
+      - name: Build
+        run: npm run build
+
+      - name: Upload site
+        uses: actions/upload-artifact@v7
+        with:
+          name: website-dist
+          path: website/dist
+          retention-days: 7

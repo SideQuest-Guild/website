@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SideQuest · An Alliance guild for World of Warcraft: Forever</title>
+<meta name="description" content="SideQuest is an Alliance guild for World of Warcraft: Forever. The journey and the raid both count.">
+<link rel="preload" as="font" type="font/woff2" href="fonts/LibertinusSerifDisplay.woff2" crossorigin>
+<link rel="preload" as="font" type="font/woff2" href="fonts/EBGaramond.woff2" crossorigin>
+<link rel="preload" as="image" href="../../../assets/plates/hero-art.png" media="(min-width: 901px)">
+<link rel="preload" as="image" href="../../../assets/plates/hero-art-mobile.png" media="(max-width: 900px)">
+<style>
+@font-face { font-family: "Libertinus Serif Display"; font-style: normal; font-weight: 400; font-display: swap; src: url(fonts/LibertinusSerifDisplay.woff2) format("woff2"); }
+@font-face { font-family: "EB Garamond"; font-style: normal; font-weight: 400 600; font-display: swap; src: url(fonts/EBGaramond.woff2) format("woff2"); }
+@font-face { font-family: "EB Garamond"; font-style: italic; font-weight: 400; font-display: swap; src: url(fonts/EBGaramond-italic.woff2) format("woff2"); }
+:root {
+  --charcoal: #151515;
+  --ink: #f2efe9;
+  --ink-2: #cfcac1;
+  --ink-3: #9d978d;
+  --gold: #d8ab5c;
+  --gold-2: #a88449;
+  --hair: rgba(255, 255, 255, .09);
+  --display: "Libertinus Serif Display", "Libertinus Serif", Georgia, serif;
+  --serif: "EB Garamond", Garamond, Georgia, serif;
+  /* Comp frame units: 1 comp pixel at the 1586px-wide comp. */
+  --u: calc(100vw / 1586);
+  /* Below the comp: the same type, fluid. */
+  --gut: clamp(20px, 4.5vw, 72px);
+  --h2: clamp(28px, 2.4vw, 40px);
+  --lede: clamp(19px, 1.45vw, 24px);
+  --body: clamp(17px, 1.15vw, 19px);
+  --caps: clamp(12px, .85vw, 14px);
+  --ease: cubic-bezier(.2, .7, .2, 1);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { background: var(--charcoal); scrollbar-color: #3a3a38 var(--charcoal); }
+body { position: relative; margin: 0; color: var(--ink); font-family: var(--serif); font-weight: 400; -webkit-font-smoothing: antialiased; background: linear-gradient(rgba(21, 21, 21, .42), rgba(21, 21, 21, .42)), url(../../../assets/plates/strip-ground.png) 0 0 / 512px repeat, var(--charcoal); }
+::selection { background: var(--gold); color: #151515; }
+a { color: inherit; text-decoration: none; }
+:focus-visible { outline: 1px solid var(--gold); outline-offset: 4px; }
+img { display: block; }
+.skip { position: absolute; left: 16px; top: -60px; z-index: 20; padding: 10px 16px; background: var(--gold); color: #151515; font-weight: 600; }
+.skip:focus { top: 16px; }
+
+/* Hairline gold rules: a line that fades out, ending in or centred on a diamond. */
+.rule { display: flex; align-items: center; }
+.rule::before { content: ""; flex: 1; height: 1px; background: linear-gradient(to right, rgba(216, 171, 92, 0), var(--gold) 80%); }
+.rule::after { content: ""; flex: none; width: max(calc(6 * var(--u)), 5px); height: max(calc(6 * var(--u)), 5px); border: 1px solid var(--gold); transform: rotate(45deg); }
+.rule.flip { flex-direction: row-reverse; }
+.rule.flip::before { background: linear-gradient(to left, rgba(216, 171, 92, 0), var(--gold) 80%); }
+.rule-c { --gap: max(calc(16 * var(--u)), 11px); --ly: 50%; position: relative; background: linear-gradient(to right, rgba(216, 171, 92, 0), rgba(233, 207, 154, .95) 22%, rgba(233, 207, 154, .95) calc(50% - var(--gap)), transparent calc(50% - var(--gap)), transparent calc(50% + var(--gap)), rgba(233, 207, 154, .95) calc(50% + var(--gap)), rgba(233, 207, 154, .95) 78%, rgba(216, 171, 92, 0)) 0 var(--ly) / 100% max(calc(1.6 * var(--u)), 1px) no-repeat; }
+.rule-c::after { content: ""; position: absolute; left: 50%; top: var(--ly); width: max(calc(13 * var(--u)), 9px); aspect-ratio: 1; background: #f4ead6; clip-path: polygon(50% 0, 61% 39%, 100% 50%, 61% 61%, 50% 100%, 39% 61%, 0 50%, 39% 39%); transform: translate(-50%, -50%); }
+.rule-c.dim { background-image: linear-gradient(to right, rgba(216, 171, 92, 0), rgba(216, 171, 92, .45) 12%, rgba(216, 171, 92, .45) calc(50% - var(--gap)), transparent calc(50% - var(--gap)), transparent calc(50% + var(--gap)), rgba(216, 171, 92, .45) calc(50% + var(--gap)), rgba(216, 171, 92, .45) 88%, rgba(216, 171, 92, 0)); }
+.rule-c.dim::after { background: var(--gold-2); }
+
+/* ——— The measured first viewport ——— */
+.frame { position: relative; width: 100%; aspect-ratio: 1586 / 992; overflow: hidden; background: url(../../../assets/plates/strip-ground.png) 0 0 / 512px repeat, var(--charcoal); }
+.site-header { position: absolute; z-index: 10; top: 0; left: 0; width: 100%; aspect-ratio: 1586 / 992; pointer-events: none; }
+.site-header > *, .site-header nav > * { pointer-events: auto; }
+.fill { object-fit: cover; }
+.fit { object-fit: contain; }
+.fill:not(.r), .fit:not(.r) { width: 100%; height: 100%; }
+.r { position: absolute; left: var(--x); top: var(--y); width: var(--w); height: var(--h); }
+.center { display: flex; align-items: center; justify-content: center; text-align: center; }
+.shade { text-shadow: 0 1px 3px rgba(4, 8, 16, .9), 0 0 22px rgba(4, 8, 16, .7); }
+
+.hero-art { --x: 0%; --y: 0%; --w: 100%; --h: 87.20%; }
+.nav-crest { --x: 4.22%; --y: 0%; --w: 4.04%; --h: 9.68%; }
+.nav-crest img { object-position: top; }
+.nav-wordmark { --x: 8.70%; --y: 3.13%; --w: 14.00%; --h: 2.72%; justify-content: flex-start; font-family: var(--display); font-size: calc(23 * var(--u)); letter-spacing: .54em; line-height: 1; white-space: nowrap; }
+.nav-links { --x: 69.48%; --y: 3.13%; --w: 25.73%; --h: 2.62%; display: flex; justify-content: space-between; align-items: center; margin: 0; padding: 0; list-style: none; }
+.nav-links a { font-size: max(calc(20.5 * var(--u)), 13px); letter-spacing: .07em; white-space: nowrap; transition: color .3s; }
+.nav-links a:hover { color: var(--gold); }
+
+.emblem { --x: 39.09%; --y: 26.21%; --w: 22.07%; --h: 19.15%; }
+.side-heading, .raid-heading { margin: 0; font-size: calc(31.5 * var(--u)); font-weight: 400; letter-spacing: .03em; line-height: 1; white-space: nowrap; }
+.side-heading { --x: 15.01%; --y: 34.88%; --w: 11.85%; --h: 3.23%; }
+.raid-heading { --x: 74.78%; --y: 34.88%; --w: 7.31%; --h: 3.23%; }
+.side-rule { --x: 16.65%; --y: 38.51%; --w: 8.45%; --h: 1.21%; }
+.raid-rule { --x: 75.98%; --y: 38.51%; --w: 5.04%; --h: 1.21%; }
+.side-copy, .raid-copy { margin: 0; font-size: calc(19 * var(--u)); line-height: 1; white-space: nowrap; color: #e4e0d8; }
+.side-copy { --x: 11.85%; --y: 40.22%; --w: 18.28%; --h: 2.22%; letter-spacing: .1em; }
+.raid-copy { --x: 71.06%; --y: 40.22%; --w: 15.76%; --h: 2.22%; letter-spacing: .02em; }
+
+.title { --x: 36.07%; --y: 45.77%; --w: 29.26%; --h: 5.24%; margin: 0; font-family: var(--display); font-weight: 400; font-size: calc(55 * var(--u)); letter-spacing: .42em; padding-left: .42em; line-height: 1; white-space: nowrap; color: #f6f3ee; }
+.title-rule { --x: 36.89%; --y: 51.71%; --w: 27.18%; --h: 1.61%; --ly: 62%; }
+.scrim { --x: 30%; --y: 22%; --w: 40%; --h: 46%; background: radial-gradient(closest-side, rgba(8, 16, 30, .55), rgba(8, 16, 30, .3) 60%, rgba(8, 16, 30, 0)); pointer-events: none; }
+.scrim-raid { --x: 67%; --y: 31%; --w: 24%; --h: 15%; background: radial-gradient(closest-side, rgba(8, 12, 22, .72), rgba(8, 12, 22, .42) 62%, rgba(8, 12, 22, 0)); }
+.tagline { --x: 36.57%; --y: 53.93%; --w: 28.12%; --h: 3.63%; margin: 0; font-size: calc(29 * var(--u)); letter-spacing: .02em; line-height: 1; white-space: nowrap; color: #f0ede6; }
+.cta-plate { --x: 39.22%; --y: 59.38%; --w: 21.69%; --h: 6.05%; transition: filter .4s var(--ease), transform .4s var(--ease); }
+.cta-plate img, .plaque img { object-fit: fill; filter: saturate(.9) brightness(.96) drop-shadow(0 4px 14px rgba(0, 0, 0, .45)); }
+.cta-plate:hover { filter: brightness(1.1); transform: translateY(-1px); }
+.cta { --x: 13.37%; --y: 23.31%; --w: 74.41%; --h: 49.92%; gap: .75em; font-size: calc(16.5 * var(--u)); font-weight: 600; letter-spacing: .21em; line-height: 1; text-transform: uppercase; white-space: nowrap; color: #17130c; }
+.i-discord { display: inline-block; flex: none; background: currentColor; -webkit-mask: url(discord.svg) center / contain no-repeat; mask: url(discord.svg) center / contain no-repeat; }
+.cta .i-discord { width: 1.75em; height: 1.75em; margin-right: .15em; }
+
+.strip-rule { --x: 11.98%; --y: 89.52%; --w: 76.92%; --h: 1.61%; }
+.facts { --x: 17.91%; --y: 92.54%; --w: 64.31%; --h: 3.02%; margin: 0; font-size: max(calc(20 * var(--u)), 13px); letter-spacing: .065em; line-height: 1; white-space: nowrap; color: #bdb6aa; }
+.facts .sep { margin: 0 .75em; color: var(--gold-2); }
+.strip-orn-left { --x: 12.23%; --y: 93.35%; --w: 3.91%; --h: 1.41%; }
+.strip-orn-right { --x: 83.73%; --y: 93.35%; --w: 3.91%; --h: 1.41%; }
+.strip-orn-left::before, .strip-orn-right::before { opacity: .7; }
+
+/* ——— Below the comp: the same system, fluid ——— */
+.wrap { width: min(100% - 2 * var(--gut), 1380px); margin-inline: auto; }
+.heading { display: flex; align-items: center; justify-content: center; gap: clamp(16px, 1.6vw, 28px); margin: 0; }
+.heading h2 { margin: 0; font-family: var(--display); font-weight: 400; font-size: var(--h2); letter-spacing: .24em; padding-left: .24em; line-height: 1; white-space: nowrap; color: #f6f3ee; }
+.heading .rule { flex: 0 1 clamp(56px, 13vw, 220px); }
+.heading.start { justify-content: flex-start; }
+.heading.start h2 { padding-left: 0; }
+.lede { margin: clamp(22px, 2vw, 32px) 0 0; max-width: 32em; font-size: var(--lede); line-height: 1.45; color: var(--ink); text-wrap: pretty; }
+.caps { font-weight: 500; font-size: var(--caps); letter-spacing: .18em; text-transform: uppercase; }
+
+.play { padding-top: clamp(84px, 8vw, 140px); }
+.play-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(16px, 1.6vw, 28px); margin-top: clamp(36px, 3.4vw, 56px); }
+.panel { margin: 0; text-align: center; }
+.panel-art { overflow: hidden; }
+.panel-art img { width: 100%; height: auto; aspect-ratio: 10 / 7; object-fit: cover; -webkit-mask-image: linear-gradient(to bottom, #000 62%, transparent 99%); mask-image: linear-gradient(to bottom, #000 62%, transparent 99%); transition: transform 1.4s var(--ease); }
+.panel h3 { position: relative; margin: calc(-1 * clamp(34px, 3vw, 50px)) 0 0; font-family: var(--display); font-weight: 400; font-size: clamp(20px, 1.55vw, 26px); letter-spacing: .26em; padding-left: .26em; line-height: 1; color: #f4f1ea; }
+.panel .rule-c { width: clamp(90px, 8vw, 130px); height: 9px; margin: 14px auto 0; }
+.panel p { margin: 16px auto 0; max-width: 22em; font-size: var(--body); line-height: 1.45; color: var(--ink-2); text-wrap: balance; }
+
+.band { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); align-items: center; gap: clamp(36px, 6vw, 110px); padding-top: clamp(110px, 11vw, 180px); }
+.band.mirror { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); }
+.band.mirror .band-art { order: 2; --edge: to left; }
+.band-art { --edge: to right; margin: 0; overflow: hidden; -webkit-mask-image: linear-gradient(to bottom, #000 74%, transparent 99%), linear-gradient(var(--edge), #000 84%, transparent); -webkit-mask-composite: source-in; mask-image: linear-gradient(to bottom, #000 74%, transparent 99%), linear-gradient(var(--edge), #000 84%, transparent); mask-composite: intersect; }
+.band-art img { width: 100%; height: auto; aspect-ratio: 2 / 3; object-fit: cover; transition: transform 1.6s var(--ease); }
+.band-body { max-width: 640px; }
+.ledger { margin: clamp(32px, 3vw, 48px) 0 0; padding: 0; border-top: 1px solid var(--hair); }
+.ledger > div { display: grid; grid-template-columns: minmax(9em, 2fr) 5fr; gap: 8px 28px; align-items: baseline; padding: 18px 0; border-bottom: 1px solid var(--hair); }
+.ledger dt { color: var(--gold); }
+.ledger dd { margin: 0; font-size: var(--body); line-height: 1.45; color: var(--ink-2); }
+.tbd { font-style: italic; color: var(--ink-3); }
+.aside { margin: 22px 0 0; font-size: var(--body); color: var(--ink-3); }
+.aside b { font-weight: 500; color: var(--ink-2); }
+
+.join { padding-top: clamp(120px, 12vw, 200px); }
+.join-art { width: 100%; height: auto; aspect-ratio: 3 / 1; object-fit: cover; object-position: 50% 40%; -webkit-mask-image: linear-gradient(to bottom, transparent, #000 14%, #000 70%, transparent 98%); mask-image: linear-gradient(to bottom, transparent, #000 14%, #000 70%, transparent 98%); }
+.join-body { position: relative; display: grid; justify-items: center; text-align: center; margin-top: calc(-1 * clamp(28px, 5vw, 96px)); }
+.join-body .heading h2 { font-size: clamp(30px, 3.3vw, 54px); letter-spacing: .26em; padding-left: .26em; }
+.join-date { margin: clamp(18px, 1.6vw, 26px) 0 0; font-size: var(--lede); letter-spacing: .08em; color: var(--gold); }
+.join-date [data-days]:empty { display: none; }
+.join-copy { margin: 14px 0 0; max-width: 30em; font-size: var(--lede); line-height: 1.45; color: var(--ink); }
+.plaque { position: relative; display: grid; place-items: center; width: clamp(280px, 21.7vw, 400px); aspect-ratio: 344 / 60; margin-top: clamp(28px, 2.4vw, 40px); transition: filter .4s var(--ease), transform .4s var(--ease); }
+.plaque img { position: absolute; inset: 0; width: 100%; height: 100%; }
+.plaque span { position: relative; display: flex; align-items: center; gap: .8em; font-size: clamp(13px, 1.1vw, 19px); font-weight: 600; letter-spacing: .2em; text-transform: uppercase; color: #17130c; }
+.plaque .i-discord { width: 1.5em; height: 1.5em; }
+.plaque:hover { filter: brightness(1.1); transform: translateY(-1px); }
+.channels { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 0; margin: 12px 0 0; padding: 0; list-style: none; color: var(--ink-3); }
+.channels li { display: flex; align-items: center; }
+.channels li + li::before { content: ""; width: 4px; height: 4px; margin: 0 14px; border: 1px solid var(--gold-2); transform: rotate(45deg); }
+.channels-label { margin: clamp(38px, 3.4vw, 54px) 0 0; color: var(--ink-2); }
+
+.foot { margin-top: clamp(110px, 10vw, 170px); padding-bottom: 48px; }
+.foot .rule-c { height: 11px; }
+.foot-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 24px 40px; padding-top: 36px; }
+.brand { display: flex; align-items: center; gap: 16px; }
+.brand img { width: 30px; height: auto; }
+.brand span { font-size: 18px; letter-spacing: .36em; }
+.foot-nav { display: flex; flex-wrap: wrap; gap: 10px 32px; margin: 0; padding: 0; list-style: none; }
+.foot-nav a { color: var(--ink-2); transition: color .3s; }
+.foot-nav a:hover { color: var(--gold); }
+.foot-meta { margin: 0; color: var(--ink-3); }
+.legal { margin: 28px 0 0; max-width: 60em; font-size: 15px; line-height: 1.5; color: var(--ink-3); }
+
+/* ——— Motion: the hero settles in, paintings lift, bands rise ——— */
+@media (prefers-reduced-motion: no-preference) {
+  html { scroll-behavior: smooth; }
+  .hero-art { animation: push 3.2s var(--ease) both; }
+  .mist { animation: mist 1.5s var(--ease) both; animation-delay: var(--d, .2s); }
+  .panel:hover img, .band-art:hover img { transform: scale(1.04); }
+  .js .rise { opacity: 0; transform: translateY(28px); transition: opacity 1.1s var(--ease), transform 1.3s var(--ease); }
+  .js .rise.in { opacity: 1; transform: none; }
+}
+@keyframes push { from { transform: scale(1.07); } }
+@keyframes mist { from { opacity: 0; filter: blur(8px); translate: 0 12px; } }
+
+/* ——— Narrow screens: the frame becomes a stacked column ——— */
+@media (max-width: 900px) {
+  :where(.frame, .site-header) .r { position: relative; left: auto; top: auto; width: auto; height: auto; }
+  .site-header { aspect-ratio: auto; display: grid; grid-template-columns: 44px auto 1fr; align-items: start; column-gap: 12px; padding: 0 20px 22px; background: linear-gradient(to bottom, rgba(5, 9, 18, .82), rgba(5, 9, 18, .55) 60%, rgba(5, 9, 18, 0)); }
+  .nav-crest { width: 44px; height: 64px; }
+  .nav-wordmark { align-self: center; margin-top: -10px; font-size: 16px; letter-spacing: .34em; }
+  .site-header nav { grid-column: 1 / -1; margin-top: 8px; }
+  .nav-links { justify-content: center; gap: 24px; }
+  .nav-links a { font-size: 16px; }
+
+  .frame { aspect-ratio: auto; overflow: visible; display: grid; grid-template-columns: 20px 1fr 1fr 20px; grid-template-rows: 150px auto auto auto auto auto 170px auto auto auto 48px; }
+  .frame > * { grid-column: 2 / 4; justify-self: center; }
+  .hero-pic { display: contents; }
+  .hero-art { grid-column: 1 / -1; grid-row: 1 / 8; justify-self: stretch; width: 100%; height: 100%; contain: size; object-position: 50% 100%; -webkit-mask-image: linear-gradient(to bottom, #000 84%, transparent); mask-image: linear-gradient(to bottom, #000 84%, transparent); }
+  .emblem { grid-row: 2; width: 250px; height: 136px; }
+  .title { grid-row: 3; margin-top: 18px; font-size: 40px; letter-spacing: .22em; padding-left: .22em; }
+  .title-rule { grid-row: 4; width: 280px; height: 12px; margin-top: 10px; }
+  .tagline { grid-row: 5; margin-top: 10px; font-size: 21px; white-space: normal; }
+  .cta-plate { grid-row: 6; width: 300px; height: 52px; margin-top: 22px; }
+  .cta { position: absolute; inset: 0; font-size: 15px; }
+  .side-heading, .raid-heading { grid-row: 8; font-size: 24px; }
+  .side-rule, .raid-rule { grid-row: 9; width: 100px; height: 10px; margin-top: 8px; }
+  .side-copy, .raid-copy { grid-row: 10; margin-top: 8px; max-width: 160px; font-size: 16px; line-height: 1.3; letter-spacing: .02em; white-space: normal; }
+  .side-heading, .side-rule, .side-copy { grid-column: 2; }
+  .raid-heading, .raid-rule, .raid-copy { grid-column: 3; }
+  .strip-rule { grid-row: 12; width: 100%; height: 12px; margin-top: 8px; }
+  .facts { grid-row: 13; display: block; max-width: 340px; margin: 14px 0 34px; font-size: 15px; line-height: 1.7; white-space: normal; }
+  .facts .sep { display: none; }
+  .facts span { display: block; }
+  .strip-orn-left, .strip-orn-right, .scrim { display: none; }
+
+  .play-grid { grid-template-columns: 1fr; gap: 40px; }
+  .band, .band.mirror { grid-template-columns: 1fr; gap: 28px; padding-top: 96px; }
+  .band.mirror .band-art { order: 0; }
+  .band-art, .band.mirror .band-art { --edge: to bottom; }
+  .band-art img { aspect-ratio: 4 / 5; }
+  .heading.start { justify-content: center; }
+  .heading.start h2 { padding-left: .24em; }
+  .heading.start .rule.flip { display: none; }
+  .ledger > div { grid-template-columns: 1fr; padding: 16px 0; }
+  .join-art { aspect-ratio: 4 / 3; object-position: 82% 50%; }
+  .join-body .heading .rule { display: none; }
+  .join-body .heading h2 { font-size: 28px; letter-spacing: .16em; padding-left: .16em; }
+  .foot-row { flex-direction: column; align-items: flex-start; }
+}
+
+/* Plates-only capture for the hero gate's first reading. */
+.plates-only .t { visibility: hidden; }
+</style>
+</head>
+<body>
+<a class="skip" href="#top">Skip to content</a>
+<header class="site-header">
+  <a class="r nav-crest" href="#top" aria-label="SideQuest home"><img class="fit" src="../../../assets/plates/nav-crest.png" alt=""></a>
+  <a class="r nav-wordmark center shade t" href="#top">SIDEQUEST</a>
+  <nav aria-label="Main"><ul class="r nav-links shade t">
+    <li><a href="#how-we-play">How we play</a></li>
+    <li><a href="#raids">Raids</a></li>
+    <li><a href="#addons">Addons</a></li>
+    <li><a class="js-join" href="#join">Discord</a></li>
+  </ul></nav>
+</header>
+
+<main id="top" tabindex="-1">
+  <div class="frame">
+    <picture class="hero-pic">
+      <source media="(max-width: 900px)" srcset="../../../assets/plates/hero-art-mobile.png">
+      <img class="r hero-art fill" src="../../../assets/plates/hero-art.png" alt="Night over a guild's road: adventurers rest at a campfire under an oak, while across the valley knights march a torchlit road to a golden citadel and gryphon riders circle overhead." fetchpriority="high">
+    </picture>
+    <span class="r scrim" aria-hidden="true"></span>
+    <span class="r scrim scrim-raid" aria-hidden="true"></span>
+
+    <p class="r side-heading center shade t mist" style="--d:1.2s">The side quest:</p>
+    <span class="r side-rule rule-c t mist" style="--d:1.3s" aria-hidden="true"></span>
+    <p class="r side-copy center shade t mist" style="--d:1.4s">casual, social, whenever you’re on.</p>
+    <p class="r raid-heading center shade t mist" style="--d:1.2s">The raid:</p>
+    <span class="r raid-rule rule-c t mist" style="--d:1.3s" aria-hidden="true"></span>
+    <p class="r raid-copy center shade t mist" style="--d:1.4s">scheduled nights, real progression.</p>
+
+    <img class="r emblem fit mist" style="--d:.35s" src="../../../assets/plates/emblem.png" alt="">
+    <h1 class="r title center shade t mist" style="--d:.6s">SIDEQUEST</h1>
+    <span class="r title-rule rule-c t mist" style="--d:.8s" aria-hidden="true"></span>
+    <p class="r tagline center shade t mist" style="--d:.9s">The journey and the raid both count.</p>
+    <a class="r cta-plate js-join mist" style="--d:1.05s" href="#join">
+      <img class="fill" src="../../../assets/plates/cta-plate.png" alt="">
+      <span class="r cta center t"><i class="i-discord" aria-hidden="true"></i>Join the Discord</span>
+    </a>
+
+    <span class="r strip-rule rule-c dim t" aria-hidden="true"></span>
+    <span class="r strip-orn-left rule t" aria-hidden="true"></span>
+    <span class="r strip-orn-right rule flip t" aria-hidden="true"></span>
+    <p class="r facts center t"><span>An Alliance guild for World of Warcraft: Forever</span><i class="sep" aria-hidden="true">·</i><span>Launch November 4, 2026</span><i class="sep" aria-hidden="true">·</i><span>Ruleset TBD</span><i class="sep" aria-hidden="true">·</i><span>Region TBD</span></p>
+  </div>
+
+  <section id="how-we-play" class="play wrap" aria-labelledby="h-how">
+    <div class="heading rise"><span class="rule" aria-hidden="true"></span><h2 id="h-how">HOW WE PLAY</h2><span class="rule flip" aria-hidden="true"></span></div>
+    <div class="play-grid">
+      <article class="panel rise">
+        <div class="panel-art"><img src="../../../assets/plates/panel-journey.png" alt="A cloaked traveler looks out over a river valley toward a hilltop town." loading="lazy" width="1500" height="1050"></div>
+        <h3>THE JOURNEY</h3><span class="rule-c" aria-hidden="true"></span>
+        <p>Quests, dungeons and professions at your own pace, in good company.</p>
+      </article>
+      <article class="panel rise">
+        <div class="panel-art"><img src="../../../assets/plates/panel-raid.png" alt="A raid group with lion-crested shields faces a towering boss wreathed in blue lightning." loading="lazy" width="1500" height="1050"></div>
+        <h3>RAID NIGHT</h3><span class="rule-c" aria-hidden="true"></span>
+        <p>Scheduled raid nights for semi-core players. Nights and times are set once we choose a region.</p>
+      </article>
+      <article class="panel rise">
+        <div class="panel-art"><img src="../../../assets/plates/panel-progression.png" alt="A knight beside a lion banner watches the sun set over mountains and distant spires." loading="lazy" width="1500" height="1050"></div>
+        <h3>PROGRESSION</h3><span class="rule-c" aria-hidden="true"></span>
+        <p>For players chasing the hardest content, pushing as a team under the same banner.</p>
+      </article>
+    </div>
+  </section>
+
+  <section id="raids" class="band wrap" aria-labelledby="h-raids">
+    <figure class="band-art rise"><img src="../../../assets/plates/raids-art.png" alt="A raid party gathers at the foot of a torchlit stair below a mountain gate hung with lion banners." loading="lazy" width="1024" height="1536"></figure>
+    <div class="band-body rise">
+      <div class="heading start"><h2 id="h-raids">RAIDS</h2><span class="rule flip" aria-hidden="true"></span></div>
+      <p class="lede">Raid nights are planned as a guild. Once SideQuest settles its region and ruleset, the schedule goes up here and in the Discord.</p>
+      <dl class="ledger">
+        <div><dt class="caps">Raid nights</dt><dd class="tbd">To be announced</dd></div>
+        <div><dt class="caps">Sign-ups</dt><dd>Open on this page after launch, one per raid night.</dd></div>
+        <div><dt class="caps">Raid charts</dt><dd>Assignments and positions for each fight, posted here before the pull.</dd></div>
+        <div><dt class="caps">Who raids</dt><dd>Semi-core nights on a set schedule, and a progression group for the hardest content.</dd></div>
+      </dl>
+      <p class="aside">Raid voice lives in <b>raid-1</b> and <b>raid-2</b> on the Discord.</p>
+    </div>
+  </section>
+
+  <section id="addons" class="band mirror wrap" aria-labelledby="h-addons">
+    <figure class="band-art rise"><img src="../../../assets/plates/addons-art.png" alt="A tinkerer's desk by a moonlit window, covered in tomes, maps, brass gears and a lantern." loading="lazy" width="1024" height="1536"></figure>
+    <div class="band-body rise">
+      <div class="heading start"><h2 id="h-addons">ADDONS</h2><span class="rule flip" aria-hidden="true"></span></div>
+      <p class="lede">The guild's own addons will download from here, so everyone raids on the same setup.</p>
+      <dl class="ledger">
+        <div><dt class="caps">Guild addons</dt><dd class="tbd">Not yet published</dd></div>
+        <div><dt class="caps">Each release</dt><dd>A download link, the version, and install notes, listed on this page.</dd></div>
+        <div><dt class="caps">Announcements</dt><dd>New versions are posted in the Discord when they land.</dd></div>
+      </dl>
+    </div>
+  </section>
+
+  <section id="join" class="join" aria-labelledby="h-join">
+    <img class="join-art" src="../../../assets/plates/join-art.png" alt="At dawn a gryphon perches on a watchtower flying a lion banner, above a road that winds toward a lakeside citadel." loading="lazy" width="2172" height="724">
+    <div class="join-body wrap rise">
+      <div class="heading"><span class="rule" aria-hidden="true"></span><h2 id="h-join">THE ROAD OPENS</h2><span class="rule flip" aria-hidden="true"></span></div>
+      <p class="join-date">November 4, 2026<span data-days></span></p>
+      <p class="join-copy">Early name reservation opened October 27. Come meet the guild in the Discord before launch.</p>
+      <a class="plaque js-join" href="#join"><img src="../../../assets/plates/cta-plate.png" alt=""><span><i class="i-discord" aria-hidden="true"></i>Join the Discord</span></a>
+      <p class="channels-label caps">In the Discord</p>
+      <ul class="channels caps" aria-label="Discord channels">
+        <li>#general</li><li>#rules</li><li>Lobby</li><li>dungeon-1</li><li>dungeon-2</li><li>dungeon-3</li><li>raid-1</li><li>raid-2</li>
+      </ul>
+    </div>
+  </section>
+</main>
+
+<footer class="foot wrap">
+  <span class="rule-c" aria-hidden="true" style="display:block"></span>
+  <div class="foot-row">
+    <a class="brand" href="#top"><img src="../../../assets/plates/nav-crest.png" alt=""><span>SIDEQUEST</span></a>
+    <ul class="foot-nav caps">
+      <li><a href="#how-we-play">How we play</a></li>
+      <li><a href="#raids">Raids</a></li>
+      <li><a href="#addons">Addons</a></li>
+      <li><a class="js-join" href="#join">Discord</a></li>
+    </ul>
+    <p class="foot-meta caps">Alliance · World of Warcraft: Forever</p>
+  </div>
+  <p class="legal">SideQuest is a player-run guild, not affiliated with or endorsed by Blizzard Entertainment. World of Warcraft is a trademark of Blizzard Entertainment, Inc. All artwork on this site is original.</p>
+</footer>
+
+<script>
+// Every join link reads from here.
+const DISCORD_INVITE = "https://discord.gg/nwncP7H9Hh";
+document.querySelectorAll(".js-join").forEach(a => { a.href = DISCORD_INVITE; });
+if (new URLSearchParams(location.search).has("plates")) document.documentElement.classList.add("plates-only");
+
+// Launch countdown, in whole days (the launch hour is not announced).
+const launch = new Date(2026, 10, 4);
+const today = new Date(); today.setHours(0, 0, 0, 0);
+const days = Math.round((launch - today) / 864e5);
+document.querySelector("[data-days]").textContent = days > 1 ? ` · ${days} days away` : days === 1 ? " · tomorrow" : days === 0 ? " · today" : " · the road is open";
+
+// Sections rise as they enter; without JS or with reduced motion they are simply there.
+document.documentElement.classList.add("js");
+const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); } }), { rootMargin: "0px 0px -10% 0px" });
+document.querySelectorAll(".rise").forEach(el => io.observe(el));
+</script>
+</body>
+</html>

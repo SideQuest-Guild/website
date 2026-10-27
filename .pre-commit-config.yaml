@@ -1,0 +1,48 @@
+# Run with prek (`make install-prek`), not pre-commit.
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-toml
+      - id: check-yaml
+      - id: end-of-file-fixer
+        exclude: ^website/
+      - id: trailing-whitespace
+        exclude: ^website/
+  - repo: local
+    hooks:
+      - id: ruff-format
+        name: ruff format
+        entry: uv run ruff format
+        language: system
+        types: [python]
+      - id: ruff
+        name: ruff check
+        entry: uv run ruff check --fix
+        language: system
+        types: [python]
+      - id: pyrefly
+        name: pyrefly check
+        entry: uv run pyrefly check
+        language: system
+        types: [python]
+        pass_filenames: false
+      - id: codespell
+        name: codespell
+        entry: uv run codespell
+        language: system
+        pass_filenames: false
+      # Website (oxc): run from website/ on the Node pinned in website/mise.toml.
+      - id: oxfmt
+        name: oxfmt
+        entry: mise exec -C website -- npx oxfmt
+        language: system
+        files: ^website/(src/|[^/]+\.(json|jsonc|mjs|ts)$)
+        exclude: ^website/package-lock\.json$
+        pass_filenames: false
+      - id: oxlint
+        name: oxlint
+        entry: mise exec -C website -- npx oxlint --deny-warnings
+        language: system
+        files: ^website/(src/|[^/]+\.(mjs|ts)$)
+        pass_filenames: false
