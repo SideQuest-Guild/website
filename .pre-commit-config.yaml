@@ -6,7 +6,7 @@ repos:
       - id: check-toml
       - id: check-yaml
       - id: end-of-file-fixer
-        exclude: ^website/
+        exclude: ^(website/|pyrefly-baseline\.json$)
       - id: trailing-whitespace
         exclude: ^website/
   - repo: local
