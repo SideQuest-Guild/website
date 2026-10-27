@@ -10,9 +10,11 @@ dependencies = [
     "advanced-alchemy[uuid]>=1.12",
     "alembic>=1.20",
     "asyncpg>=0.32",
-    "litestar[standard]>=2.25",
+    "litestar[cryptography,standard]>=2.25",
     "pydantic>=2.14",
     "pydantic-settings>=2.16",
+    "litestar-vite>=0.32,<0.33",
+    "httpx>=0.28",
 ]
 
 [project.scripts]

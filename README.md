@@ -28,11 +28,26 @@ flowchart LR
 |---|---|---|
 | `/` | none | Website (`website/dist`, built by `make web-build`; a placeholder page until the first build) |
 | `/api/guilds/{guild_id}/...` | `X-API-Key` (shared secret with the bot) | Guild config, XP/levels, moderation cases, role menus |
+| `/auth/discord/login`, `/auth/discord/callback`, `/auth/logout` | none | Discord OAuth sign-in (session cookie `sq_session`) |
+| `/api/me` | signed in | The signed-in member |
+| `/api/raids`, `/api/addons` (GET) | none | Raid nights with roster + raid chart, guild addon links |
+| `/api/raids/{id}/signup` | guild member | Sign up for / withdraw from a raid |
+| `/api/raids`, `/api/addons` (POST/PATCH/DELETE), `/api/raids/{id}/signups/{id}` | officer | Manage raids, the raid chart and addons |
 | `/health`, `/health/live` | none | Health checks |
 | `/schema` | none | OpenAPI docs |
 
-Only the bot's guild router is behind the bot key. Website and member routes get their own auth (e.g. Discord OAuth)
-when they're added.
+Only the bot's guild router is behind the bot key. Members sign in with Discord: a "guild member" is anyone in the
+SideQuest server, and an officer is a member holding a role listed in `WEB_OFFICER_ROLE_IDS` (roles and nickname
+refresh at each sign-in). The site's member pages are `/raids/`, `/addons/`, `/account/` and `/officers/`.
+
+### Discord sign-in setup
+
+In the Developer Portal → Game Master → OAuth2, add the redirect `{WEB_BASE_URL}/auth/discord/callback` (locally
+`http://localhost:8000/auth/discord/callback`) and copy the client ID and secret into `WEB_DISCORD_CLIENT_ID` and
+`WEB_DISCORD_CLIENT_SECRET`. Set `WEB_SESSION_SECRET` to a long random string (without it, sessions end on every
+restart), `WEB_OFFICER_ROLE_IDS` to a JSON list of officer role IDs (e.g. `[123456789012345678]`), and
+`WEB_COOKIE_SECURE=true` behind HTTPS. Until the client ID and secret are set, sign-in returns 503 and the public
+pages keep working. See `.env.example`.
 
 ## Running locally
 
@@ -44,11 +59,15 @@ bot needs the **Server Members** and **Message Content** privileged intents enab
 cp .env.example .env              # then set API_KEY to a random secret
 make install                      # uv sync + the website's Node and npm packages
 make db-up migrate                # Postgres in Docker + apply migrations
-make web-build                    # build the site into website/dist
-make api                          # http://localhost:8000: site at /, OpenAPI docs at /schema
+make dev                          # API + Astro dev server, hot reload, both on http://localhost:8000
 make bot                          # in another terminal
-make web-dev                      # optional: the site with hot reload at http://localhost:4321
 ```
+
+`make dev` runs the API with `VITE_DEV_MODE=1` (litestar-vite's `VitePlugin`, `mode="framework"`) and the Astro dev
+server together; Litestar proxies every request it doesn't own to Astro, so the browser only ever talks to
+`http://localhost:8000` and `/api`, `/auth` and the site share one cookie jar. For production, build once and run the
+API alone: `make web-build` (site into `website/dist`) then `make api` (serves `/` from that build, themed 404 for
+unknown paths). `make web-dev` on its own still works too (plain Astro on `http://localhost:4321`, not proxied).
 
 `make bot` uses `DISCORD_TOKEN` from the environment or `.env`; if neither is set it reads the macOS Keychain item
 `discord-mcp` (the same token the Discord MCP server uses), so the token never has to sit in a file.
@@ -120,6 +139,24 @@ Anything the bot hands out on its own (level rewards, the auto-role, role-menu b
   handed out.
 - **Who configures it:** they need Manage Roles, and the role must sit below their own highest role.
 
-## Hosting
-Not decided yet. The API needs Postgres and the bot needs a long-running process. Both read all configuration from the
-environment (`DB_*`, `API_*`, `DISCORD_*`; see `.env.example`).
+## Deploying with Docker
+Host-agnostic: a single multi-stage `Dockerfile` builds the website (Node 24) and the Python workspace (uv) into one
+slim Python 3.15 image. The image's default command runs the API (`sidequest-api`); the same image runs the bot with
+`sidequest-bot` as the container command. `docker-compose.yml` wires up Postgres, a one-shot `migrate` service
+(`litestar database upgrade`) that runs before the API starts, the `api` service (port 8000), and a `bot` service
+behind the `bot` Compose profile so it never starts without a token.
+
+```bash
+cp .env.example .env            # set API_KEY, DISCORD_TOKEN, etc.
+make docker-build                # build the image
+make docker-up                   # postgres + migrate + api (http://localhost:8000)
+make docker-migrate              # re-run migrations on demand
+docker compose --profile bot up -d bot   # start the bot (needs DISCORD_TOKEN in .env)
+make docker-logs                 # follow logs
+make docker-down                 # stop everything (keeps the pgdata volume)
+```
+
+`API_HOST=0.0.0.0` is baked into the image so it binds inside the container; `API_PORT` stays 8000. The image has a
+`HEALTHCHECK` against `/health`. `.dockerignore` keeps `.venv`, `node_modules`, `dist`, caches, and tests out of the
+build context. CI builds the image (no push) on every PR via `docker/build-push-action` with GitHub Actions layer
+caching.

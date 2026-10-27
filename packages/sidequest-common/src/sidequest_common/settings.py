@@ -1,12 +1,13 @@
 """Environment-driven settings shared by the API and the bot.
 
-Each concern has its own env prefix: ``DB_``, ``API_``, ``DISCORD_``.
+Each concern has its own env prefix: ``DB_``, ``API_``, ``DISCORD_``, ``WEB_``.
 """
 
-from pydantic import SecretStr
+from pydantic import SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 _BASE_CONFIG = {"env_file": ".env", "extra": "ignore", "case_sensitive": False}
+MIN_SESSION_SECRET_LENGTH = 32
 
 
 class DatabaseSettings(BaseSettings):
@@ -45,3 +46,34 @@ class DiscordSettings(BaseSettings):
 
     TOKEN: SecretStr
     GUILD_ID: int | None = None
+
+
+class WebSettings(BaseSettings):
+    """Member hub / website settings (``WEB_*``).
+
+    Discord OAuth2 login (scopes ``identify guilds.members.read``) for guild members, raids, and addons.
+    ``DISCORD_CLIENT_ID``/``DISCORD_CLIENT_SECRET`` are the OAuth *application* credentials (separate from the
+    bot's ``DISCORD_TOKEN``); when either is unset the app still boots, but ``/auth/discord/login`` returns 503.
+    """
+
+    model_config = SettingsConfigDict(env_prefix="WEB_", **_BASE_CONFIG)
+
+    BASE_URL: str = "http://localhost:8000"
+    SESSION_SECRET: SecretStr | None = None
+    DISCORD_CLIENT_ID: str | None = None
+    DISCORD_CLIENT_SECRET: SecretStr | None = None
+    GUILD_ID: int = 1564671275316543508
+    OFFICER_ROLE_IDS: list[int] = []
+    COOKIE_SECURE: bool = False
+
+    @property
+    def oauth_configured(self) -> bool:
+        """Whether both Discord OAuth app credentials are set."""
+        return self.DISCORD_CLIENT_ID is not None and self.DISCORD_CLIENT_SECRET is not None
+
+    @model_validator(mode="after")
+    def _validate_session_secret_length(self) -> WebSettings:
+        if self.SESSION_SECRET is not None and len(self.SESSION_SECRET.get_secret_value()) < MIN_SESSION_SECRET_LENGTH:
+            msg = f"WEB_SESSION_SECRET must be at least {MIN_SESSION_SECRET_LENGTH} characters"
+            raise ValueError(msg)
+        return self

@@ -1,0 +1,26 @@
+---
+import Site from "./Site.astro";
+import PageHeader from "../components/PageHeader.astro";
+import SiteFooter from "../components/SiteFooter.astro";
+
+interface Props {
+  title: string;
+  description: string;
+  heading: string;
+  current?: "raids" | "addons" | "officers" | "account";
+}
+
+const { title, description, heading, current } = Astro.props;
+---
+
+<Site title={title} description={description}>
+  <PageHeader current={current} />
+  <main id="top" tabindex="-1" class="page wrap">
+    <div class="heading start">
+      <h1 id="page-heading">{heading}</h1>
+      <span class="rule flip" aria-hidden="true"></span>
+    </div>
+    <slot />
+  </main>
+  <SiteFooter />
+</Site>

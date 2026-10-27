@@ -1,0 +1,324 @@
+---
+import Page from "../../../layouts/Page.astro";
+---
+
+<Page
+  title="Raid · SideQuest"
+  description="Roster, raid chart and signup for a SideQuest raid night."
+  heading="RAID"
+  current="raids"
+>
+  <p class="status" id="raid-status" role="status" aria-live="polite"></p>
+
+  <div id="raid-content" hidden>
+    <p class="lede" id="raid-summary"></p>
+    <p class="aside" id="raid-notes"></p>
+
+    <section aria-labelledby="h-roster">
+      <span class="caps section-label" id="h-roster">
+        Roster
+      </span>
+      <div class="roster-grid" id="roster-grid"></div>
+    </section>
+
+    <section aria-labelledby="h-status-lists">
+      <span class="caps section-label" id="h-status-lists">
+        Tentative &amp; absent
+      </span>
+      <div class="roster-grid cols-2" id="roster-extra"></div>
+    </section>
+
+    <section aria-labelledby="h-chart">
+      <span class="caps section-label" id="h-chart">
+        Raid chart
+      </span>
+      <div class="chart-grid" id="chart-grid"></div>
+    </section>
+
+    <section aria-labelledby="h-signup" id="signup-section" hidden>
+      <span class="caps section-label" id="h-signup">
+        Your signup
+      </span>
+      <form id="signup-form" class="form">
+        <fieldset>
+          <legend>Sign up for this raid</legend>
+          <div class="form-row">
+            <div class="field">
+              <label for="su-character">Character</label>
+              <input id="su-character" name="character" type="text" maxlength="24" autocomplete="off" required />
+            </div>
+            <div class="field">
+              <label for="su-class">Class</label>
+              <select id="su-class" name="class" required></select>
+            </div>
+            <div class="field">
+              <label for="su-role">Role</label>
+              <select id="su-role" name="role" required>
+                <option value="tank">Tank</option>
+                <option value="healer">Healer</option>
+                <option value="dps">DPS</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="su-status">Status</label>
+              <select id="su-status" name="status" required>
+                <option value="signed">Signed</option>
+                <option value="tentative">Tentative</option>
+                <option value="absent">Absent</option>
+              </select>
+            </div>
+          </div>
+          <div class="field">
+            <label for="su-comment">Comment</label>
+            <textarea id="su-comment" name="comment" maxlength="200" rows="2"></textarea>
+          </div>
+        </fieldset>
+        <div class="form-actions">
+          <button type="submit" class="btn">
+            Save signup
+          </button>
+          <button type="button" class="btn-quiet" id="withdraw-btn" hidden>
+            Withdraw
+          </button>
+        </div>
+        <p class="status" id="signup-status" role="status" aria-live="polite"></p>
+      </form>
+    </section>
+  </div>
+
+  <noscript>
+    <p class="aside">Enable JavaScript to view this raid's roster, chart and signup form.</p>
+  </noscript>
+</Page>
+
+<script>
+  import {
+    apiFetch,
+    capitalize,
+    escapeHtml,
+    requireElement,
+    statusMessage,
+    CLASSES,
+    ROLES,
+    type Me,
+    type RaidDetail,
+    type Role,
+    type Signup,
+  } from "../../../scripts/api";
+
+  const LOCKED_MESSAGE = "This raid is no longer open for signups.";
+
+  const params = new URLSearchParams(location.search);
+  const raidId = params.get("id");
+
+  const statusEl = requireElement("raid-status");
+  const contentEl = requireElement("raid-content");
+  const summaryEl = requireElement("raid-summary");
+  const notesEl = requireElement("raid-notes");
+  const rosterGrid = requireElement("roster-grid");
+  const rosterExtra = requireElement("roster-extra");
+  const chartGrid = requireElement("chart-grid");
+  const signupSection = requireElement("signup-section");
+  const signupForm = requireElement<HTMLFormElement>("signup-form");
+  const withdrawBtn = requireElement<HTMLButtonElement>("withdraw-btn");
+  const signupStatus = requireElement("signup-status");
+  const classSelect = requireElement<HTMLSelectElement>("su-class");
+
+  classSelect.innerHTML = CLASSES.map((c) => `<option value="${c}">${capitalize(c)}</option>`).join("");
+
+  const dateFormat = new Intl.DateTimeFormat(undefined, {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+
+  let me: Me | null = null;
+  let raid: RaidDetail | null = null;
+
+  function rosterList(signups: Signup[], emptyText: string): string {
+    if (signups.length === 0) {
+      return `<li class="aside">${emptyText}</li>`;
+    }
+    return signups
+      .map((s) => `<li>${escapeHtml(s.character)} <span class="aside">(${capitalize(s.class)})</span></li>`)
+      .join("");
+  }
+
+  function renderRoster(detail: RaidDetail): void {
+    const signed = detail.signups.filter((s) => s.status === "signed");
+    rosterGrid.innerHTML = ROLES.map((role: Role) => {
+      const members = signed.filter((s) => s.role === role);
+      return `
+        <div class="roster-col">
+          <h3 class="caps">${capitalize(role)} (${members.length})</h3>
+          <ul>${rosterList(members, "None yet")}</ul>
+        </div>`;
+    }).join("");
+
+    const tentative = detail.signups.filter((s) => s.status === "tentative");
+    const absent = detail.signups.filter((s) => s.status === "absent");
+    rosterExtra.innerHTML = `
+      <div class="roster-col">
+        <h3 class="caps">Tentative (${tentative.length})</h3>
+        <ul>${rosterList(tentative, "None")}</ul>
+      </div>
+      <div class="roster-col">
+        <h3 class="caps">Absent (${absent.length})</h3>
+        <ul>${rosterList(absent, "None")}</ul>
+      </div>`;
+  }
+
+  function chartCell(label: string, members: Signup[], isOfficer: boolean, isBench: boolean): string {
+    const rows = members
+      .map((s) => {
+        const control = isOfficer
+          ? `<select data-signup-id="${s.id}" aria-label="Group for ${escapeHtml(s.character)}">
+              ${Array.from({ length: 8 }, (_, i) => i + 1)
+                .map((g) => `<option value="${g}" ${!isBench && s.group === g ? "selected" : ""}>Group ${g}</option>`)
+                .join("")}
+              <option value="bench" ${isBench ? "selected" : ""}>Bench</option>
+            </select>`
+          : "";
+        return `<li>${escapeHtml(s.character)} <span class="aside">(${capitalize(s.role)})</span>${control}</li>`;
+      })
+      .join("");
+    return `<div class="chart-cell"><h3>${label}</h3><ul>${rows || `<li class="aside">Empty</li>`}</ul></div>`;
+  }
+
+  async function onChartAssign(ev: Event): Promise<void> {
+    const select = ev.currentTarget as HTMLSelectElement;
+    const signupId = select.dataset.signupId;
+    if (!signupId || !raid) {
+      return;
+    }
+    const value = select.value;
+    const body = value === "bench" ? { bench: true, group: null } : { bench: false, group: Number(value) };
+    try {
+      await apiFetch(`/api/raids/${raid.id}/signups/${signupId}`, { method: "PATCH", body: JSON.stringify(body) });
+      await refresh();
+    } catch (err) {
+      signupStatus.textContent = statusMessage(err);
+    }
+  }
+
+  function renderChart(detail: RaidDetail): void {
+    const signed = detail.signups.filter((s) => s.status === "signed");
+    const isOfficer = me?.is_officer ?? false;
+    const cells: string[] = [];
+    for (let group = 1; group <= 8; group++) {
+      const members = signed.filter((s) => s.group === group && !s.bench);
+      cells.push(chartCell(`Group ${group}`, members, isOfficer, false));
+    }
+    const bench = signed.filter((s) => s.bench || s.group === null);
+    cells.push(chartCell("Bench", bench, isOfficer, true));
+    chartGrid.innerHTML = cells.join("");
+
+    if (isOfficer) {
+      chartGrid.querySelectorAll<HTMLSelectElement>("select[data-signup-id]").forEach((select) => {
+        select.addEventListener("change", onChartAssign);
+      });
+    }
+  }
+
+  function renderSignupForm(detail: RaidDetail): void {
+    if (!me || !me.is_guild_member) {
+      signupSection.hidden = true;
+      return;
+    }
+    signupSection.hidden = false;
+    const mine = detail.my_signup;
+    const locked = detail.status !== "scheduled";
+
+    requireElement<HTMLInputElement>("su-character").value = mine?.character ?? "";
+    requireElement<HTMLSelectElement>("su-class").value = mine?.class ?? CLASSES[0];
+    requireElement<HTMLSelectElement>("su-role").value = mine?.role ?? "dps";
+    requireElement<HTMLSelectElement>("su-status").value = mine?.status ?? "signed";
+    requireElement<HTMLTextAreaElement>("su-comment").value = mine?.comment ?? "";
+    withdrawBtn.hidden = !mine;
+
+    for (const field of signupForm.elements) {
+      if (
+        field instanceof HTMLInputElement ||
+        field instanceof HTMLSelectElement ||
+        field instanceof HTMLTextAreaElement
+      ) {
+        field.disabled = locked;
+      }
+    }
+    // Keep "Saved." / "Withdrawn." from the action that triggered this re-render; only the lock notice is owned here.
+    if (locked) {
+      signupStatus.textContent = LOCKED_MESSAGE;
+    } else if (signupStatus.textContent === LOCKED_MESSAGE) {
+      signupStatus.textContent = "";
+    }
+  }
+
+  async function refresh(): Promise<void> {
+    if (!raidId) {
+      statusEl.textContent = "No raid specified.";
+      return;
+    }
+    const [meResult, raidResult] = await Promise.allSettled([
+      apiFetch<Me>("/api/me"),
+      apiFetch<RaidDetail>(`/api/raids/${raidId}`),
+    ]);
+    me = meResult.status === "fulfilled" ? meResult.value : null;
+    if (raidResult.status === "rejected") {
+      contentEl.hidden = true;
+      statusEl.textContent = statusMessage(raidResult.reason);
+      return;
+    }
+    raid = raidResult.value;
+    statusEl.textContent = "";
+    contentEl.hidden = false;
+    requireElement<HTMLHeadingElement>("page-heading").textContent = raid.title;
+    document.title = `${raid.title} · SideQuest`;
+    summaryEl.textContent = `${raid.instance} · ${dateFormat.format(new Date(raid.starts_at))} · ${raid.size}-player`;
+    notesEl.textContent = raid.notes ?? "";
+    renderRoster(raid);
+    renderChart(raid);
+    renderSignupForm(raid);
+  }
+
+  signupForm.addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    if (!raid) {
+      return;
+    }
+    const data = new FormData(signupForm);
+    const comment = String(data.get("comment") ?? "").trim();
+    const body = {
+      character: String(data.get("character") ?? "").trim(),
+      class: String(data.get("class")),
+      role: String(data.get("role")),
+      status: String(data.get("status")),
+      comment: comment.length > 0 ? comment : undefined,
+    };
+    signupStatus.textContent = "Saving…";
+    try {
+      await apiFetch<Signup>(`/api/raids/${raid.id}/signup`, { method: "PUT", body: JSON.stringify(body) });
+      signupStatus.textContent = "Saved.";
+      await refresh();
+    } catch (err) {
+      signupStatus.textContent = statusMessage(err);
+    }
+  });
+
+  withdrawBtn.addEventListener("click", async () => {
+    if (!raid) {
+      return;
+    }
+    signupStatus.textContent = "Withdrawing…";
+    try {
+      await apiFetch(`/api/raids/${raid.id}/signup`, { method: "DELETE" });
+      signupStatus.textContent = "Withdrawn.";
+      await refresh();
+    } catch (err) {
+      signupStatus.textContent = statusMessage(err);
+    }
+  });
+
+  refresh();
+</script>

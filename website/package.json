@@ -18,6 +18,7 @@
   "devDependencies": {
     "@astrojs/check": "^0.9.12",
     "@astrojs/compiler-rs": "^0.5.2",
+    "litestar-vite-plugin": "^0.32.0",
     "oxfmt": "^0.75.0",
     "oxlint": "^1.90.0",
     "typescript": "^6.0.3"

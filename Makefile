@@ -143,9 +143,16 @@ migration: ## Autogenerate a migration: make migration MSG="add thing"
 
 ##@ Run
 
-.PHONY: api bot run-dev
-api: ## Run the API (http://localhost:8000, docs at /schema, website at /)
+.PHONY: api bot dev run-dev
+api: ## Run the API (http://localhost:8000, docs at /schema, website at / from website/dist)
 	@$(UV) run sidequest-api
+
+dev: ## Run the API + Astro dev server together, proxied through http://localhost:8000 (hot reload, shared cookies)
+	@trap 'kill 0' EXIT INT TERM; \
+	VITE_DEV_MODE=1 $(UV) run sidequest-api & \
+	until [ -f website/.litestar.json ]; do sleep 0.2; done; \
+	$(WEB) npm run dev & \
+	wait
 
 bot: ## Run the bot (token from DISCORD_TOKEN, else macOS Keychain "discord-mcp")
 	@if [ -z "$$DISCORD_TOKEN" ] && ! grep -qE '^DISCORD_TOKEN=.+' .env 2>/dev/null; then \
@@ -154,10 +161,12 @@ bot: ## Run the bot (token from DISCORD_TOKEN, else macOS Keychain "discord-mcp"
 	$(UV) run sidequest-bot
 
 run-dev: ## How to run everything locally
-	@echo "Run each in its own terminal:"
 	@echo "  make db-up && make migrate"
+	@echo "  make dev       # API + website hot reload together at http://localhost:8000"
+	@echo "  make bot       # Discord bot, in another terminal"
+	@echo ""
+	@echo "Or run the API and website separately (no proxying, two origins):"
 	@echo "  make api       # backend + built site at http://localhost:8000"
-	@echo "  make bot       # Discord bot"
 	@echo "  make web-dev   # website with hot reload at http://localhost:4321"
 
 # =============================================================================
@@ -166,9 +175,12 @@ run-dev: ## How to run everything locally
 
 ##@ Docker
 
-.PHONY: docker-up docker-down docker-logs docker-ps
-docker-up: ## Start all compose services
-	@docker compose up -d --wait
+.PHONY: docker-build docker-up docker-down docker-logs docker-ps docker-migrate
+docker-build: ## Build the sidequest image (migrate, api and bot share it)
+	@docker compose build migrate
+
+docker-up: ## Build, then start Postgres + the API in Docker (the `migrate` service runs first via depends_on)
+	@docker compose up -d --build --wait postgres api
 
 docker-down: ## Stop all compose services
 	@docker compose down
@@ -178,6 +190,9 @@ docker-logs: ## Follow logs from all compose services
 
 docker-ps: ## Show compose service status
 	@docker compose ps
+
+docker-migrate: ## Apply migrations inside Docker (one-shot `migrate` service)
+	@docker compose up --build migrate
 
 # =============================================================================
 # Local GitHub Actions (act)

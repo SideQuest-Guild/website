@@ -1,5 +1,6 @@
 """Pydantic request/response schemas shared by the API and the bot's API client."""
 
+from sidequest_common.schemas.addons import AddonCreate, AddonSchema, AddonUpdate
 from sidequest_common.schemas.guild import GuildConfigSchema, GuildConfigUpdate
 from sidequest_common.schemas.levels import (
     LeaderboardEntry,
@@ -11,7 +12,23 @@ from sidequest_common.schemas.levels import (
     SetXPRequest,
     XPAwardResult,
 )
+from sidequest_common.schemas.members import Me
 from sidequest_common.schemas.moderation import CaseAction, ModCaseCreate, ModCaseSchema, ModCaseUpdate
+from sidequest_common.schemas.raids import (
+    RaidChartUpdate,
+    RaidCounts,
+    RaidCreate,
+    RaidDetail,
+    RaidStatus,
+    RaidSummary,
+    RaidUpdate,
+    Signup,
+    SignupMember,
+    SignupRole,
+    SignupStatus,
+    SignupUpsert,
+    WowClass,
+)
 from sidequest_common.schemas.role_menus import (
     RoleMenuCreate,
     RoleMenuOptionSchema,
@@ -21,6 +38,9 @@ from sidequest_common.schemas.role_menus import (
 )
 
 __all__ = (
+    "AddonCreate",
+    "AddonSchema",
+    "AddonUpdate",
     "CaseAction",
     "GuildConfigSchema",
     "GuildConfigUpdate",
@@ -28,10 +48,18 @@ __all__ = (
     "LeaderboardPage",
     "LevelRoleSchema",
     "LevelRoleUpsert",
+    "Me",
     "MemberLevelSchema",
     "ModCaseCreate",
     "ModCaseSchema",
     "ModCaseUpdate",
+    "RaidChartUpdate",
+    "RaidCounts",
+    "RaidCreate",
+    "RaidDetail",
+    "RaidStatus",
+    "RaidSummary",
+    "RaidUpdate",
     "RankSchema",
     "RoleMenuCreate",
     "RoleMenuOptionSchema",
@@ -39,5 +67,11 @@ __all__ = (
     "RoleMenuSchema",
     "RoleMenuUpdate",
     "SetXPRequest",
+    "Signup",
+    "SignupMember",
+    "SignupRole",
+    "SignupStatus",
+    "SignupUpsert",
+    "WowClass",
     "XPAwardResult",
 )

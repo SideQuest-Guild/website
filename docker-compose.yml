@@ -1,5 +1,13 @@
 name: sidequest
 
+# One image for migrations, the API and the bot. `migrate` owns the build so every service runs the same build;
+# `make docker-up` rebuilds it. `.env` is optional (see .env.example).
+x-app: &app
+  image: sidequest:latest
+  env_file:
+    - path: .env
+      required: false
+
 services:
   postgres:
     image: postgres:17-alpine
@@ -16,6 +24,52 @@ services:
       interval: 2s
       timeout: 3s
       retries: 15
+
+  migrate:
+    <<: *app
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SITE_URL: ${WEB_BASE_URL:-http://localhost:8000}
+    command: ["uv", "run", "--no-sync", "litestar", "--app", "sidequest_api.app:create_app", "database", "upgrade", "--no-prompt"]
+    environment:
+      DB_URL: postgresql+asyncpg://sidequest:sidequest@postgres:5432/sidequest
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  api:
+    <<: *app
+    ports:
+      - "8000:8000"
+    environment:
+      DB_URL: postgresql+asyncpg://sidequest:sidequest@postgres:5432/sidequest
+      API_HOST: 0.0.0.0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health').status == 200 else 1)"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  bot:
+    <<: *app
+    command: ["sidequest-bot"]
+    environment:
+      DB_URL: postgresql+asyncpg://sidequest:sidequest@postgres:5432/sidequest
+      API_URL: http://api:8000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+    profiles:
+      - bot
 
 volumes:
   pgdata:

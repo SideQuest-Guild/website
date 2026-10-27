@@ -1,0 +1,72 @@
+---
+import Page from "../../layouts/Page.astro";
+---
+
+<Page
+  title="Raids · SideQuest"
+  description="Upcoming and past SideQuest raid nights, World of Warcraft: Forever."
+  heading="RAIDS"
+  current="raids"
+>
+  <p class="lede">
+    Raid nights come once the guild has leveled — there's no schedule yet, and SideQuest is recruiting all roles. Sign
+    in with Discord on the <a href="/account/">account page</a> to sign up once a raid is posted.
+  </p>
+
+  <section aria-labelledby="h-upcoming">
+    <span class="caps section-label" id="h-upcoming">
+      Upcoming
+    </span>
+    <ul class="raid-list" id="raids-upcoming" aria-live="polite"></ul>
+  </section>
+
+  <section aria-labelledby="h-past">
+    <span class="caps section-label" id="h-past">
+      Past
+    </span>
+    <ul class="raid-list" id="raids-past" aria-live="polite"></ul>
+  </section>
+
+  <noscript>
+    <p class="aside">Enable JavaScript to load the raid schedule here, or check the Discord.</p>
+  </noscript>
+</Page>
+
+<script>
+  import { apiFetch, escapeHtml, requireElement, statusMessage, type RaidSummary } from "../../scripts/api";
+
+  const dateFormat = new Intl.DateTimeFormat(undefined, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+
+  function raidRow(raid: RaidSummary): string {
+    const when = dateFormat.format(new Date(raid.starts_at));
+    const counts = `${raid.counts.tank}T · ${raid.counts.healer}H · ${raid.counts.dps}D · ${raid.counts.tentative} tentative · ${raid.counts.absent} absent`;
+    const statusSuffix = raid.status === "scheduled" ? "" : ` (${escapeHtml(raid.status)})`;
+    return `
+      <li>
+        <a class="raid-row" href="/raids/event/?id=${raid.id}">
+          <span>${escapeHtml(raid.title)}${statusSuffix}</span>
+          <span class="when">${escapeHtml(raid.instance)} · ${escapeHtml(when)}</span>
+          <span class="meta">${escapeHtml(counts)}</span>
+        </a>
+      </li>`;
+  }
+
+  async function loadRaids(when: "upcoming" | "past", listId: string, emptyText: string): Promise<void> {
+    const list = requireElement(listId);
+    try {
+      const raids = await apiFetch<RaidSummary[]>(`/api/raids?when=${when}`);
+      list.innerHTML = raids.length > 0 ? raids.map(raidRow).join("") : `<li class="aside">${emptyText}</li>`;
+    } catch (err) {
+      list.innerHTML = `<li class="aside">${escapeHtml(statusMessage(err))}</li>`;
+    }
+  }
+
+  loadRaids("upcoming", "raids-upcoming", "No raids yet — raid nights come once the guild has leveled.");
+  loadRaids("past", "raids-past", "No past raids yet.");
+</script>

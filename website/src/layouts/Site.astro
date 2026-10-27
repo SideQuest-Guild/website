@@ -3,6 +3,7 @@ import { getImage } from "astro:assets";
 import "../styles/site.css";
 import groundPlate from "../../assets/plates/strip-ground.png";
 import guildLogo from "../../assets/brand/sidequest-logo.png";
+import heroArt from "../../assets/plates/hero-art.png";
 import displayFont from "../fonts/LibertinusSerifDisplay.woff2?url";
 import bodyFont from "../fonts/EBGaramond.woff2?url";
 
@@ -12,10 +13,24 @@ interface Props {
 }
 
 const { title, description } = Astro.props;
-// The charcoal ground tiles at 512px; one 1024px WebP covers 2x screens.
+// Falls back to the WebSettings default origin so previews build correctly before `site` is wired
+// up in astro.config.mjs from SITE_URL.
+const origin = Astro.site ?? new URL("http://localhost:8000");
+const canonicalUrl = new URL(Astro.url.pathname, origin).toString();
+// The ground tiles at 512px; one 1024px WebP covers 2x screens.
 const ground = await getImage({ src: groundPlate, width: 1024, format: "webp", quality: 82 });
 const favicon = await getImage({ src: guildLogo, width: 32, format: "png" });
 const touchIcon = await getImage({ src: guildLogo, width: 180, format: "png" });
+const ogImage = await getImage({
+  src: heroArt,
+  width: 1200,
+  height: 630,
+  fit: "cover",
+  position: "centre",
+  format: "jpeg",
+  quality: 78,
+});
+const ogImageUrl = new URL(ogImage.src, origin).toString();
 ---
 
 <!doctype html>
@@ -26,6 +41,19 @@ const touchIcon = await getImage({ src: guildLogo, width: 180, format: "png" });
     <title>{title}</title>
     <meta name="description" content={description} />
     <meta name="theme-color" content="#151515" />
+    <link rel="canonical" href={canonicalUrl} />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="SideQuest" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonicalUrl} />
+    <meta property="og:image" content={ogImageUrl} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImageUrl} />
     <link rel="icon" type="image/png" href={favicon.src} />
     <link rel="apple-touch-icon" href={touchIcon.src} />
     <link rel="preload" as="font" type="font/woff2" href={displayFont} crossorigin />

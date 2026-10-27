@@ -1,0 +1,45 @@
+---
+import { Image } from "astro:assets";
+import { DISCORD_INVITE } from "../config";
+import guildLogo from "../../assets/brand/sidequest-logo.png";
+
+interface Props {
+  current?: "raids" | "addons" | "officers" | "account";
+}
+
+const { current } = Astro.props;
+---
+
+<header class="page-header wrap">
+  <a class="page-brand" href="/#top">
+    <Image src={guildLogo} width={40} alt="" />
+    <span class="wordmark">SIDEQUEST</span>
+  </a>
+  <nav aria-label="Main">
+    <ul class="page-nav">
+      <li>
+        <a href="/raids/" aria-current={current === "raids" ? "page" : undefined}>
+          Raids
+        </a>
+      </li>
+      <li>
+        <a href="/addons/" aria-current={current === "addons" ? "page" : undefined}>
+          Addons
+        </a>
+      </li>
+      <li>
+        <a href="/officers/" aria-current={current === "officers" ? "page" : undefined}>
+          Officers
+        </a>
+      </li>
+      <li>
+        <a href={DISCORD_INVITE}>Discord</a>
+      </li>
+      <li>
+        <a href="/account/" aria-current={current === "account" ? "page" : undefined}>
+          Account
+        </a>
+      </li>
+    </ul>
+  </nav>
+</header>

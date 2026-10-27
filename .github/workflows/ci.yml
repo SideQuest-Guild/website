@@ -109,3 +109,22 @@ jobs:
           name: website-dist
           path: website/dist
           retention-days: 7
+
+  docker:
+    name: Docker image build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4.4.1
+
+      - name: Build image (no push)
+        uses: docker/build-push-action@v7.4.0
+        with:
+          context: .
+          push: false
+          tags: sidequest:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

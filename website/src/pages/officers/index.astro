@@ -1,0 +1,419 @@
+---
+import Page from "../../layouts/Page.astro";
+---
+
+<Page
+  title="Officers · SideQuest"
+  description="Officer console: create raids, assign the raid chart, and manage addons."
+  heading="OFFICERS"
+  current="officers"
+>
+  <p class="status" id="officers-status" role="status" aria-live="polite"></p>
+
+  <div id="officers-gate" hidden>
+    <p class="lede">
+      This page is for SideQuest officers. Sign in with Discord on the <a href="/account/">account page</a> if you hold
+      an officer role.
+    </p>
+  </div>
+
+  <div id="officers-body" hidden>
+    <section aria-labelledby="h-raid-manage">
+      <span class="caps section-label" id="h-raid-manage">
+        Raids
+      </span>
+      <form id="raid-form" class="form">
+        <fieldset>
+          <legend id="raid-form-legend">New raid</legend>
+          <div class="form-row">
+            <div class="field">
+              <label for="r-title">Title</label>
+              <input id="r-title" maxlength="80" required />
+            </div>
+            <div class="field">
+              <label for="r-instance">Instance</label>
+              <input id="r-instance" maxlength="80" required />
+            </div>
+            <div class="field">
+              <label for="r-starts">Start</label>
+              <input id="r-starts" type="datetime-local" required />
+            </div>
+            <div class="field">
+              <label for="r-size">Size</label>
+              <select id="r-size" required>
+                <option value="10">10</option>
+                <option value="20">20</option>
+                <option value="40">40</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="r-status">Status</label>
+              <select id="r-status">
+                <option value="scheduled">Scheduled</option>
+                <option value="cancelled">Cancelled</option>
+                <option value="completed">Completed</option>
+              </select>
+            </div>
+          </div>
+          <div class="field">
+            <label for="r-notes">Notes</label>
+            <textarea id="r-notes" rows="2" maxlength="500"></textarea>
+          </div>
+        </fieldset>
+        <div class="form-actions">
+          <button type="submit" class="btn" id="raid-save">
+            Save raid
+          </button>
+          <button type="button" class="btn-quiet" id="raid-reset">
+            New raid
+          </button>
+          <button type="button" class="btn-quiet" id="raid-delete" hidden>
+            Cancel &amp; delete raid
+          </button>
+        </div>
+        <p class="status" id="raid-form-status" role="status" aria-live="polite"></p>
+      </form>
+      <ul class="raid-list" id="officer-raid-list" aria-label="Existing raids"></ul>
+    </section>
+
+    <section aria-labelledby="h-addon-manage">
+      <span class="caps section-label" id="h-addon-manage">
+        Addons
+      </span>
+      <form id="addon-form" class="form">
+        <fieldset>
+          <legend id="addon-form-legend">New addon</legend>
+          <div class="form-row">
+            <div class="field">
+              <label for="a-name">Name</label>
+              <input id="a-name" maxlength="80" required />
+            </div>
+            <div class="field">
+              <label for="a-slug">Slug</label>
+              <input id="a-slug" pattern="[a-z0-9-]+" maxlength="80" required />
+            </div>
+            <div class="field">
+              <label for="a-version">Version</label>
+              <input id="a-version" maxlength="40" required />
+            </div>
+            <div class="field">
+              <label for="a-download">Download URL</label>
+              <input id="a-download" type="url" required />
+            </div>
+            <div class="field">
+              <label for="a-homepage">Homepage URL</label>
+              <input id="a-homepage" type="url" />
+            </div>
+          </div>
+          <div class="field">
+            <label for="a-summary">Summary</label>
+            <textarea id="a-summary" rows="2" maxlength="280" required></textarea>
+          </div>
+        </fieldset>
+        <div class="form-actions">
+          <button type="submit" class="btn" id="addon-save">
+            Save addon
+          </button>
+          <button type="button" class="btn-quiet" id="addon-reset">
+            New addon
+          </button>
+          <button type="button" class="btn-quiet" id="addon-delete" hidden>
+            Delete addon
+          </button>
+        </div>
+        <p class="status" id="addon-form-status" role="status" aria-live="polite"></p>
+      </form>
+      <ul class="addon-list" id="officer-addon-list" aria-label="Existing addons"></ul>
+    </section>
+  </div>
+
+  <noscript>
+    <p class="aside">Enable JavaScript to use the officer console.</p>
+  </noscript>
+</Page>
+
+<script>
+  import {
+    ApiError,
+    apiFetch,
+    escapeHtml,
+    requireElement,
+    statusMessage,
+    type Addon,
+    type Me,
+    type RaidSummary,
+  } from "../../scripts/api";
+
+  const statusEl = requireElement("officers-status");
+  const gateEl = requireElement("officers-gate");
+  const bodyEl = requireElement("officers-body");
+
+  // ——— Raids ———
+  const raidForm = requireElement<HTMLFormElement>("raid-form");
+  const raidLegend = requireElement("raid-form-legend");
+  const raidTitle = requireElement<HTMLInputElement>("r-title");
+  const raidInstance = requireElement<HTMLInputElement>("r-instance");
+  const raidStarts = requireElement<HTMLInputElement>("r-starts");
+  const raidSize = requireElement<HTMLSelectElement>("r-size");
+  const raidStatusSelect = requireElement<HTMLSelectElement>("r-status");
+  const raidNotes = requireElement<HTMLTextAreaElement>("r-notes");
+  const raidResetBtn = requireElement<HTMLButtonElement>("raid-reset");
+  const raidDeleteBtn = requireElement<HTMLButtonElement>("raid-delete");
+  const raidFormStatus = requireElement("raid-form-status");
+  const raidListEl = requireElement("officer-raid-list");
+
+  let raids: RaidSummary[] = [];
+  let editingRaidId: number | null = null;
+
+  function pad(n: number): string {
+    return String(n).padStart(2, "0");
+  }
+
+  function localDateTimeInput(iso: string): string {
+    const d = new Date(iso);
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+
+  function resetRaidForm(): void {
+    raidForm.reset();
+    editingRaidId = null;
+    raidLegend.textContent = "New raid";
+    raidStatusSelect.value = "scheduled";
+    raidDeleteBtn.hidden = true;
+    raidFormStatus.textContent = "";
+  }
+
+  function fillRaidForm(raid: RaidSummary): void {
+    editingRaidId = raid.id;
+    raidLegend.textContent = `Edit · ${raid.title}`;
+    raidTitle.value = raid.title;
+    raidInstance.value = raid.instance;
+    raidStarts.value = localDateTimeInput(raid.starts_at);
+    raidSize.value = String(raid.size);
+    raidStatusSelect.value = raid.status;
+    raidNotes.value = raid.notes ?? "";
+    raidDeleteBtn.hidden = false;
+    raidFormStatus.textContent = "";
+  }
+
+  function renderRaidList(): void {
+    raidListEl.innerHTML =
+      raids.length > 0
+        ? raids
+            .map(
+              (r) => `
+        <li>
+          <button type="button" class="raid-row" data-edit-raid="${r.id}">
+            <span>${escapeHtml(r.title)} (${escapeHtml(r.status)})</span>
+            <span class="when">${escapeHtml(r.instance)} · ${escapeHtml(new Date(r.starts_at).toLocaleString())}</span>
+          </button>
+        </li>`,
+            )
+            .join("")
+        : `<li class="aside">No raids yet.</li>`;
+    raidListEl.querySelectorAll<HTMLButtonElement>("[data-edit-raid]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const id = Number(btn.dataset.editRaid);
+        const raid = raids.find((r) => r.id === id);
+        if (raid) {
+          fillRaidForm(raid);
+        }
+      });
+    });
+  }
+
+  async function loadRaids(): Promise<void> {
+    try {
+      const [upcoming, past] = await Promise.all([
+        apiFetch<RaidSummary[]>("/api/raids?when=upcoming"),
+        apiFetch<RaidSummary[]>("/api/raids?when=past"),
+      ]);
+      raids = [...upcoming, ...past];
+      renderRaidList();
+    } catch (err) {
+      raidListEl.innerHTML = `<li class="aside">${escapeHtml(statusMessage(err))}</li>`;
+    }
+  }
+
+  raidForm.addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    const notes = raidNotes.value.trim();
+    const body: Record<string, unknown> = {
+      title: raidTitle.value.trim(),
+      instance: raidInstance.value.trim(),
+      starts_at: new Date(raidStarts.value).toISOString(),
+      size: Number(raidSize.value),
+      notes: notes.length > 0 ? notes : undefined,
+    };
+    raidFormStatus.textContent = "Saving…";
+    try {
+      if (editingRaidId) {
+        body.status = raidStatusSelect.value;
+        await apiFetch(`/api/raids/${editingRaidId}`, { method: "PATCH", body: JSON.stringify(body) });
+      } else {
+        await apiFetch("/api/raids", { method: "POST", body: JSON.stringify(body) });
+      }
+      resetRaidForm();
+      raidFormStatus.textContent = "Saved.";
+      await loadRaids();
+    } catch (err) {
+      raidFormStatus.textContent = statusMessage(err);
+    }
+  });
+
+  raidResetBtn.addEventListener("click", resetRaidForm);
+
+  raidDeleteBtn.addEventListener("click", async () => {
+    if (!editingRaidId || !confirm("Cancel and remove this raid?")) {
+      return;
+    }
+    raidFormStatus.textContent = "Deleting…";
+    try {
+      await apiFetch(`/api/raids/${editingRaidId}`, { method: "DELETE" });
+      resetRaidForm();
+      raidFormStatus.textContent = "Deleted.";
+      await loadRaids();
+    } catch (err) {
+      raidFormStatus.textContent = statusMessage(err);
+    }
+  });
+
+  // ——— Addons ———
+  const addonForm = requireElement<HTMLFormElement>("addon-form");
+  const addonLegend = requireElement("addon-form-legend");
+  const addonName = requireElement<HTMLInputElement>("a-name");
+  const addonSlug = requireElement<HTMLInputElement>("a-slug");
+  const addonVersion = requireElement<HTMLInputElement>("a-version");
+  const addonDownload = requireElement<HTMLInputElement>("a-download");
+  const addonHomepage = requireElement<HTMLInputElement>("a-homepage");
+  const addonSummary = requireElement<HTMLTextAreaElement>("a-summary");
+  const addonResetBtn = requireElement<HTMLButtonElement>("addon-reset");
+  const addonDeleteBtn = requireElement<HTMLButtonElement>("addon-delete");
+  const addonFormStatus = requireElement("addon-form-status");
+  const addonListEl = requireElement("officer-addon-list");
+
+  let addons: Addon[] = [];
+  let editingAddonId: number | null = null;
+
+  function resetAddonForm(): void {
+    addonForm.reset();
+    editingAddonId = null;
+    addonLegend.textContent = "New addon";
+    addonDeleteBtn.hidden = true;
+    addonFormStatus.textContent = "";
+  }
+
+  function fillAddonForm(addon: Addon): void {
+    editingAddonId = addon.id;
+    addonLegend.textContent = `Edit · ${addon.name}`;
+    addonName.value = addon.name;
+    addonSlug.value = addon.slug;
+    addonVersion.value = addon.version;
+    addonDownload.value = addon.download_url;
+    addonHomepage.value = addon.homepage_url ?? "";
+    addonSummary.value = addon.summary;
+    addonDeleteBtn.hidden = false;
+    addonFormStatus.textContent = "";
+  }
+
+  function renderAddonList(): void {
+    addonListEl.innerHTML =
+      addons.length > 0
+        ? addons
+            .map(
+              (a) => `
+        <li class="addon-row">
+          <button type="button" class="raid-row" data-edit-addon="${a.id}">
+            <span class="addon-name">${escapeHtml(a.name)}</span>
+            <span class="when">v${escapeHtml(a.version)} · ${escapeHtml(a.slug)}</span>
+          </button>
+        </li>`,
+            )
+            .join("")
+        : `<li class="aside">No addons yet.</li>`;
+    addonListEl.querySelectorAll<HTMLButtonElement>("[data-edit-addon]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const id = Number(btn.dataset.editAddon);
+        const addon = addons.find((a) => a.id === id);
+        if (addon) {
+          fillAddonForm(addon);
+        }
+      });
+    });
+  }
+
+  async function loadAddons(): Promise<void> {
+    try {
+      addons = await apiFetch<Addon[]>("/api/addons");
+      renderAddonList();
+    } catch (err) {
+      addonListEl.innerHTML = `<li class="aside">${escapeHtml(statusMessage(err))}</li>`;
+    }
+  }
+
+  addonForm.addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    const homepage = addonHomepage.value.trim();
+    const body = {
+      slug: addonSlug.value.trim(),
+      name: addonName.value.trim(),
+      summary: addonSummary.value.trim(),
+      version: addonVersion.value.trim(),
+      download_url: addonDownload.value.trim(),
+      homepage_url: homepage.length > 0 ? homepage : undefined,
+    };
+    addonFormStatus.textContent = "Saving…";
+    try {
+      if (editingAddonId) {
+        await apiFetch(`/api/addons/${editingAddonId}`, { method: "PATCH", body: JSON.stringify(body) });
+      } else {
+        await apiFetch("/api/addons", { method: "POST", body: JSON.stringify(body) });
+      }
+      resetAddonForm();
+      addonFormStatus.textContent = "Saved.";
+      await loadAddons();
+    } catch (err) {
+      addonFormStatus.textContent = statusMessage(err);
+    }
+  });
+
+  addonResetBtn.addEventListener("click", resetAddonForm);
+
+  addonDeleteBtn.addEventListener("click", async () => {
+    if (!editingAddonId || !confirm("Delete this addon?")) {
+      return;
+    }
+    addonFormStatus.textContent = "Deleting…";
+    try {
+      await apiFetch(`/api/addons/${editingAddonId}`, { method: "DELETE" });
+      resetAddonForm();
+      addonFormStatus.textContent = "Deleted.";
+      await loadAddons();
+    } catch (err) {
+      addonFormStatus.textContent = statusMessage(err);
+    }
+  });
+
+  // ——— Gate ———
+  async function init(): Promise<void> {
+    let me: Me | null = null;
+    try {
+      me = await apiFetch<Me>("/api/me");
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 0) {
+        statusEl.textContent = statusMessage(err);
+      }
+      me = null;
+    }
+    if (!me || !me.is_officer) {
+      gateEl.hidden = false;
+      return;
+    }
+    bodyEl.hidden = false;
+    resetRaidForm();
+    resetAddonForm();
+    await Promise.all([loadRaids(), loadAddons()]);
+  }
+
+  init();
+</script>

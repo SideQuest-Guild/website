@@ -33,7 +33,7 @@ const panels = [
     art: panelRaid,
     alt: "A raid group with lion-crested shields faces a towering boss wreathed in blue lightning.",
     title: "RAID NIGHT",
-    copy: "Scheduled raid nights for semi-core players. Nights and times are set once we choose a region.",
+    copy: "Scheduled raid nights for semi-core and progression groups, once everyone's leveled up together.",
   },
   {
     art: panelProgression,
@@ -75,6 +75,9 @@ const channels = ["#general", "#rules", "Lobby", "dungeon-1", "dungeon-2", "dung
         </li>
         <li>
           <a href={DISCORD_INVITE}>Discord</a>
+        </li>
+        <li>
+          <a href="/account/">Account</a>
         </li>
       </ul>
     </nav>
@@ -150,11 +153,11 @@ const channels = ["#general", "#rules", "Lobby", "dungeon-1", "dungeon-2", "dung
         <i class="sep" aria-hidden="true">
           ·
         </i>
-        <span>Ruleset TBD</span>
+        <span>Normal ruleset</span>
         <i class="sep" aria-hidden="true">
           ·
         </i>
-        <span>Region TBD</span>
+        <span>US region</span>
       </p>
     </div>
 
@@ -193,21 +196,28 @@ const channels = ["#general", "#rules", "Lobby", "dungeon-1", "dungeon-2", "dung
           <span class="rule flip" aria-hidden="true"></span>
         </div>
         <p class="lede">
-          Raid nights are planned as a guild. Once SideQuest settles its region and ruleset, the schedule goes up here
-          and in the Discord.
+          Raid nights are planned as a guild. Once everyone's leveled up, the schedule goes up here and in the Discord.
         </p>
         <dl class="ledger">
           <div>
             <dt class="caps">Raid nights</dt>
-            <dd class="tbd">To be announced</dd>
+            <dd class="tbd">Once the guild has leveled — no schedule yet.</dd>
+          </div>
+          <div>
+            <dt class="caps">Recruiting</dt>
+            <dd>All roles.</dd>
           </div>
           <div>
             <dt class="caps">Sign-ups</dt>
-            <dd>Open on this page after launch, one per raid night.</dd>
+            <dd>
+              Open on the <a href="/raids/">raids page</a> once a raid is posted, one per raid night.
+            </dd>
           </div>
           <div>
             <dt class="caps">Raid charts</dt>
-            <dd>Assignments and positions for each fight, posted here before the pull.</dd>
+            <dd>
+              Assignments and positions for each fight, posted on the <a href="/raids/">raids page</a> before the pull.
+            </dd>
           </div>
           <div>
             <dt class="caps">Who raids</dt>
@@ -234,7 +244,10 @@ const channels = ["#general", "#rules", "Lobby", "dungeon-1", "dungeon-2", "dung
           <h2 id="h-addons">ADDONS</h2>
           <span class="rule flip" aria-hidden="true"></span>
         </div>
-        <p class="lede">The guild's own addons will download from here, so everyone raids on the same setup.</p>
+        <p class="lede">
+          The guild's own addons will download from the <a href="/addons/">addons page</a>, so everyone raids on the
+          same setup.
+        </p>
         <dl class="ledger">
           <div>
             <dt class="caps">Guild addons</dt>

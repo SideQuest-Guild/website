@@ -1,0 +1,51 @@
+---
+import Page from "../../layouts/Page.astro";
+---
+
+<Page
+  title="Addons · SideQuest"
+  description="Download SideQuest's guild addons for World of Warcraft: Forever."
+  heading="ADDONS"
+  current="addons"
+>
+  <p class="lede">
+    The guild's own addons, so everyone raids on the same setup. New versions are announced in the Discord.
+  </p>
+  <ul class="addon-list" id="addons-list" aria-live="polite"></ul>
+
+  <noscript>
+    <p class="aside">Enable JavaScript to see the addon list.</p>
+  </noscript>
+</Page>
+
+<script>
+  import { apiFetch, escapeHtml, requireElement, statusMessage, type Addon } from "../../scripts/api";
+
+  function addonRow(addon: Addon): string {
+    const homepage = addon.homepage_url
+      ? `<a class="btn-quiet" href="${escapeHtml(addon.homepage_url)}">Homepage</a>`
+      : "";
+    return `
+      <li class="addon-row">
+        <span class="addon-name">${escapeHtml(addon.name)}</span>
+        <span class="aside">v${escapeHtml(addon.version)}</span>
+        <p>${escapeHtml(addon.summary)}</p>
+        <div class="form-actions">
+          <a class="btn" href="${escapeHtml(addon.download_url)}">Download</a>
+          ${homepage}
+        </div>
+      </li>`;
+  }
+
+  async function loadAddons(): Promise<void> {
+    const list = requireElement("addons-list");
+    try {
+      const addons = await apiFetch<Addon[]>("/api/addons");
+      list.innerHTML = addons.length > 0 ? addons.map(addonRow).join("") : `<li class="aside">Not yet published.</li>`;
+    } catch (err) {
+      list.innerHTML = `<li class="aside">${escapeHtml(statusMessage(err))}</li>`;
+    }
+  }
+
+  loadAddons();
+</script>

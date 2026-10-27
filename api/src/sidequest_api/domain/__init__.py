@@ -1,12 +1,16 @@
 """Route registry.
 
 ``guild_controllers`` serve the Discord bot. ``create_app`` mounts them under ``/api/guilds/{guild_id}`` behind the
-``X-API-Key`` guard. ``public_routes`` (health, and website/member routes as they're added) have no service-key auth.
+``X-API-Key`` guard. ``public_routes`` (health, website/member hub routes) have no service-key auth.
 """
 
+from sidequest_api.domain.addons.controllers import AddonsController
+from sidequest_api.domain.auth.controllers import AuthController
 from sidequest_api.domain.cases.controllers import CasesController
 from sidequest_api.domain.guilds.controllers import GuildConfigController
 from sidequest_api.domain.levels.controllers import LevelsController
+from sidequest_api.domain.members.controllers import MembersController
+from sidequest_api.domain.raids.controllers import RaidsController
 from sidequest_api.domain.role_menus.controllers import RoleMenusController
 from sidequest_api.domain.system.controllers import HealthController
 
@@ -21,4 +25,8 @@ guild_controllers = [
 
 public_routes = [
     HealthController,
+    AuthController,
+    MembersController,
+    RaidsController,
+    AddonsController,
 ]
