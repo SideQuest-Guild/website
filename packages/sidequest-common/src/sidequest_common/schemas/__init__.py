@@ -10,6 +10,7 @@ from sidequest_common.schemas.discord_events import (
     DiscordSyncPending,
     PushAction,
 )
+from sidequest_common.schemas.discord_live import DiscordLive, DiscordLiveReport, VoiceChannelCount
 from sidequest_common.schemas.events import (
     EVENT_KIND_LABELS,
     ROLE_KINDS,
@@ -66,6 +67,8 @@ __all__ = (
     "DiscordEventReconcile",
     "DiscordEventState",
     "DiscordEventStatus",
+    "DiscordLive",
+    "DiscordLiveReport",
     "DiscordPushAck",
     "DiscordSyncPending",
     "EventCounts",
@@ -105,6 +108,7 @@ __all__ = (
     "SignupRole",
     "SignupStatus",
     "SignupUpsert",
+    "VoiceChannelCount",
     "WowClass",
     "XPAwardResult",
 )

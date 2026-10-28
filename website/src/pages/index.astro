@@ -43,6 +43,7 @@ const panels = [
   },
 ];
 
+// Text channels start with "#"; the rest are voice channels, which get live counts from discord-live.ts.
 const channels = ["#general", "#rules", "Lobby", "dungeon-1", "dungeon-2", "dungeon-3", "raid-1", "raid-2"];
 ---
 
@@ -302,11 +303,20 @@ const channels = ["#general", "#rules", "Lobby", "dungeon-1", "dungeon-2", "dung
           Early name reservation opened October 27. Come meet the guild in the Discord before launch.
         </p>
         <JoinPlaque />
-        <p class="channels-label caps">In the Discord</p>
+        <p class="channels-label caps">
+          In the Discord<span class="channels-online" data-discord-online hidden></span>
+        </p>
         <ul class="channels caps" aria-label="Discord channels">
-          {channels.map((channel) => (
-            <li>{channel}</li>
-          ))}
+          {channels.map((channel) =>
+            channel.startsWith("#") ? (
+              <li>{channel}</li>
+            ) : (
+              <li data-voice={channel.toLowerCase()}>
+                {channel}
+                <span class="voice-count" hidden></span>
+              </li>
+            ),
+          )}
         </ul>
       </div>
     </section>
@@ -349,5 +359,6 @@ const channels = ["#general", "#rules", "Lobby", "dungeon-1", "dungeon-2", "dung
 
   <script>
     import "../scripts/raid-gate";
+    import "../scripts/discord-live";
   </script>
 </Site>

@@ -873,6 +873,22 @@ img {
   margin: clamp(38px, 3.4vw, 54px) 0 0;
   color: var(--ink-2);
 }
+.channels-online::before {
+  content: "·";
+  margin: 0 0.6em;
+  color: var(--gold-2);
+}
+.channels-online {
+  color: var(--gold);
+}
+.channels li.live {
+  color: var(--ink-2);
+}
+.voice-count {
+  margin-left: 0.5em;
+  color: var(--gold);
+  font-variant-numeric: tabular-nums;
+}
 
 .foot {
   margin-top: clamp(110px, 10vw, 170px);

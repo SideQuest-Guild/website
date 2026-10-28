@@ -8,6 +8,7 @@ from sidequest_api.domain.addons.controllers import AddonsController
 from sidequest_api.domain.auth.controllers import AuthController
 from sidequest_api.domain.battlenet.controllers import BattleNetController
 from sidequest_api.domain.cases.controllers import CasesController
+from sidequest_api.domain.discord_live.controllers import DiscordLiveController, DiscordLivePublicController
 from sidequest_api.domain.event_series.controllers import EventSeriesController
 from sidequest_api.domain.event_sync.controllers import EventSyncController
 from sidequest_api.domain.events.controllers import EventsController
@@ -25,6 +26,7 @@ guild_controllers = [
     CasesController,
     RoleMenusController,
     EventSyncController,
+    DiscordLiveController,
 ]
 
 public_routes = [
@@ -35,4 +37,5 @@ public_routes = [
     EventsController,
     EventSeriesController,
     AddonsController,
+    DiscordLivePublicController,
 ]

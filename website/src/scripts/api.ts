@@ -134,6 +134,16 @@ export type Addon = {
   updated_at: string;
 };
 
+export type VoiceChannelCount = { name: string; count: number };
+
+/** ``GET /api/discord/live``: empty counts (``online: null``, ``voice: []``) when the bot hasn't reported recently. */
+export type DiscordLive = {
+  online: number | null;
+  members: number | null;
+  voice: VoiceChannelCount[];
+  reported_at: string | null;
+};
+
 export const CLASSES: CharClass[] = [
   "warrior",
   "paladin",

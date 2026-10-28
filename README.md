@@ -29,6 +29,8 @@ flowchart LR
 | `/` | none | Website (`website/dist`, built by `make web-build`; a placeholder page until the first build) |
 | `/api/guilds/{guild_id}/...` | `X-API-Key` (shared secret with the bot) | Guild config, XP/levels, moderation cases, role menus |
 | `/api/guilds/{guild_id}/event-sync` (GET), `/event-sync/{event_id}/ack`, `/event-sync/events`, `/event-sync/events/{event_id}` (DELETE), `/event-sync/tombstones/{event_id}` (DELETE), `/event-sync/reconcile` | `X-API-Key` | Two-way guild event <-> Discord scheduled event sync (404s for any guild other than the site guild) |
+| `/api/guilds/{guild_id}/live` (PUT) | `X-API-Key` | Bot reports the guild's live online/member/voice-channel counts (404s for any guild other than the site guild) |
+| `/api/discord/live` (GET) | none | Website reads the site guild's live counts; empty counts (not 404) if the bot hasn't reported recently |
 | `/auth/discord/login`, `/auth/discord/callback`, `/auth/logout` | none | Discord OAuth sign-in (session cookie `sq_session`) |
 | `/auth/battlenet/link`, `/auth/battlenet/callback`, `/auth/battlenet/unlink` | signed in | Link a Battle.net account (BattleTag) to the member |
 | `/api/me` | signed in | The signed-in member |
@@ -175,6 +177,15 @@ restored.
   than the series rule itself. Editing a single occurrence detaches it from the series; editing the series updates
   its still-attached future occurrences (re-timing or cancelling ones a schedule change no longer matches); ending
   a series cancels its signed-up future occurrences and deletes the signup-less ones, keeping past occurrences.
+
+### Live status
+The homepage "In the Discord" band shows live counts, never names: how many people are in each public voice/stage
+channel, plus the guild's approximate online/member counts. Every 60 seconds the bot refreshes
+`approximate_presence_count`/`approximate_member_count` (`fetch_guild(..., with_counts=True)`, keeping the last
+known values if that fetch fails) and pushes a full report; voice/stage channel changes also push immediately,
+debounced ~5 seconds per guild so a burst of joins/leaves coalesces into one push (mute/deafen toggles don't count
+as a channel change). No privileged presence intent is used
+(`bot/src/sidequest_bot/plugins/live_status.py`, `PUT /api/guilds/{guild_id}/live`).
 
 ## Role safety
 Anything the bot hands out on its own (level rewards, the auto-role, role-menu buttons) goes through
