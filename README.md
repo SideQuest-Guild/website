@@ -206,3 +206,35 @@ make docker-down                 # stop everything (keeps the pgdata volume)
 `HEALTHCHECK` against `/health`. `.dockerignore` keeps `.venv`, `node_modules`, `dist`, caches, and tests out of the
 build context. CI builds the image (no push) on every PR via `docker/build-push-action` with GitHub Actions layer
 caching.
+
+### Cabotage
+The `Procfile` defines the three processes, all from the same image:
+
+| Process | Command | Notes |
+|---|---|---|
+| `release` | `litestar … database upgrade --no-prompt` | Runs once per deploy, before traffic |
+| `web` | `uvicorn … --uds /var/run/cabotage/cabotage.sock` | Serves the API and the built site |
+| `worker` | `sidequest-bot` | Run **exactly one** replica: two bots would double every Discord event push |
+
+Set the health check path to **`/health/live`** (no database round-trip, fits the 2 s probe timeout). The site's
+canonical and og URLs are baked in at build time from the `SITE_URL` build arg, which defaults to
+`https://sidequest-guild.com`.
+
+Environment (secrets in Vault, the rest in Consul):
+
+| Variable | Value | Used by |
+|---|---|---|
+| `DB_URL` | `postgresql+asyncpg://user:pass@host:5432/db` (must use the `postgresql+asyncpg` scheme) | release, web |
+| `API_KEY` | shared secret (`secrets.token_urlsafe(32)`) | web, worker |
+| `API_URL` | `https://sidequest-guild.com`: the bot reaches the API through the public site | worker |
+| `DISCORD_TOKEN` | bot token | worker |
+| `DISCORD_GUILD_ID` | `1564671275316543508` (instant slash-command sync) | worker |
+| `WEB_BASE_URL` | `https://sidequest-guild.com` | web |
+| `WEB_COOKIE_SECURE` | `true` | web |
+| `WEB_SESSION_SECRET` | at least 32 characters | web |
+| `WEB_DISCORD_CLIENT_ID` / `WEB_DISCORD_CLIENT_SECRET` | Discord OAuth app | web |
+| `WEB_BATTLENET_CLIENT_ID` / `WEB_BATTLENET_CLIENT_SECRET` | Battle.net API client | web |
+| `WEB_OFFICER_ROLE_IDS` | `1564678042381586532,1564678035117178960` | web |
+
+Register `https://sidequest-guild.com/auth/discord/callback` as a Discord OAuth redirect (the Battle.net one is
+already registered).
