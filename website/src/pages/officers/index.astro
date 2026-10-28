@@ -39,11 +39,20 @@ import Page from "../../layouts/Page.astro";
               <input id="r-starts" type="datetime-local" required />
             </div>
             <div class="field">
+              <label for="r-ends">End (optional)</label>
+              <input id="r-ends" type="datetime-local" />
+            </div>
+            <div class="field">
               <label for="r-size">Size</label>
               <select id="r-size" required>
+                <option value="" disabled>
+                  Choose
+                </option>
                 <option value="10">10</option>
                 <option value="20">20</option>
-                <option value="40">40</option>
+                <option value="40" selected>
+                  40
+                </option>
               </select>
             </div>
             <div class="field">
@@ -72,6 +81,11 @@ import Page from "../../layouts/Page.astro";
           </button>
         </div>
         <p class="status" id="raid-form-status" role="status" aria-live="polite"></p>
+        <p class="aside">
+          Raids are mirrored to the Discord server's Events. Changes here show up in Discord within about 15 seconds;
+          events made or edited in Discord appear here. Deleting an event in Discord cancels its raid here and keeps the
+          sign-ups.
+        </p>
       </form>
       <ul class="raid-list" id="officer-raid-list" aria-label="Existing raids"></ul>
     </section>
@@ -166,6 +180,7 @@ import Page from "../../layouts/Page.astro";
   const raidTitle = requireElement<HTMLInputElement>("r-title");
   const raidInstance = requireElement<HTMLInputElement>("r-instance");
   const raidStarts = requireElement<HTMLInputElement>("r-starts");
+  const raidEnds = requireElement<HTMLInputElement>("r-ends");
   const raidSize = requireElement<HTMLSelectElement>("r-size");
   const raidStatusSelect = requireElement<HTMLSelectElement>("r-status");
   const raidNotes = requireElement<HTMLTextAreaElement>("r-notes");
@@ -201,7 +216,8 @@ import Page from "../../layouts/Page.astro";
     raidTitle.value = raid.title;
     raidInstance.value = raid.instance;
     raidStarts.value = localDateTimeInput(raid.starts_at);
-    raidSize.value = String(raid.size);
+    raidEnds.value = raid.ends_at ? localDateTimeInput(raid.ends_at) : "";
+    raidSize.value = raid.size === null ? "" : String(raid.size);
     raidStatusSelect.value = raid.status;
     raidNotes.value = raid.notes ?? "";
     raidDeleteBtn.hidden = false;
@@ -217,7 +233,7 @@ import Page from "../../layouts/Page.astro";
         <li>
           <button type="button" class="raid-row" data-edit-raid="${r.id}">
             <span>${escapeHtml(r.title)} (${escapeHtml(r.status)})</span>
-            <span class="when">${escapeHtml(r.instance)} · ${escapeHtml(new Date(r.starts_at).toLocaleString())}</span>
+            <span class="when">${escapeHtml([r.instance, new Date(r.starts_at).toLocaleString()].filter(Boolean).join(" · "))}</span>
           </button>
         </li>`,
             )
@@ -250,13 +266,25 @@ import Page from "../../layouts/Page.astro";
   raidForm.addEventListener("submit", async (ev) => {
     ev.preventDefault();
     const notes = raidNotes.value.trim();
+    const startsAt = new Date(raidStarts.value);
+    const endsAt = raidEnds.value ? new Date(raidEnds.value) : null;
+    if (endsAt && endsAt <= startsAt) {
+      raidFormStatus.textContent = "The end has to be after the start.";
+      raidEnds.focus();
+      return;
+    }
     const body: Record<string, unknown> = {
       title: raidTitle.value.trim(),
       instance: raidInstance.value.trim(),
-      starts_at: new Date(raidStarts.value).toISOString(),
+      starts_at: startsAt.toISOString(),
       size: Number(raidSize.value),
       notes: notes.length > 0 ? notes : undefined,
     };
+    if (endsAt) {
+      body.ends_at = endsAt.toISOString();
+    } else if (editingRaidId) {
+      body.ends_at = null;
+    }
     raidFormStatus.textContent = "Saving…";
     try {
       if (editingRaidId) {

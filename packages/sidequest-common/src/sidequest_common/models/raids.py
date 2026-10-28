@@ -5,7 +5,7 @@ from uuid import UUID  # SQLAlchemy resolves Mapped[] annotations at runtime
 
 from advanced_alchemy.base import UUIDAuditBase
 from advanced_alchemy.types import DateTimeUTC
-from sqlalchemy import Boolean, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import BigInteger, Boolean, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 RAID_STATUSES = ("scheduled", "cancelled", "completed")
@@ -25,7 +25,14 @@ WOW_CLASSES = (
 
 
 class Raid(UUIDAuditBase):
-    """One scheduled raid night."""
+    """One scheduled raid night, mirrored to a Discord scheduled event when the bot is running.
+
+    ``instance`` is ``""`` and ``size`` is ``None`` for events first created in Discord (Discord has neither).
+    The ``discord_*`` columns belong to the two-way sync: ``discord_pushed_hash`` is the hash of the last desired
+    state the bot wrote to Discord, ``discord_seen_hash`` the hash of the last Discord state the bot reported. A raid
+    needs a push when its current desired-state hash differs from ``discord_pushed_hash``; a Discord report whose hash
+    equals ``discord_seen_hash`` is our own echo and is ignored.
+    """
 
     __tablename__ = "raid"
     __table_args__ = {"comment": "Scheduled raid events."}
@@ -33,9 +40,22 @@ class Raid(UUIDAuditBase):
     title: Mapped[str] = mapped_column(Text)
     instance: Mapped[str] = mapped_column(Text)
     starts_at: Mapped[datetime] = mapped_column(DateTimeUTC(timezone=True), index=True)
-    size: Mapped[int] = mapped_column(Integer)
+    ends_at: Mapped[datetime | None] = mapped_column(DateTimeUTC(timezone=True), default=None)
+    size: Mapped[int | None] = mapped_column(Integer, default=None)
     status: Mapped[str] = mapped_column(String(20), default="scheduled")
     notes: Mapped[str | None] = mapped_column(Text, default=None)
+    discord_event_id: Mapped[int | None] = mapped_column(BigInteger, unique=True, default=None)
+    discord_pushed_hash: Mapped[str | None] = mapped_column(String(64), default=None)
+    discord_seen_hash: Mapped[str | None] = mapped_column(String(64), default=None)
+
+
+class DiscordEventTombstone(UUIDAuditBase):
+    """A Discord scheduled event whose raid was deleted on the site; the bot deletes it in Discord, then this row."""
+
+    __tablename__ = "discord_event_tombstone"
+    __table_args__ = {"comment": "Discord scheduled events still to delete after their raid was deleted."}
+
+    discord_event_id: Mapped[int] = mapped_column(BigInteger, unique=True)
 
 
 class RaidSignup(UUIDAuditBase):

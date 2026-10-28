@@ -1,6 +1,15 @@
 """Pydantic request/response schemas shared by the API and the bot's API client."""
 
 from sidequest_common.schemas.addons import AddonCreate, AddonSchema, AddonUpdate
+from sidequest_common.schemas.discord_events import (
+    DiscordEventPush,
+    DiscordEventReconcile,
+    DiscordEventState,
+    DiscordEventStatus,
+    DiscordPushAck,
+    DiscordSyncPending,
+    PushAction,
+)
 from sidequest_common.schemas.guild import GuildConfigSchema, GuildConfigUpdate
 from sidequest_common.schemas.levels import (
     LeaderboardEntry,
@@ -42,6 +51,12 @@ __all__ = (
     "AddonSchema",
     "AddonUpdate",
     "CaseAction",
+    "DiscordEventPush",
+    "DiscordEventReconcile",
+    "DiscordEventState",
+    "DiscordEventStatus",
+    "DiscordPushAck",
+    "DiscordSyncPending",
     "GuildConfigSchema",
     "GuildConfigUpdate",
     "LeaderboardEntry",
@@ -54,6 +69,7 @@ __all__ = (
     "ModCaseCreate",
     "ModCaseSchema",
     "ModCaseUpdate",
+    "PushAction",
     "RaidChartUpdate",
     "RaidCounts",
     "RaidCreate",

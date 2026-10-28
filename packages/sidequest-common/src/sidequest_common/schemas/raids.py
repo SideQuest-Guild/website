@@ -10,7 +10,7 @@ from enum import StrEnum
 from typing import Literal
 from uuid import UUID  # pydantic needs it at runtime
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class SignupRole(StrEnum):
@@ -65,7 +65,7 @@ class RaidCounts(BaseModel):
 
 
 class RaidSummary(BaseModel):
-    """One raid as returned in list views."""
+    """One raid as returned in list views. ``instance`` is ``""`` and ``size`` ``None`` for Discord-created events."""
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -73,7 +73,8 @@ class RaidSummary(BaseModel):
     title: str
     instance: str
     starts_at: datetime
-    size: int
+    ends_at: datetime | None
+    size: int | None
     status: RaidStatus
     notes: str | None
     counts: RaidCounts
@@ -118,16 +119,28 @@ class RaidCreate(BaseModel):
     title: str = Field(min_length=1, max_length=200)
     instance: str = Field(min_length=1, max_length=200)
     starts_at: datetime
+    ends_at: datetime | None = None
     size: RaidSize
     notes: str | None = Field(default=None, max_length=2000)
 
+    @model_validator(mode="after")
+    def _ends_after_start(self) -> RaidCreate:
+        if self.ends_at is not None and self.ends_at <= self.starts_at:
+            msg = "ends_at must be after starts_at"
+            raise ValueError(msg)
+        return self
+
 
 class RaidUpdate(BaseModel):
-    """Body for ``PATCH /api/raids/{id}`` (officer). Only present fields change."""
+    """Body for ``PATCH /api/raids/{id}`` (officer). Only present fields change; ``ends_at: null`` clears the end.
+
+    ``ends_at`` vs ``starts_at`` is checked against the stored raid by the service when only one of them is sent.
+    """
 
     title: str | None = Field(default=None, min_length=1, max_length=200)
     instance: str | None = Field(default=None, min_length=1, max_length=200)
     starts_at: datetime | None = None
+    ends_at: datetime | None = None
     size: RaidSize | None = None
     notes: str | None = Field(default=None, max_length=2000)
     status: RaidStatus | None = None

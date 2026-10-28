@@ -275,7 +275,16 @@ import Page from "../../../layouts/Page.astro";
     contentEl.hidden = false;
     requireElement<HTMLHeadingElement>("page-heading").textContent = raid.title;
     document.title = `${raid.title} · SideQuest`;
-    summaryEl.textContent = `${raid.instance} · ${dateFormat.format(new Date(raid.starts_at))} · ${raid.size}-player`;
+    const start = new Date(raid.starts_at);
+    let when = dateFormat.format(start);
+    if (raid.ends_at) {
+      const end = new Date(raid.ends_at);
+      const sameDay = end.toDateString() === start.toDateString();
+      when += ` to ${sameDay ? end.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" }) : dateFormat.format(end)}`;
+    }
+    summaryEl.textContent = [raid.instance, when, raid.size === null ? "" : `${raid.size}-player`]
+      .filter(Boolean)
+      .join(" · ");
     notesEl.textContent = raid.notes ?? "";
     renderRoster(raid);
     renderChart(raid);

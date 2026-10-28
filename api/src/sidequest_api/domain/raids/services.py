@@ -6,12 +6,12 @@ from typing import TYPE_CHECKING, Literal
 from advanced_alchemy.exceptions import IntegrityError
 from advanced_alchemy.repository import SQLAlchemyAsyncRepository
 from advanced_alchemy.service import SQLAlchemyAsyncRepositoryService
-from litestar.exceptions import HTTPException, NotFoundException
+from litestar.exceptions import HTTPException, NotFoundException, ValidationException
 from litestar.status_codes import HTTP_409_CONFLICT
 from sqlalchemy import func, or_, select
 
 from sidequest_api.lib.discord import avatar_url
-from sidequest_common.models import Member, Raid, RaidSignup
+from sidequest_common.models import DiscordEventTombstone, Member, Raid, RaidSignup
 from sidequest_common.schemas import (
     RaidChartUpdate,
     RaidCounts,
@@ -36,6 +36,7 @@ def _raid_summary_fields(raid: Raid) -> dict[str, object]:
         "title": raid.title,
         "instance": raid.instance,
         "starts_at": raid.starts_at,
+        "ends_at": raid.ends_at,
         "size": raid.size,
         "status": raid.status,
         "notes": raid.notes,
@@ -140,20 +141,33 @@ class RaidsService(SQLAlchemyAsyncRepositoryService[Raid]):
     async def create_raid(self, data: RaidCreate) -> Raid:
         """Create a scheduled raid."""
         raid = Raid(
-            title=data.title, instance=data.instance, starts_at=data.starts_at, size=data.size, notes=data.notes
+            title=data.title,
+            instance=data.instance,
+            starts_at=data.starts_at,
+            ends_at=data.ends_at,
+            size=data.size,
+            notes=data.notes,
         )
         return await self.create(raid, auto_commit=True)
 
     async def update_raid(self, raid_id: UUID, data: RaidUpdate) -> Raid:
-        """Apply the present fields of ``data`` to the raid."""
+        """Apply the present fields of ``data``. 400 if the resulting ``ends_at`` isn't after ``starts_at``."""
         raid = await self.get_raid_or_404(raid_id)
-        for field, value in data.model_dump(exclude_unset=True).items():
+        changes = data.model_dump(exclude_unset=True)
+        starts_at = changes.get("starts_at", raid.starts_at)
+        ends_at = changes.get("ends_at", raid.ends_at)
+        if ends_at is not None and ends_at <= starts_at:
+            msg = "ends_at must be after starts_at"
+            raise ValidationException(msg)
+        for field, value in changes.items():
             setattr(raid, field, value)
         return await self.update(raid, auto_commit=True)
 
     async def delete_raid(self, raid_id: UUID) -> None:
-        """Delete a raid and its signups."""
-        await self.get_raid_or_404(raid_id)
+        """Delete a raid and its signups; tombstone a linked Discord event in the same transaction."""
+        raid = await self.get_raid_or_404(raid_id)
+        if raid.discord_event_id is not None:
+            self.repository.session.add(DiscordEventTombstone(discord_event_id=raid.discord_event_id))
         await self.delete(raid_id, auto_commit=True)
 
     async def _counts_for(self, raid_ids: list[UUID]) -> dict[UUID, RaidCounts]:

@@ -5,11 +5,12 @@ from sidequest_common.models.guild import GuildConfig
 from sidequest_common.models.levels import LevelRole, MemberLevel
 from sidequest_common.models.members import Member
 from sidequest_common.models.moderation import ModCase
-from sidequest_common.models.raids import Raid, RaidSignup
+from sidequest_common.models.raids import DiscordEventTombstone, Raid, RaidSignup
 from sidequest_common.models.role_menus import RoleMenu, RoleMenuOption
 
 __all__ = (
     "Addon",
+    "DiscordEventTombstone",
     "GuildConfig",
     "LevelRole",
     "Member",

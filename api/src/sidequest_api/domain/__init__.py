@@ -11,6 +11,7 @@ from sidequest_api.domain.cases.controllers import CasesController
 from sidequest_api.domain.guilds.controllers import GuildConfigController
 from sidequest_api.domain.levels.controllers import LevelsController
 from sidequest_api.domain.members.controllers import MembersController
+from sidequest_api.domain.raid_sync.controllers import RaidSyncController
 from sidequest_api.domain.raids.controllers import RaidsController
 from sidequest_api.domain.role_menus.controllers import RoleMenusController
 from sidequest_api.domain.system.controllers import HealthController
@@ -22,6 +23,7 @@ guild_controllers = [
     LevelsController,
     CasesController,
     RoleMenusController,
+    RaidSyncController,
 ]
 
 public_routes = [

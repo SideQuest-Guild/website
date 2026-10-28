@@ -1,5 +1,6 @@
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
+from uuid import UUID
 
 from sidequest_common.models import Raid
 from tests.unit.api.conftest import OFFICER_ROLE_ID, login_as
@@ -179,3 +180,50 @@ async def test_officer_raid_chart_places_signup_in_group(
     assert chart_response.status_code == 200
     assert chart_response.json()["group"] == 3
     assert chart_response.json()["bench"] is False
+
+
+async def test_create_raid_rejects_ends_at_before_starts_at(
+    member_client: AsyncTestClient, discord_state: dict
+) -> None:
+    await login_as(member_client, discord_state, discord_id=2050, roles=[OFFICER_ROLE_ID])
+    response = await member_client.post(
+        "/api/raids",
+        json={
+            "title": "Blackwing Lair",
+            "instance": "Blackwing Lair",
+            "starts_at": "2026-12-05T20:00:00Z",
+            "ends_at": "2026-12-05T19:00:00Z",
+            "size": 40,
+            "notes": None,
+        },
+    )
+    assert response.status_code == 400
+
+
+async def test_update_raid_rejects_ends_at_not_after_stored_starts_at(
+    member_client: AsyncTestClient, discord_state: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    starts_at = datetime.now(UTC) + timedelta(days=1)
+    raid_id = await _seed_raid(db_sessionmaker, starts_at=starts_at)
+    await login_as(member_client, discord_state, discord_id=2051, roles=[OFFICER_ROLE_ID])
+    response = await member_client.patch(
+        f"/api/raids/{raid_id}", json={"ends_at": (starts_at - timedelta(hours=1)).isoformat()}
+    )
+    assert response.status_code == 400
+
+
+async def test_update_raid_rejects_new_starts_at_after_stored_ends_at(
+    member_client: AsyncTestClient, discord_state: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    starts_at = datetime.now(UTC) + timedelta(days=1)
+    raid_id = await _seed_raid(db_sessionmaker, starts_at=starts_at)
+    async with db_sessionmaker() as session:
+        raid = await session.get(Raid, UUID(raid_id))
+        assert raid is not None
+        raid.ends_at = starts_at + timedelta(hours=3)
+        await session.commit()
+    await login_as(member_client, discord_state, discord_id=2052, roles=[OFFICER_ROLE_ID])
+    response = await member_client.patch(
+        f"/api/raids/{raid_id}", json={"starts_at": (starts_at + timedelta(hours=4)).isoformat()}
+    )
+    assert response.status_code == 400

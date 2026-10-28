@@ -16,7 +16,7 @@ flowchart LR
 
 | Path | What lives there |
 |---|---|
-| `api/` | The Litestar backend: `domain/{guilds,levels,cases,role_menus,system}`, migrations in `lib/migrations`, website serving in `lib/website.py` |
+| `api/` | The Litestar backend: `domain/{guilds,levels,cases,role_menus,raid_sync,system}`, migrations in `lib/migrations`, website serving in `lib/website.py` |
 | `bot/` | Discord bot: `bot.py`, `api_client.py` (the only way the bot reaches the backend), `plugins/*` (auto-loaded), `lib/` |
 | `website/` | Guild website (Astro, static build). Its built `website/dist/` is served by the backend at `/` |
 | `packages/sidequest-common` | ORM models, pydantic schemas (the API contract), leveling curve, message templates, settings |
@@ -28,6 +28,7 @@ flowchart LR
 |---|---|---|
 | `/` | none | Website (`website/dist`, built by `make web-build`; a placeholder page until the first build) |
 | `/api/guilds/{guild_id}/...` | `X-API-Key` (shared secret with the bot) | Guild config, XP/levels, moderation cases, role menus |
+| `/api/guilds/{guild_id}/raid-sync` (GET), `/raid-sync/{raid_id}/ack`, `/raid-sync/events`, `/raid-sync/events/{event_id}` (DELETE), `/raid-sync/tombstones/{event_id}` (DELETE), `/raid-sync/reconcile` | `X-API-Key` | Two-way raid <-> Discord scheduled event sync (404s for any guild other than the site guild) |
 | `/auth/discord/login`, `/auth/discord/callback`, `/auth/logout` | none | Discord OAuth sign-in (session cookie `sq_session`) |
 | `/auth/battlenet/link`, `/auth/battlenet/callback`, `/auth/battlenet/unlink` | signed in | Link a Battle.net account (BattleTag) to the member |
 | `/api/me` | signed in | The signed-in member |
@@ -67,7 +68,8 @@ Create a client at [develop.battle.net/access/clients](https://develop.battle.ne
 
 Requires uv (Python 3.15 is installed from `.python-version`), [mise](https://mise.jdx.dev) (the website's Node is
 pinned in `website/mise.toml`), Docker (for Postgres), and the bot's token (Developer Portal → Game Master → Bot). The
-bot needs the **Server Members** and **Message Content** privileged intents enabled in the portal.
+bot needs the **Server Members** and **Message Content** privileged intents enabled in the portal, plus the
+**Manage Events** server permission (Create Events + Manage Events) for raid sync.
 
 ```bash
 cp .env.example .env              # then set API_KEY to a random secret
@@ -143,6 +145,20 @@ floods (more than 5 messages in 5 s) it also times the member out for 5 minutes.
 case. Members with Manage Messages, exempt roles, and exempt channels are skipped.
 
 - `/automod status | toggle | mentions | spam | timeout | exempt role|channel add|remove` (Manage Server)
+
+### Raid sync
+Raids created, edited, or cancelled on the site appear as Discord scheduled events, and events created, edited, or
+deleted in Discord update the matching raid, in either direction. Site edits reach Discord within about 15 seconds
+(the bot's sync loop interval); Discord edits reach the site immediately via gateway listeners. Requires the bot's
+**Manage Events** permission; without it, sync pauses for that server until the permission is restored.
+
+- Each Discord event's description ends with a `── SideQuest raid ──` block: instance and size, live sign-up
+  counts, and a sign-up link built from `WEB_BASE_URL` (so set it to the public domain in production). Text above
+  that block is the raid's notes in both directions.
+- Events made in Discord become raids with no instance or size; officers can fill those in on the site.
+- Deleting an event in Discord cancels its raid on the site and keeps the sign-ups; deleting a raid on the site
+  deletes its Discord event. Raids that already started aren't created in Discord (Discord rejects past starts).
+- The bot reconciles every event when it starts, so changes made while it was offline are picked up.
 
 ## Role safety
 Anything the bot hands out on its own (level rewards, the auto-role, role-menu buttons) goes through

@@ -51,7 +51,7 @@ import Page from "../../layouts/Page.astro";
       <li>
         <a class="raid-row" href="/raids/event/?id=${raid.id}">
           <span>${escapeHtml(raid.title)}${statusSuffix}</span>
-          <span class="when">${escapeHtml(raid.instance)} · ${escapeHtml(when)}</span>
+          <span class="when">${escapeHtml([raid.instance, when].filter(Boolean).join(" · "))}</span>
           <span class="meta">${escapeHtml(counts)}</span>
         </a>
       </li>`;

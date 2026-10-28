@@ -35,9 +35,12 @@ export type RaidCounts = { tank: number; healer: number; dps: number; tentative:
 export type RaidSummary = {
   id: string;
   title: string;
+  /** `""` for events first created in Discord. */
   instance: string;
   starts_at: string;
-  size: number;
+  ends_at: string | null;
+  /** `null` for events first created in Discord. */
+  size: number | null;
   status: RaidStatus;
   notes: string | null;
   counts: RaidCounts;
