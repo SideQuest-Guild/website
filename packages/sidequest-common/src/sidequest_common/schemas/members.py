@@ -22,6 +22,7 @@ class Me(BaseModel):
     is_guild_member: bool
     is_officer: bool
     battletag: str | None
+    roster_confirmed: bool
 
 
 class MemberListing(BaseModel):
@@ -37,4 +38,5 @@ class MemberListing(BaseModel):
     is_guild_member: bool
     is_officer: bool
     battletag: str | None
+    roster_confirmed: bool
     last_login_at: datetime | None

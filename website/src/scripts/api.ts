@@ -11,6 +11,7 @@ export type Me = {
   is_guild_member: boolean;
   is_officer: boolean;
   battletag: string | null;
+  roster_confirmed: boolean;
 };
 
 /** Officers' member list row (`GET /api/members`). */
@@ -23,6 +24,7 @@ export type MemberListing = {
   is_officer: boolean;
   battletag: string | null;
   last_login_at: string | null;
+  roster_confirmed: boolean;
 };
 
 export type EventKind = "raid" | "dungeon" | "leveling" | "pvp" | "social" | "other";

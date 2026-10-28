@@ -1,7 +1,8 @@
 """The signed-in member's own profile, and the officers' member list."""
 
-from litestar import Controller, Request, delete, get
+from litestar import Controller, Request, delete, get, put
 from litestar.di import NamedDependency, Provide
+from litestar.params import FromPath
 
 from sidequest_api.domain.members.dependencies import provide_members_service
 from sidequest_api.domain.members.services import MembersService
@@ -22,6 +23,21 @@ def _to_me(member: Member, web_settings: WebSettings) -> Me:
         is_guild_member=member.is_guild_member,
         is_officer=is_officer(member, web_settings.OFFICER_ROLE_IDS),
         battletag=member.battletag,
+        roster_confirmed=member.roster_confirmed_at is not None,
+    )
+
+
+def _to_listing(member: Member, web_settings: WebSettings) -> MemberListing:
+    return MemberListing(
+        id=member.id,
+        username=member.username,
+        display_name=member.display_name,
+        avatar_url=avatar_url(member.discord_id, member.avatar_hash),
+        is_guild_member=member.is_guild_member,
+        is_officer=is_officer(member, web_settings.OFFICER_ROLE_IDS),
+        battletag=member.battletag,
+        roster_confirmed=member.roster_confirmed_at is not None,
+        last_login_at=member.last_login_at,
     )
 
 
@@ -65,16 +81,36 @@ class MembersController(Controller):
     ) -> list[MemberListing]:
         """Officers only: everyone who has signed in, with their linked BattleTag for checking the guild roster."""
         del current_officer
-        return [
-            MemberListing(
-                id=member.id,
-                username=member.username,
-                display_name=member.display_name,
-                avatar_url=avatar_url(member.discord_id, member.avatar_hash),
-                is_guild_member=member.is_guild_member,
-                is_officer=is_officer(member, web_settings.OFFICER_ROLE_IDS),
-                battletag=member.battletag,
-                last_login_at=member.last_login_at,
-            )
-            for member in await members_service.list_for_officers()
-        ]
+        return [_to_listing(member, web_settings) for member in await members_service.list_for_officers()]
+
+    @put("/members/{member_id:int}/roster-confirmation", operation_id="ConfirmMemberRoster")
+    async def confirm_member_roster(
+        self,
+        member_id: FromPath[int],
+        current_officer: NamedDependency[Member],
+        members_service: NamedDependency[MembersService],
+        web_settings: NamedDependency[WebSettings],
+    ) -> MemberListing:
+        """Officers only: mark a member confirmed on the in-game guild roster.
+
+        Idempotent: keeps the first confirmation timestamp if already confirmed. 401 signed out, 403 non-officer,
+        404 unknown member id.
+        """
+        del current_officer
+        member = await members_service.get_for_officer_action(member_id)
+        member = await members_service.confirm_roster(member)
+        return _to_listing(member, web_settings)
+
+    @delete("/members/{member_id:int}/roster-confirmation", operation_id="UnconfirmMemberRoster", status_code=200)
+    async def unconfirm_member_roster(
+        self,
+        member_id: FromPath[int],
+        current_officer: NamedDependency[Member],
+        members_service: NamedDependency[MembersService],
+        web_settings: NamedDependency[WebSettings],
+    ) -> MemberListing:
+        """Officers only: clear a member's roster confirmation. 401 signed out, 403 non-officer, 404 unknown id."""
+        del current_officer
+        member = await members_service.get_for_officer_action(member_id)
+        member = await members_service.unconfirm_roster(member)
+        return _to_listing(member, web_settings)

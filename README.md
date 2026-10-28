@@ -36,6 +36,7 @@ flowchart LR
 | `/auth/battlenet/link`, `/auth/battlenet/callback`, `/auth/battlenet/unlink` | signed in | Link a Battle.net account (BattleTag) to the member |
 | `/api/me` (GET), `/api/me` (DELETE) | signed in | The signed-in member; `DELETE` permanently deletes the member and their event signups and clears the session cookie |
 | `/api/members` | officer | Everyone who has signed in, with linked BattleTags, for checking the guild roster |
+| `/api/members/{member_id}/roster-confirmation` (PUT, DELETE) | officer | Confirm or clear that a member is on the in-game guild roster |
 | `/api/events`, `/api/event-series`, `/api/addons` (GET) | none | Guild events (raids, dungeons, leveling, pvp, social, other) with roster + raid chart, repeating event series, guild addon links |
 | `/api/events/{id}/signup` | guild member | Sign up for / withdraw from a guild event |
 | `/api/events`, `/api/event-series`, `/api/addons` (POST/PATCH/DELETE), `/api/events/{id}/signups/{id}` | officer | Manage guild events, repeating event series, the raid chart and addons |
@@ -193,14 +194,18 @@ Members who sign in on the site get a role (default name **Signed the Ledger**);
 get a second one (**Battle-Tagged**). Unlinking Battle.net drops just that role; unlinking the site account (or no
 longer appearing in the sign-in list) drops both. New joiners who haven't signed in get a third role, the gate role
 (**At the Gate**), removed the moment they sign in; it's granted immediately on join (or screening-clear) just like
-the other two. Channels other than the sign-in channel are set in Discord to be visible only to the **Signed the
-Ledger** role (and `@everyone` loses `View Channel`), so the gate role's only purpose is to show new members the
-sign-in channel until they're in. A sync loop reconciles every member every 60 seconds against
+the other two. Once an officer confirms a member on the Officers page as actually being on the in-game guild
+roster (ahead of the WoW Forever roster API that will later set the same flag automatically), the member gets a
+fourth role, the roster role (**New Arrival**) — but never if they already hold a rank above it, so a promoted
+member who dropped the role doesn't get it back every minute. Channels other than the sign-in channel are set in
+Discord to be visible only to the **Signed the Ledger** role (and `@everyone` loses `View Channel`), so the gate
+role's only purpose is to show new members the sign-in channel until they're in; every member channel is further
+restricted to the roster role and ranks above it. A sync loop reconciles every member every 60 seconds against
 `GET /api/guilds/{guild_id}/member-links`, and joins/screening-clears apply the same plan immediately. Only
 configured roles are ever touched, and a role that's missing or unsafe to grant is skipped with a one-time warning
 (`bot/src/sidequest_bot/plugins/link_roles.py`).
 
-- `/linkroles site | battlenet | gate` (Manage Server)
+- `/linkroles site | battlenet | gate | roster` (Manage Server)
 
 ## Role safety
 Anything the bot hands out on its own (level rewards, the auto-role, role-menu buttons, link roles) goes through

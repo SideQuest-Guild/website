@@ -34,6 +34,7 @@ class Member(BigIntAuditBase):
     battlenet_id: Mapped[int | None] = mapped_column(BigInteger, unique=True, default=None)
     battletag: Mapped[str | None] = mapped_column(Text, default=None)
     battlenet_linked_at: Mapped[datetime | None] = mapped_column(DateTimeUTC(timezone=True), default=None)
+    roster_confirmed_at: Mapped[datetime | None] = mapped_column(DateTimeUTC(timezone=True), default=None)
 
     @property
     def display_name(self) -> str:

@@ -12,3 +12,5 @@ class MemberLink(BaseModel):
 
     discord_id: int
     battlenet_linked: bool
+    # Defaulted so a bot newer than the API still parses (same reasoning as GuildConfigSchema's role ids).
+    roster_confirmed: bool = False

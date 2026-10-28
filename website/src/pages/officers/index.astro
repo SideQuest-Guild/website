@@ -164,8 +164,9 @@ import Page from "../../layouts/Page.astro";
         Members
       </span>
       <p class="aside">
-        Everyone who has signed in. Match each linked BattleTag against the in-game guild roster; members without one
-        haven't linked Battle.net yet.
+        Everyone who has signed in. Match each linked BattleTag against the in-game guild roster, then confirm them:
+        Discord gives them New Arrival and opens the member channels within a minute. Until then they only see the Guest
+        Hall.
       </p>
       <ul class="raid-list" id="officer-member-list" aria-label="Signed-in members"></ul>
     </section>
@@ -710,20 +711,50 @@ import Page from "../../layouts/Page.astro";
         members.length > 0
           ? members
               .map((m) => {
-                const tags = [m.is_officer ? "Officer" : null, m.is_guild_member ? null : "Not in the Discord"]
+                const tags = [
+                  m.is_officer ? "Officer" : null,
+                  m.is_guild_member ? null : "Not in the Discord",
+                  m.roster_confirmed ? "On the roster" : "Guest",
+                ]
                   .filter(Boolean)
                   .join(" · ");
+                const label = m.roster_confirmed ? "Remove from roster" : "Confirm in guild";
                 return `
-        <li class="raid-row">
-          <span>${escapeHtml(m.display_name)} <span class="when">@${escapeHtml(m.username)}</span></span>
-          <span class="when">${m.battletag ? escapeHtml(m.battletag) : "No Battle.net linked"}</span>
-          ${tags ? `<span class="meta">${escapeHtml(tags)}</span>` : ""}
+        <li class="series-row">
+          <div class="raid-row">
+            <span>${escapeHtml(m.display_name)} <span class="when">@${escapeHtml(m.username)}</span></span>
+            <span class="when">${m.battletag ? escapeHtml(m.battletag) : "No Battle.net linked"}</span>
+            <span class="meta">${escapeHtml(tags)}</span>
+          </div>
+          <button type="button" class="btn-quiet" data-roster="${m.id}" data-confirmed="${m.roster_confirmed}">
+            ${label}
+          </button>
         </li>`;
               })
               .join("")
           : `<li class="aside">No one has signed in yet.</li>`;
+      memberListEl.querySelectorAll<HTMLButtonElement>("[data-roster]").forEach((btn) => {
+        btn.addEventListener("click", () => onToggleRoster(btn));
+      });
     } catch (err) {
       memberListEl.innerHTML = `<li class="aside">${escapeHtml(statusMessage(err))}</li>`;
+    }
+  }
+
+  async function onToggleRoster(btn: HTMLButtonElement): Promise<void> {
+    const confirmed = btn.dataset.confirmed === "true";
+    if (confirmed && !confirm("Remove from the roster? They lose New Arrival and drop back to the Guest Hall.")) {
+      return;
+    }
+    btn.disabled = true;
+    try {
+      await apiFetch(`/api/members/${btn.dataset.roster}/roster-confirmation`, {
+        method: confirmed ? "DELETE" : "PUT",
+      });
+      await loadMembers();
+    } catch (err) {
+      btn.disabled = false;
+      btn.textContent = statusMessage(err);
     }
   }
 

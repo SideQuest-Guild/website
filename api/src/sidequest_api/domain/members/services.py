@@ -5,6 +5,7 @@ from typing import Any
 
 from advanced_alchemy.repository import SQLAlchemyAsyncRepository
 from advanced_alchemy.service import SQLAlchemyAsyncRepositoryService
+from litestar.exceptions import NotFoundException
 from sqlalchemy import delete
 
 from sidequest_api.lib.battlenet import BattleNetOAuthError
@@ -80,6 +81,26 @@ class MembersService(SQLAlchemyAsyncRepositoryService[Member]):
         """
         await self.repository.session.execute(delete(EventSignup).where(EventSignup.member_id == member.id))
         await self.delete(member.id, auto_commit=True)
+
+    async def get_for_officer_action(self, member_id: int) -> Member:
+        """``member_id``'s row. Raises ``NotFoundException`` if no such member has ever signed in."""
+        member = await self.get_one_or_none(id=member_id)
+        if member is None:
+            msg = f"No member {member_id}"
+            raise NotFoundException(msg)
+        return member
+
+    async def confirm_roster(self, member: Member) -> Member:
+        """Mark ``member`` confirmed on the in-game guild roster. Idempotent: keeps the first confirmation time."""
+        if member.roster_confirmed_at is None:
+            member.roster_confirmed_at = datetime.now(UTC)
+            return await self.update(member, auto_commit=True)
+        return member
+
+    async def unconfirm_roster(self, member: Member) -> Member:
+        """Clear ``member``'s roster confirmation."""
+        member.roster_confirmed_at = None
+        return await self.update(member, auto_commit=True)
 
     async def list_for_officers(self) -> list[Member]:
         """Every member who has signed in, current guild members first, then by display name."""
