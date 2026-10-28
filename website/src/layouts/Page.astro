@@ -8,15 +8,18 @@ interface Props {
   description: string;
   heading: string;
   current?: "raids" | "addons" | "officers" | "account";
+  /** A short, single-column page (e.g. account) centered under a two-ruled heading, like the homepage's Join. */
+  centered?: boolean;
 }
 
-const { title, description, heading, current } = Astro.props;
+const { title, description, heading, current, centered = false } = Astro.props;
 ---
 
 <Site title={title} description={description}>
   <PageHeader current={current} />
-  <main id="top" tabindex="-1" class="page wrap">
-    <div class="heading start">
+  <main id="top" tabindex="-1" class:list={["page wrap", { "page-centered": centered }]}>
+    <div class:list={["heading", { start: !centered }]}>
+      {centered && <span class="rule" aria-hidden="true" />}
       <h1 id="page-heading">{heading}</h1>
       <span class="rule flip" aria-hidden="true"></span>
     </div>

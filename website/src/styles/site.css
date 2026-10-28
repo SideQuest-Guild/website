@@ -1403,8 +1403,34 @@ a.raid-row {
   letter-spacing: 0.1em;
   color: var(--ink);
 }
-#account-signed-in .btn-quiet {
+#account-signed-in .form-actions {
   margin-top: clamp(20px, 2vw, 28px);
+}
+
+/* ——— Centered single-column pages (account) ——— */
+.page-centered {
+  display: grid;
+  justify-items: center;
+  text-align: center;
+}
+.page-centered > * {
+  width: min(100%, 640px);
+}
+.page-centered > .heading {
+  width: 100%;
+}
+.page-centered .plaque {
+  margin-inline: auto;
+}
+.page-centered .account-card,
+.page-centered .form-actions {
+  justify-content: center;
+}
+.page-centered .account-card > div {
+  text-align: left;
+}
+.page-centered .ledger {
+  text-align: left;
 }
 
 /* ——— Member pages: narrow screens ——— */
