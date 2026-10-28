@@ -59,11 +59,22 @@ const ogImageUrl = new URL(ogImage.src, origin).toString();
     <link rel="preload" as="font" type="font/woff2" href={displayFont} crossorigin />
     <link rel="preload" as="font" type="font/woff2" href={bodyFont} crossorigin />
     <slot name="head" />
+    <!-- Lets CSS collapse the mobile menu only when the script that opens it will run. -->
+    <script is:inline>
+      document.documentElement.classList.add("js");
+    </script>
   </head>
   <body>
     <a class="skip" href="#top">
       Skip to content
     </a>
     <slot />
+    <a class="to-top" href="#top" data-to-top>
+      <span class="to-top-chevron" aria-hidden="true"></span>
+      <span class="sr-only">Back to top</span>
+    </a>
+    <script>
+      import "../scripts/site-chrome";
+    </script>
   </body>
 </html>

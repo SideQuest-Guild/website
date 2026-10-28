@@ -3,8 +3,11 @@
 Each concern has its own env prefix: ``DB_``, ``API_``, ``DISCORD_``, ``WEB_``.
 """
 
-from pydantic import SecretStr, model_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+import json
+from typing import Annotated, Any
+
+from pydantic import SecretStr, field_validator, model_validator
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 _BASE_CONFIG = {"env_file": ".env", "extra": "ignore", "case_sensitive": False}
 MIN_SESSION_SECRET_LENGTH = 32
@@ -67,7 +70,8 @@ class WebSettings(BaseSettings):
     BATTLENET_CLIENT_ID: str | None = None
     BATTLENET_CLIENT_SECRET: SecretStr | None = None
     GUILD_ID: int = 1564671275316543508
-    OFFICER_ROLE_IDS: list[int] = []
+    # NoDecode: parsed by _parse_role_ids, so both `123,456` and `[123,456]` work in .env.
+    OFFICER_ROLE_IDS: Annotated[list[int], NoDecode] = []
     COOKIE_SECURE: bool = False
 
     @property
@@ -79,6 +83,17 @@ class WebSettings(BaseSettings):
     def battlenet_configured(self) -> bool:
         """Whether both Battle.net OAuth client credentials are set."""
         return self.BATTLENET_CLIENT_ID is not None and self.BATTLENET_CLIENT_SECRET is not None
+
+    @field_validator("OFFICER_ROLE_IDS", mode="before")
+    @classmethod
+    def _parse_role_ids(cls, value: Any) -> Any:
+        """Accept a JSON array (``[123,456]``) or a comma-separated list (``123,456``) from the environment."""
+        if not isinstance(value, str):
+            return value
+        text = value.strip()
+        if text.startswith("["):
+            return json.loads(text)
+        return [part.strip() for part in text.split(",") if part.strip()]
 
     @model_validator(mode="after")
     def _validate_session_secret_length(self) -> WebSettings:

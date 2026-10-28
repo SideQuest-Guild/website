@@ -31,6 +31,10 @@
   --gold: #d8ab5c;
   --gold-2: #a88449;
   --hair: rgba(255, 255, 255, 0.09);
+  /* Flat surfaces: the member-page panel, the open mobile menu, and the veil behind floating controls. */
+  --panel: rgba(32, 31, 29, 0.94);
+  --menu: rgb(14, 14, 15);
+  --menu-veil: rgba(14, 14, 15, 0.55);
   --ground: none; /* set on <html> by the layout: a build-time WebP of assets/plates/strip-ground.png */
   --display: "Libertinus Serif Display", "Libertinus Serif", Georgia, serif;
   --serif: "EB Garamond", Garamond, Georgia, serif;
@@ -59,6 +63,8 @@ html {
 body {
   position: relative;
   margin: 0;
+  /* Nothing on the site is meant to pan sideways; clip (not hidden) keeps position: sticky working. */
+  overflow-x: clip;
   color: var(--ink);
   font-family: var(--serif);
   font-weight: 400;
@@ -95,6 +101,123 @@ img {
 }
 .skip:focus {
   top: 16px;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ——— Page chrome: Menu button (narrow screens) and back-to-top ——— */
+.nav-toggle {
+  display: none;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 0 14px;
+  background: var(--menu-veil);
+  border: 1px solid var(--hair);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 500;
+  font-size: 13px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    border-color 0.3s,
+    color 0.3s;
+}
+.nav-toggle:hover,
+.nav-toggle[aria-expanded="true"] {
+  border-color: var(--gold-2);
+  color: var(--gold);
+}
+/* Three hairlines that fold into a cross when open. */
+.nav-toggle-bars,
+.nav-toggle-bars::before,
+.nav-toggle-bars::after {
+  display: block;
+  width: 16px;
+  height: 1px;
+  background: currentColor;
+  transition:
+    transform 0.3s var(--ease),
+    opacity 0.3s;
+}
+.nav-toggle-bars {
+  position: relative;
+}
+.nav-toggle-bars::before,
+.nav-toggle-bars::after {
+  content: "";
+  position: absolute;
+  left: 0;
+}
+.nav-toggle-bars::before {
+  top: -5px;
+}
+.nav-toggle-bars::after {
+  top: 5px;
+}
+.nav-toggle[aria-expanded="true"] .nav-toggle-bars {
+  background: transparent;
+}
+.nav-toggle[aria-expanded="true"] .nav-toggle-bars::before {
+  transform: translateY(5px) rotate(45deg);
+}
+.nav-toggle[aria-expanded="true"] .nav-toggle-bars::after {
+  transform: translateY(-5px) rotate(-45deg);
+}
+
+.to-top {
+  display: none;
+}
+.js .to-top {
+  position: fixed;
+  z-index: 50;
+  right: max(20px, env(safe-area-inset-right));
+  bottom: max(20px, env(safe-area-inset-bottom));
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  background: var(--menu);
+  border: 1px solid var(--gold-2);
+  color: var(--gold);
+  opacity: 0;
+  visibility: hidden;
+  translate: 0 8px;
+  transition:
+    opacity 0.3s var(--ease),
+    translate 0.3s var(--ease),
+    visibility 0s linear 0.3s,
+    border-color 0.3s;
+}
+.js .to-top.show {
+  opacity: 1;
+  visibility: visible;
+  translate: 0 0;
+  transition:
+    opacity 0.3s var(--ease),
+    translate 0.3s var(--ease),
+    visibility 0s,
+    border-color 0.3s;
+}
+.to-top:hover {
+  border-color: var(--gold);
+}
+/* An up-pointing half-diamond, in the same 1px gold line as the rule ornaments. */
+.to-top-chevron {
+  width: 12px;
+  height: 12px;
+  margin-top: 6px;
+  border-top: 1px solid currentColor;
+  border-left: 1px solid currentColor;
+  rotate: 45deg;
 }
 
 /* Hairline gold rules: a line that fades out, ending in or centred on a diamond. */
@@ -247,6 +370,12 @@ img {
   line-height: 1;
   white-space: nowrap;
 }
+/* Measured comp box: grow the hit area, not the layout. */
+.nav-wordmark::after {
+  content: "";
+  position: absolute;
+  inset: -16px -8px;
+}
 .nav-links {
   --x: 63.21%;
   --y: 3.13%;
@@ -260,10 +389,17 @@ img {
   list-style: none;
 }
 .nav-links a {
+  position: relative;
   font-size: max(calc(20.5 * var(--u)), 13px);
   letter-spacing: 0.07em;
   white-space: nowrap;
   transition: color 0.3s;
+}
+/* The hero nav sits in the comp's measured box; widen only the hit area, not the layout. */
+.nav-links a::after {
+  content: "";
+  position: absolute;
+  inset: -14px -10px;
 }
 .nav-links a:hover {
   color: var(--gold);
@@ -770,12 +906,16 @@ img {
 .foot-nav {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px 32px;
-  margin: 0;
+  gap: 0 12px;
+  margin: 0 -10px;
   padding: 0;
   list-style: none;
 }
 .foot-nav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 10px;
   color: var(--ink-2);
   transition: color 0.3s;
 }
@@ -847,33 +987,36 @@ img {
   .site-header {
     aspect-ratio: auto;
     display: grid;
-    grid-template-columns: 44px auto 1fr;
-    align-items: start;
+    grid-template-columns: 40px 1fr auto;
+    align-items: center;
     column-gap: 12px;
-    padding: 0 20px 22px;
-    background: linear-gradient(to bottom, rgba(5, 9, 18, 0.82), rgba(5, 9, 18, 0.55) 60%, rgba(5, 9, 18, 0));
+    padding: 12px 16px 28px 20px;
+    background: linear-gradient(to bottom, rgba(5, 9, 18, 0.86), rgba(5, 9, 18, 0.6) 62%, rgba(5, 9, 18, 0));
   }
   .nav-crest {
-    width: 44px;
-    height: 56px;
+    width: 40px;
+    height: 50px;
   }
   .nav-wordmark {
-    align-self: center;
-    margin-top: -10px;
-    font-size: 16px;
+    justify-content: flex-start;
+    font-size: 15px;
     letter-spacing: 0.34em;
   }
-  .site-header nav {
+  /* Without JS the links stay visible as a wrapped row under the brand. */
+  html:not(.js) .site-header nav {
     grid-column: 1 / -1;
-    margin-top: 8px;
+    margin-top: 10px;
   }
-  .nav-links {
+  html:not(.js) .nav-links {
     justify-content: center;
     flex-wrap: wrap;
-    row-gap: 10px;
-    column-gap: 12px;
+    gap: 0 4px;
   }
-  .nav-links a {
+  html:not(.js) .nav-links a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 8px;
     font-size: 15px;
   }
 
@@ -1080,6 +1223,7 @@ img {
   display: flex;
   align-items: center;
   gap: 12px;
+  min-height: 44px;
 }
 .page-brand img {
   width: 32px;
@@ -1097,28 +1241,118 @@ img {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 10px 28px;
-  margin: 0;
+  gap: 4px 6px;
+  margin: 0 -12px;
   padding: 0;
   list-style: none;
 }
+/* Button-sized targets that still read as tracked caps: a hairline frame appears on hover/focus, and the
+   current page carries a gold underline. */
 .page-nav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid transparent;
   font-weight: 500;
   font-size: var(--caps);
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  transition: color 0.3s;
+  transition:
+    color 0.3s,
+    border-color 0.3s;
 }
 .page-nav a:hover,
+.page-nav a:focus-visible {
+  color: var(--gold);
+  border-color: var(--hair);
+}
 .page-nav a[aria-current="page"] {
   color: var(--gold);
+  border-bottom-color: var(--gold-2);
 }
 
-/* ——— Member pages: shared page shell ——— */
+/* ——— Member pages: shared page shell ———
+   Text-heavy pages sit on one flat, calmer panel so copy never reads directly over the mottled ground. */
 .page {
-  padding-top: clamp(48px, 5vw, 80px);
-  padding-bottom: clamp(90px, 9vw, 150px);
+  margin-top: clamp(24px, 3vw, 48px);
+  padding: clamp(36px, 4vw, 72px) clamp(20px, 4vw, 72px) clamp(56px, 5vw, 96px);
+  background: var(--panel);
+  border: 1px solid var(--hair);
 }
+.page.page-centered {
+  width: min(100% - 2 * var(--gut), 880px);
+}
+
+/* ——— Narrow screens: one compact bar, links behind the Menu button ——— */
+@media (max-width: 900px) {
+  .page-header {
+    position: relative;
+    flex-wrap: nowrap;
+    padding: 12px 0;
+  }
+  .page-brand img {
+    width: 36px;
+  }
+  .page-brand .wordmark {
+    font-size: 14px;
+    letter-spacing: 0.34em;
+  }
+  .js .nav-toggle {
+    display: inline-flex;
+  }
+  /* The open list drops full-bleed under its header as tall, thumb-sized rows. */
+  .js .page-nav,
+  .js .nav-links {
+    display: none;
+    position: absolute;
+    z-index: 40;
+    top: 100%;
+    left: 50%;
+    width: 100vw;
+    translate: -50% 0;
+    margin: 0;
+    padding: 6px 0 14px;
+    background: var(--menu);
+    border-top: 1px solid var(--hair);
+    border-bottom: 1px solid var(--gold-2);
+    text-shadow: none;
+  }
+  .js .site-header .nav-links {
+    left: 0;
+    width: 100%;
+    translate: none;
+  }
+  .js .page-nav.open,
+  .js .nav-links.open {
+    display: grid;
+    justify-content: stretch;
+  }
+  .js .page-nav li + li,
+  .js .nav-links li + li {
+    border-top: 1px solid var(--hair);
+  }
+  .js .page-nav a,
+  .js .nav-links a {
+    display: flex;
+    align-items: center;
+    min-height: 54px;
+    padding: 0 24px;
+    border: 0;
+    font-family: var(--display);
+    font-weight: 400;
+    font-size: 16px;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+  }
+  .js .nav-links a::after {
+    content: none;
+  }
+  .js .page-nav a[aria-current="page"] {
+    color: var(--gold);
+  }
+}
+
 .page > .heading {
   margin-bottom: clamp(20px, 2vw, 32px);
 }
@@ -1267,14 +1501,15 @@ a.raid-row {
 }
 .chart-cell select {
   display: block;
-  margin-top: 6px;
+  margin-top: 8px;
   width: 100%;
+  min-height: 40px;
   background: transparent;
   border: 1px solid var(--hair);
   color: var(--ink);
   font: inherit;
-  font-size: 13px;
-  padding: 4px 6px;
+  font-size: 15px;
+  padding: 6px 8px;
 }
 .chart-cell select:focus-visible {
   outline: none;
@@ -1351,10 +1586,12 @@ a.raid-row {
   align-items: center;
   justify-content: center;
   gap: 0.6em;
-  padding: 12px 26px;
+  min-height: 44px;
+  padding: 0 26px;
   background: none;
   border: 1px solid var(--gold-2);
   color: var(--ink);
+  font: inherit;
   font-weight: 500;
   font-size: var(--caps);
   letter-spacing: 0.18em;

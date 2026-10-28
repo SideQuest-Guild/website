@@ -16,7 +16,11 @@ const { current } = Astro.props;
     <span class="wordmark">SIDEQUEST</span>
   </a>
   <nav aria-label="Main">
-    <ul class="page-nav">
+    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="page-nav-list" data-nav-toggle>
+      <span class="nav-toggle-bars" aria-hidden="true"></span>
+      <span data-nav-label>Menu</span>
+    </button>
+    <ul class="page-nav" id="page-nav-list">
       <li>
         <a href="/raids/" aria-current={current === "raids" ? "page" : undefined}>
           Raids

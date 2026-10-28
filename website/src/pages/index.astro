@@ -63,7 +63,17 @@ const channels = ["#general", "#rules", "Lobby", "dungeon-1", "dungeon-2", "dung
       SIDEQUEST
     </a>
     <nav aria-label="Main">
-      <ul class="r nav-links shade">
+      <button
+        class="nav-toggle shade"
+        type="button"
+        aria-expanded="false"
+        aria-controls="hero-nav-list"
+        data-nav-toggle
+      >
+        <span class="nav-toggle-bars" aria-hidden="true"></span>
+        <span data-nav-label>Menu</span>
+      </button>
+      <ul class="r nav-links shade" id="hero-nav-list">
         <li>
           <a href="#how-we-play">How we play</a>
         </li>
