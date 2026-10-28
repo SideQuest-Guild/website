@@ -10,6 +10,7 @@ dependencies = [
     "pydantic>=2.14",
     "pydantic-settings>=2.16",
     "sqlalchemy>=2.0.40,<2.1",  # advanced-alchemy 1.12 uses sqlalchemy.util.portable_instancemethod (removed in 2.1)
+    "tzdata>=2025.2",  # python:3.15-slim has no system tz database; zoneinfo needs this for EventSeries wall-time math
 ]
 
 [build-system]

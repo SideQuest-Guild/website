@@ -1,6 +1,6 @@
 // Shared client-side helpers for the SideQuest member hub pages: typed fetch wrapper, API
 // response shapes (mirrors packages/sidequest-common schemas), and small DOM/string utilities.
-// Imported by the <script> tags on /raids/, /raids/event/, /addons/, /account/ and /officers/.
+// Imported by the <script> tags on /events/, /events/detail/, /addons/, /account/ and /officers/.
 
 export type Me = {
   id: number;
@@ -25,25 +25,85 @@ export type MemberListing = {
   last_login_at: string | null;
 };
 
+export type EventKind = "raid" | "dungeon" | "leveling" | "pvp" | "social" | "other";
+
+export const EVENT_KINDS: EventKind[] = ["raid", "dungeon", "leveling", "pvp", "social", "other"];
+
+export const EVENT_KIND_LABELS: Record<EventKind, string> = {
+  raid: "Raid",
+  dungeon: "Dungeon",
+  leveling: "Leveling",
+  pvp: "PvP",
+  social: "Social",
+  other: "Other",
+};
+
+/** Kinds whose sign-ups require character, class and role. */
+export const ROLE_KINDS: EventKind[] = ["raid", "dungeon"];
+
 export type Role = "tank" | "healer" | "dps";
 export type SignupStatus = "signed" | "tentative" | "absent";
-export type RaidStatus = "scheduled" | "cancelled" | "completed";
+export type EventStatus = "scheduled" | "cancelled" | "completed";
 export type CharClass = "warrior" | "paladin" | "hunter" | "rogue" | "priest" | "shaman" | "mage" | "warlock" | "druid";
 
-export type RaidCounts = { tank: number; healer: number; dps: number; tentative: number; absent: number };
+/** A repeating event series' schedule rule, as read back on `EventSeriesSummary.rule`. */
+export type SeriesRule = {
+  weekdays: number[];
+  interval_weeks: 1 | 2;
+  /** "HH:MM", 24h, wall-clock in `timezone`. */
+  start_time: string;
+  timezone: string;
+  duration_minutes: number | null;
+  starts_on: string;
+  until: string | null;
+};
 
-export type RaidSummary = {
+/** The lean series reference an occurrence carries on `EventSummary.series`. */
+export type SeriesRef = {
   id: string;
+  weekdays: number[];
+  interval_weeks: 1 | 2;
+  start_time: string;
+  timezone: string;
+};
+
+/** `GET/POST/PATCH /api/event-series` response shape. */
+export type EventSeriesSummary = {
+  id: string;
+  kind: EventKind;
   title: string;
-  /** `""` for events first created in Discord. */
-  instance: string;
+  location: string;
+  size: number | null;
+  notes: string | null;
+  rule: SeriesRule;
+  active: boolean;
+  next_starts_at: string | null;
+};
+
+export type EventCounts = {
+  tank: number;
+  healer: number;
+  dps: number;
+  signed: number;
+  tentative: number;
+  absent: number;
+};
+
+export type EventSummary = {
+  id: string;
+  kind: EventKind;
+  title: string;
+  /** `""` for events first created in Discord, or kinds that don't track a location. */
+  location: string;
   starts_at: string;
   ends_at: string | null;
-  /** `null` for events first created in Discord. */
+  /** `null` for events first created in Discord, or when no size was set. */
   size: number | null;
-  status: RaidStatus;
+  status: EventStatus;
   notes: string | null;
-  counts: RaidCounts;
+  counts: EventCounts;
+  /** Null for one-off events, or occurrences detached from their series. */
+  series: SeriesRef | null;
 };
 
 export type SignupMember = { display_name: string; avatar_url: string | null };
@@ -51,9 +111,9 @@ export type SignupMember = { display_name: string; avatar_url: string | null };
 export type Signup = {
   id: string;
   member: SignupMember;
-  character: string;
-  class: CharClass;
-  role: Role;
+  character: string | null;
+  class: CharClass | null;
+  role: Role | null;
   status: SignupStatus;
   comment: string | null;
   group: number | null;
@@ -61,7 +121,7 @@ export type Signup = {
   updated_at: string;
 };
 
-export type RaidDetail = RaidSummary & { signups: Signup[]; my_signup: Signup | null };
+export type EventDetail = EventSummary & { signups: Signup[]; my_signup: Signup | null };
 
 export type Addon = {
   id: string;
@@ -158,7 +218,7 @@ export function statusMessage(err: unknown): string {
       case 404:
         return "That isn't here.";
       case 409:
-        return err.detail || "That raid isn't open for changes right now.";
+        return err.detail || "That event isn't open for changes right now.";
       case 503:
         return "Discord login isn't set up yet.";
       default:

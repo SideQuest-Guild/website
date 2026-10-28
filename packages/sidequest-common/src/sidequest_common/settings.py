@@ -54,7 +54,7 @@ class DiscordSettings(BaseSettings):
 class WebSettings(BaseSettings):
     """Member hub / website settings (``WEB_*``).
 
-    Discord OAuth2 login (scopes ``identify guilds.members.read``) for guild members, raids, and addons.
+    Discord OAuth2 login (scopes ``identify guilds.members.read``) for guild members, guild events, and addons.
     ``DISCORD_CLIENT_ID``/``DISCORD_CLIENT_SECRET`` are the OAuth *application* credentials (separate from the
     bot's ``DISCORD_TOKEN``); when either is unset the app still boots, but ``/auth/discord/login`` returns 503.
     ``BATTLENET_CLIENT_ID``/``BATTLENET_CLIENT_SECRET`` (a develop.battle.net API client) let signed-in members link

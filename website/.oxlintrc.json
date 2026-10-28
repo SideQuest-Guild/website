@@ -8,7 +8,7 @@
   },
   "env": { "browser": true, "es2024": true },
   "rules": {
-    "import/no-unassigned-import": ["warn", { "allow": ["**/*.css", "**/scripts/site-chrome"] }]
+    "import/no-unassigned-import": ["warn", { "allow": ["**/*.css", "**/scripts/site-chrome", "**/scripts/raid-gate"] }]
   },
   "ignorePatterns": [".impeccable/**", "dist/**", ".astro/**"]
 }

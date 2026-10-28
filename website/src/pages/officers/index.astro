@@ -4,7 +4,7 @@ import Page from "../../layouts/Page.astro";
 
 <Page
   title="Officers · SideQuest"
-  description="Officer console: create raids, assign the raid chart, manage addons, and check members' BattleTags."
+  description="Officer console: create guild events, assign the raid chart, manage addons, and check members' BattleTags."
   heading="OFFICERS"
   current="officers"
 >
@@ -18,76 +18,95 @@ import Page from "../../layouts/Page.astro";
   </div>
 
   <div id="officers-body" hidden>
-    <section aria-labelledby="h-raid-manage">
-      <span class="caps section-label" id="h-raid-manage">
-        Raids
+    <section aria-labelledby="h-event-manage">
+      <span class="caps section-label" id="h-event-manage">
+        Events
       </span>
-      <form id="raid-form" class="form">
+      <form id="event-form" class="form">
         <fieldset>
-          <legend id="raid-form-legend">New raid</legend>
+          <legend id="event-form-legend">New event</legend>
+          <p class="aside" id="e-series-aside" hidden>
+            To change every week, edit the series below.
+          </p>
           <div class="form-row">
             <div class="field">
-              <label for="r-title">Title</label>
-              <input id="r-title" maxlength="80" required />
+              <label for="e-kind">Kind</label>
+              <select id="e-kind" required></select>
             </div>
             <div class="field">
-              <label for="r-instance">Instance</label>
-              <input id="r-instance" maxlength="80" required />
+              <label for="e-title">Title</label>
+              <input id="e-title" maxlength="80" required />
             </div>
             <div class="field">
-              <label for="r-starts">Start</label>
-              <input id="r-starts" type="datetime-local" required />
+              <label for="e-location">Location</label>
+              <input id="e-location" maxlength="80" />
             </div>
             <div class="field">
-              <label for="r-ends">End (optional)</label>
-              <input id="r-ends" type="datetime-local" />
+              <label for="e-starts">Start</label>
+              <input id="e-starts" type="datetime-local" required />
             </div>
             <div class="field">
-              <label for="r-size">Size</label>
-              <select id="r-size" required>
-                <option value="" disabled>
-                  Choose
-                </option>
-                <option value="10">10</option>
-                <option value="20">20</option>
-                <option value="40" selected>
-                  40
-                </option>
-              </select>
+              <label for="e-ends">End (optional)</label>
+              <input id="e-ends" type="datetime-local" />
             </div>
             <div class="field">
-              <label for="r-status">Status</label>
-              <select id="r-status">
+              <label for="e-size">Size (optional)</label>
+              <input id="e-size" type="number" min="1" max="40" />
+            </div>
+            <div class="field" id="e-status-field">
+              <label for="e-status">Status</label>
+              <select id="e-status">
                 <option value="scheduled">Scheduled</option>
                 <option value="cancelled">Cancelled</option>
                 <option value="completed">Completed</option>
               </select>
             </div>
+            <div class="field" id="e-repeats-field">
+              <label for="e-repeats">Repeats</label>
+              <select id="e-repeats">
+                <option value="">Doesn't repeat</option>
+                <option value="1">Weekly</option>
+                <option value="2">Every 2 weeks</option>
+              </select>
+            </div>
+            <div class="field" id="e-until-field" hidden>
+              <label for="e-until">Until (optional)</label>
+              <input id="e-until" type="date" />
+            </div>
           </div>
+          <fieldset class="weekday-toggles" id="e-weekdays-fieldset" hidden>
+            <legend class="caps">Repeat on</legend>
+            <div id="e-weekday-grid"></div>
+          </fieldset>
           <div class="field">
-            <label for="r-notes">Notes</label>
-            <textarea id="r-notes" rows="2" maxlength="500"></textarea>
+            <label for="e-notes">Notes</label>
+            <textarea id="e-notes" rows="2" maxlength="500"></textarea>
           </div>
         </fieldset>
         <div class="form-actions">
-          <button type="submit" class="btn" id="raid-save">
-            Save raid
+          <button type="submit" class="btn" id="event-save">
+            Save event
           </button>
-          <button type="button" class="btn-quiet" id="raid-reset">
-            New raid
+          <button type="button" class="btn-quiet" id="event-reset">
+            New event
           </button>
-          <button type="button" class="btn-quiet" id="raid-delete" hidden>
-            Cancel &amp; delete raid
+          <button type="button" class="btn-quiet" id="event-delete" hidden>
+            Cancel &amp; delete event
           </button>
         </div>
-        <p class="status" id="raid-form-status" role="status" aria-live="polite"></p>
+        <p class="status" id="event-form-status" role="status" aria-live="polite"></p>
         <p class="aside">
-          Raids are mirrored to the Discord server's Events. Changes here show up in Discord within about 15 seconds;
-          events made or edited in Discord appear here. Deleting an event in Discord cancels its raid here and keeps the
-          sign-ups.
+          Events are mirrored to the Discord server's Events. Changes here show up in Discord within about 15 seconds;
+          events made or edited in Discord appear here too, starting out with kind "Other" until set here. Deleting an
+          event in Discord cancels it here and keeps the sign-ups.
         </p>
       </form>
-      <ul class="raid-list" id="officer-raid-list" aria-label="Existing raids"></ul>
+      <ul class="raid-list" id="officer-event-list" aria-label="Existing events"></ul>
+
+      <span class="caps section-label" id="h-series-manage">
+        Repeating events
+      </span>
+      <ul class="raid-list" id="officer-series-list" aria-label="Repeating events"></ul>
     </section>
 
     <section aria-labelledby="h-addon-manage">
@@ -164,33 +183,62 @@ import Page from "../../layouts/Page.astro";
     escapeHtml,
     requireElement,
     statusMessage,
+    EVENT_KINDS,
+    EVENT_KIND_LABELS,
+    ROLE_KINDS,
     type Addon,
+    type EventKind,
+    type EventSeriesSummary,
+    type EventSummary,
     type Me,
     type MemberListing,
-    type RaidSummary,
   } from "../../scripts/api";
+  import { seriesRuleText, WEEKDAY_SHORT_LABELS } from "../../scripts/series";
 
   const statusEl = requireElement("officers-status");
   const gateEl = requireElement("officers-gate");
   const bodyEl = requireElement("officers-body");
 
-  // ——— Raids ———
-  const raidForm = requireElement<HTMLFormElement>("raid-form");
-  const raidLegend = requireElement("raid-form-legend");
-  const raidTitle = requireElement<HTMLInputElement>("r-title");
-  const raidInstance = requireElement<HTMLInputElement>("r-instance");
-  const raidStarts = requireElement<HTMLInputElement>("r-starts");
-  const raidEnds = requireElement<HTMLInputElement>("r-ends");
-  const raidSize = requireElement<HTMLSelectElement>("r-size");
-  const raidStatusSelect = requireElement<HTMLSelectElement>("r-status");
-  const raidNotes = requireElement<HTMLTextAreaElement>("r-notes");
-  const raidResetBtn = requireElement<HTMLButtonElement>("raid-reset");
-  const raidDeleteBtn = requireElement<HTMLButtonElement>("raid-delete");
-  const raidFormStatus = requireElement("raid-form-status");
-  const raidListEl = requireElement("officer-raid-list");
+  // ——— Events ———
+  const eventForm = requireElement<HTMLFormElement>("event-form");
+  const eventLegend = requireElement("event-form-legend");
+  const eventSeriesAside = requireElement("e-series-aside");
+  const eventKind = requireElement<HTMLSelectElement>("e-kind");
+  const eventTitle = requireElement<HTMLInputElement>("e-title");
+  const eventLocation = requireElement<HTMLInputElement>("e-location");
+  const eventStarts = requireElement<HTMLInputElement>("e-starts");
+  const eventEnds = requireElement<HTMLInputElement>("e-ends");
+  const eventSize = requireElement<HTMLInputElement>("e-size");
+  const eventStatusField = requireElement("e-status-field");
+  const eventStatusSelect = requireElement<HTMLSelectElement>("e-status");
+  const eventRepeatsField = requireElement("e-repeats-field");
+  const eventRepeats = requireElement<HTMLSelectElement>("e-repeats");
+  const eventWeekdaysFieldset = requireElement("e-weekdays-fieldset");
+  const eventWeekdayGrid = requireElement("e-weekday-grid");
+  const eventUntilField = requireElement("e-until-field");
+  const eventUntil = requireElement<HTMLInputElement>("e-until");
+  const eventNotes = requireElement<HTMLTextAreaElement>("e-notes");
+  const eventResetBtn = requireElement<HTMLButtonElement>("event-reset");
+  const eventDeleteBtn = requireElement<HTMLButtonElement>("event-delete");
+  const eventFormStatus = requireElement("event-form-status");
+  const eventListEl = requireElement("officer-event-list");
+  const seriesListEl = requireElement("officer-series-list");
 
-  let raids: RaidSummary[] = [];
-  let editingRaidId: string | null = null;
+  eventKind.innerHTML = EVENT_KINDS.map((k) => `<option value="${k}">${EVENT_KIND_LABELS[k]}</option>`).join("");
+  eventWeekdayGrid.innerHTML = WEEKDAY_SHORT_LABELS.map(
+    (label, i) => `
+      <label class="weekday-toggle">
+        <input type="checkbox" value="${i}" />
+        <span>${label}</span>
+      </label>`,
+  ).join("");
+  const weekdayCheckboxes = Array.from(eventWeekdayGrid.querySelectorAll<HTMLInputElement>("input[type=checkbox]"));
+
+  let events: EventSummary[] = [];
+  let series: EventSeriesSummary[] = [];
+  let editingEventId: string | null = null;
+  let editingSeriesId: string | null = null;
+  let weekdaysTouched = false;
 
   function pad(n: number): string {
     return String(n).padStart(2, "0");
@@ -201,120 +249,338 @@ import Page from "../../layouts/Page.astro";
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
   }
 
-  function resetRaidForm(): void {
-    raidForm.reset();
-    editingRaidId = null;
-    raidLegend.textContent = "New raid";
-    raidStatusSelect.value = "scheduled";
-    raidDeleteBtn.hidden = true;
-    raidFormStatus.textContent = "";
+  function addMinutesToLocalDateTime(dateStr: string, timeStr: string, minutes: number): string {
+    const [y, m, d] = dateStr.split("-").map(Number);
+    const [hh, mm] = timeStr.split(":").map(Number);
+    const dt = new Date(y ?? 1970, (m ?? 1) - 1, d ?? 1, hh ?? 0, (mm ?? 0) + minutes);
+    return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}T${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
   }
 
-  function fillRaidForm(raid: RaidSummary): void {
-    editingRaidId = raid.id;
-    raidLegend.textContent = `Edit · ${raid.title}`;
-    raidTitle.value = raid.title;
-    raidInstance.value = raid.instance;
-    raidStarts.value = localDateTimeInput(raid.starts_at);
-    raidEnds.value = raid.ends_at ? localDateTimeInput(raid.ends_at) : "";
-    raidSize.value = raid.size === null ? "" : String(raid.size);
-    raidStatusSelect.value = raid.status;
-    raidNotes.value = raid.notes ?? "";
-    raidDeleteBtn.hidden = false;
-    raidFormStatus.textContent = "";
+  function applyDefaultWeekdays(): void {
+    const d = eventStarts.value ? new Date(eventStarts.value) : new Date();
+    const day = (d.getDay() + 6) % 7;
+    for (const cb of weekdayCheckboxes) {
+      cb.checked = Number(cb.value) === day;
+    }
   }
 
-  function renderRaidList(): void {
-    raidListEl.innerHTML =
-      raids.length > 0
-        ? raids
+  for (const cb of weekdayCheckboxes) {
+    cb.addEventListener("change", () => {
+      weekdaysTouched = true;
+    });
+  }
+
+  eventRepeats.addEventListener("change", () => {
+    const repeating = eventRepeats.value !== "";
+    eventWeekdaysFieldset.hidden = !repeating;
+    eventUntilField.hidden = !repeating;
+    if (repeating && !weekdaysTouched) {
+      applyDefaultWeekdays();
+    }
+  });
+
+  eventStarts.addEventListener("change", () => {
+    if (eventRepeats.value !== "" && !weekdaysTouched) {
+      applyDefaultWeekdays();
+    }
+  });
+
+  function resetEventForm(): void {
+    eventForm.reset();
+    editingEventId = null;
+    editingSeriesId = null;
+    weekdaysTouched = false;
+    eventLegend.textContent = "New event";
+    eventSeriesAside.hidden = true;
+    eventKind.value = "raid";
+    eventStatusField.hidden = false;
+    eventStatusSelect.value = "scheduled";
+    eventRepeatsField.hidden = false;
+    eventRepeats.value = "";
+    eventWeekdaysFieldset.hidden = true;
+    eventUntilField.hidden = true;
+    eventDeleteBtn.hidden = true;
+    eventFormStatus.textContent = "";
+  }
+
+  function fillEventForm(event: EventSummary): void {
+    editingEventId = event.id;
+    editingSeriesId = null;
+    weekdaysTouched = false;
+    eventLegend.textContent = event.series ? `Edit · ${event.title} (this night only)` : `Edit · ${event.title}`;
+    eventSeriesAside.hidden = !event.series;
+    eventStatusField.hidden = false;
+    eventRepeatsField.hidden = true;
+    eventRepeats.value = "";
+    eventWeekdaysFieldset.hidden = true;
+    eventUntilField.hidden = true;
+    eventKind.value = event.kind;
+    eventTitle.value = event.title;
+    eventLocation.value = event.location;
+    eventStarts.value = localDateTimeInput(event.starts_at);
+    eventEnds.value = event.ends_at ? localDateTimeInput(event.ends_at) : "";
+    eventSize.value = event.size === null ? "" : String(event.size);
+    eventStatusSelect.value = event.status;
+    eventNotes.value = event.notes ?? "";
+    eventDeleteBtn.hidden = false;
+    eventFormStatus.textContent = "";
+  }
+
+  function fillSeriesForm(s: EventSeriesSummary): void {
+    editingEventId = null;
+    editingSeriesId = s.id;
+    weekdaysTouched = true;
+    eventLegend.textContent = `Edit series · ${s.title}`;
+    eventSeriesAside.hidden = true;
+    eventStatusField.hidden = true;
+    eventRepeatsField.hidden = false;
+    eventWeekdaysFieldset.hidden = false;
+    eventUntilField.hidden = false;
+    eventKind.value = s.kind;
+    eventTitle.value = s.title;
+    eventLocation.value = s.location;
+    eventStarts.value = `${s.rule.starts_on}T${s.rule.start_time}`;
+    eventEnds.value = s.rule.duration_minutes
+      ? addMinutesToLocalDateTime(s.rule.starts_on, s.rule.start_time, s.rule.duration_minutes)
+      : "";
+    eventSize.value = s.size === null ? "" : String(s.size);
+    eventNotes.value = s.notes ?? "";
+    eventRepeats.value = String(s.rule.interval_weeks);
+    for (const cb of weekdayCheckboxes) {
+      cb.checked = s.rule.weekdays.includes(Number(cb.value));
+    }
+    eventUntil.value = s.rule.until ?? "";
+    eventDeleteBtn.hidden = true;
+    eventFormStatus.textContent = "";
+  }
+
+  function renderEventList(): void {
+    eventListEl.innerHTML =
+      events.length > 0
+        ? events
             .map(
-              (r) => `
+              (e) => `
         <li>
-          <button type="button" class="raid-row" data-edit-raid="${r.id}">
-            <span>${escapeHtml(r.title)} (${escapeHtml(r.status)})</span>
-            <span class="when">${escapeHtml([r.instance, new Date(r.starts_at).toLocaleString()].filter(Boolean).join(" · "))}</span>
+          <button type="button" class="raid-row" data-edit-event="${e.id}">
+            <span class="caps kind-tag">${escapeHtml(EVENT_KIND_LABELS[e.kind])}</span>
+            <span>${escapeHtml(e.title)} (${escapeHtml(e.status)})</span>
+            <span class="when">${escapeHtml([e.location, new Date(e.starts_at).toLocaleString()].filter(Boolean).join(" · "))}</span>
           </button>
         </li>`,
             )
             .join("")
-        : `<li class="aside">No raids yet.</li>`;
-    raidListEl.querySelectorAll<HTMLButtonElement>("[data-edit-raid]").forEach((btn) => {
+        : `<li class="aside">No events yet.</li>`;
+    eventListEl.querySelectorAll<HTMLButtonElement>("[data-edit-event]").forEach((btn) => {
       btn.addEventListener("click", () => {
-        const id = btn.dataset.editRaid;
-        const raid = raids.find((r) => r.id === id);
-        if (raid) {
-          fillRaidForm(raid);
+        const id = btn.dataset.editEvent;
+        const match = events.find((e) => e.id === id);
+        if (match) {
+          fillEventForm(match);
         }
       });
     });
   }
 
-  async function loadRaids(): Promise<void> {
+  function renderSeriesList(): void {
+    seriesListEl.innerHTML =
+      series.length > 0
+        ? series
+            .map((s) => {
+              const ruleText = seriesRuleText(s.rule, s.next_starts_at);
+              const nextText = s.next_starts_at ? new Date(s.next_starts_at).toLocaleDateString() : "No upcoming night";
+              return `
+        <li class="series-row">
+          <button type="button" class="raid-row" data-edit-series="${s.id}">
+            <span class="caps kind-tag">${escapeHtml(EVENT_KIND_LABELS[s.kind])}</span>
+            <span>${escapeHtml(ruleText)}${s.location ? ` · ${escapeHtml(s.location)}` : ""}</span>
+            <span class="when">${escapeHtml(nextText)}</span>
+          </button>
+          <button type="button" class="btn-quiet" data-end-series="${s.id}">End series</button>
+        </li>`;
+            })
+            .join("")
+        : `<li class="aside">No repeating events yet.</li>`;
+    seriesListEl.querySelectorAll<HTMLButtonElement>("[data-edit-series]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const match = series.find((s) => s.id === btn.dataset.editSeries);
+        if (match) {
+          fillSeriesForm(match);
+        }
+      });
+    });
+    seriesListEl.querySelectorAll<HTMLButtonElement>("[data-end-series]").forEach((btn) => {
+      btn.addEventListener("click", () => onEndSeries(btn.dataset.endSeries));
+    });
+  }
+
+  async function loadEvents(): Promise<void> {
     try {
       const [upcoming, past] = await Promise.all([
-        apiFetch<RaidSummary[]>("/api/raids?when=upcoming"),
-        apiFetch<RaidSummary[]>("/api/raids?when=past"),
+        apiFetch<EventSummary[]>("/api/events?when=upcoming"),
+        apiFetch<EventSummary[]>("/api/events?when=past"),
       ]);
-      raids = [...upcoming, ...past];
-      renderRaidList();
+      events = [...upcoming, ...past];
+      renderEventList();
     } catch (err) {
-      raidListEl.innerHTML = `<li class="aside">${escapeHtml(statusMessage(err))}</li>`;
+      eventListEl.innerHTML = `<li class="aside">${escapeHtml(statusMessage(err))}</li>`;
     }
   }
 
-  raidForm.addEventListener("submit", async (ev) => {
-    ev.preventDefault();
-    const notes = raidNotes.value.trim();
-    const startsAt = new Date(raidStarts.value);
-    const endsAt = raidEnds.value ? new Date(raidEnds.value) : null;
-    if (endsAt && endsAt <= startsAt) {
-      raidFormStatus.textContent = "The end has to be after the start.";
-      raidEnds.focus();
+  async function loadSeries(): Promise<void> {
+    try {
+      series = await apiFetch<EventSeriesSummary[]>("/api/event-series");
+      renderSeriesList();
+    } catch (err) {
+      seriesListEl.innerHTML = `<li class="aside">${escapeHtml(statusMessage(err))}</li>`;
+    }
+  }
+
+  async function onEndSeries(id: string | undefined): Promise<void> {
+    if (!id) {
       return;
     }
+    if (
+      !confirm(
+        "End this series? Future nights without sign-ups will be removed; nights with sign-ups will be cancelled.",
+      )
+    ) {
+      return;
+    }
+    eventFormStatus.textContent = "Ending series…";
+    try {
+      await apiFetch(`/api/event-series/${id}`, { method: "DELETE" });
+      if (editingSeriesId === id) {
+        resetEventForm();
+      }
+      eventFormStatus.textContent = "Series ended.";
+      await Promise.all([loadEvents(), loadSeries()]);
+    } catch (err) {
+      eventFormStatus.textContent = statusMessage(err);
+    }
+  }
+
+  eventForm.addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    const kind = eventKind.value as EventKind;
+    const location = eventLocation.value.trim();
+    if (ROLE_KINDS.includes(kind) && location.length === 0) {
+      eventFormStatus.textContent = "Location is required for raids and dungeons.";
+      eventLocation.focus();
+      return;
+    }
+    const notes = eventNotes.value.trim();
+    const startsAt = new Date(eventStarts.value);
+    const endsAt = eventEnds.value ? new Date(eventEnds.value) : null;
+    if (endsAt && endsAt <= startsAt) {
+      eventFormStatus.textContent = "The end has to be after the start.";
+      eventEnds.focus();
+      return;
+    }
+    const sizeRaw = eventSize.value.trim();
+    const repeating = eventRepeats.value !== "";
+
+    if (repeating) {
+      const weekdays = weekdayCheckboxes.filter((cb) => cb.checked).map((cb) => Number(cb.value));
+      if (weekdays.length === 0) {
+        eventFormStatus.textContent = "Pick at least one day of the week.";
+        return;
+      }
+      const seriesBody: Record<string, unknown> = {
+        kind,
+        title: eventTitle.value.trim(),
+        location,
+        weekdays,
+        interval_weeks: Number(eventRepeats.value),
+        start_time: `${pad(startsAt.getHours())}:${pad(startsAt.getMinutes())}`,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        starts_on: eventStarts.value.slice(0, 10),
+      };
+      if (notes.length > 0) {
+        seriesBody.notes = notes;
+      } else if (editingSeriesId) {
+        seriesBody.notes = null;
+      }
+      if (eventUntil.value.length > 0) {
+        seriesBody.until = eventUntil.value;
+      } else if (editingSeriesId) {
+        seriesBody.until = null;
+      }
+      if (endsAt) {
+        seriesBody.duration_minutes = Math.round((endsAt.getTime() - startsAt.getTime()) / 60000);
+      } else if (editingSeriesId) {
+        seriesBody.duration_minutes = null;
+      }
+      if (sizeRaw.length > 0) {
+        seriesBody.size = Number(sizeRaw);
+      } else if (editingSeriesId) {
+        seriesBody.size = null;
+      }
+      eventFormStatus.textContent = "Saving…";
+      try {
+        if (editingSeriesId) {
+          await apiFetch(`/api/event-series/${editingSeriesId}`, {
+            method: "PATCH",
+            body: JSON.stringify(seriesBody),
+          });
+        } else {
+          await apiFetch("/api/event-series", { method: "POST", body: JSON.stringify(seriesBody) });
+        }
+        resetEventForm();
+        eventFormStatus.textContent = "Saved.";
+        await Promise.all([loadEvents(), loadSeries()]);
+      } catch (err) {
+        eventFormStatus.textContent = statusMessage(err);
+      }
+      return;
+    }
+
     const body: Record<string, unknown> = {
-      title: raidTitle.value.trim(),
-      instance: raidInstance.value.trim(),
+      kind,
+      title: eventTitle.value.trim(),
+      location,
       starts_at: startsAt.toISOString(),
-      size: Number(raidSize.value),
       notes: notes.length > 0 ? notes : undefined,
     };
+    if (sizeRaw.length > 0) {
+      body.size = Number(sizeRaw);
+    } else if (editingEventId) {
+      body.size = null;
+    }
     if (endsAt) {
       body.ends_at = endsAt.toISOString();
-    } else if (editingRaidId) {
+    } else if (editingEventId) {
       body.ends_at = null;
     }
-    raidFormStatus.textContent = "Saving…";
+    eventFormStatus.textContent = "Saving…";
     try {
-      if (editingRaidId) {
-        body.status = raidStatusSelect.value;
-        await apiFetch(`/api/raids/${editingRaidId}`, { method: "PATCH", body: JSON.stringify(body) });
+      if (editingEventId) {
+        body.status = eventStatusSelect.value;
+        await apiFetch(`/api/events/${editingEventId}`, { method: "PATCH", body: JSON.stringify(body) });
       } else {
-        await apiFetch("/api/raids", { method: "POST", body: JSON.stringify(body) });
+        await apiFetch("/api/events", { method: "POST", body: JSON.stringify(body) });
       }
-      resetRaidForm();
-      raidFormStatus.textContent = "Saved.";
-      await loadRaids();
+      resetEventForm();
+      eventFormStatus.textContent = "Saved.";
+      await loadEvents();
     } catch (err) {
-      raidFormStatus.textContent = statusMessage(err);
+      eventFormStatus.textContent = statusMessage(err);
     }
   });
 
-  raidResetBtn.addEventListener("click", resetRaidForm);
+  eventResetBtn.addEventListener("click", resetEventForm);
 
-  raidDeleteBtn.addEventListener("click", async () => {
-    if (!editingRaidId || !confirm("Cancel and remove this raid?")) {
+  eventDeleteBtn.addEventListener("click", async () => {
+    if (!editingEventId || !confirm("Cancel and remove this event?")) {
       return;
     }
-    raidFormStatus.textContent = "Deleting…";
+    eventFormStatus.textContent = "Deleting…";
     try {
-      await apiFetch(`/api/raids/${editingRaidId}`, { method: "DELETE" });
-      resetRaidForm();
-      raidFormStatus.textContent = "Deleted.";
-      await loadRaids();
+      await apiFetch(`/api/events/${editingEventId}`, { method: "DELETE" });
+      resetEventForm();
+      eventFormStatus.textContent = "Deleted.";
+      await loadEvents();
     } catch (err) {
-      raidFormStatus.textContent = statusMessage(err);
+      eventFormStatus.textContent = statusMessage(err);
     }
   });
 
@@ -477,9 +743,9 @@ import Page from "../../layouts/Page.astro";
       return;
     }
     bodyEl.hidden = false;
-    resetRaidForm();
+    resetEventForm();
     resetAddonForm();
-    await Promise.all([loadRaids(), loadAddons(), loadMembers()]);
+    await Promise.all([loadEvents(), loadSeries(), loadAddons(), loadMembers()]);
   }
 
   init();

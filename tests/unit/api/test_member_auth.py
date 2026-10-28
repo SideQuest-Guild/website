@@ -60,9 +60,9 @@ async def test_next_that_browsers_normalize_to_another_host_is_rejected(
 
 
 async def test_valid_same_site_next_is_honored(member_client: AsyncTestClient, discord_state: dict) -> None:
-    response = await login_as(member_client, discord_state, discord_id=1003, next_path="/raids/")
+    response = await login_as(member_client, discord_state, discord_id=1003, next_path="/events/")
     assert response.status_code == 302
-    assert response.headers["location"] == "/raids/"
+    assert response.headers["location"] == "/events/"
 
 
 async def test_login_rejects_next_without_leading_slash(member_client: AsyncTestClient, discord_state: dict) -> None:

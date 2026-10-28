@@ -1,0 +1,141 @@
+---
+import Page from "../../layouts/Page.astro";
+---
+
+<Page
+  title="Events · SideQuest"
+  description="Upcoming and past SideQuest guild events: raid nights, dungeons, leveling groups, PvP and social nights."
+  heading="EVENTS"
+  current="events"
+>
+  <p class="lede">
+    Raid nights, dungeons, leveling groups, PvP and social nights, all posted here as the guild plans them. Sign in with
+    Discord on the <a href="/account/">account page</a> to sign up once an event is posted.
+  </p>
+
+  <nav class="kind-filter" aria-label="Filter by kind">
+    <ul id="kind-filter-list">
+      <li>
+        <a href="/events/" data-kind="">
+          All
+        </a>
+      </li>
+      <li>
+        <a href="/events/?kind=raid" data-kind="raid">
+          Raids
+        </a>
+      </li>
+      <li>
+        <a href="/events/?kind=dungeon" data-kind="dungeon">
+          Dungeons
+        </a>
+      </li>
+      <li>
+        <a href="/events/?kind=leveling" data-kind="leveling">
+          Leveling
+        </a>
+      </li>
+      <li>
+        <a href="/events/?kind=pvp" data-kind="pvp">
+          PvP
+        </a>
+      </li>
+      <li>
+        <a href="/events/?kind=social" data-kind="social">
+          Social
+        </a>
+      </li>
+      <li>
+        <a href="/events/?kind=other" data-kind="other">
+          Other
+        </a>
+      </li>
+    </ul>
+  </nav>
+
+  <section aria-labelledby="h-upcoming">
+    <span class="caps section-label" id="h-upcoming">
+      Upcoming
+    </span>
+    <ul class="raid-list" id="events-upcoming" aria-live="polite"></ul>
+  </section>
+
+  <section aria-labelledby="h-past">
+    <span class="caps section-label" id="h-past">
+      Past
+    </span>
+    <ul class="raid-list" id="events-past" aria-live="polite"></ul>
+  </section>
+
+  <noscript>
+    <p class="aside">Enable JavaScript to load the event schedule here, or check the Discord.</p>
+  </noscript>
+</Page>
+
+<script>
+  import {
+    apiFetch,
+    escapeHtml,
+    requireElement,
+    statusMessage,
+    EVENT_KIND_LABELS,
+    ROLE_KINDS,
+    type EventKind,
+    type EventSummary,
+  } from "../../scripts/api";
+  import { weekdayPhrase } from "../../scripts/series";
+
+  const dateFormat = new Intl.DateTimeFormat(undefined, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+
+  const params = new URLSearchParams(location.search);
+  const requestedKind = params.get("kind");
+  const kind: EventKind | null =
+    requestedKind && requestedKind in EVENT_KIND_LABELS ? (requestedKind as EventKind) : null;
+
+  for (const link of document.querySelectorAll<HTMLAnchorElement>("#kind-filter-list a")) {
+    if (link.dataset.kind === (kind ?? "")) {
+      link.setAttribute("aria-current", "page");
+    }
+  }
+
+  function eventRow(event: EventSummary): string {
+    const when = dateFormat.format(new Date(event.starts_at));
+    const counts = ROLE_KINDS.includes(event.kind)
+      ? `${event.counts.tank}T · ${event.counts.healer}H · ${event.counts.dps}D${
+          event.counts.tentative > 0 ? ` · ${event.counts.tentative} tentative` : ""
+        }`
+      : `${event.counts.signed} going${event.counts.tentative > 0 ? ` · ${event.counts.tentative} maybe` : ""}`;
+    const statusSuffix = event.status === "scheduled" ? "" : ` (${escapeHtml(event.status)})`;
+    const seriesText = event.series ? weekdayPhrase(event.series.weekdays, event.series.interval_weeks) : "";
+    const locationAndWhen = [event.location, when, seriesText].filter(Boolean).join(" · ");
+    return `
+      <li>
+        <a class="raid-row" href="/events/detail/?id=${event.id}">
+          <span class="caps kind-tag">${escapeHtml(EVENT_KIND_LABELS[event.kind])}</span>
+          <span>${escapeHtml(event.title)}${statusSuffix}</span>
+          <span class="when">${escapeHtml(locationAndWhen)}</span>
+          <span class="meta">${escapeHtml(counts)}</span>
+        </a>
+      </li>`;
+  }
+
+  async function loadEvents(when: "upcoming" | "past", listId: string, emptyText: string): Promise<void> {
+    const list = requireElement(listId);
+    const query = `/api/events?when=${when}${kind ? `&kind=${kind}` : ""}`;
+    try {
+      const events = await apiFetch<EventSummary[]>(query);
+      list.innerHTML = events.length > 0 ? events.map(eventRow).join("") : `<li class="aside">${emptyText}</li>`;
+    } catch (err) {
+      list.innerHTML = `<li class="aside">${escapeHtml(statusMessage(err))}</li>`;
+    }
+  }
+
+  loadEvents("upcoming", "events-upcoming", "No events yet — the schedule goes up here as it's planned.");
+  loadEvents("past", "events-past", "No past events yet.");
+</script>

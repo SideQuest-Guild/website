@@ -3,32 +3,32 @@ import Page from "../../../layouts/Page.astro";
 ---
 
 <Page
-  title="Raid · SideQuest"
-  description="Roster, raid chart and signup for a SideQuest raid night."
-  heading="RAID"
-  current="raids"
+  title="Event · SideQuest"
+  description="Roster, raid chart and signup for a SideQuest guild event."
+  heading="EVENT"
+  current="events"
 >
-  <p class="status" id="raid-status" role="status" aria-live="polite"></p>
+  <p class="status" id="event-status" role="status" aria-live="polite"></p>
 
-  <div id="raid-content" hidden>
-    <p class="lede" id="raid-summary"></p>
-    <p class="aside" id="raid-notes"></p>
+  <div id="event-content" hidden>
+    <p class="lede" id="event-summary"></p>
+    <p class="aside" id="event-notes"></p>
 
-    <section aria-labelledby="h-roster">
+    <section aria-labelledby="h-roster" id="roster-section">
       <span class="caps section-label" id="h-roster">
         Roster
       </span>
       <div class="roster-grid" id="roster-grid"></div>
     </section>
 
-    <section aria-labelledby="h-status-lists">
+    <section aria-labelledby="h-status-lists" id="status-section">
       <span class="caps section-label" id="h-status-lists">
         Tentative &amp; absent
       </span>
       <div class="roster-grid cols-2" id="roster-extra"></div>
     </section>
 
-    <section aria-labelledby="h-chart">
+    <section aria-labelledby="h-chart" id="chart-section">
       <span class="caps section-label" id="h-chart">
         Raid chart
       </span>
@@ -41,19 +41,19 @@ import Page from "../../../layouts/Page.astro";
       </span>
       <form id="signup-form" class="form">
         <fieldset>
-          <legend>Sign up for this raid</legend>
+          <legend>Sign up for this event</legend>
           <div class="form-row">
             <div class="field">
               <label for="su-character">Character</label>
-              <input id="su-character" name="character" type="text" maxlength="24" autocomplete="off" required />
+              <input id="su-character" name="character" type="text" maxlength="24" autocomplete="off" />
             </div>
-            <div class="field">
+            <div class="field" id="su-class-field">
               <label for="su-class">Class</label>
-              <select id="su-class" name="class" required></select>
+              <select id="su-class" name="class"></select>
             </div>
-            <div class="field">
+            <div class="field" id="su-role-field">
               <label for="su-role">Role</label>
-              <select id="su-role" name="role" required>
+              <select id="su-role" name="role">
                 <option value="tank">Tank</option>
                 <option value="healer">Healer</option>
                 <option value="dps">DPS</option>
@@ -61,11 +61,7 @@ import Page from "../../../layouts/Page.astro";
             </div>
             <div class="field">
               <label for="su-status">Status</label>
-              <select id="su-status" name="status" required>
-                <option value="signed">Signed</option>
-                <option value="tentative">Tentative</option>
-                <option value="absent">Absent</option>
-              </select>
+              <select id="su-status" name="status" required></select>
             </div>
           </div>
           <div class="field">
@@ -87,7 +83,7 @@ import Page from "../../../layouts/Page.astro";
   </div>
 
   <noscript>
-    <p class="aside">Enable JavaScript to view this raid's roster, chart and signup form.</p>
+    <p class="aside">Enable JavaScript to view this event's roster, chart and signup form.</p>
   </noscript>
 </Page>
 
@@ -100,29 +96,39 @@ import Page from "../../../layouts/Page.astro";
     statusMessage,
     CLASSES,
     ROLES,
+    ROLE_KINDS,
+    EVENT_KIND_LABELS,
+    type EventDetail,
     type Me,
-    type RaidDetail,
     type Role,
     type Signup,
   } from "../../../scripts/api";
+  import { weekdayPhrase } from "../../../scripts/series";
 
-  const LOCKED_MESSAGE = "This raid is no longer open for signups.";
+  const LOCKED_MESSAGE = "This event is no longer open for signups.";
 
   const params = new URLSearchParams(location.search);
-  const raidId = params.get("id");
+  const eventId = params.get("id");
 
-  const statusEl = requireElement("raid-status");
-  const contentEl = requireElement("raid-content");
-  const summaryEl = requireElement("raid-summary");
-  const notesEl = requireElement("raid-notes");
+  const statusEl = requireElement("event-status");
+  const contentEl = requireElement("event-content");
+  const summaryEl = requireElement("event-summary");
+  const notesEl = requireElement("event-notes");
+  const rosterSection = requireElement("roster-section");
   const rosterGrid = requireElement("roster-grid");
+  const statusHeading = requireElement("h-status-lists");
   const rosterExtra = requireElement("roster-extra");
+  const chartSection = requireElement("chart-section");
   const chartGrid = requireElement("chart-grid");
   const signupSection = requireElement("signup-section");
   const signupForm = requireElement<HTMLFormElement>("signup-form");
   const withdrawBtn = requireElement<HTMLButtonElement>("withdraw-btn");
   const signupStatus = requireElement("signup-status");
+  const classField = requireElement("su-class-field");
   const classSelect = requireElement<HTMLSelectElement>("su-class");
+  const roleField = requireElement("su-role-field");
+  const characterInput = requireElement<HTMLInputElement>("su-character");
+  const statusSelect = requireElement<HTMLSelectElement>("su-status");
 
   classSelect.innerHTML = CLASSES.map((c) => `<option value="${c}">${capitalize(c)}</option>`).join("");
 
@@ -135,53 +141,81 @@ import Page from "../../../layouts/Page.astro";
   });
 
   let me: Me | null = null;
-  let raid: RaidDetail | null = null;
+  let event: EventDetail | null = null;
 
-  function rosterList(signups: Signup[], emptyText: string): string {
+  function rosterList(signups: Signup[], emptyText: string, showRole: boolean): string {
     if (signups.length === 0) {
       return `<li class="aside">${emptyText}</li>`;
     }
     return signups
-      .map((s) => `<li>${escapeHtml(s.character)} <span class="aside">(${capitalize(s.class)})</span></li>`)
+      .map((s) => {
+        const name = s.character ?? s.member.display_name;
+        const detail = showRole && s.class ? ` <span class="aside">(${capitalize(s.class)})</span>` : "";
+        return `<li>${escapeHtml(name)}${detail}</li>`;
+      })
       .join("");
   }
 
-  function renderRoster(detail: RaidDetail): void {
+  function renderRoster(detail: EventDetail): void {
+    const roleKind = ROLE_KINDS.includes(detail.kind);
     const signed = detail.signups.filter((s) => s.status === "signed");
-    rosterGrid.innerHTML = ROLES.map((role: Role) => {
-      const members = signed.filter((s) => s.role === role);
-      return `
-        <div class="roster-col">
-          <h3 class="caps">${capitalize(role)} (${members.length})</h3>
-          <ul>${rosterList(members, "None yet")}</ul>
-        </div>`;
-    }).join("");
-
     const tentative = detail.signups.filter((s) => s.status === "tentative");
     const absent = detail.signups.filter((s) => s.status === "absent");
-    rosterExtra.innerHTML = `
-      <div class="roster-col">
-        <h3 class="caps">Tentative (${tentative.length})</h3>
-        <ul>${rosterList(tentative, "None")}</ul>
-      </div>
-      <div class="roster-col">
-        <h3 class="caps">Absent (${absent.length})</h3>
-        <ul>${rosterList(absent, "None")}</ul>
-      </div>`;
+
+    rosterSection.hidden = !roleKind;
+    if (roleKind) {
+      rosterGrid.innerHTML = ROLES.map((role: Role) => {
+        const members = signed.filter((s) => s.role === role);
+        return `
+          <div class="roster-col">
+            <h3 class="caps">${capitalize(role)} (${members.length})</h3>
+            <ul>${rosterList(members, "None yet", true)}</ul>
+          </div>`;
+      }).join("");
+      statusHeading.textContent = "Tentative & absent";
+      rosterExtra.classList.add("cols-2");
+      rosterExtra.innerHTML = `
+        <div class="roster-col">
+          <h3 class="caps">Tentative (${tentative.length})</h3>
+          <ul>${rosterList(tentative, "None", true)}</ul>
+        </div>
+        <div class="roster-col">
+          <h3 class="caps">Absent (${absent.length})</h3>
+          <ul>${rosterList(absent, "None", true)}</ul>
+        </div>`;
+    } else {
+      statusHeading.textContent = "Going, maybe & can't make it";
+      rosterExtra.classList.remove("cols-2");
+      rosterExtra.innerHTML = `
+        <div class="roster-col">
+          <h3 class="caps">Going (${signed.length})</h3>
+          <ul>${rosterList(signed, "None yet", false)}</ul>
+        </div>
+        <div class="roster-col">
+          <h3 class="caps">Maybe (${tentative.length})</h3>
+          <ul>${rosterList(tentative, "None", false)}</ul>
+        </div>
+        <div class="roster-col">
+          <h3 class="caps">Can't make it (${absent.length})</h3>
+          <ul>${rosterList(absent, "None", false)}</ul>
+        </div>`;
+    }
   }
 
   function chartCell(label: string, members: Signup[], isOfficer: boolean, isBench: boolean): string {
     const rows = members
       .map((s) => {
+        const name = s.character ?? s.member.display_name;
         const control = isOfficer
-          ? `<select data-signup-id="${s.id}" aria-label="Group for ${escapeHtml(s.character)}">
+          ? `<select data-signup-id="${s.id}" aria-label="Group for ${escapeHtml(name)}">
               ${Array.from({ length: 8 }, (_, i) => i + 1)
                 .map((g) => `<option value="${g}" ${!isBench && s.group === g ? "selected" : ""}>Group ${g}</option>`)
                 .join("")}
               <option value="bench" ${isBench ? "selected" : ""}>Bench</option>
             </select>`
           : "";
-        return `<li>${escapeHtml(s.character)} <span class="aside">(${capitalize(s.role)})</span>${control}</li>`;
+        const role = s.role ? ` <span class="aside">(${capitalize(s.role)})</span>` : "";
+        return `<li>${escapeHtml(name)}${role}${control}</li>`;
       })
       .join("");
     return `<div class="chart-cell"><h3>${label}</h3><ul>${rows || `<li class="aside">Empty</li>`}</ul></div>`;
@@ -190,20 +224,24 @@ import Page from "../../../layouts/Page.astro";
   async function onChartAssign(ev: Event): Promise<void> {
     const select = ev.currentTarget as HTMLSelectElement;
     const signupId = select.dataset.signupId;
-    if (!signupId || !raid) {
+    if (!signupId || !event) {
       return;
     }
     const value = select.value;
     const body = value === "bench" ? { bench: true, group: null } : { bench: false, group: Number(value) };
     try {
-      await apiFetch(`/api/raids/${raid.id}/signups/${signupId}`, { method: "PATCH", body: JSON.stringify(body) });
+      await apiFetch(`/api/events/${event.id}/signups/${signupId}`, { method: "PATCH", body: JSON.stringify(body) });
       await refresh();
     } catch (err) {
       signupStatus.textContent = statusMessage(err);
     }
   }
 
-  function renderChart(detail: RaidDetail): void {
+  function renderChart(detail: EventDetail): void {
+    chartSection.hidden = detail.kind !== "raid";
+    if (detail.kind !== "raid") {
+      return;
+    }
     const signed = detail.signups.filter((s) => s.status === "signed");
     const isOfficer = me?.is_officer ?? false;
     const cells: string[] = [];
@@ -222,19 +260,29 @@ import Page from "../../../layouts/Page.astro";
     }
   }
 
-  function renderSignupForm(detail: RaidDetail): void {
+  function renderSignupForm(detail: EventDetail): void {
     if (!me || !me.is_guild_member) {
       signupSection.hidden = true;
       return;
     }
     signupSection.hidden = false;
+    const roleKind = ROLE_KINDS.includes(detail.kind);
+    classField.hidden = !roleKind;
+    roleField.hidden = !roleKind;
+    characterInput.required = roleKind;
+    classSelect.required = roleKind;
+    requireElement<HTMLSelectElement>("su-role").required = roleKind;
+    statusSelect.innerHTML = roleKind
+      ? `<option value="signed">Signed</option><option value="tentative">Tentative</option><option value="absent">Absent</option>`
+      : `<option value="signed">Going</option><option value="tentative">Maybe</option><option value="absent">Can't make it</option>`;
+
     const mine = detail.my_signup;
     const locked = detail.status !== "scheduled";
 
-    requireElement<HTMLInputElement>("su-character").value = mine?.character ?? "";
-    requireElement<HTMLSelectElement>("su-class").value = mine?.class ?? CLASSES[0];
+    characterInput.value = mine?.character ?? "";
+    classSelect.value = mine?.class ?? CLASSES[0];
     requireElement<HTMLSelectElement>("su-role").value = mine?.role ?? "dps";
-    requireElement<HTMLSelectElement>("su-status").value = mine?.status ?? "signed";
+    statusSelect.value = mine?.status ?? "signed";
     requireElement<HTMLTextAreaElement>("su-comment").value = mine?.comment ?? "";
     withdrawBtn.hidden = !mine;
 
@@ -256,58 +304,70 @@ import Page from "../../../layouts/Page.astro";
   }
 
   async function refresh(): Promise<void> {
-    if (!raidId) {
-      statusEl.textContent = "No raid specified.";
+    if (!eventId) {
+      statusEl.textContent = "No event specified.";
       return;
     }
-    const [meResult, raidResult] = await Promise.allSettled([
+    const [meResult, eventResult] = await Promise.allSettled([
       apiFetch<Me>("/api/me"),
-      apiFetch<RaidDetail>(`/api/raids/${raidId}`),
+      apiFetch<EventDetail>(`/api/events/${eventId}`),
     ]);
     me = meResult.status === "fulfilled" ? meResult.value : null;
-    if (raidResult.status === "rejected") {
+    if (eventResult.status === "rejected") {
       contentEl.hidden = true;
-      statusEl.textContent = statusMessage(raidResult.reason);
+      statusEl.textContent = statusMessage(eventResult.reason);
       return;
     }
-    raid = raidResult.value;
+    event = eventResult.value;
     statusEl.textContent = "";
     contentEl.hidden = false;
-    requireElement<HTMLHeadingElement>("page-heading").textContent = raid.title;
-    document.title = `${raid.title} · SideQuest`;
-    const start = new Date(raid.starts_at);
+    requireElement<HTMLHeadingElement>("page-heading").textContent = event.title;
+    document.title = `${event.title} · SideQuest`;
+    const start = new Date(event.starts_at);
     let when = dateFormat.format(start);
-    if (raid.ends_at) {
-      const end = new Date(raid.ends_at);
+    if (event.ends_at) {
+      const end = new Date(event.ends_at);
       const sameDay = end.toDateString() === start.toDateString();
       when += ` to ${sameDay ? end.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" }) : dateFormat.format(end)}`;
     }
-    summaryEl.textContent = [raid.instance, when, raid.size === null ? "" : `${raid.size}-player`]
+    summaryEl.textContent = [
+      EVENT_KIND_LABELS[event.kind],
+      event.location,
+      when,
+      event.size === null ? "" : `${event.size}-player`,
+      event.series ? weekdayPhrase(event.series.weekdays, event.series.interval_weeks) : "",
+    ]
       .filter(Boolean)
       .join(" · ");
-    notesEl.textContent = raid.notes ?? "";
-    renderRoster(raid);
-    renderChart(raid);
-    renderSignupForm(raid);
+    notesEl.textContent = event.notes ?? "";
+    renderRoster(event);
+    renderChart(event);
+    renderSignupForm(event);
   }
 
   signupForm.addEventListener("submit", async (ev) => {
     ev.preventDefault();
-    if (!raid) {
+    if (!event) {
       return;
     }
+    const roleKind = ROLE_KINDS.includes(event.kind);
     const data = new FormData(signupForm);
+    const character = String(data.get("character") ?? "").trim();
     const comment = String(data.get("comment") ?? "").trim();
-    const body = {
-      character: String(data.get("character") ?? "").trim(),
-      class: String(data.get("class")),
-      role: String(data.get("role")),
+    const body: Record<string, unknown> = {
       status: String(data.get("status")),
       comment: comment.length > 0 ? comment : undefined,
     };
+    if (roleKind) {
+      body.character = character;
+      body.class = String(data.get("class"));
+      body.role = String(data.get("role"));
+    } else if (character.length > 0) {
+      body.character = character;
+    }
     signupStatus.textContent = "Saving…";
     try {
-      await apiFetch<Signup>(`/api/raids/${raid.id}/signup`, { method: "PUT", body: JSON.stringify(body) });
+      await apiFetch<Signup>(`/api/events/${event.id}/signup`, { method: "PUT", body: JSON.stringify(body) });
       signupStatus.textContent = "Saved.";
       await refresh();
     } catch (err) {
@@ -316,12 +376,12 @@ import Page from "../../../layouts/Page.astro";
   });
 
   withdrawBtn.addEventListener("click", async () => {
-    if (!raid) {
+    if (!event) {
       return;
     }
     signupStatus.textContent = "Withdrawing…";
     try {
-      await apiFetch(`/api/raids/${raid.id}/signup`, { method: "DELETE" });
+      await apiFetch(`/api/events/${event.id}/signup`, { method: "DELETE" });
       signupStatus.textContent = "Withdrawn.";
       await refresh();
     } catch (err) {

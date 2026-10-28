@@ -78,6 +78,9 @@ const channels = ["#general", "#rules", "Lobby", "dungeon-1", "dungeon-2", "dung
           <a href="#how-we-play">How we play</a>
         </li>
         <li>
+          <a href="/events/">Events</a>
+        </li>
+        <li id="hero-raid-nav" hidden>
           <a href="#raids">Raids</a>
         </li>
         <li>
@@ -191,7 +194,7 @@ const channels = ["#general", "#rules", "Lobby", "dungeon-1", "dungeon-2", "dung
       </div>
     </section>
 
-    <section id="raids" class="band wrap" aria-labelledby="h-raids">
+    <section id="raids" class="band wrap" aria-labelledby="h-raids" hidden>
       <figure class="band-art rise">
         <Image
           src={raidsArt}
@@ -211,7 +214,9 @@ const channels = ["#general", "#rules", "Lobby", "dungeon-1", "dungeon-2", "dung
         <dl class="ledger">
           <div>
             <dt class="caps">Raid nights</dt>
-            <dd class="tbd">Once the guild has leveled — no schedule yet.</dd>
+            <dd class="tbd" id="raid-next-date">
+              Once the guild has leveled — no schedule yet.
+            </dd>
           </div>
           <div>
             <dt class="caps">Recruiting</dt>
@@ -220,13 +225,14 @@ const channels = ["#general", "#rules", "Lobby", "dungeon-1", "dungeon-2", "dung
           <div>
             <dt class="caps">Sign-ups</dt>
             <dd>
-              Open on the <a href="/raids/">raids page</a> once a raid is posted, one per raid night.
+              Open on the <a href="/events/?kind=raid">events page</a> once a raid is posted, one per raid night.
             </dd>
           </div>
           <div>
             <dt class="caps">Raid charts</dt>
             <dd>
-              Assignments and positions for each fight, posted on the <a href="/raids/">raids page</a> before the pull.
+              Assignments and positions for each fight, posted on the <a href="/events/?kind=raid">events page</a>
+              before the pull.
             </dd>
           </div>
           <div>
@@ -339,5 +345,9 @@ const channels = ["#general", "#rules", "Lobby", "dungeon-1", "dungeon-2", "dung
       { rootMargin: "0px 0px -10% 0px" },
     );
     document.querySelectorAll(".rise").forEach((el) => io.observe(el));
+  </script>
+
+  <script>
+    import "../scripts/raid-gate";
   </script>
 </Site>

@@ -14,7 +14,7 @@ Why not litestar-vite's framework mode in production too: with built assets and 
 process, ``ViteConfig._apply_proxy_mode_defaults`` turns on ``spa_handler``, which registers a single
 catch-all route serving one ``index.html`` for every path (see ``litestar_vite.handler.AppHandler``,
 ``spa_handler_prod``) -- true SPA behavior. That always returns 200 and ignores Astro's per-directory
-``index.html`` files, so it cannot reproduce "``/raids/`` serves its own page" or "unknown paths get a
+``index.html`` files, so it cannot reproduce "``/events/`` serves its own page" or "unknown paths get a
 404-status themed 404.html", both of which ``create_static_files_router(html_mode=True)`` already does
 correctly. Production keeps the static-files router; ``VitePlugin`` is dev-only.
 """

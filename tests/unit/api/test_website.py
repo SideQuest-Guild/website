@@ -17,9 +17,9 @@ if TYPE_CHECKING:
 @pytest.fixture
 def dist(tmp_path: Path) -> Path:
     site = tmp_path / "dist"
-    (site / "raids").mkdir(parents=True)
+    (site / "events").mkdir(parents=True)
     (site / "index.html").write_text("<h1>home</h1>")
-    (site / "raids" / "index.html").write_text("<h1>raids</h1>")
+    (site / "events" / "index.html").write_text("<h1>events</h1>")
     (site / "404.html").write_text("<h1>lost</h1>")
     return site
 
@@ -33,7 +33,7 @@ async def site_client(database_url: str, dist: Path) -> AsyncIterator[AsyncTestC
 
 async def test_built_site_served_at_root_with_directory_pages(site_client: AsyncTestClient[Litestar]) -> None:
     assert (await site_client.get("/")).text == "<h1>home</h1>"
-    assert (await site_client.get("/raids/")).text == "<h1>raids</h1>"
+    assert (await site_client.get("/events/")).text == "<h1>events</h1>"
 
 
 async def test_unknown_site_path_gets_the_site_404_page(site_client: AsyncTestClient[Litestar]) -> None:

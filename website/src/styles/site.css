@@ -1364,6 +1364,44 @@ img {
   margin: 0 0 4px;
   color: var(--gold);
 }
+/* ——— Member pages: event kind filter row and inline kind tags ——— */
+.kind-filter ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+  margin: clamp(20px, 2vw, 32px) -12px 0;
+  padding: 0;
+  list-style: none;
+}
+.kind-filter a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  font-weight: 500;
+  font-size: var(--caps);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+  transition:
+    color 0.3s,
+    border-color 0.3s;
+}
+.kind-filter a:hover,
+.kind-filter a:focus-visible {
+  color: var(--gold);
+  border-color: var(--hair);
+}
+.kind-filter a[aria-current="page"] {
+  color: var(--gold);
+  border-bottom-color: var(--gold-2);
+}
+.kind-tag {
+  color: var(--gold);
+  margin-right: 4px;
+}
+
 .status {
   margin: clamp(16px, 1.6vw, 24px) 0 0;
   font-size: var(--body);
@@ -1440,6 +1478,15 @@ a.raid-row {
   font-size: var(--body);
   line-height: 1.45;
   color: var(--ink-2);
+}
+.series-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.series-row .raid-row {
+  flex: 1;
+  width: auto;
 }
 
 /* ——— Member pages: roster + raid chart grids ——— */
@@ -1573,6 +1620,56 @@ a.raid-row {
   outline: none;
   border-color: var(--gold);
 }
+.weekday-toggles {
+  margin-top: 18px;
+}
+.weekday-toggles legend {
+  padding: 0 0 8px;
+  font-weight: 500;
+  font-size: var(--caps);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+.weekday-toggles > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.weekday-toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--hair);
+  color: var(--ink-2);
+  font-weight: 500;
+  font-size: var(--caps);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    border-color 0.3s,
+    color 0.3s;
+}
+.weekday-toggle input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+.weekday-toggle:has(input:checked) {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+.weekday-toggle:has(input:focus-visible) {
+  outline: 1px solid var(--gold);
+  outline-offset: 2px;
+}
+
 .form-actions {
   display: flex;
   flex-wrap: wrap;

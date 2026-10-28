@@ -29,7 +29,7 @@ def create_app(
     """Build the app. Settings default to the environment; tests pass their own. Schema comes from migrations.
 
     Routes: ``/api/guilds/{guild_id}/...`` (bot, requires ``X-API-Key``), ``/health``, ``/schema`` (OpenAPI docs),
-    ``/auth`` (Discord sign-in, Battle.net linking), ``/api/me``, ``/api/members``, ``/api/raids``, ``/api/addons``
+    ``/auth`` (Discord sign-in, Battle.net linking), ``/api/me``, ``/api/members``, ``/api/events``, ``/api/addons``
     (member hub), and the website at ``/`` (``website_dist`` defaults to the repo's ``website/dist``).
     ``discord_transport``/``battlenet_transport`` let tests mock the Discord and Battle.net APIs.
     """
