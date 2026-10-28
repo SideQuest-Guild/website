@@ -224,7 +224,8 @@ Environment (secrets in Vault, the rest in Consul):
 
 | Variable | Value | Used by |
 |---|---|---|
-| `DB_URL` | `postgresql+asyncpg://user:pass@host:5432/db` (must use the `postgresql+asyncpg` scheme) | release, web |
+| `DB_URL` | `postgresql+asyncpg://{PGUSER}:{PGPASSWORD}@{PGHOST}:{PGPORT}/{PGDATABASE}?ssl=verify-full`, built from the database's shared `SIDEQUEST_PG*` variables (scheme must be `postgresql+asyncpg`; asyncpg takes `ssl=`, not `sslmode=`) | release, web |
+| `PGSSLROOTCERT` | the shared `SIDEQUEST_PGSSLROOTCERT` (`/var/run/secrets/cabotage.io/ca.crt`); asyncpg verifies the server against it | release, web |
 | `API_KEY` | shared secret (`secrets.token_urlsafe(32)`) | web, worker |
 | `API_URL` | `https://sidequest-guild.com`: the bot reaches the API through the public site | worker |
 | `DISCORD_TOKEN` | bot token | worker |
