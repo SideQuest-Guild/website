@@ -34,7 +34,7 @@ flowchart LR
 | `/api/discord/live` (GET) | none | Website reads the site guild's live counts; empty counts (not 404) if the bot hasn't reported recently |
 | `/auth/discord/login`, `/auth/discord/callback`, `/auth/logout` | none | Discord OAuth sign-in (session cookie `sq_session`) |
 | `/auth/battlenet/link`, `/auth/battlenet/callback`, `/auth/battlenet/unlink` | signed in | Link a Battle.net account (BattleTag) to the member |
-| `/api/me` | signed in | The signed-in member |
+| `/api/me` (GET), `/api/me` (DELETE) | signed in | The signed-in member; `DELETE` permanently deletes the member and their event signups and clears the session cookie |
 | `/api/members` | officer | Everyone who has signed in, with linked BattleTags, for checking the guild roster |
 | `/api/events`, `/api/event-series`, `/api/addons` (GET) | none | Guild events (raids, dungeons, leveling, pvp, social, other) with roster + raid chart, repeating event series, guild addon links |
 | `/api/events/{id}/signup` | guild member | Sign up for / withdraw from a guild event |

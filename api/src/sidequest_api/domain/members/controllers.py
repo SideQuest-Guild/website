@@ -1,6 +1,6 @@
 """The signed-in member's own profile, and the officers' member list."""
 
-from litestar import Controller, get
+from litestar import Controller, Request, delete, get
 from litestar.di import NamedDependency, Provide
 
 from sidequest_api.domain.members.dependencies import provide_members_service
@@ -40,6 +40,21 @@ class MembersController(Controller):
     ) -> Me:
         """The signed-in member's profile. 401 if not logged in."""
         return _to_me(authenticated_member, web_settings)
+
+    @delete("/me", operation_id="DeleteMe", status_code=204)
+    async def delete_me(
+        self,
+        request: Request,
+        authenticated_member: NamedDependency[Member],
+        members_service: NamedDependency[MembersService],
+    ) -> None:
+        """Delete the signed-in member's account: the member row, their event signups, and the session cookie.
+
+        401 if not logged in. This is the site's equivalent of unlinking Discord; signing in again afterwards
+        creates a fresh member.
+        """
+        await members_service.delete_account(authenticated_member)
+        request.clear_session()
 
     @get("/members", operation_id="ListMembers")
     async def list_members(

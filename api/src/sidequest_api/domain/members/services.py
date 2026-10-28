@@ -5,9 +5,10 @@ from typing import Any
 
 from advanced_alchemy.repository import SQLAlchemyAsyncRepository
 from advanced_alchemy.service import SQLAlchemyAsyncRepositoryService
+from sqlalchemy import delete
 
 from sidequest_api.lib.battlenet import BattleNetOAuthError
-from sidequest_common.models import Member
+from sidequest_common.models import EventSignup, Member
 
 
 class MembersRepository(SQLAlchemyAsyncRepository[Member]):
@@ -70,6 +71,15 @@ class MembersService(SQLAlchemyAsyncRepositoryService[Member]):
         member.battletag = None
         member.battlenet_linked_at = None
         return await self.update(member, auto_commit=True)
+
+    async def delete_account(self, member: Member) -> None:
+        """Permanently delete ``member`` and every row that belongs to them.
+
+        Deletes event signups explicitly rather than relying on the database's ``ON DELETE CASCADE`` alone, so
+        this holds regardless of whether the engine enforces foreign keys (e.g. SQLite in tests).
+        """
+        await self.repository.session.execute(delete(EventSignup).where(EventSignup.member_id == member.id))
+        await self.delete(member.id, auto_commit=True)
 
     async def list_for_officers(self) -> list[Member]:
         """Every member who has signed in, current guild members first, then by display name."""
