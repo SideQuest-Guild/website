@@ -44,8 +44,9 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 # (parents[4]); keep the same repo-relative layout inside the image so no override is needed.
 COPY --from=website /src/website/dist website/dist
 
-RUN groupadd --system sidequest && useradd --system --gid sidequest --home /app --shell /usr/sbin/nologin sidequest \
-    && chown -R sidequest:sidequest /app
+# The app only reads /app (bytecode is precompiled; the Cabotage socket lives in /var/run/cabotage), so files stay
+# root-owned. A `chown -R /app` here would copy the whole venv into a second ~190 MB layer.
+RUN groupadd --system sidequest && useradd --system --gid sidequest --home /app --shell /usr/sbin/nologin sidequest
 USER sidequest
 
 ENV PATH="/app/.venv/bin:${PATH}"
