@@ -4,7 +4,9 @@
 FROM node:24-slim AS website
 
 WORKDIR /src/website
-ARG SITE_URL=http://localhost:8000
+# Absolute URL for canonical/og tags, baked in at build time. Defaults to production (Cabotage builds without build
+# args); compose passes its own.
+ARG SITE_URL=https://sidequest-guild.com
 ENV SITE_URL=${SITE_URL}
 
 COPY website/package.json website/package-lock.json ./
