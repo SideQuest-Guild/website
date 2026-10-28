@@ -12,7 +12,7 @@ import Page from "../../../layouts/Page.astro";
 
   <div id="event-content" hidden>
     <p class="lede" id="event-summary"></p>
-    <p class="aside" id="event-notes"></p>
+    <p class="aside event-notes" id="event-notes"></p>
 
     <section aria-labelledby="h-roster" id="roster-section">
       <span class="caps section-label" id="h-roster">
@@ -218,7 +218,8 @@ import Page from "../../../layouts/Page.astro";
         return `<li>${escapeHtml(name)}${role}${control}</li>`;
       })
       .join("");
-    return `<div class="chart-cell"><h3>${label}</h3><ul>${rows || `<li class="aside">Empty</li>`}</ul></div>`;
+    const cellClass = isBench ? "chart-cell chart-bench" : "chart-cell";
+    return `<div class="${cellClass}"><h3>${label}</h3><ul>${rows || `<li class="aside">Empty</li>`}</ul></div>`;
   }
 
   async function onChartAssign(ev: Event): Promise<void> {
@@ -321,7 +322,9 @@ import Page from "../../../layouts/Page.astro";
     event = eventResult.value;
     statusEl.textContent = "";
     contentEl.hidden = false;
-    requireElement<HTMLHeadingElement>("page-heading").textContent = event.title;
+    const headingEl = requireElement<HTMLHeadingElement>("page-heading");
+    headingEl.textContent = event.title;
+    headingEl.classList.add("heading-title");
     document.title = `${event.title} · SideQuest`;
     const start = new Date(event.starts_at);
     let when = dateFormat.format(start);

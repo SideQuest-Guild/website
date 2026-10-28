@@ -96,7 +96,10 @@ img {
   left: 16px;
   top: -60px;
   z-index: 20;
-  padding: 10px 16px;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 16px;
   background: var(--gold);
   color: #151515;
   font-weight: 600;
@@ -1047,7 +1050,7 @@ img {
     background: linear-gradient(to bottom, rgba(5, 9, 18, 0.86), rgba(5, 9, 18, 0.6) 62%, rgba(5, 9, 18, 0));
   }
   .nav-crest {
-    width: 40px;
+    width: 44px;
     height: 50px;
   }
   .nav-wordmark {
@@ -1276,6 +1279,7 @@ img {
   display: flex;
   align-items: center;
   gap: 12px;
+  min-width: 0;
   min-height: 44px;
 }
 .page-brand img {
@@ -1353,6 +1357,7 @@ img {
   }
   .js .nav-toggle {
     display: inline-flex;
+    flex-shrink: 0;
   }
   /* The open list drops full-bleed under its header as tall, thumb-sized rows. */
   .js .page-nav,
@@ -1405,9 +1410,45 @@ img {
     color: var(--gold);
   }
 }
+/* The smallest phones (320–360px): the crest, wordmark and Menu button still share one row. */
+@media (max-width: 380px) {
+  .page-header {
+    gap: 10px;
+  }
+  .page-brand {
+    gap: 10px;
+  }
+  .page-brand .wordmark {
+    font-size: 13px;
+    letter-spacing: 0.24em;
+  }
+  .nav-toggle {
+    padding: 0 12px;
+  }
+}
 
 .page > .heading {
   margin-bottom: clamp(20px, 2vw, 32px);
+}
+/* An event's own name replaces the fixed page name at runtime and can run to a sentence: smaller, tighter
+   tracked caps that wrap (balanced) inside the panel instead of the one-line flanking-rule form. */
+.heading h1.heading-title {
+  min-width: 0;
+  font-size: clamp(22px, 2vw, 32px);
+  letter-spacing: 0.12em;
+  padding-left: 0;
+  line-height: 1.25;
+  white-space: normal;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+  text-transform: uppercase;
+}
+.event-notes {
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+.event-notes + section {
+  margin-top: clamp(48px, 5vw, 80px);
 }
 .page section + section {
   margin-top: clamp(64px, 6vw, 100px);
@@ -1418,6 +1459,9 @@ img {
   color: var(--gold);
 }
 /* ——— Member pages: event kind filter row and inline kind tags ——— */
+.kind-filter {
+  margin-bottom: clamp(32px, 3vw, 48px);
+}
 .kind-filter ul {
   display: flex;
   flex-wrap: wrap;
@@ -1603,7 +1647,7 @@ a.raid-row {
   display: block;
   margin-top: 8px;
   width: 100%;
-  min-height: 40px;
+  min-height: 44px;
   background: transparent;
   border: 1px solid var(--hair);
   color: var(--ink);
@@ -1659,6 +1703,7 @@ a.raid-row {
   background: transparent;
   border: 0;
   border-bottom: 1px solid var(--hair);
+  min-height: 44px;
   padding: 10px 2px;
   font: inherit;
   font-size: var(--body);
@@ -1862,12 +1907,20 @@ a.raid-row {
   .chart-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+  /* Eight groups fill four rows of two; the bench takes the whole last row. */
+  .chart-bench {
+    grid-column: 1 / -1;
+  }
 }
 @media (max-width: 560px) {
   .roster-grid,
-  .roster-grid.cols-2,
-  .chart-grid {
+  .roster-grid.cols-2 {
     grid-template-columns: 1fr;
+  }
+  /* Raid groups hold five names each: two per row keeps the eight groups to a short scroll. */
+  .chart-cell {
+    padding: 12px;
+    overflow-wrap: anywhere;
   }
   .raid-row {
     flex-direction: column;
