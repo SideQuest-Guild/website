@@ -35,6 +35,8 @@
   --panel: rgba(32, 31, 29, 0.94);
   --menu: rgb(14, 14, 15);
   --menu-veil: rgba(14, 14, 15, 0.55);
+  /* Warm amber for errors and destructive intent: readable on the panel, never a fill. */
+  --error: #e0a479;
   --ground: none; /* set on <html> by the layout: a build-time WebP of assets/plates/strip-ground.png */
   --display: "Libertinus Serif Display", "Libertinus Serif", Georgia, serif;
   --serif: "EB Garamond", Garamond, Georgia, serif;
@@ -942,6 +944,41 @@ img {
   margin: 0;
   color: var(--ink-3);
 }
+/* Rules · Privacy · Terms: quiet 44px links separated by the channel list's small gold diamonds. */
+.foot-legal {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  margin: 20px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.foot-legal li {
+  display: flex;
+  align-items: center;
+}
+.foot-legal li + li::before {
+  content: "";
+  width: 4px;
+  height: 4px;
+  margin: 0 4px;
+  border: 1px solid var(--gold-2);
+  transform: rotate(45deg);
+}
+.foot-legal a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 10px;
+  color: var(--ink-3);
+  transition: color 0.3s;
+}
+.foot-legal li:first-child a {
+  padding-left: 0;
+}
+.foot-legal a:hover {
+  color: var(--gold);
+}
 .legal {
   margin: 28px 0 0;
   max-width: 60em;
@@ -1429,7 +1466,7 @@ img {
   min-height: 0;
 }
 .status[data-tone="error"] {
-  color: #e0a479;
+  color: var(--error);
 }
 
 /* ——— Member pages: ledger-style lists (raids, addons) ——— */
@@ -1756,6 +1793,41 @@ a.raid-row {
 #account-signed-in .form-actions {
   margin-top: clamp(20px, 2vw, 28px);
 }
+/* Destructive controls live apart from everyday ones, under their own hairline. */
+.account-data {
+  margin-top: clamp(40px, 4vw, 64px);
+  padding-top: clamp(24px, 2.4vw, 36px);
+  border-top: 1px solid var(--hair);
+}
+.account-data h2 {
+  margin: 0;
+  color: var(--ink-2);
+}
+.account-data .aside {
+  margin-top: 12px;
+}
+.account-terms {
+  margin-top: 18px;
+  font-size: 15px;
+}
+.account-terms a,
+.account-data .aside a {
+  color: var(--ink-2);
+  text-decoration: underline;
+  text-decoration-color: var(--gold-2);
+  text-underline-offset: 3px;
+  transition: color 0.3s;
+}
+.account-terms a:hover,
+.account-data .aside a:hover {
+  color: var(--gold);
+}
+/* Same quiet outline as every secondary action; it only warms to the error tone when you reach for it. */
+.btn-danger:hover,
+.btn-danger:focus-visible {
+  border-color: var(--error);
+  color: var(--error);
+}
 
 /* ——— Centered single-column pages (account) ——— */
 .page-centered {
@@ -1800,5 +1872,235 @@ a.raid-row {
   .raid-row {
     flex-direction: column;
     align-items: flex-start;
+  }
+}
+
+/* ——— Charter pages (Rules, Privacy, Terms) ———
+   A painted plate dissolves behind the title; the articles sit on the reading panel with a contents rail. */
+.charter {
+  padding-bottom: clamp(24px, 3vw, 48px);
+}
+.charter-head {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  align-content: end;
+  min-height: clamp(340px, 40vw, 600px);
+}
+.charter-art {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  -webkit-mask-image: linear-gradient(to bottom, #000 30%, rgba(0, 0, 0, 0.55) 62%, transparent 96%);
+  mask-image: linear-gradient(to bottom, #000 30%, rgba(0, 0, 0, 0.55) 62%, transparent 96%);
+}
+/* A soft night scrim under the title, so it reads over any painting without a box. */
+.charter-head::after {
+  content: "";
+  position: absolute;
+  inset: 30% 0 0;
+  z-index: -1;
+  background: radial-gradient(60% 70% at 50% 72%, rgba(10, 11, 16, 0.78), rgba(10, 11, 16, 0) 72%);
+  pointer-events: none;
+}
+.charter-title {
+  display: grid;
+  justify-items: center;
+  padding: clamp(140px, 14vw, 240px) 0 clamp(36px, 3.4vw, 56px);
+  text-align: center;
+}
+.charter-title .heading {
+  width: 100%;
+}
+.charter-title .heading h1 {
+  font-size: clamp(30px, 3.3vw, 54px);
+  letter-spacing: 0.26em;
+  padding-left: 0.26em;
+}
+.charter-lede {
+  margin: clamp(20px, 1.8vw, 28px) 0 0;
+  max-width: 34em;
+  font-size: var(--lede);
+  font-style: italic;
+  line-height: 1.4;
+  text-wrap: balance;
+}
+.charter-date {
+  margin: 16px 0 0;
+  color: var(--ink-3);
+}
+
+.charter-body {
+  display: grid;
+  grid-template-columns: minmax(200px, 250px) minmax(0, 1fr);
+  gap: clamp(36px, 5vw, 96px);
+  padding: clamp(36px, 4vw, 72px) clamp(20px, 4vw, 72px) clamp(56px, 5vw, 96px);
+  background: var(--panel);
+  border: 1px solid var(--hair);
+}
+
+.charter-toc {
+  position: sticky;
+  top: 28px;
+  align-self: start;
+}
+.charter-toc ol {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-left: 1px solid var(--hair);
+}
+.charter-toc a {
+  display: grid;
+  grid-template-columns: 2.4em 1fr;
+  align-items: center;
+  min-height: 44px;
+  margin-left: -1px;
+  padding: 6px 0 6px 16px;
+  border-left: 1px solid transparent;
+  color: var(--ink-3);
+  font-size: var(--caps);
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  line-height: 1.3;
+  text-transform: uppercase;
+  transition:
+    color 0.3s,
+    border-color 0.3s;
+}
+.charter-toc a:hover {
+  color: var(--ink);
+}
+.charter-toc a[aria-current] {
+  color: var(--gold);
+  border-left-color: var(--gold);
+}
+.charter-toc a[aria-current] .charter-num {
+  color: var(--gold);
+}
+.charter-num {
+  font-family: var(--display);
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  color: var(--gold-2);
+}
+
+.charter-text {
+  max-width: 68ch;
+  font-size: var(--body);
+  line-height: 1.6;
+  color: var(--ink-2);
+}
+.article {
+  scroll-margin-top: 28px;
+}
+.article + .article {
+  margin-top: clamp(44px, 4vw, 64px);
+  padding-top: clamp(44px, 4vw, 64px);
+  background: linear-gradient(to right, rgba(216, 171, 92, 0), rgba(216, 171, 92, 0.4) 18%, rgba(216, 171, 92, 0)) 0 0 /
+    100% 1px no-repeat;
+}
+.article-title {
+  display: grid;
+  grid-template-columns: 2.4em 1fr;
+  align-items: baseline;
+  margin: 0 0 clamp(14px, 1.4vw, 22px);
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: clamp(20px, 1.55vw, 26px);
+  letter-spacing: 0.22em;
+  line-height: 1.25;
+  text-transform: uppercase;
+  color: #f6f3ee;
+}
+.article-title .charter-num {
+  color: var(--gold);
+}
+.article-body {
+  padding-left: 2.4em;
+}
+.article-body > :first-child {
+  margin-top: 0;
+}
+.article-body p {
+  margin: 0.9em 0 0;
+}
+.article-body ul {
+  display: grid;
+  gap: 0.55em;
+  margin: 0.9em 0 0;
+  padding: 0;
+  list-style: none;
+}
+.article-body li {
+  position: relative;
+  padding-left: 1.4em;
+}
+/* The same small gold diamond that separates the Discord channel names. */
+.article-body li::before {
+  content: "";
+  position: absolute;
+  left: 0.15em;
+  top: 0.7em;
+  width: 4px;
+  height: 4px;
+  border: 1px solid var(--gold-2);
+  transform: rotate(45deg);
+}
+.article-body strong {
+  font-weight: 500;
+  color: var(--ink);
+}
+.article-body a {
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: var(--gold-2);
+  text-underline-offset: 3px;
+  transition:
+    color 0.3s,
+    text-decoration-color 0.3s;
+}
+.article-body a:hover {
+  color: var(--gold);
+  text-decoration-color: var(--gold);
+}
+/* The one line a reader must not miss on a page (e.g. 18+); framed by hairline gold, never filled. */
+.charter-mark {
+  margin: 1.1em 0 0;
+  padding: 0.9em 1.1em;
+  border-top: 1px solid var(--gold-2);
+  border-bottom: 1px solid var(--gold-2);
+  font-size: var(--lede);
+  font-style: italic;
+  line-height: 1.4;
+  color: var(--ink);
+}
+
+@media (max-width: 900px) {
+  .charter-head {
+    min-height: 0;
+  }
+  .charter-title {
+    padding-top: clamp(150px, 46vw, 240px);
+  }
+  .charter-title .heading h1 {
+    white-space: normal;
+    text-wrap: balance;
+  }
+  .charter-title .heading .rule {
+    flex-basis: 28px;
+  }
+  .charter-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .charter-toc {
+    position: static;
+  }
+  .article-body {
+    padding-left: 0;
   }
 }

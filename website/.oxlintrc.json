@@ -10,7 +10,15 @@
   "rules": {
     "import/no-unassigned-import": [
       "warn",
-      { "allow": ["**/*.css", "**/scripts/site-chrome", "**/scripts/raid-gate", "**/scripts/discord-live"] }
+      {
+        "allow": [
+          "**/*.css",
+          "**/scripts/site-chrome",
+          "**/scripts/raid-gate",
+          "**/scripts/discord-live",
+          "**/scripts/charter"
+        ]
+      }
     ]
   },
   "ignorePatterns": [".impeccable/**", "dist/**", ".astro/**"]

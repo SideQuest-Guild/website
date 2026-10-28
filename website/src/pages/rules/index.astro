@@ -1,0 +1,106 @@
+---
+import Charter from "../../layouts/Charter.astro";
+import Article from "../../components/Article.astro";
+import art from "../../../assets/plates/panel-journey.png";
+import { DISCORD_INVITE } from "../../config";
+
+const articles = [
+  { id: "be-kind", title: "Be kind" },
+  { id: "adults", title: "Adults only" },
+  { id: "blizzard", title: "Play by Blizzard's rules" },
+  { id: "discord", title: "And Discord's" },
+  { id: "the-hall", title: "Keep the hall clean" },
+  { id: "groups", title: "Groups and raid nights" },
+  { id: "when-it-goes-wrong", title: "When something goes wrong" },
+];
+---
+
+<Charter
+  title="Guild rules · SideQuest"
+  description="SideQuest's guild rules: be kind, 18 and over, and play by Blizzard's and Discord's rules."
+  heading="GUILD RULES"
+  lede="A guild where the journey and the raid both count only works if people want to come back. These rules keep it that way, in game, in Discord and on this site."
+  effective="October 28, 2026"
+  art={art}
+  artPosition="30% 40%"
+  articles={articles}
+>
+  <Article id="be-kind" n={1} title="Be kind">
+    <p>Treat every guildie like someone you'd happily run another dungeon with.</p>
+    <ul>
+      <li>
+        No harassment, bullying, slurs or hate, including about race, ethnicity, religion, gender, sexual orientation,
+        disability or age. Not as a joke either.
+      </li>
+      <li>Argue about pulls, builds and loot all you like. Criticise the play, never the person.</li>
+      <li>
+        New players are welcome and no question is a dumb one. If you know the answer, share it. If you don't, someone
+        will.
+      </li>
+      <li>When someone asks you to stop, stop.</li>
+    </ul>
+  </Article>
+
+  <Article id="adults" n={2} title="Adults only">
+    <p class="charter-mark">SideQuest is for players 18 and older.</p>
+    <p>
+      Being 18+ is about who we play with, not about what we post. Rule V still applies. If there's reason to think
+      someone is under 18, officers will ask them to leave the guild and the Discord.
+    </p>
+  </Article>
+
+  <Article id="blizzard" n={3} title="Play by Blizzard's rules">
+    <p>
+      Everyone in SideQuest follows Blizzard's <a href="https://blizzard.com/EULA">End User License Agreement</a> and{" "}
+      <a href="https://us.support.blizzard.com/en/help/article/42673">In-Game Code of Conduct</a>. In practice:
+    </p>
+    <ul>
+      <li>No cheating, botting, exploiting bugs or third-party programs that break Blizzard's rules.</li>
+      <li>No buying or selling gold, items, boosts or accounts for real money.</li>
+      <li>No account sharing.</li>
+    </ul>
+    <p>The guild won't help with any of it, and doing it under SideQuest's name means leaving the guild.</p>
+  </Article>
+
+  <Article id="discord" n={4} title="And Discord's">
+    <p>
+      Our Discord follows Discord's <a href="https://discord.com/terms">Terms of Service</a> and{" "}
+      <a href="https://discord.com/guidelines">Community Guidelines</a>. Anything Discord doesn't allow, we don't
+      either.
+    </p>
+  </Article>
+
+  <Article id="the-hall" n={5} title="Keep the hall clean">
+    <ul>
+      <li>No NSFW, gore or shock content anywhere: channels, names, avatars or event notes.</li>
+      <li>No spam, advertising or invite links to other servers. The bot removes invite links on its own.</li>
+      <li>
+        Never share someone's personal information, screenshots of their DMs or real-life details without their OK.
+      </li>
+      <li>Don't pretend to be an officer, Blizzard or Discord staff.</li>
+      <li>Keep heated real-world debates out of guild channels. Take them to DMs.</li>
+    </ul>
+  </Article>
+
+  <Article id="groups" n={6} title="Groups and raid nights">
+    <ul>
+      <li>
+        Sign up on <a href="/events/">Events</a> when you're in, and withdraw there if your plans change, so the group
+        can fill your spot.
+      </li>
+      <li>Show up on time, with repairs, consumables and the addons the group asked for.</li>
+      <li>Loot rules will be posted here before the first raid night.</li>
+    </ul>
+  </Article>
+
+  <Article id="when-it-goes-wrong" n={7} title="When something goes wrong">
+    <p>
+      If someone breaks these rules or makes you uncomfortable, message an officer in the{" "}
+      <a href={DISCORD_INVITE}>SideQuest Discord</a>. You won't get in trouble for reporting in good faith.
+    </p>
+    <p>
+      Officers may warn, time out or remove people. Hate, threats, cheating and anything involving a minor mean
+      immediate removal. If you think an officer got it wrong, message another officer.
+    </p>
+  </Article>
+</Charter>

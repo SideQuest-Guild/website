@@ -1,0 +1,22 @@
+---
+// One numbered article of a charter page. `n` is its 1-based position, matching the contents rail.
+import { toRoman } from "../scripts/roman";
+
+interface Props {
+  id: string;
+  n: number;
+  title: string;
+}
+
+const { id, n, title } = Astro.props;
+---
+
+<section class="article" id={id} aria-labelledby={`${id}-title`}>
+  <h2 class="article-title" id={`${id}-title`}>
+    <span class="charter-num">{toRoman(n)}</span>
+    <span>{title}</span>
+  </h2>
+  <div class="article-body">
+    <slot />
+  </div>
+</section>

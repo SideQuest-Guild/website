@@ -16,6 +16,10 @@ import { DISCORD_INVITE } from "../../config";
   <div id="account-signed-out">
     <p class="lede">Sign in with your Discord account to sign up for raids and see your profile.</p>
     <JoinPlaque label="Sign in with Discord" href="/auth/discord/login?next=/account/" />
+    <p class="aside account-terms">
+      You must be 18 or older. Signing in means you accept the <a href="/terms/">Terms</a> and the{" "}
+      <a href="/rules/">Guild rules</a>. See <a href="/privacy/">Privacy</a> for what we keep.
+    </p>
   </div>
 
   <div id="account-not-member" hidden>
@@ -53,6 +57,22 @@ import { DISCORD_INVITE } from "../../config";
         Sign out
       </button>
     </div>
+
+    <section class="account-data" aria-labelledby="account-data-title">
+      <h2 class="caps" id="account-data-title">
+        Your data
+      </h2>
+      <p class="aside">
+        Deleting your account erases your SideQuest profile and every event sign-up right away, and signs you out. Chat
+        XP and moderation records in the Discord stay; ask an officer about those. <a href="/privacy/">Privacy</a> has
+        the full list.
+      </p>
+      <div class="form-actions">
+        <button type="button" class="btn-quiet btn-danger" id="delete-account-btn">
+          Delete my account
+        </button>
+      </div>
+    </section>
   </div>
 
   <noscript>
@@ -95,6 +115,7 @@ import { DISCORD_INVITE } from "../../config";
   const bnetTag = requireElement("bnet-tag");
   const bnetLink = requireElement<HTMLAnchorElement>("bnet-link");
   const bnetUnlinkBtn = requireElement<HTMLButtonElement>("bnet-unlink-btn");
+  const deleteAccountBtn = requireElement<HTMLButtonElement>("delete-account-btn");
 
   function show(target: HTMLElement): void {
     for (const el of [signedOut, notMember, signedIn]) {
@@ -159,7 +180,7 @@ import { DISCORD_INVITE } from "../../config";
   });
 
   bnetUnlinkBtn.addEventListener("click", async () => {
-    if (!confirm("Unlink your Battle.net account?")) {
+    if (!confirm("Unlink Battle.net? Your BattleTag is erased from SideQuest right away.")) {
       return;
     }
     bnetUnlinkBtn.disabled = true;
@@ -173,6 +194,28 @@ import { DISCORD_INVITE } from "../../config";
       statusEl.textContent = statusMessage(err);
     } finally {
       bnetUnlinkBtn.disabled = false;
+    }
+  });
+
+  deleteAccountBtn.addEventListener("click", async () => {
+    if (
+      !confirm(
+        "Delete your SideQuest account? Your profile and every event sign-up are erased right away. This can't be undone.",
+      )
+    ) {
+      return;
+    }
+    deleteAccountBtn.disabled = true;
+    try {
+      await apiFetch("/api/me", { method: "DELETE" });
+      statusEl.dataset.tone = "";
+      statusEl.textContent = "Your account and sign-ups are deleted. Signing in again starts a fresh account.";
+      show(signedOut);
+    } catch (err) {
+      statusEl.dataset.tone = "error";
+      statusEl.textContent = statusMessage(err);
+    } finally {
+      deleteAccountBtn.disabled = false;
     }
   });
 

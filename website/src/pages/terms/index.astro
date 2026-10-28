@@ -1,0 +1,108 @@
+---
+import Charter from "../../layouts/Charter.astro";
+import Article from "../../components/Article.astro";
+import art from "../../../assets/plates/panel-progression.png";
+import { DISCORD_INVITE } from "../../config";
+
+const articles = [
+  { id: "who-we-are", title: "Who we are" },
+  { id: "who-can-use-it", title: "Who can use it" },
+  { id: "your-account", title: "Your account" },
+  { id: "conduct", title: "Conduct" },
+  { id: "what-you-post", title: "What you post" },
+  { id: "addons", title: "Addons and links" },
+  { id: "other-services", title: "Other services" },
+  { id: "no-guarantees", title: "No guarantees" },
+  { id: "ending", title: "Leaving, or being removed" },
+  { id: "changes", title: "Changes and questions" },
+];
+---
+
+<Charter
+  title="Terms of service · SideQuest"
+  description="The terms for using SideQuest's guild site: who it's for, what you post, and what it promises."
+  heading="TERMS OF SERVICE"
+  lede="The agreement between you and SideQuest when you use this site, kept as short as we could make it."
+  effective="October 28, 2026"
+  art={art}
+  artPosition="78% 45%"
+  articles={articles}
+>
+  <Article id="who-we-are" n={1} title="Who we are">
+    <p>
+      SideQuest is a player-run guild on World of Warcraft: Forever. Guild officers run this site for free, as a hobby,
+      so members can sign up for events and find the guild's addons. By using it you agree to these terms, the{" "}
+      <a href="/rules/">Guild rules</a> and the <a href="/privacy/">Privacy</a> page.
+    </p>
+    <p>
+      We're not affiliated with or endorsed by Blizzard Entertainment or Discord. World of Warcraft is a trademark of
+      Blizzard Entertainment, Inc.
+    </p>
+  </Article>
+
+  <Article id="who-can-use-it" n={2} title="Who can use it">
+    <p class="charter-mark">You must be 18 or older to sign in or take part.</p>
+    <p>
+      Anyone can read the public pages. Signing up for events needs a Discord account and membership in the SideQuest
+      Discord.
+    </p>
+  </Article>
+
+  <Article id="your-account" n={3} title="Your account">
+    <p>
+      You sign in with Discord, so your account is only as safe as your Discord account. Officer access comes from
+      officer roles in the SideQuest Discord, and losing the role removes the access.
+    </p>
+  </Article>
+
+  <Article id="conduct" n={4} title="Conduct">
+    <p>
+      The <a href="/rules/">Guild rules</a> apply here too: in character names, notes and everything else you enter.
+      Don't try to break, overload or get around the site's sign-in or officer checks.
+    </p>
+  </Article>
+
+  <Article id="what-you-post" n={5} title="What you post">
+    <p>
+      Your sign-ups and notes stay yours. By posting them you let the guild show them on the site and in Discord so
+      events can run. Officers may edit or remove anything that breaks the rules.
+    </p>
+  </Article>
+
+  <Article id="addons" n={6} title="Addons and links">
+    <p>
+      Addon links point to files hosted elsewhere. Install them at your own risk, keep backups of your settings, and
+      only use addons that Blizzard's rules allow.
+    </p>
+  </Article>
+
+  <Article id="other-services" n={7} title="Other services">
+    <p>
+      Discord, Battle.net and World of Warcraft have their own terms, and you agreed to those with them, not with us.
+      Nothing here changes them.
+    </p>
+  </Article>
+
+  <Article id="no-guarantees" n={8} title="No guarantees">
+    <p>
+      The site is provided as it is, with no warranty of any kind. It may change, go down or shut down at any time. To
+      the fullest extent the law allows, SideQuest and its officers aren't liable for any loss that comes from using it,
+      missed raid nights and lost loot included.
+    </p>
+  </Article>
+
+  <Article id="ending" n={9} title="Leaving, or being removed">
+    <p>
+      You can delete your account at any time on your <a href="/account/">Account</a> page. Officers may suspend or
+      remove access for anyone who breaks these terms or the Guild rules.
+    </p>
+  </Article>
+
+  <Article id="changes" n={10} title="Changes and questions">
+    <p>
+      When these terms change, this page and its date change with them. Significant changes are announced in the Discord
+      first, and using the site afterwards means you accept them. Questions go to an officer in the{" "}
+      <a href={DISCORD_INVITE}>SideQuest Discord</a>.
+    </p>
+  </Article>
+</Charter>

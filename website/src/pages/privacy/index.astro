@@ -1,0 +1,154 @@
+---
+import Charter from "../../layouts/Charter.astro";
+import Article from "../../components/Article.astro";
+import art from "../../../assets/plates/join-art.png";
+import { DISCORD_INVITE } from "../../config";
+
+const articles = [
+  { id: "short-version", title: "The short version" },
+  { id: "discord-sign-in", title: "Signing in with Discord" },
+  { id: "battle-net", title: "Linking Battle.net" },
+  { id: "events", title: "Event sign-ups" },
+  { id: "cookies", title: "Cookies" },
+  { id: "bot", title: "The guild bot" },
+  { id: "who-else", title: "Who else handles it" },
+  { id: "deleting", title: "Deleting your data" },
+  { id: "changes", title: "Changes" },
+];
+---
+
+<Charter
+  title="Privacy · SideQuest"
+  description="What SideQuest's site and Discord bot keep about you, and how to delete it."
+  heading="PRIVACY"
+  lede="What this site and the guild's Discord bot keep about you, who else touches it, and how to make it go away."
+  effective="October 28, 2026"
+  art={art}
+  artPosition="88% 40%"
+  articles={articles}
+>
+  <Article id="short-version" n={1} title="The short version">
+    <ul>
+      <li>We keep only what we need to run the guild: who you are on Discord, and your event sign-ups.</li>
+      <li>No ads, no analytics, no trackers. We never sell or share your data with anyone for marketing.</li>
+      <li>
+        Unlinking Battle.net erases your Battle.net data. Deleting your account erases your site account and every event
+        sign-up. Both are on your <a href="/account/">Account</a> page and take effect immediately.
+      </li>
+    </ul>
+    <p>"We" means SideQuest's officers, who run this site for the guild.</p>
+  </Article>
+
+  <Article id="discord-sign-in" n={2} title="Signing in with Discord">
+    <p>
+      Signing in asks Discord for two permissions: who you are, and your membership in the SideQuest server. From those
+      we keep:
+    </p>
+    <ul>
+      <li>Your Discord ID, username, display name and avatar</li>
+      <li>Your nickname and roles in the SideQuest server, and whether you're still in it</li>
+      <li>When you last signed in</li>
+    </ul>
+    <p>
+      These update each time you sign in. We never see your email, password or messages, and we don't keep the token
+      Discord hands us. It's used once during sign-in and then thrown away.
+    </p>
+  </Article>
+
+  <Article id="battle-net" n={3} title="Linking Battle.net">
+    <p>
+      Linking is optional. It asks Battle.net only for your account ID and BattleTag, and we keep those two plus when
+      you linked. Not your characters, email or real name, and no token is kept.
+    </p>
+    <p>
+      <strong>Unlinking erases all three right away.</strong>
+    </p>
+  </Article>
+
+  <Article id="events" n={4} title="Event sign-ups">
+    <p>
+      When you sign up for an event we keep your answer (going, maybe or can't), and when you give them, your character,
+      class, role and note. On raid nights officers may also place you in a group or on the bench.
+    </p>
+    <p>
+      <strong>Event pages are public:</strong> anyone with the link can see who signed up (Discord display name and
+      avatar) along with those details. Don't put anything in a note you wouldn't say in guild chat.
+    </p>
+  </Article>
+
+  <Article id="cookies" n={5} title="Cookies">
+    <ul>
+      <li>
+        <strong>sq_session</strong> keeps you signed in. It's encrypted, holds only your account number, can't be read
+        by scripts, and lasts 30 days or until you sign out.
+      </li>
+      <li>
+        During a Discord or Battle.net sign-in, the same cookie briefly holds a one-time code that stops forged
+        sign-ins.
+      </li>
+    </ul>
+    <p>No analytics or advertising cookies. If you never sign in, you get no cookies at all.</p>
+  </Article>
+
+  <Article id="bot" n={6} title="The guild bot">
+    <p>Inside the SideQuest Discord, the guild's bot keeps:</p>
+    <ul>
+      <li>Your chat XP and level</li>
+      <li>
+        Moderation records (warnings, timeouts, kicks and bans, including the bot's own automatic ones), with the reason
+        and which officer acted
+      </li>
+      <li>
+        A log channel only officers can read, where the bot copies edited and deleted messages, joins and leaves, and
+        nickname and role changes
+      </li>
+      <li>How many people are in each voice channel, shown on the homepage as numbers only, never names</li>
+    </ul>
+    <p>
+      These belong to your Discord account in the server, not your site account, so deleting your site account doesn't
+      remove them. Ask an officer to clear your XP. Moderation records are kept to keep the guild safe.
+    </p>
+  </Article>
+
+  <Article id="who-else" n={7} title="Who else handles it">
+    <ul>
+      <li>
+        <strong>Discord</strong> and <strong>Blizzard (Battle.net)</strong> run the sign-ins, under their own privacy
+        policies.
+      </li>
+      <li>
+        <strong>Cloudflare</strong> sits in front of the site, and <strong>Cabotage</strong> hosts it on Amazon Web
+        Services in the US. Like any website, they see standard request details such as your IP address in order to
+        deliver and protect it.
+      </li>
+    </ul>
+    <p>That's everyone. Nothing else is shared.</p>
+  </Article>
+
+  <Article id="deleting" n={8} title="Deleting your data">
+    <ul>
+      <li>
+        <strong>Unlink Battle.net</strong> on your <a href="/account/">Account</a> page: your Battle.net data is erased.
+      </li>
+      <li>
+        <strong>Delete my account</strong> on the same page: your site account and every event sign-up are erased and
+        you're signed out. The bot takes away your linked roles within a minute.
+      </li>
+      <li>
+        Removing SideQuest from <em>Authorized Apps</em> in Discord only stops future sign-ins. It doesn't reach us, so
+        use Delete my account to erase what we hold.
+      </li>
+    </ul>
+    <p>
+      For anything else, including your bot XP, message an officer in the <a href={DISCORD_INVITE}>SideQuest Discord</a>
+      .
+    </p>
+  </Article>
+
+  <Article id="changes" n={9} title="Changes">
+    <p>
+      If what we keep changes, this page and its date change with it, and anything significant gets announced in the
+      Discord first.
+    </p>
+  </Article>
+</Charter>
