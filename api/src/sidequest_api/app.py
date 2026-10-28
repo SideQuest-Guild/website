@@ -24,17 +24,20 @@ def create_app(
     *,
     website_dist: Path | None = None,
     discord_transport: httpx.BaseTransport | None = None,
+    battlenet_transport: httpx.BaseTransport | None = None,
 ) -> Litestar:
     """Build the app. Settings default to the environment; tests pass their own. Schema comes from migrations.
 
     Routes: ``/api/guilds/{guild_id}/...`` (bot, requires ``X-API-Key``), ``/health``, ``/schema`` (OpenAPI docs),
-    ``/auth``, ``/api/me``, ``/api/raids``, ``/api/addons`` (member hub), and the website at ``/`` (``website_dist``
-    defaults to the repo's ``website/dist``). ``discord_transport`` lets tests mock the Discord API.
+    ``/auth`` (Discord sign-in, Battle.net linking), ``/api/me``, ``/api/members``, ``/api/raids``, ``/api/addons``
+    (member hub), and the website at ``/`` (``website_dist`` defaults to the repo's ``website/dist``).
+    ``discord_transport``/``battlenet_transport`` let tests mock the Discord and Battle.net APIs.
     """
     from advanced_alchemy.extensions.litestar import SQLAlchemyPlugin
 
     from sidequest_api.domain import GUILD_API_PATH, guild_controllers, public_routes
     from sidequest_api.lib.auth import API_KEY_HEADER, api_key_guard
+    from sidequest_api.lib.battlenet import BATTLENET_TRANSPORT_STATE_KEY
     from sidequest_api.lib.db import build_alchemy_config
     from sidequest_api.lib.discord import DISCORD_TRANSPORT_STATE_KEY
     from sidequest_api.lib.member_auth import (
@@ -70,7 +73,9 @@ def create_app(
             "current_member": Provide(provide_current_member),
             "current_officer": Provide(create_current_officer_provider(web_settings.OFFICER_ROLE_IDS)),
         },
-        state=State({DISCORD_TRANSPORT_STATE_KEY: discord_transport}),
+        state=State(
+            {DISCORD_TRANSPORT_STATE_KEY: discord_transport, BATTLENET_TRANSPORT_STATE_KEY: battlenet_transport}
+        ),
         openapi_config=OpenAPIConfig(
             title="SideQuest Guild API",
             version="0.1.0",

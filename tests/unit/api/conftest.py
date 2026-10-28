@@ -49,12 +49,34 @@ def discord_state() -> dict:
     return {"user": None, "guild_member": None}
 
 
+def _battlenet_transport(battlenet_state: dict) -> httpx.MockTransport:
+    """Fakes Battle.net's ``/token`` and ``/userinfo``; records the token request for credential checks."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/token":
+            battlenet_state["token_request"] = request
+            return httpx.Response(200, json={"access_token": "bnet-access-token"})
+        if request.url.path == "/userinfo":
+            return httpx.Response(200, json=battlenet_state["user"])
+        return httpx.Response(404, json={})
+
+    return httpx.MockTransport(handler)
+
+
+@pytest.fixture
+def battlenet_state() -> dict:
+    """Mutable holder for the Battle.net account the mocked ``/userinfo`` returns."""
+    return {"user": {"sub": "1", "id": 1, "battletag": "Tester#1111"}, "token_request": None}
+
+
 @pytest.fixture
 def member_web_settings() -> WebSettings:
     """Discord OAuth configured, with one officer role (``OFFICER_ROLE_ID``)."""
     return WebSettings(
         DISCORD_CLIENT_ID="test-client-id",
         DISCORD_CLIENT_SECRET="test-client-secret",
+        BATTLENET_CLIENT_ID="bnet-client-id",
+        BATTLENET_CLIENT_SECRET="bnet-client-secret",
         SESSION_SECRET=MEMBER_SESSION_SECRET,
         GUILD_ID=GUILD_ID,
         OFFICER_ROLE_IDS=[OFFICER_ROLE_ID],
@@ -63,13 +85,16 @@ def member_web_settings() -> WebSettings:
 
 
 @pytest.fixture
-def member_app(database_url: str, member_web_settings: WebSettings, discord_state: dict) -> Litestar:
-    """App with Discord OAuth configured and a mocked Discord transport."""
+def member_app(
+    database_url: str, member_web_settings: WebSettings, discord_state: dict, battlenet_state: dict
+) -> Litestar:
+    """App with Discord OAuth and Battle.net configured, both behind mocked transports."""
     return create_app(
         DatabaseSettings(URL=database_url),
         APISettings(KEY=TEST_API_KEY),
         member_web_settings,
         discord_transport=_discord_transport(discord_state),
+        battlenet_transport=_battlenet_transport(battlenet_state),
     )
 
 
@@ -100,4 +125,14 @@ async def login_as(
     state = parse_qs(urlparse(login_response.headers["location"]).query)["state"][0]
     return await client.get(
         "/auth/discord/callback", params={"code": "fake-code", "state": state}, follow_redirects=False
+    )
+
+
+async def link_battlenet(client: AsyncTestClient[Litestar], battlenet_state: dict, *, account_id: int, battletag: str):
+    """Drive the Battle.net link flow for the signed-in member; returns the callback's redirect response."""
+    battlenet_state["user"] = {"sub": str(account_id), "id": account_id, "battletag": battletag}
+    start = await client.get("/auth/battlenet/link", follow_redirects=False)
+    state = parse_qs(urlparse(start.headers["location"]).query)["state"][0]
+    return await client.get(
+        "/auth/battlenet/callback", params={"code": "bnet-code", "state": state}, follow_redirects=False
     )

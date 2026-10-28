@@ -12,7 +12,7 @@ from sidequest_common.schemas.levels import (
     SetXPRequest,
     XPAwardResult,
 )
-from sidequest_common.schemas.members import Me
+from sidequest_common.schemas.members import Me, MemberListing
 from sidequest_common.schemas.moderation import CaseAction, ModCaseCreate, ModCaseSchema, ModCaseUpdate
 from sidequest_common.schemas.raids import (
     RaidChartUpdate,
@@ -50,6 +50,7 @@ __all__ = (
     "LevelRoleUpsert",
     "Me",
     "MemberLevelSchema",
+    "MemberListing",
     "ModCaseCreate",
     "ModCaseSchema",
     "ModCaseUpdate",

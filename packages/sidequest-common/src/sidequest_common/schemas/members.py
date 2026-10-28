@@ -1,4 +1,6 @@
-"""Signed-in member profile schema."""
+"""Signed-in member profile and officer member-list schemas."""
+
+from datetime import datetime  # pydantic needs it at runtime
 
 from pydantic import BaseModel, ConfigDict
 
@@ -19,3 +21,20 @@ class Me(BaseModel):
     avatar_url: str | None
     is_guild_member: bool
     is_officer: bool
+    battletag: str | None
+
+
+class MemberListing(BaseModel):
+    """One row of the officers' member list (``GET /api/members``): who has signed in and what they've linked.
+
+    Officers compare ``battletag`` against the in-game guild roster; it is never shown outside officer views.
+    """
+
+    id: int
+    username: str
+    display_name: str
+    avatar_url: str | None
+    is_guild_member: bool
+    is_officer: bool
+    battletag: str | None
+    last_login_at: datetime | None

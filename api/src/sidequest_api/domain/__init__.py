@@ -6,6 +6,7 @@
 
 from sidequest_api.domain.addons.controllers import AddonsController
 from sidequest_api.domain.auth.controllers import AuthController
+from sidequest_api.domain.battlenet.controllers import BattleNetController
 from sidequest_api.domain.cases.controllers import CasesController
 from sidequest_api.domain.guilds.controllers import GuildConfigController
 from sidequest_api.domain.levels.controllers import LevelsController
@@ -26,6 +27,7 @@ guild_controllers = [
 public_routes = [
     HealthController,
     AuthController,
+    BattleNetController,
     MembersController,
     RaidsController,
     AddonsController,

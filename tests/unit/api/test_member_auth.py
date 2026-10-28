@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 async def test_login_is_503_when_discord_oauth_is_not_configured(client: AsyncTestClient) -> None:
-    """``client`` (root conftest) builds the app without ``web_settings``, so OAuth defaults to unconfigured."""
+    """``client`` (root conftest) builds the app with Discord OAuth unset, ignoring any local ``.env``."""
     response = await client.get("/auth/discord/login", follow_redirects=False)
     assert response.status_code == 503
     assert response.json()["detail"] == "Discord login is not configured"

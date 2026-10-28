@@ -48,6 +48,10 @@
 * {
   box-sizing: border-box;
 }
+/* `hidden` must beat component display rules (.btn is inline-flex, .raid-row is flex). */
+[hidden] {
+  display: none !important;
+}
 html {
   background: var(--charcoal);
   scrollbar-color: #3a3a38 var(--charcoal);

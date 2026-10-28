@@ -84,12 +84,16 @@ async def provide_optional_member(request: Request, db_session: NamedDependency[
     return await db_session.get(Member, int(member_id))
 
 
+def is_officer(member: Member, officer_role_ids: list[int]) -> bool:
+    """Whether ``member`` holds any of ``officer_role_ids`` (their Discord roles as of their last sign-in)."""
+    return bool(set(officer_role_ids) & set(member.roles))
+
+
 def create_current_officer_provider(officer_role_ids: list[int]) -> Callable[[Member], Awaitable[Member]]:
     """Dependency factory: the signed-in member, 403 unless they hold one of ``officer_role_ids``."""
-    officer_roles = set(officer_role_ids)
 
     async def provide_current_officer(current_member: NamedDependency[Member]) -> Member:
-        if not officer_roles & set(current_member.roles):
+        if not is_officer(current_member, officer_role_ids):
             raise PermissionDeniedException(_NOT_AN_OFFICER_MESSAGE)
         return current_member
 

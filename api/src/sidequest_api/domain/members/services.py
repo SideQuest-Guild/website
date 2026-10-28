@@ -1,4 +1,4 @@
-"""Member persistence and Discord-driven upserts."""
+"""Member persistence, Discord-driven upserts, and Battle.net linking."""
 
 from datetime import UTC, datetime
 from typing import Any
@@ -6,6 +6,7 @@ from typing import Any
 from advanced_alchemy.repository import SQLAlchemyAsyncRepository
 from advanced_alchemy.service import SQLAlchemyAsyncRepositoryService
 
+from sidequest_api.lib.battlenet import BattleNetOAuthError
 from sidequest_common.models import Member
 
 
@@ -47,3 +48,30 @@ class MembersService(SQLAlchemyAsyncRepositoryService[Member]):
         for field, value in fields.items():
             setattr(member, field, value)
         return await self.update(member, auto_commit=True)
+
+    async def link_battlenet(self, member: Member, *, account_id: int, battletag: str) -> Member:
+        """Attach a Battle.net account to ``member``; relinking the same account refreshes the BattleTag.
+
+        Raises ``BattleNetOAuthError("battlenet_taken")`` if another member already linked that account.
+        """
+        holder = await self.get_one_or_none(battlenet_id=account_id)
+        if holder is not None and holder.id != member.id:
+            msg = "That Battle.net account is linked to another member"
+            taken = "battlenet_taken"
+            raise BattleNetOAuthError(taken, msg)
+        member.battlenet_id = account_id
+        member.battletag = battletag
+        member.battlenet_linked_at = datetime.now(UTC)
+        return await self.update(member, auto_commit=True)
+
+    async def unlink_battlenet(self, member: Member) -> Member:
+        """Remove the member's Battle.net link."""
+        member.battlenet_id = None
+        member.battletag = None
+        member.battlenet_linked_at = None
+        return await self.update(member, auto_commit=True)
+
+    async def list_for_officers(self) -> list[Member]:
+        """Every member who has signed in, current guild members first, then by display name."""
+        members = list(await self.get_many())
+        return sorted(members, key=lambda m: (not m.is_guild_member, m.display_name.casefold()))

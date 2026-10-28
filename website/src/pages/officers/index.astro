@@ -4,7 +4,7 @@ import Page from "../../layouts/Page.astro";
 
 <Page
   title="Officers · SideQuest"
-  description="Officer console: create raids, assign the raid chart, and manage addons."
+  description="Officer console: create raids, assign the raid chart, manage addons, and check members' BattleTags."
   heading="OFFICERS"
   current="officers"
 >
@@ -125,6 +125,17 @@ import Page from "../../layouts/Page.astro";
       </form>
       <ul class="addon-list" id="officer-addon-list" aria-label="Existing addons"></ul>
     </section>
+
+    <section aria-labelledby="h-members">
+      <span class="caps section-label" id="h-members">
+        Members
+      </span>
+      <p class="aside">
+        Everyone who has signed in. Match each linked BattleTag against the in-game guild roster; members without one
+        haven't linked Battle.net yet.
+      </p>
+      <ul class="raid-list" id="officer-member-list" aria-label="Signed-in members"></ul>
+    </section>
   </div>
 
   <noscript>
@@ -141,6 +152,7 @@ import Page from "../../layouts/Page.astro";
     statusMessage,
     type Addon,
     type Me,
+    type MemberListing,
     type RaidSummary,
   } from "../../scripts/api";
 
@@ -163,7 +175,7 @@ import Page from "../../layouts/Page.astro";
   const raidListEl = requireElement("officer-raid-list");
 
   let raids: RaidSummary[] = [];
-  let editingRaidId: number | null = null;
+  let editingRaidId: string | null = null;
 
   function pad(n: number): string {
     return String(n).padStart(2, "0");
@@ -213,7 +225,7 @@ import Page from "../../layouts/Page.astro";
         : `<li class="aside">No raids yet.</li>`;
     raidListEl.querySelectorAll<HTMLButtonElement>("[data-edit-raid]").forEach((btn) => {
       btn.addEventListener("click", () => {
-        const id = Number(btn.dataset.editRaid);
+        const id = btn.dataset.editRaid;
         const raid = raids.find((r) => r.id === id);
         if (raid) {
           fillRaidForm(raid);
@@ -293,7 +305,7 @@ import Page from "../../layouts/Page.astro";
   const addonListEl = requireElement("officer-addon-list");
 
   let addons: Addon[] = [];
-  let editingAddonId: number | null = null;
+  let editingAddonId: string | null = null;
 
   function resetAddonForm(): void {
     addonForm.reset();
@@ -333,7 +345,7 @@ import Page from "../../layouts/Page.astro";
         : `<li class="aside">No addons yet.</li>`;
     addonListEl.querySelectorAll<HTMLButtonElement>("[data-edit-addon]").forEach((btn) => {
       btn.addEventListener("click", () => {
-        const id = Number(btn.dataset.editAddon);
+        const id = btn.dataset.editAddon;
         const addon = addons.find((a) => a.id === id);
         if (addon) {
           fillAddonForm(addon);
@@ -394,6 +406,33 @@ import Page from "../../layouts/Page.astro";
     }
   });
 
+  // ——— Members ———
+  const memberListEl = requireElement("officer-member-list");
+
+  async function loadMembers(): Promise<void> {
+    try {
+      const members = await apiFetch<MemberListing[]>("/api/members");
+      memberListEl.innerHTML =
+        members.length > 0
+          ? members
+              .map((m) => {
+                const tags = [m.is_officer ? "Officer" : null, m.is_guild_member ? null : "Not in the Discord"]
+                  .filter(Boolean)
+                  .join(" · ");
+                return `
+        <li class="raid-row">
+          <span>${escapeHtml(m.display_name)} <span class="when">@${escapeHtml(m.username)}</span></span>
+          <span class="when">${m.battletag ? escapeHtml(m.battletag) : "No Battle.net linked"}</span>
+          ${tags ? `<span class="meta">${escapeHtml(tags)}</span>` : ""}
+        </li>`;
+              })
+              .join("")
+          : `<li class="aside">No one has signed in yet.</li>`;
+    } catch (err) {
+      memberListEl.innerHTML = `<li class="aside">${escapeHtml(statusMessage(err))}</li>`;
+    }
+  }
+
   // ——— Gate ———
   async function init(): Promise<void> {
     let me: Me | null = null;
@@ -412,7 +451,7 @@ import Page from "../../layouts/Page.astro";
     bodyEl.hidden = false;
     resetRaidForm();
     resetAddonForm();
-    await Promise.all([loadRaids(), loadAddons()]);
+    await Promise.all([loadRaids(), loadAddons(), loadMembers()]);
   }
 
   init();

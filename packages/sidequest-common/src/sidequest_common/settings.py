@@ -54,6 +54,8 @@ class WebSettings(BaseSettings):
     Discord OAuth2 login (scopes ``identify guilds.members.read``) for guild members, raids, and addons.
     ``DISCORD_CLIENT_ID``/``DISCORD_CLIENT_SECRET`` are the OAuth *application* credentials (separate from the
     bot's ``DISCORD_TOKEN``); when either is unset the app still boots, but ``/auth/discord/login`` returns 503.
+    ``BATTLENET_CLIENT_ID``/``BATTLENET_CLIENT_SECRET`` (a develop.battle.net API client) let signed-in members link
+    their Battle.net account; when unset, linking redirects back to the account page with an explanation.
     """
 
     model_config = SettingsConfigDict(env_prefix="WEB_", **_BASE_CONFIG)
@@ -62,6 +64,8 @@ class WebSettings(BaseSettings):
     SESSION_SECRET: SecretStr | None = None
     DISCORD_CLIENT_ID: str | None = None
     DISCORD_CLIENT_SECRET: SecretStr | None = None
+    BATTLENET_CLIENT_ID: str | None = None
+    BATTLENET_CLIENT_SECRET: SecretStr | None = None
     GUILD_ID: int = 1564671275316543508
     OFFICER_ROLE_IDS: list[int] = []
     COOKIE_SECURE: bool = False
@@ -70,6 +74,11 @@ class WebSettings(BaseSettings):
     def oauth_configured(self) -> bool:
         """Whether both Discord OAuth app credentials are set."""
         return self.DISCORD_CLIENT_ID is not None and self.DISCORD_CLIENT_SECRET is not None
+
+    @property
+    def battlenet_configured(self) -> bool:
+        """Whether both Battle.net OAuth client credentials are set."""
+        return self.BATTLENET_CLIENT_ID is not None and self.BATTLENET_CLIENT_SECRET is not None
 
     @model_validator(mode="after")
     def _validate_session_secret_length(self) -> WebSettings:

@@ -6,7 +6,7 @@ import { DISCORD_INVITE } from "../../config";
 
 <Page
   title="Account · SideQuest"
-  description="Sign in with Discord to manage your SideQuest account."
+  description="Sign in with Discord to manage your SideQuest account, and link Battle.net."
   heading="ACCOUNT"
   current="account"
 >
@@ -30,9 +30,28 @@ import { DISCORD_INVITE } from "../../config";
         <p class="aside" id="account-role"></p>
       </div>
     </div>
-    <button type="button" class="btn-quiet" id="sign-out-btn">
-      Sign out
-    </button>
+    <dl class="ledger" aria-label="Linked accounts">
+      <div>
+        <dt class="caps">Battle.net</dt>
+        <dd>
+          <span id="bnet-linked" hidden>
+            <span id="bnet-tag"></span> · officers use it to check the guild roster.
+          </span>
+          <span id="bnet-unlinked">Not linked. Link it so officers can match you to your characters in game.</span>
+        </dd>
+      </div>
+    </dl>
+    <div class="form-actions">
+      <a class="btn" id="bnet-link" href="/auth/battlenet/link">
+        Link Battle.net
+      </a>
+      <button type="button" class="btn-quiet" id="bnet-unlink-btn" hidden>
+        Unlink Battle.net
+      </button>
+      <button type="button" class="btn-quiet" id="sign-out-btn">
+        Sign out
+      </button>
+    </div>
   </div>
 
   <noscript>
@@ -43,12 +62,22 @@ import { DISCORD_INVITE } from "../../config";
 </Page>
 
 <script>
-  import { apiFetch, requireElement, type Me } from "../../scripts/api";
+  import { apiFetch, requireElement, statusMessage, type Me } from "../../scripts/api";
 
   const ERROR_MESSAGES: Record<string, string> = {
-    state: "Sign-in expired — try again.",
-    not_configured: "Discord login isn't set up yet.",
-    discord: "Discord didn't respond — try again.",
+    state: "That sign-in took too long or was opened twice. Try again.",
+    oauth_not_configured: "Discord sign-in isn't set up yet.",
+    discord_unreachable: "Couldn't reach Discord. Try again in a moment.",
+    token_exchange_failed: "Discord didn't accept the sign-in. Try again.",
+    user_fetch_failed: "Discord didn't send your profile. Try again.",
+    guild_member_fetch_failed: "Couldn't check your SideQuest membership with Discord. Try again.",
+    signin_first: "Sign in with Discord first, then link Battle.net.",
+    battlenet_not_configured: "Battle.net linking isn't set up yet.",
+    battlenet_denied: "Battle.net linking was cancelled.",
+    battlenet_unreachable: "Couldn't reach Battle.net. Try again in a moment.",
+    battlenet_failed: "Battle.net didn't confirm your account. Try again.",
+    battlenet_taken:
+      "That Battle.net account is already linked to another SideQuest member. Ask an officer if that's wrong.",
   };
 
   const statusEl = requireElement("account-status");
@@ -60,6 +89,11 @@ import { DISCORD_INVITE } from "../../config";
   const nameEl = requireElement("account-name");
   const roleEl = requireElement("account-role");
   const signOutBtn = requireElement<HTMLButtonElement>("sign-out-btn");
+  const bnetLinked = requireElement("bnet-linked");
+  const bnetUnlinked = requireElement("bnet-unlinked");
+  const bnetTag = requireElement("bnet-tag");
+  const bnetLink = requireElement<HTMLAnchorElement>("bnet-link");
+  const bnetUnlinkBtn = requireElement<HTMLButtonElement>("bnet-unlink-btn");
 
   function show(target: HTMLElement): void {
     for (const el of [signedOut, notMember, signedIn]) {
@@ -67,13 +101,21 @@ import { DISCORD_INVITE } from "../../config";
     }
   }
 
-  async function render(): Promise<void> {
-    const errorCode = new URLSearchParams(location.search).get("error");
-    if (errorCode) {
-      statusEl.dataset.tone = "error";
-      statusEl.textContent = ERROR_MESSAGES[errorCode] ?? "Sign-in failed — try again.";
+  function showRedirectError(): void {
+    const params = new URLSearchParams(location.search);
+    const errorCode = params.get("error");
+    if (!errorCode) {
+      return;
     }
+    statusEl.dataset.tone = "error";
+    statusEl.textContent = ERROR_MESSAGES[errorCode] ?? "Something went wrong. Try again.";
+    // Drop ?error= so a reload or a later re-render doesn't repeat a stale message.
+    params.delete("error");
+    const query = params.toString();
+    history.replaceState(null, "", `${location.pathname}${query ? `?${query}` : ""}${location.hash}`);
+  }
 
+  async function render(): Promise<void> {
     let me: Me | null = null;
     try {
       me = await apiFetch<Me>("/api/me");
@@ -96,6 +138,12 @@ import { DISCORD_INVITE } from "../../config";
       avatarImg.src = me.avatar_url;
       avatarImg.hidden = false;
     }
+    const linked = me.battletag !== null;
+    bnetTag.textContent = me.battletag ?? "";
+    bnetLinked.hidden = !linked;
+    bnetUnlinked.hidden = linked;
+    bnetLink.hidden = linked;
+    bnetUnlinkBtn.hidden = !linked;
     show(signedIn);
   }
 
@@ -109,5 +157,24 @@ import { DISCORD_INVITE } from "../../config";
     location.reload();
   });
 
+  bnetUnlinkBtn.addEventListener("click", async () => {
+    if (!confirm("Unlink your Battle.net account?")) {
+      return;
+    }
+    bnetUnlinkBtn.disabled = true;
+    try {
+      await apiFetch("/auth/battlenet/unlink", { method: "POST" });
+      statusEl.dataset.tone = "";
+      statusEl.textContent = "Battle.net unlinked.";
+      await render();
+    } catch (err) {
+      statusEl.dataset.tone = "error";
+      statusEl.textContent = statusMessage(err);
+    } finally {
+      bnetUnlinkBtn.disabled = false;
+    }
+  });
+
+  showRedirectError();
   render();
 </script>

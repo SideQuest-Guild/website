@@ -10,6 +10,19 @@ export type Me = {
   avatar_url: string | null;
   is_guild_member: boolean;
   is_officer: boolean;
+  battletag: string | null;
+};
+
+/** Officers' member list row (`GET /api/members`). */
+export type MemberListing = {
+  id: number;
+  username: string;
+  display_name: string;
+  avatar_url: string | null;
+  is_guild_member: boolean;
+  is_officer: boolean;
+  battletag: string | null;
+  last_login_at: string | null;
 };
 
 export type Role = "tank" | "healer" | "dps";
@@ -20,7 +33,7 @@ export type CharClass = "warrior" | "paladin" | "hunter" | "rogue" | "priest" | 
 export type RaidCounts = { tank: number; healer: number; dps: number; tentative: number; absent: number };
 
 export type RaidSummary = {
-  id: number;
+  id: string;
   title: string;
   instance: string;
   starts_at: string;
@@ -33,7 +46,7 @@ export type RaidSummary = {
 export type SignupMember = { display_name: string; avatar_url: string | null };
 
 export type Signup = {
-  id: number;
+  id: string;
   member: SignupMember;
   character: string;
   class: CharClass;
@@ -48,7 +61,7 @@ export type Signup = {
 export type RaidDetail = RaidSummary & { signups: Signup[]; my_signup: Signup | null };
 
 export type Addon = {
-  id: number;
+  id: string;
   slug: string;
   name: string;
   summary: string;

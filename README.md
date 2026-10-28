@@ -29,7 +29,9 @@ flowchart LR
 | `/` | none | Website (`website/dist`, built by `make web-build`; a placeholder page until the first build) |
 | `/api/guilds/{guild_id}/...` | `X-API-Key` (shared secret with the bot) | Guild config, XP/levels, moderation cases, role menus |
 | `/auth/discord/login`, `/auth/discord/callback`, `/auth/logout` | none | Discord OAuth sign-in (session cookie `sq_session`) |
+| `/auth/battlenet/link`, `/auth/battlenet/callback`, `/auth/battlenet/unlink` | signed in | Link a Battle.net account (BattleTag) to the member |
 | `/api/me` | signed in | The signed-in member |
+| `/api/members` | officer | Everyone who has signed in, with linked BattleTags, for checking the guild roster |
 | `/api/raids`, `/api/addons` (GET) | none | Raid nights with roster + raid chart, guild addon links |
 | `/api/raids/{id}/signup` | guild member | Sign up for / withdraw from a raid |
 | `/api/raids`, `/api/addons` (POST/PATCH/DELETE), `/api/raids/{id}/signups/{id}` | officer | Manage raids, the raid chart and addons |
@@ -48,6 +50,18 @@ In the Developer Portal → Game Master → OAuth2, add the redirect `{WEB_BASE_
 restart), `WEB_OFFICER_ROLE_IDS` to a JSON list of officer role IDs (e.g. `[123456789012345678]`), and
 `WEB_COOKIE_SECURE=true` behind HTTPS. Until the client ID and secret are set, sign-in returns 503 and the public
 pages keep working. See `.env.example`.
+
+### Battle.net linking setup
+
+Signed-in members can link Battle.net from `/account/`; officers then see each BattleTag on `/officers/` and match it
+against the in-game roster. Linking asks only for the `openid` scope (account id + BattleTag). Characters aren't read:
+Blizzard hasn't said whether World of Warcraft: Forever will be in its Profile API. One Battle.net account can be
+linked to only one member.
+
+Create a client at [develop.battle.net/access/clients](https://develop.battle.net/access/clients) with the redirect
+`{WEB_BASE_URL}/auth/battlenet/callback` (production `https://sidequest-guild.com/auth/battlenet/callback`, locally
+`http://localhost:8000/auth/battlenet/callback`), then set `WEB_BATTLENET_CLIENT_ID` and
+`WEB_BATTLENET_CLIENT_SECRET`. Blizzard notes changes can take up to 10 minutes to apply.
 
 ## Running locally
 
