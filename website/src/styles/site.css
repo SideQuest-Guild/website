@@ -1873,6 +1873,12 @@ a.raid-row {
     flex-direction: column;
     align-items: flex-start;
   }
+  .series-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    padding-bottom: 16px;
+  }
 }
 
 /* ——— Charter pages (Rules, Privacy, Terms) ———
