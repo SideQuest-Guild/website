@@ -34,3 +34,4 @@ def test_reads_config_without_link_role_ids() -> None:
     config = GuildConfigSchema.model_validate(PREVIOUS_RELEASE_CONFIG)
     assert config.linked_role_id is None
     assert config.battlenet_role_id is None
+    assert config.gate_role_id is None

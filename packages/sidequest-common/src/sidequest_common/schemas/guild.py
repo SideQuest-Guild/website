@@ -18,6 +18,7 @@ class GuildConfigSchema(BaseModel):
     # Defaulted so a bot rolled out before the API (deploys aren't ordered) can still read the config.
     linked_role_id: int | None = None
     battlenet_role_id: int | None = None
+    gate_role_id: int | None = None
 
     leveling_enabled: bool
     level_up_channel_id: int | None
@@ -53,6 +54,7 @@ class GuildConfigUpdate(BaseModel):
     auto_role_id: int | None = None
     linked_role_id: int | None = None
     battlenet_role_id: int | None = None
+    gate_role_id: int | None = None
 
     leveling_enabled: bool | None = None
     level_up_channel_id: int | None = None

@@ -191,12 +191,16 @@ as a channel change). No privileged presence intent is used
 ### Link roles
 Members who sign in on the site get a role (default name **Signed the Ledger**); members who also link Battle.net
 get a second one (**Battle-Tagged**). Unlinking Battle.net drops just that role; unlinking the site account (or no
-longer appearing in the sign-in list) drops both. A sync loop reconciles every member every 60 seconds against
+longer appearing in the sign-in list) drops both. New joiners who haven't signed in get a third role, the gate role
+(**At the Gate**), removed the moment they sign in; it's granted immediately on join (or screening-clear) just like
+the other two. Channels other than the sign-in channel are set in Discord to be visible only to the **Signed the
+Ledger** role (and `@everyone` loses `View Channel`), so the gate role's only purpose is to show new members the
+sign-in channel until they're in. A sync loop reconciles every member every 60 seconds against
 `GET /api/guilds/{guild_id}/member-links`, and joins/screening-clears apply the same plan immediately. Only
 configured roles are ever touched, and a role that's missing or unsafe to grant is skipped with a one-time warning
 (`bot/src/sidequest_bot/plugins/link_roles.py`).
 
-- `/linkroles site | battlenet` (Manage Server)
+- `/linkroles site | battlenet | gate` (Manage Server)
 
 ## Role safety
 Anything the bot hands out on its own (level rewards, the auto-role, role-menu buttons, link roles) goes through

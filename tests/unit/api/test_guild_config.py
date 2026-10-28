@@ -52,6 +52,13 @@ async def test_link_role_ids_round_trip_and_clear(api: SideQuestAPI) -> None:
     assert cleared.battlenet_role_id == 222
 
 
+async def test_gate_role_id_round_trips_and_clears(api: SideQuestAPI) -> None:
+    updated = await api.update_guild_config(GUILD_ID, GuildConfigUpdate(gate_role_id=333))
+    assert updated.gate_role_id == 333
+    cleared = await api.update_guild_config(GUILD_ID, GuildConfigUpdate(gate_role_id=None))
+    assert cleared.gate_role_id is None
+
+
 async def test_xp_min_above_stored_max_rejected(api: SideQuestAPI) -> None:
     with pytest.raises(APIError) as excinfo:
         await api.update_guild_config(GUILD_ID, GuildConfigUpdate(xp_min=30))
