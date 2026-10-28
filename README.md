@@ -30,6 +30,7 @@ flowchart LR
 | `/api/guilds/{guild_id}/...` | `X-API-Key` (shared secret with the bot) | Guild config, XP/levels, moderation cases, role menus |
 | `/api/guilds/{guild_id}/event-sync` (GET), `/event-sync/{event_id}/ack`, `/event-sync/events`, `/event-sync/events/{event_id}` (DELETE), `/event-sync/tombstones/{event_id}` (DELETE), `/event-sync/reconcile` | `X-API-Key` | Two-way guild event <-> Discord scheduled event sync (404s for any guild other than the site guild) |
 | `/api/guilds/{guild_id}/live` (PUT) | `X-API-Key` | Bot reports the guild's live online/member/voice-channel counts (404s for any guild other than the site guild) |
+| `/api/guilds/{guild_id}/member-links` (GET) | `X-API-Key` | Bot reads every signed-in member's Discord id and Battle.net-link status for role syncing (404s for any guild other than the site guild) |
 | `/api/discord/live` (GET) | none | Website reads the site guild's live counts; empty counts (not 404) if the bot hasn't reported recently |
 | `/auth/discord/login`, `/auth/discord/callback`, `/auth/logout` | none | Discord OAuth sign-in (session cookie `sq_session`) |
 | `/auth/battlenet/link`, `/auth/battlenet/callback`, `/auth/battlenet/unlink` | signed in | Link a Battle.net account (BattleTag) to the member |
@@ -187,8 +188,18 @@ debounced ~5 seconds per guild so a burst of joins/leaves coalesces into one pus
 as a channel change). No privileged presence intent is used
 (`bot/src/sidequest_bot/plugins/live_status.py`, `PUT /api/guilds/{guild_id}/live`).
 
+### Link roles
+Members who sign in on the site get a role (default name **Signed the Ledger**); members who also link Battle.net
+get a second one (**Battle-Tagged**). Unlinking Battle.net drops just that role; unlinking the site account (or no
+longer appearing in the sign-in list) drops both. A sync loop reconciles every member every 60 seconds against
+`GET /api/guilds/{guild_id}/member-links`, and joins/screening-clears apply the same plan immediately. Only
+configured roles are ever touched, and a role that's missing or unsafe to grant is skipped with a one-time warning
+(`bot/src/sidequest_bot/plugins/link_roles.py`).
+
+- `/linkroles site | battlenet` (Manage Server)
+
 ## Role safety
-Anything the bot hands out on its own (level rewards, the auto-role, role-menu buttons) goes through
+Anything the bot hands out on its own (level rewards, the auto-role, role-menu buttons, link roles) goes through
 `bot/src/sidequest_bot/lib/roles.py`:
 
 - **The role itself:** it must be below the bot's role, not managed by an integration, and free of moderator/admin

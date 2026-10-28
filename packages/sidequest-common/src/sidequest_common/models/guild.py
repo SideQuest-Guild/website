@@ -24,6 +24,8 @@ class GuildConfig(UUIDAuditBase):
     welcome_channel_id: Mapped[int | None] = mapped_column(BigInteger, default=None)
     welcome_message: Mapped[str] = mapped_column(Text, default=DEFAULT_WELCOME_MESSAGE)
     auto_role_id: Mapped[int | None] = mapped_column(BigInteger, default=None)
+    linked_role_id: Mapped[int | None] = mapped_column(BigInteger, default=None)
+    battlenet_role_id: Mapped[int | None] = mapped_column(BigInteger, default=None)
 
     # Leveling
     leveling_enabled: Mapped[bool] = mapped_column(Boolean, default=True)

@@ -15,6 +15,8 @@ class GuildConfigSchema(BaseModel):
     welcome_channel_id: int | None
     welcome_message: str
     auto_role_id: int | None
+    linked_role_id: int | None
+    battlenet_role_id: int | None
 
     leveling_enabled: bool
     level_up_channel_id: int | None
@@ -48,6 +50,8 @@ class GuildConfigUpdate(BaseModel):
     welcome_channel_id: int | None = None
     welcome_message: str | None = Field(default=None, min_length=1, max_length=2000)
     auto_role_id: int | None = None
+    linked_role_id: int | None = None
+    battlenet_role_id: int | None = None
 
     leveling_enabled: bool | None = None
     level_up_channel_id: int | None = None
