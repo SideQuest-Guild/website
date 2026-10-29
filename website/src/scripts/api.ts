@@ -10,20 +10,8 @@ export type Me = {
   avatar_url: string | null;
   is_guild_member: boolean;
   is_officer: boolean;
+  is_gm: boolean;
   battletag: string | null;
-  roster_confirmed: boolean;
-};
-
-/** Officers' member list row (`GET /api/members`). */
-export type MemberListing = {
-  id: number;
-  username: string;
-  display_name: string;
-  avatar_url: string | null;
-  is_guild_member: boolean;
-  is_officer: boolean;
-  battletag: string | null;
-  last_login_at: string | null;
   roster_confirmed: boolean;
 };
 
@@ -144,6 +132,83 @@ export type Addon = {
   homepage_url: string | null;
   updated_at: string;
 };
+
+/** A Discord role shown on a `GmMember`, highest position first; color `null` means Discord's default (no color). */
+export type RoleTag = { id: string; name: string; color: string | null };
+
+/** `GET /api/gm/members[/{id}]` row: everyone who has ever signed in, GM-eyes-only. */
+export type GmMember = {
+  id: number;
+  discord_id: string;
+  username: string;
+  display_name: string;
+  avatar_url: string | null;
+  roles: RoleTag[];
+  is_guild_member: boolean;
+  is_officer: boolean;
+  is_gm: boolean;
+  roster_confirmed_at: string | null;
+  battletag: string | null;
+  battlenet_linked_at: string | null;
+  first_seen_at: string;
+  last_login_at: string | null;
+  signup_count: number;
+  case_count: number;
+  level: number | null;
+};
+
+/** One of a member's event sign-ups, as listed on `GmMemberDetail`. */
+export type GmSignup = {
+  event_id: string;
+  title: string;
+  kind: EventKind;
+  starts_at: string;
+  event_status: EventStatus;
+  status: SignupStatus;
+  character: string | null;
+  class: CharClass | null;
+  role: Role | null;
+  comment: string | null;
+};
+
+/** `GET /api/gm/cases[?user_id=]`, and the cases listed on `GmMemberDetail`. */
+export type GmCase = {
+  case_number: number;
+  action: string;
+  user_id: string;
+  user_name: string | null;
+  moderator_id: string;
+  moderator_name: string | null;
+  reason: string | null;
+  duration_seconds: number | null;
+  created_at: string;
+};
+
+/** `GET /api/gm/members/{id}` full profile. */
+export type GmMemberDetail = {
+  member: GmMember;
+  signups: GmSignup[];
+  cases: GmCase[];
+  xp: number | null;
+  message_count: number | null;
+};
+
+export type GmLogKind = "signup" | "sign_in" | "battlenet" | "officer" | "moderation";
+
+/** One row of `GET /api/gm/log`. */
+export type LogEntry = {
+  id: string;
+  at: string;
+  kind: GmLogKind;
+  actor: { display_name: string; avatar_url: string | null } | null;
+  summary: string;
+  detail: string | null;
+  member_id: number | null;
+  event_id: string | null;
+  case_number: number | null;
+};
+
+export type LogPage = { entries: LogEntry[]; next_before: string | null };
 
 export type VoiceChannelCount = { name: string; count: number };
 

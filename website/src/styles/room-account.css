@@ -1,0 +1,109 @@
+/* The Ledger Chamber: sign-in invitation, or a character sheet with linked accounts and the data chamber. */
+
+.ledger-cta {
+  margin: clamp(22px, 2.2vw, 30px) auto 0;
+  text-align: center;
+}
+.account-terms {
+  margin-top: clamp(18px, 1.8vw, 24px);
+  text-align: center;
+}
+
+/* ——— Character sheet: framed portrait, name in display caps, rank and roster lines ——— */
+.sheet {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  margin: 0 0 clamp(28px, 3vw, 40px);
+}
+.sheet-portrait {
+  position: relative;
+  display: block;
+  flex: none;
+  width: 96px;
+  height: 96px;
+  background: rgba(4, 8, 16, 0.6);
+  border: 1px solid var(--gold-2);
+}
+.sheet-portrait::after {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  pointer-events: none;
+  border: 1px solid var(--stone);
+}
+.sheet-portrait img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.sheet-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.sheet-name {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: clamp(20px, 1.7vw, 27px);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #f6f3ee;
+}
+.sheet-rank {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: var(--caps);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+.sheet-roster {
+  margin: 0;
+  font-size: var(--body);
+  color: var(--mist-2);
+}
+
+/* ——— Linked accounts: a ledger of rows, not the old gold-lined dl ——— */
+.links {
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--stone-2);
+}
+.links > div {
+  display: grid;
+  grid-template-columns: minmax(9em, 1fr) 3fr;
+  gap: 8px 24px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--stone-2);
+}
+.links dt {
+  font-family: var(--display);
+  font-size: var(--caps);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--mist);
+}
+.links dd {
+  margin: 0;
+  font-size: var(--body);
+  line-height: 1.5;
+  color: var(--mist);
+}
+
+@media (max-width: 560px) {
+  .sheet {
+    gap: 16px;
+  }
+  .sheet-portrait {
+    width: 76px;
+    height: 76px;
+  }
+  .links > div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+  }
+}

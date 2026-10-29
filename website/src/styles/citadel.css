@@ -1,0 +1,732 @@
+/* The citadel's rooms: every page past the homepage.
+   One painting opens each room under the nav and dissolves into the same moonlit night the homepage paints; the
+   page's working parts sit in framed chambers drawn the way the game draws its windows (a stone outer line, a gold
+   inner line, bracketed corners, a ribbon title), in the night blue the paintings already carry. */
+
+:root {
+  --night: #0a0f1a;
+  --night-2: #101a2c;
+  --night-3: #18253d;
+  --royal: #22386a;
+  --royal-2: #2e4a85;
+  --stone: rgba(150, 172, 210, 0.26);
+  --stone-2: rgba(150, 172, 210, 0.13);
+  /* Text on the night surfaces: tinted from the blue rather than gray, so secondary copy belongs to the room. */
+  --mist: #c4cddd;
+  --mist-2: #96a2b8;
+  /* The game's own color language, used only where the game uses it: a character's class, an item's quality. */
+  --c-warrior: #c69b6d;
+  --c-paladin: #f48cba;
+  --c-hunter: #aad372;
+  --c-rogue: #fff468;
+  --c-priest: #ffffff;
+  --c-shaman: #4a9df2; /* the game's #0070dd lifted to read on night blue */
+  --c-mage: #3fc7eb;
+  --c-warlock: #9d9ef5;
+  --c-druid: #ff8c2a;
+  --q-common: #f2efe9;
+  --q-uncommon: #4fdc2e;
+  --q-rare: #4a9df2;
+  --q-epic: #b673f5;
+  --flavor: #ffd36a;
+  --corner: 26px;
+}
+
+::selection {
+  background: rgba(46, 74, 133, 0.85);
+  color: #fff;
+}
+html {
+  scrollbar-color: var(--royal-2) var(--night);
+  accent-color: var(--gold);
+}
+input,
+textarea {
+  caret-color: var(--gold);
+}
+
+/* ——— The room: painting, title, night ——— */
+.room {
+  min-height: 100vh;
+  background:
+    radial-gradient(90rem 50rem at 50% 18rem, rgba(58, 88, 150, 0.2), rgba(58, 88, 150, 0) 70%),
+    linear-gradient(180deg, rgba(10, 15, 26, 0.94) 0, rgba(10, 15, 26, 0.86) 55%, rgba(12, 14, 20, 0.92) 100%);
+}
+.room-head {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  min-height: clamp(400px, 44vw, 660px);
+}
+.room-art {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  -webkit-mask-image: linear-gradient(to bottom, #000 42%, rgba(0, 0, 0, 0.6) 70%, transparent 98%);
+  mask-image: linear-gradient(to bottom, #000 42%, rgba(0, 0, 0, 0.6) 70%, transparent 98%);
+  view-transition-name: room-art;
+}
+/* Night scrims: one across the top so the nav reads, one pooled under the title. Neither is a box. */
+.room-head::before,
+.room-head::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  pointer-events: none;
+}
+.room-head::before {
+  inset: 0 0 auto;
+  height: 180px;
+  background: linear-gradient(to bottom, rgba(6, 10, 18, 0.72), rgba(6, 10, 18, 0));
+}
+.room-head::after {
+  inset: 25% 0 0;
+  background: radial-gradient(58% 64% at 50% 74%, rgba(7, 11, 20, 0.82), rgba(7, 11, 20, 0) 74%);
+}
+.room-head .page-header {
+  border-bottom: 0;
+  text-shadow:
+    0 1px 3px rgba(4, 8, 16, 0.9),
+    0 0 18px rgba(4, 8, 16, 0.7);
+  view-transition-name: site-nav;
+}
+.room-title {
+  align-self: end;
+  display: grid;
+  justify-items: center;
+  padding: clamp(72px, 9vw, 160px) 0 clamp(36px, 3.6vw, 60px);
+  text-align: center;
+  view-transition-name: room-title;
+}
+.room-title .heading {
+  width: 100%;
+}
+.room-title .heading h1 {
+  font-size: clamp(30px, 3.3vw, 54px);
+  letter-spacing: 0.26em;
+  padding-left: 0.26em;
+}
+.room-title .heading h1.heading-title {
+  max-width: 26em;
+  font-size: clamp(24px, 2.4vw, 40px);
+  letter-spacing: 0.14em;
+  padding-left: 0.14em;
+  line-height: 1.2;
+  white-space: normal;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+.room-lede {
+  margin: clamp(18px, 1.6vw, 26px) 0 0;
+  max-width: 34em;
+  font-size: var(--lede);
+  font-style: italic;
+  line-height: 1.4;
+  text-wrap: balance;
+}
+.room-body {
+  display: grid;
+  gap: clamp(56px, 5.4vw, 92px);
+  padding: clamp(28px, 2.6vw, 44px) 0 clamp(88px, 8vw, 140px);
+}
+
+/* ——— Chambers: the framed windows ———
+   Stone outer line, gold inner line 5px in, bracketed gold corners, and a ribbon carrying the chamber's name across
+   the top edge. The ribbon is the section heading: nothing sits above it. */
+.chamber {
+  position: relative;
+  min-width: 0;
+  padding: clamp(44px, 4vw, 64px) clamp(20px, 3.4vw, 56px) clamp(28px, 3vw, 48px);
+  background: linear-gradient(180deg, rgba(23, 35, 60, 0.92), rgba(10, 16, 29, 0.95));
+  border: 1px solid var(--stone);
+}
+.chamber::before,
+.chamber::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+}
+.chamber::before {
+  inset: 5px;
+  border: 1px solid rgba(168, 132, 73, 0.34);
+}
+.chamber::after {
+  inset: -1px;
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 26 26'%3E%3Cpath d='M1.5 25V9L9 1.5H25' fill='none' stroke='%23d8ab5c' stroke-width='1.2'/%3E%3Cpath d='M9 5.5 12.5 9 9 12.5 5.5 9z' fill='%23d8ab5c'/%3E%3C/svg%3E")
+      top left / var(--corner) no-repeat,
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 26 26'%3E%3Cpath d='M24.5 25V9L17 1.5H1' fill='none' stroke='%23d8ab5c' stroke-width='1.2'/%3E%3Cpath d='M17 5.5 20.5 9 17 12.5 13.5 9z' fill='%23d8ab5c'/%3E%3C/svg%3E")
+      top right / var(--corner) no-repeat,
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 26 26'%3E%3Cpath d='M1.5 1V17L9 24.5H25' fill='none' stroke='%23d8ab5c' stroke-width='1.2'/%3E%3Cpath d='M9 13.5 12.5 17 9 20.5 5.5 17z' fill='%23d8ab5c'/%3E%3C/svg%3E")
+      bottom left / var(--corner) no-repeat,
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 26 26'%3E%3Cpath d='M24.5 1V17L17 24.5H1' fill='none' stroke='%23d8ab5c' stroke-width='1.2'/%3E%3Cpath d='M17 13.5 20.5 17 17 20.5 13.5 17z' fill='%23d8ab5c'/%3E%3C/svg%3E")
+      bottom right / var(--corner) no-repeat;
+}
+.chamber > * {
+  position: relative;
+}
+.chamber-title {
+  position: absolute;
+  top: 0;
+  /* Centered across the full chamber (not left: 50%), so the shrink-to-fit width can use the whole edge. */
+  inset-inline: 0;
+  z-index: 1;
+  width: fit-content;
+  max-width: calc(100% - 64px);
+  margin: 0 auto;
+  padding: 12px 44px 13px calc(44px + 0.28em);
+  translate: 0 -50%;
+  background:
+    linear-gradient(var(--gold-2), var(--gold-2)) top / 100% 1px no-repeat,
+    linear-gradient(var(--gold-2), var(--gold-2)) bottom / 100% 1px no-repeat,
+    linear-gradient(180deg, var(--royal-2), var(--royal) 55%, #18295a);
+  clip-path: polygon(0 0, 100% 0, calc(100% - 18px) 50%, 100% 100%, 0 100%, 18px 50%);
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: clamp(14px, 1.05vw, 17px);
+  letter-spacing: 0.28em;
+  line-height: 1.15;
+  text-align: center;
+  text-transform: uppercase;
+  text-wrap: balance;
+  color: #f6f3ee;
+  text-shadow: 0 1px 2px rgba(4, 8, 16, 0.8);
+}
+.ico-quest.is-done {
+  color: var(--mist-2);
+  filter: none;
+}
+.chamber-note {
+  margin: clamp(20px, 2vw, 28px) 0 0;
+  text-align: center;
+}
+.chamber-intro {
+  margin: 0 auto;
+  max-width: 44em;
+  font-size: var(--body);
+  line-height: 1.5;
+  color: var(--mist);
+  text-align: center;
+  text-wrap: pretty;
+}
+.chamber-intro + * {
+  margin-top: clamp(24px, 2.4vw, 36px);
+}
+/* Two chambers side by side on wide screens (e.g. a list beside its form). */
+.chamber-pair {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: clamp(56px, 4vw, 72px) clamp(24px, 2.4vw, 40px);
+  align-items: start;
+}
+
+/* A sub-heading inside a chamber: tracked caps with a fading gold line, never an eyebrow over another heading. */
+.chamber h3,
+.sub-title {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 0 0 12px;
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: clamp(14px, 1vw, 16px);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #f6f3ee;
+}
+.chamber h3::after,
+.sub-title::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(to right, rgba(168, 132, 73, 0.6), rgba(168, 132, 73, 0));
+}
+.count {
+  font-family: var(--serif);
+  letter-spacing: 0.04em;
+  color: var(--gold);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+/* ——— Drawn marks ——— */
+.ico {
+  display: inline-block;
+  flex: none;
+  width: 1.15em;
+  height: 1.15em;
+  vertical-align: -0.2em;
+}
+.ico-quest {
+  width: 28px;
+  height: 28px;
+  color: var(--flavor);
+  filter: drop-shadow(0 0 6px rgba(255, 196, 70, 0.35));
+}
+.role-tank {
+  color: #9fb8e6;
+}
+.role-healer {
+  color: #8fe0a0;
+}
+.role-dps {
+  color: #f0a58a;
+}
+.cls-warrior {
+  color: var(--c-warrior);
+}
+.cls-paladin {
+  color: var(--c-paladin);
+}
+.cls-hunter {
+  color: var(--c-hunter);
+}
+.cls-rogue {
+  color: var(--c-rogue);
+}
+.cls-priest {
+  color: var(--c-priest);
+}
+.cls-shaman {
+  color: var(--c-shaman);
+}
+.cls-mage {
+  color: var(--c-mage);
+}
+.cls-warlock {
+  color: var(--c-warlock);
+}
+.cls-druid {
+  color: var(--c-druid);
+}
+
+/* ——— Quest log: event lists ——— */
+.quest-log {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.quest-log > li + li {
+  border-top: 1px solid var(--stone-2);
+}
+.quest {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 4px 18px;
+  min-height: 72px;
+  padding: 14px 16px 14px 8px;
+  color: var(--ink);
+  transition:
+    background-color 0.35s var(--ease),
+    color 0.35s var(--ease);
+}
+.quest:hover,
+.quest:focus-visible {
+  background: linear-gradient(90deg, rgba(46, 74, 133, 0.42), rgba(46, 74, 133, 0.08));
+}
+.quest:hover .quest-name,
+.quest:focus-visible .quest-name {
+  color: var(--gold);
+}
+.quest .ico-quest {
+  justify-self: center;
+  transition: transform 0.45s var(--ease);
+}
+.quest:hover .ico-quest {
+  transform: translateY(-3px);
+}
+.quest-name {
+  display: block;
+  font-family: var(--display);
+  font-size: clamp(17px, 1.3vw, 21px);
+  letter-spacing: 0.08em;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+  transition: color 0.35s var(--ease);
+}
+.quest-meta {
+  display: block;
+  margin-top: 4px;
+  font-size: 15px;
+  color: var(--mist-2);
+}
+.quest-when {
+  text-align: right;
+  font-size: var(--body);
+  color: var(--mist);
+  font-variant-numeric: tabular-nums lining-nums;
+  white-space: nowrap;
+}
+.quest-when small {
+  display: block;
+  font-size: var(--caps);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--mist-2);
+}
+.quest-empty {
+  padding: 28px 8px;
+  text-align: center;
+  font-style: italic;
+  color: var(--mist-2);
+}
+
+/* ——— Tabs (filters): ribbon-cut tabs like a log's category tabs ——— */
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin: 0 0 clamp(20px, 2vw, 28px);
+  padding: 0;
+  list-style: none;
+}
+.tabs a,
+.tabs button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 18px;
+  border: 1px solid var(--stone-2);
+  background: rgba(10, 16, 29, 0.6);
+  color: var(--mist);
+  font: inherit;
+  font-weight: 500;
+  font-size: var(--caps);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    color 0.3s,
+    border-color 0.3s,
+    background-color 0.3s;
+}
+.tabs a:hover,
+.tabs a:focus-visible,
+.tabs button:hover,
+.tabs button:focus-visible {
+  color: var(--gold);
+  border-color: var(--gold-2);
+}
+.tabs [aria-current="page"],
+.tabs [aria-pressed="true"],
+.tabs [aria-selected="true"] {
+  color: #f6f3ee;
+  border-color: var(--gold-2);
+  background: linear-gradient(180deg, var(--royal-2), var(--royal));
+}
+
+/* ——— Buttons ——— */
+.btn,
+.btn-quiet {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6em;
+  min-height: 46px;
+  padding: 0 26px;
+  border: 1px solid var(--gold-2);
+  background: linear-gradient(180deg, var(--royal-2), var(--royal) 60%, #1a2c5a);
+  color: #f6f3ee;
+  font: inherit;
+  font-weight: 500;
+  font-size: var(--caps);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  text-shadow: 0 1px 2px rgba(4, 8, 16, 0.7);
+  cursor: pointer;
+  transition:
+    border-color 0.3s,
+    color 0.3s,
+    filter 0.3s,
+    translate 0.3s var(--ease);
+}
+.btn:hover,
+.btn:focus-visible {
+  border-color: var(--gold);
+  color: var(--gold);
+  filter: brightness(1.15);
+}
+.btn:active {
+  translate: 0 1px;
+}
+.btn-quiet {
+  border-color: var(--stone);
+  background: rgba(10, 16, 29, 0.55);
+  color: var(--mist);
+  text-shadow: none;
+}
+.btn-quiet:hover,
+.btn-quiet:focus-visible {
+  border-color: var(--gold-2);
+  color: var(--gold);
+}
+.btn[disabled],
+.btn-quiet[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+  filter: none;
+}
+.btn[aria-busy="true"] {
+  cursor: progress;
+  opacity: 0.75;
+}
+.btn-danger:hover,
+.btn-danger:focus-visible {
+  border-color: var(--error);
+  color: var(--error);
+}
+.btn-small {
+  min-height: 44px;
+  padding: 0 16px;
+  letter-spacing: 0.14em;
+}
+
+/* ——— Forms: edit boxes are wells in the frame ——— */
+.form fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.form legend {
+  padding: 0 0 4px;
+  font-family: var(--display);
+  font-size: 15px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: #f6f3ee;
+}
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 0 20px;
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  margin-top: 18px;
+}
+.field label {
+  font-weight: 500;
+  font-size: var(--caps);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--mist);
+}
+.field input,
+.field select,
+.field textarea {
+  min-height: 46px;
+  padding: 10px 12px;
+  background: rgba(4, 8, 16, 0.62);
+  border: 1px solid var(--stone);
+  border-radius: 0;
+  font: inherit;
+  font-size: var(--body);
+  color: var(--ink);
+  color-scheme: dark;
+  transition:
+    border-color 0.3s,
+    background-color 0.3s;
+}
+.field input::placeholder,
+.field textarea::placeholder {
+  color: var(--mist-2);
+}
+.field textarea {
+  resize: vertical;
+  line-height: 1.45;
+}
+.field input:hover,
+.field select:hover,
+.field textarea:hover {
+  border-color: rgba(168, 132, 73, 0.6);
+}
+.field input:focus-visible,
+.field select:focus-visible,
+.field textarea:focus-visible {
+  outline: none;
+  border-color: var(--gold);
+  background: rgba(4, 8, 16, 0.8);
+}
+.form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px 18px;
+  margin-top: 26px;
+}
+.status {
+  margin: 16px 0 0;
+  font-size: var(--body);
+  color: var(--mist);
+  min-height: 1.45em;
+}
+.status:empty {
+  margin: 0;
+  min-height: 0;
+}
+.status[data-tone="error"] {
+  color: var(--error);
+}
+.aside {
+  color: var(--mist-2);
+}
+
+/* Inline links inside room copy (paragraphs, and lists marked .prose). Tabs and rows carry their own affordance. */
+.room-body p a:not([class]),
+.room-body .prose li a:not([class]) {
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: var(--gold-2);
+  text-underline-offset: 3px;
+  transition:
+    color 0.3s,
+    text-decoration-color 0.3s;
+}
+.room-body p a:not([class]):hover,
+.room-body .prose li a:not([class]):hover {
+  color: var(--gold);
+  text-decoration-color: var(--gold);
+}
+
+/* ——— Walking between rooms ———
+   Same-origin page loads crossfade; the painting itself dissolves from one room into the next while the nav holds
+   still. Browsers without cross-document view transitions simply load the page. */
+@media (prefers-reduced-motion: no-preference) {
+  @view-transition {
+    navigation: auto;
+  }
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: 0.45s;
+    animation-timing-function: var(--ease);
+  }
+  ::view-transition-group(room-art) {
+    animation-duration: 0.7s;
+    animation-timing-function: var(--ease);
+  }
+  ::view-transition-old(room-art) {
+    animation: room-leave 0.7s var(--ease) both;
+  }
+  ::view-transition-new(room-art) {
+    animation: room-enter 0.7s var(--ease) both;
+  }
+  ::view-transition-old(room-title) {
+    animation: room-title-leave 0.3s ease-in both;
+  }
+  ::view-transition-new(room-title) {
+    animation: room-title-enter 0.6s 0.15s var(--ease) both;
+  }
+  @keyframes room-leave {
+    to {
+      opacity: 0;
+      scale: 1.06;
+      filter: blur(4px);
+    }
+  }
+  @keyframes room-enter {
+    from {
+      opacity: 0;
+      scale: 1.03;
+    }
+  }
+  @keyframes room-title-leave {
+    to {
+      opacity: 0;
+      translate: 0 -8px;
+    }
+  }
+  @keyframes room-title-enter {
+    from {
+      opacity: 0;
+      translate: 0 12px;
+      filter: blur(3px);
+    }
+  }
+
+  /* The painting drifts down and settles as you scroll into the room, and the title lifts off it. */
+  @supports (animation-timeline: scroll()) {
+    .room-art {
+      animation: room-drift linear both;
+      animation-timeline: scroll(root);
+      animation-range: 0 70vh;
+    }
+    .room-title {
+      animation: room-title-lift linear both;
+      animation-timeline: scroll(root);
+      animation-range: 0 60vh;
+    }
+    @keyframes room-drift {
+      to {
+        translate: 0 14%;
+        scale: 1.06;
+      }
+    }
+    @keyframes room-title-lift {
+      to {
+        translate: 0 -40px;
+        opacity: 0.35;
+      }
+    }
+  }
+}
+
+/* ——— Narrow screens ——— */
+@media (max-width: 900px) {
+  .room-head {
+    min-height: clamp(340px, 92vw, 520px);
+  }
+  .room-head .page-header {
+    background: linear-gradient(to bottom, rgba(6, 10, 18, 0.82), rgba(6, 10, 18, 0.35));
+  }
+  .room-title .heading h1 {
+    white-space: normal;
+    text-wrap: balance;
+  }
+  .room-title .heading .rule {
+    flex-basis: 24px;
+  }
+  .chamber-pair {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 560px) {
+  :root {
+    --corner: 20px;
+  }
+  .chamber {
+    padding-inline: 16px;
+  }
+  .chamber-title {
+    padding-inline: 34px;
+    max-width: calc(100% - 36px);
+    letter-spacing: 0.2em;
+  }
+  .quest {
+    grid-template-columns: 28px minmax(0, 1fr);
+    padding-inline: 4px 8px;
+  }
+  .quest .ico-quest {
+    width: 22px;
+    height: 22px;
+  }
+  .quest-when {
+    grid-column: 2;
+    text-align: left;
+    white-space: normal;
+  }
+  .quest-when small {
+    display: inline;
+    margin-left: 0.6em;
+  }
+}

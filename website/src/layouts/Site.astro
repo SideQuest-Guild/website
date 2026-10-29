@@ -1,6 +1,8 @@
 ---
 import { getImage } from "astro:assets";
 import "../styles/site.css";
+import "../styles/citadel.css";
+import Sprites from "../components/Sprites.astro";
 import groundPlate from "../../assets/plates/strip-ground.png";
 import guildLogo from "../../assets/brand/sidequest-logo.png";
 import heroArt from "../../assets/plates/hero-art.png";
@@ -65,6 +67,7 @@ const ogImageUrl = new URL(ogImage.src, origin).toString();
     </script>
   </head>
   <body>
+    <Sprites />
     <a class="skip" href="#top">
       Skip to content
     </a>

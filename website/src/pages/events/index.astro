@@ -1,76 +1,77 @@
 ---
-import Page from "../../layouts/Page.astro";
+import Room from "../../layouts/Room.astro";
+import warRoom from "../../../assets/rooms/war-room.webp";
 ---
 
-<Page
+<Room
   title="Events · SideQuest"
   description="Upcoming and past SideQuest guild events: raid nights, dungeons, leveling groups, PvP and social nights."
   heading="EVENTS"
+  lede="Raid nights, dungeons, leveling groups, PvP and social nights, pinned to the war table as the guild plans them."
+  art={warRoom}
+  artPosition="50% 55%"
   current="events"
 >
-  <p class="lede">
-    Raid nights, dungeons, leveling groups, PvP and social nights, all posted here as the guild plans them. Sign in with
-    Discord on the <a href="/account/">account page</a> to sign up once an event is posted.
-  </p>
-
-  <nav class="kind-filter" aria-label="Filter by kind">
-    <ul id="kind-filter-list">
-      <li>
-        <a href="/events/" data-kind="">
-          All
-        </a>
-      </li>
-      <li>
-        <a href="/events/?kind=raid" data-kind="raid">
-          Raids
-        </a>
-      </li>
-      <li>
-        <a href="/events/?kind=dungeon" data-kind="dungeon">
-          Dungeons
-        </a>
-      </li>
-      <li>
-        <a href="/events/?kind=leveling" data-kind="leveling">
-          Leveling
-        </a>
-      </li>
-      <li>
-        <a href="/events/?kind=pvp" data-kind="pvp">
-          PvP
-        </a>
-      </li>
-      <li>
-        <a href="/events/?kind=social" data-kind="social">
-          Social
-        </a>
-      </li>
-      <li>
-        <a href="/events/?kind=other" data-kind="other">
-          Other
-        </a>
-      </li>
-    </ul>
-  </nav>
-
-  <section aria-labelledby="h-upcoming">
-    <span class="caps section-label" id="h-upcoming">
+  <section class="chamber" aria-labelledby="h-upcoming">
+    <h2 class="chamber-title" id="h-upcoming">
       Upcoming
-    </span>
-    <ul class="raid-list" id="events-upcoming" aria-live="polite"></ul>
+    </h2>
+    <nav aria-label="Filter by kind">
+      <ul class="tabs" id="kind-filter-list">
+        <li>
+          <a href="/events/" data-kind="">
+            All
+          </a>
+        </li>
+        <li>
+          <a href="/events/?kind=raid" data-kind="raid">
+            Raids
+          </a>
+        </li>
+        <li>
+          <a href="/events/?kind=dungeon" data-kind="dungeon">
+            Dungeons
+          </a>
+        </li>
+        <li>
+          <a href="/events/?kind=leveling" data-kind="leveling">
+            Leveling
+          </a>
+        </li>
+        <li>
+          <a href="/events/?kind=pvp" data-kind="pvp">
+            PvP
+          </a>
+        </li>
+        <li>
+          <a href="/events/?kind=social" data-kind="social">
+            Social
+          </a>
+        </li>
+        <li>
+          <a href="/events/?kind=other" data-kind="other">
+            Other
+          </a>
+        </li>
+      </ul>
+    </nav>
+    <ul class="quest-log" id="events-upcoming" aria-live="polite"></ul>
+    <p class="chamber-note aside">
+      Sign in with Discord on the <a href="/account/">account page</a> to sign up for an event.
+    </p>
   </section>
 
-  <section aria-labelledby="h-past">
-    <span class="caps section-label" id="h-past">
+  <section class="chamber" aria-labelledby="h-past">
+    <h2 class="chamber-title" id="h-past">
       Past
-    </span>
-    <ul class="raid-list" id="events-past" aria-live="polite"></ul>
+    </h2>
+    <ul class="quest-log" id="events-past" aria-live="polite"></ul>
   </section>
 
   <noscript>
     <p class="aside">Enable JavaScript to load the event schedule here, or check the Discord.</p>
   </noscript>
-</Page>
+</Room>
 
 <script>
   import {
@@ -85,14 +86,6 @@ import Page from "../../layouts/Page.astro";
   } from "../../scripts/api";
   import { weekdayPhrase } from "../../scripts/series";
 
-  const dateFormat = new Intl.DateTimeFormat(undefined, {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
-
   const params = new URLSearchParams(location.search);
   const requestedKind = params.get("kind");
   const kind: EventKind | null =
@@ -104,8 +97,17 @@ import Page from "../../layouts/Page.astro";
     }
   }
 
+  const dayFormat = new Intl.DateTimeFormat(undefined, { weekday: "short", month: "short", day: "numeric" });
+  const timeFormat = new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" });
+
+  // Quest-giver marks: a gold "!" for an event still open to sign-ups, a dim "?" once it has run.
+  function questMark(event: EventSummary): string {
+    const open = event.status === "scheduled" && new Date(event.starts_at).getTime() > Date.now();
+    return `<svg class="ico ico-quest${open ? "" : " is-done"}" aria-hidden="true"><use href="#${open ? "i-quest" : "i-quest-done"}"></use></svg>`;
+  }
+
   function eventRow(event: EventSummary): string {
-    const when = dateFormat.format(new Date(event.starts_at));
+    const start = new Date(event.starts_at);
     const signupCounts = ROLE_KINDS.includes(event.kind)
       ? `${event.counts.tank}T · ${event.counts.healer}H · ${event.counts.dps}D${
           event.counts.tentative > 0 ? ` · ${event.counts.tentative} tentative` : ""
@@ -113,16 +115,19 @@ import Page from "../../layouts/Page.astro";
       : `${event.counts.signed} going${event.counts.tentative > 0 ? ` · ${event.counts.tentative} maybe` : ""}`;
     const counts =
       event.counts.interested > 0 ? `${signupCounts} · ${event.counts.interested} interested on Discord` : signupCounts;
-    const statusSuffix = event.status === "scheduled" ? "" : ` (${escapeHtml(event.status)})`;
+    const statusSuffix =
+      event.status === "scheduled" ? "" : ` · ${event.status === "cancelled" ? "Cancelled" : "Completed"}`;
     const seriesText = event.series ? weekdayPhrase(event.series.weekdays, event.series.interval_weeks) : "";
-    const locationAndWhen = [event.location, when, seriesText].filter(Boolean).join(" · ");
+    const meta = [EVENT_KIND_LABELS[event.kind], event.location, seriesText, counts].filter(Boolean).join(" · ");
     return `
       <li>
-        <a class="raid-row" href="/events/detail/?id=${event.id}">
-          <span class="caps kind-tag">${escapeHtml(EVENT_KIND_LABELS[event.kind])}</span>
-          <span>${escapeHtml(event.title)}${statusSuffix}</span>
-          <span class="when">${escapeHtml(locationAndWhen)}</span>
-          <span class="meta">${escapeHtml(counts)}</span>
+        <a class="quest" href="/events/detail/?id=${event.id}">
+          ${questMark(event)}
+          <span>
+            <span class="quest-name">${escapeHtml(event.title)}${escapeHtml(statusSuffix)}</span>
+            <span class="quest-meta">${escapeHtml(meta)}</span>
+          </span>
+          <span class="quest-when">${escapeHtml(timeFormat.format(start))}<small>${escapeHtml(dayFormat.format(start))}</small></span>
         </a>
       </li>`;
   }
@@ -132,12 +137,12 @@ import Page from "../../layouts/Page.astro";
     const query = `/api/events?when=${when}${kind ? `&kind=${kind}` : ""}`;
     try {
       const events = await apiFetch<EventSummary[]>(query);
-      list.innerHTML = events.length > 0 ? events.map(eventRow).join("") : `<li class="aside">${emptyText}</li>`;
+      list.innerHTML = events.length > 0 ? events.map(eventRow).join("") : `<li class="quest-empty">${emptyText}</li>`;
     } catch (err) {
-      list.innerHTML = `<li class="aside">${escapeHtml(statusMessage(err))}</li>`;
+      list.innerHTML = `<li class="quest-empty">${escapeHtml(statusMessage(err))}</li>`;
     }
   }
 
-  loadEvents("upcoming", "events-upcoming", "No events yet — the schedule goes up here as it's planned.");
+  loadEvents("upcoming", "events-upcoming", "Nothing on the war table yet. Events appear here as they're planned.");
   loadEvents("past", "events-past", "No past events yet.");
 </script>

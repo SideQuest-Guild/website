@@ -1,68 +1,98 @@
 ---
 import JoinPlaque from "../../components/JoinPlaque.astro";
-import Page from "../../layouts/Page.astro";
+import Room from "../../layouts/Room.astro";
+import ledgerChamber from "../../../assets/rooms/ledger-chamber.webp";
 import { DISCORD_INVITE } from "../../config";
+import "../../styles/room-account.css";
 ---
 
-<Page
+<Room
   title="Account · SideQuest"
   description="Sign in with Discord to manage your SideQuest account, and link Battle.net."
   heading="ACCOUNT"
+  art={ledgerChamber}
   current="account"
-  centered
 >
   <p class="status" id="account-status" role="status" aria-live="polite"></p>
 
   <div id="account-signed-out">
-    <p class="lede">Sign in with your Discord account to sign up for raids and see your profile.</p>
-    <JoinPlaque label="Sign in with Discord" href="/auth/discord/login?next=/account/" />
-    <p class="aside account-terms">
-      You must be 18 or older. Signing in means you accept the <a href="/terms/">Terms</a> and the{" "}
-      <a href="/rules/">Guild rules</a>. See <a href="/privacy/">Privacy</a> for what we keep.
-    </p>
+    <section class="chamber" aria-labelledby="h-sign-in">
+      <h2 class="chamber-title" id="h-sign-in">
+        Sign The Ledger
+      </h2>
+      <p class="chamber-intro">Sign in with your Discord account to sign up for raids and see your profile.</p>
+      <div class="ledger-cta">
+        <JoinPlaque label="Sign in with Discord" href="/auth/discord/login?next=/account/" />
+      </div>
+      <p class="aside account-terms">
+        You must be 18 or older. Signing in means you accept the <a href="/terms/">Terms</a> and the{" "}
+        <a href="/rules/">Guild rules</a>. See <a href="/privacy/">Privacy</a> for what we keep.
+      </p>
+    </section>
   </div>
 
   <div id="account-not-member" hidden>
-    <p class="lede" id="not-member-text"></p>
-    <JoinPlaque label="Join the Discord" href={DISCORD_INVITE} />
+    <section class="chamber" aria-labelledby="h-not-member">
+      <h2 class="chamber-title" id="h-not-member">
+        Not Yet On The Roll
+      </h2>
+      <p class="chamber-intro" id="not-member-text"></p>
+      <div class="ledger-cta">
+        <JoinPlaque label="Join the Discord" href={DISCORD_INVITE} />
+      </div>
+    </section>
   </div>
 
   <div id="account-signed-in" hidden>
-    <div class="account-card">
-      <img id="account-avatar" alt="" width="64" height="64" hidden />
-      <div>
-        <p class="account-name" id="account-name"></p>
-        <p class="aside" id="account-role"></p>
-      </div>
-    </div>
-    <dl class="ledger" aria-label="Linked accounts">
-      <div>
-        <dt class="caps">Battle.net</dt>
-        <dd>
-          <span id="bnet-linked" hidden>
-            <span id="bnet-tag"></span> · officers use it to check the guild roster.
-          </span>
-          <span id="bnet-unlinked">Not linked. Link it so officers can match you to your characters in game.</span>
-        </dd>
-      </div>
-    </dl>
-    <div class="form-actions">
-      <a class="btn" id="bnet-link" href="/auth/battlenet/link">
-        Link Battle.net
-      </a>
-      <button type="button" class="btn-quiet" id="bnet-unlink-btn" hidden>
-        Unlink Battle.net
-      </button>
-      <button type="button" class="btn-quiet" id="sign-out-btn">
-        Sign out
-      </button>
-    </div>
-
-    <section class="account-data" aria-labelledby="account-data-title">
-      <h2 class="caps" id="account-data-title">
-        Your data
+    <section class="chamber" aria-labelledby="h-sheet">
+      <h2 class="chamber-title" id="h-sheet">
+        Character Sheet
       </h2>
-      <p class="aside">
+      <div class="sheet">
+        <span class="sheet-portrait">
+          <img id="account-avatar" alt="" width="96" height="96" hidden />
+        </span>
+        <div class="sheet-info">
+          <p class="sheet-name" id="account-name"></p>
+          <p class="sheet-rank" id="account-role"></p>
+          <p class="sheet-roster" id="account-roster"></p>
+        </div>
+      </div>
+
+      <h3>Linked accounts</h3>
+      <dl class="links" aria-label="Linked accounts">
+        <div>
+          <dt>Discord</dt>
+          <dd id="account-discord"></dd>
+        </div>
+        <div>
+          <dt>Battle.net</dt>
+          <dd>
+            <span id="bnet-linked" hidden>
+              <span id="bnet-tag"></span> · officers use it to check the guild roster.
+            </span>
+            <span id="bnet-unlinked">Not linked. Link it so officers can match you to your characters in game.</span>
+          </dd>
+        </div>
+      </dl>
+      <div class="form-actions">
+        <a class="btn" id="bnet-link" href="/auth/battlenet/link">
+          Link Battle.net
+        </a>
+        <button type="button" class="btn-quiet" id="bnet-unlink-btn" hidden>
+          Unlink Battle.net
+        </button>
+        <button type="button" class="btn-quiet" id="sign-out-btn">
+          Sign out
+        </button>
+      </div>
+    </section>
+
+    <section class="chamber" aria-labelledby="account-data-title">
+      <h2 class="chamber-title" id="account-data-title">
+        Your Data
+      </h2>
+      <p>
         Deleting your account erases your SideQuest profile and every event sign-up right away, and signs you out. Chat
         XP and moderation records in the Discord stay; ask an officer about those. <a href="/privacy/">Privacy</a> has
         the full list.
@@ -80,7 +110,7 @@ import { DISCORD_INVITE } from "../../config";
       Without JavaScript you can still sign in above, but your profile and sign-out button won't display here.
     </p>
   </noscript>
-</Page>
+</Room>
 
 <script>
   import { apiFetch, requireElement, statusMessage, type Me } from "../../scripts/api";
@@ -109,6 +139,8 @@ import { DISCORD_INVITE } from "../../config";
   const avatarImg = requireElement<HTMLImageElement>("account-avatar");
   const nameEl = requireElement("account-name");
   const roleEl = requireElement("account-role");
+  const rosterEl = requireElement("account-roster");
+  const discordEl = requireElement("account-discord");
   const signOutBtn = requireElement<HTMLButtonElement>("sign-out-btn");
   const bnetLinked = requireElement("bnet-linked");
   const bnetUnlinked = requireElement("bnet-unlinked");
@@ -137,6 +169,15 @@ import { DISCORD_INVITE } from "../../config";
     history.replaceState(null, "", `${location.pathname}${query ? `?${query}` : ""}${location.hash}`);
   }
 
+  /** `is_gm` isn't on `Me` yet; read it defensively so the rank line is ready the day it ships. */
+  function rankLabel(me: Me): string {
+    const isGm = (me as unknown as { is_gm?: boolean }).is_gm === true;
+    if (isGm) {
+      return "GM";
+    }
+    return me.is_officer ? "Officer" : "Member";
+  }
+
   async function render(): Promise<void> {
     let me: Me | null = null;
     try {
@@ -155,7 +196,11 @@ import { DISCORD_INVITE } from "../../config";
       return;
     }
     nameEl.textContent = me.display_name;
-    roleEl.textContent = me.is_officer ? "Officer" : "Member";
+    roleEl.textContent = rankLabel(me);
+    rosterEl.textContent = me.roster_confirmed
+      ? "Confirmed on the guild roster."
+      : "Not yet confirmed on the guild roster.";
+    discordEl.textContent = `@${me.username}`;
     if (me.avatar_url) {
       avatarImg.src = me.avatar_url;
       avatarImg.hidden = false;

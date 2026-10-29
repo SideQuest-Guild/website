@@ -1,11 +1,9 @@
 ---
-// The guild's written pages (Rules, Privacy, Terms): a painted plate dissolving into the ground behind the title,
-// then numbered articles on the reading panel with a contents rail that follows along on wide screens.
+// The guild's written pages (Rules, Privacy, Terms) hang in the citadel's Great Hall: the hall's painting opens the
+// page, and the articles are read in one framed chamber with a contents rail that follows along on wide screens.
 import type { ImageMetadata } from "astro";
-import { Image } from "astro:assets";
-import Site from "./Site.astro";
-import PageHeader from "../components/PageHeader.astro";
-import SiteFooter from "../components/SiteFooter.astro";
+import Room from "./Room.astro";
+import greatHall from "../../assets/rooms/great-hall.webp";
 import { toRoman } from "../scripts/roman";
 
 export type CharterArticle = { id: string; title: string };
@@ -17,61 +15,50 @@ interface Props {
   lede: string;
   /** Shown as "In effect since …"; bump it whenever the text changes in substance. */
   effective: string;
-  art: ImageMetadata;
-  /** CSS object-position for the plate, so each painting's subject stays in frame. */
+  /** Defaults to the Great Hall; every charter hangs there. */
+  art?: ImageMetadata;
   artPosition?: string;
   articles: CharterArticle[];
 }
 
-const { title, description, heading, lede, effective, art, artPosition = "50% 40%", articles } = Astro.props;
+const {
+  title,
+  description,
+  heading,
+  lede,
+  effective,
+  art = greatHall,
+  artPosition = "50% 40%",
+  articles,
+} = Astro.props;
 ---
 
-<Site title={title} description={description}>
-  <PageHeader />
-  <main id="top" tabindex="-1" class="charter">
-    <header class="charter-head">
-      <Image
-        class="charter-art"
-        src={art}
-        widths={[640, 1024, 1600, 2048]}
-        sizes="100vw"
-        loading="eager"
-        alt=""
-        style={`object-position: ${artPosition}`}
-      />
-      <div class="charter-title wrap">
-        <div class="heading">
-          <span class="rule" aria-hidden="true"></span>
-          <h1 class="shade">{heading}</h1>
-          <span class="rule flip" aria-hidden="true"></span>
-        </div>
-        <p class="charter-lede shade">{lede}</p>
-        <p class="charter-date caps">In effect since {effective}</p>
-      </div>
-    </header>
+<Room title={title} description={description} heading={heading} lede={lede} art={art} artPosition={artPosition}>
+  <p slot="title" class="charter-date caps shade">
+    In effect since {effective}
+  </p>
 
-    <div class="charter-body wrap">
-      <nav class="charter-toc" aria-label="Contents">
-        <ol>
-          {articles.map((article, index) => (
-            <li>
-              <a href={`#${article.id}`} data-toc={article.id}>
-                <span class="charter-num" aria-hidden="true">
-                  {toRoman(index + 1)}
-                </span>
-                <span>{article.title}</span>
-              </a>
-            </li>
-          ))}
-        </ol>
-      </nav>
-      <div class="charter-text">
-        <slot />
-      </div>
+  <div class="chamber charter-body">
+    <h2 class="chamber-title">The Charter</h2>
+    <nav class="charter-toc" aria-label="Contents">
+      <ol>
+        {articles.map((article, index) => (
+          <li>
+            <a href={`#${article.id}`} data-toc={article.id}>
+              <span class="charter-num" aria-hidden="true">
+                {toRoman(index + 1)}
+              </span>
+              <span>{article.title}</span>
+            </a>
+          </li>
+        ))}
+      </ol>
+    </nav>
+    <div class="charter-text">
+      <slot />
     </div>
-  </main>
-  <SiteFooter />
-</Site>
+  </div>
+</Room>
 
 <script>
   import "../scripts/charter";

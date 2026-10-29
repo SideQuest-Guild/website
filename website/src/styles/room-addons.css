@@ -1,0 +1,77 @@
+/* The Armory: addons laid out as item tooltips, racked in a grid. */
+
+.tooltip-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: clamp(18px, 2vw, 28px);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* An item tooltip: epic-quality border, name in that color, a version line, flavor text in quotes. */
+.tooltip-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 20px 22px;
+  background: rgba(4, 8, 16, 0.5);
+  border: 1px solid var(--q-epic);
+}
+.tt-name {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: clamp(17px, 1.1vw, 20px);
+  letter-spacing: 0.02em;
+  color: var(--q-epic);
+}
+.tt-version {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: var(--caps);
+  letter-spacing: 0.06em;
+  color: var(--mist-2);
+}
+.tt-flavor {
+  margin: 2px 0 0;
+  font-size: var(--body);
+  font-style: italic;
+  line-height: 1.45;
+  color: var(--flavor);
+}
+.tooltip-card .form-actions {
+  margin-top: auto;
+  padding-top: 10px;
+}
+
+/* An empty equipment slot: the honest "nothing racked yet" state, drawn like the frame it will fill. */
+.armory-empty {
+  display: grid;
+  gap: 10px;
+  grid-column: 1 / -1;
+  justify-items: center;
+  padding: clamp(32px, 4vw, 48px);
+  text-align: center;
+  border: 1px dashed var(--stone);
+}
+.armory-empty-label {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 13px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--mist-2);
+}
+.armory-empty p:last-child {
+  max-width: 44em;
+  margin: 0;
+  color: var(--mist);
+  line-height: 1.5;
+}
+
+@media (max-width: 560px) {
+  .tooltip-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

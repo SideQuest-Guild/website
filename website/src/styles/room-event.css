@@ -1,0 +1,204 @@
+/* The Muster Yard: event detail room. Roster, raid chart and signup, drawn the way the game draws its own frames. */
+
+.event-meta {
+  margin: clamp(14px, 1.4vw, 20px) 0 0;
+  max-width: 40em;
+  font-size: var(--body);
+  letter-spacing: 0.02em;
+  color: var(--mist);
+  text-wrap: balance;
+}
+
+/* Notes read like an item tooltip's flavor line: gold, italic, and safe for a long pasted URL. */
+.event-notes {
+  max-width: 50em;
+  margin: 0 0 clamp(28px, 2.8vw, 40px);
+  font-size: var(--body);
+  font-style: italic;
+  line-height: 1.5;
+  color: var(--flavor);
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+/* ——— Roster chamber: role columns, tentative/absent, Discord interest ——— */
+.roster-block + .roster-block {
+  margin-top: clamp(32px, 3vw, 48px);
+}
+.roster-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(20px, 2vw, 32px);
+}
+.roster-grid.cols-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.roster-col {
+  min-width: 0;
+}
+.roster-list {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.roster-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--stone-2);
+  font-size: var(--body);
+  color: var(--mist);
+}
+.roster-list li .ico {
+  width: 15px;
+  height: 15px;
+}
+.roster-list li.aside {
+  border-bottom: 0;
+}
+
+/* ——— Signup chamber: either the form, or a clear invitation to sign in ——— */
+.signup-invite {
+  max-width: 44em;
+  margin: 0;
+  font-size: var(--body);
+  line-height: 1.5;
+  color: var(--mist);
+}
+.signup-invite a {
+  color: var(--mist);
+  text-decoration: underline;
+  text-decoration-color: rgba(168, 132, 73, 0.6);
+  text-underline-offset: 3px;
+  transition: color 0.3s;
+}
+.signup-invite a:hover,
+.signup-invite a:focus-visible {
+  color: var(--gold);
+}
+
+/* ——— Raid chart: eight group frames and the bench, drawn like the game's raid frames ——— */
+.raid-frames {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: clamp(14px, 1.6vw, 22px);
+}
+.raid-frame {
+  min-width: 0;
+  padding: 12px 14px 14px;
+  background: rgba(6, 10, 18, 0.55);
+  border: 1px solid var(--stone);
+}
+.raid-frame-bench {
+  grid-column: 1 / -1;
+}
+.raid-frame-title {
+  margin: 0 0 10px;
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 13px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--mist);
+}
+.raid-roster {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.raid-frame-bench .raid-roster {
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+}
+/* A raid-frame unit: the class color tints the frame at low opacity and names the character on it. */
+.raid-bar {
+  --bar-color: var(--mist-2);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 6px 10px;
+  background: color-mix(in srgb, var(--bar-color) 20%, rgba(6, 10, 18, 0.85));
+  border: 1px solid color-mix(in srgb, var(--bar-color) 45%, transparent);
+}
+.raid-bar .ico {
+  width: 15px;
+  height: 15px;
+  flex: none;
+}
+.raid-bar-name {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--bar-color);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+}
+.raid-bar select {
+  flex: none;
+  margin-left: auto;
+  min-height: 32px;
+  padding: 4px 6px;
+  background: rgba(4, 8, 16, 0.75);
+  border: 1px solid var(--stone);
+  border-radius: 0;
+  font: inherit;
+  font-size: 13px;
+  color: var(--ink);
+  color-scheme: dark;
+  transition:
+    border-color 0.3s,
+    background-color 0.3s;
+}
+.raid-bar select:hover {
+  border-color: rgba(168, 132, 73, 0.6);
+}
+.raid-bar select:focus-visible {
+  outline: none;
+  border-color: var(--gold);
+  background: rgba(4, 8, 16, 0.92);
+}
+.raid-empty {
+  padding: 8px 2px;
+  color: var(--mist-2);
+  font-size: var(--body);
+}
+
+@media (max-width: 900px) {
+  .roster-grid,
+  .roster-grid.cols-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .raid-frames {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 560px) {
+  .roster-grid,
+  .roster-grid.cols-2 {
+    grid-template-columns: 1fr;
+  }
+  .raid-frames {
+    grid-template-columns: 1fr;
+  }
+  .raid-frame-bench .raid-roster {
+    grid-template-columns: 1fr;
+  }
+  .raid-bar {
+    flex-wrap: wrap;
+  }
+  .raid-bar select {
+    margin-left: 0;
+    width: 100%;
+  }
+}
+
+/* The three chambers share one wrapper (shown once the event loads), so they take the room's chamber rhythm here. */
+#event-content:not([hidden]) {
+  display: grid;
+  gap: clamp(56px, 5.4vw, 92px);
+}

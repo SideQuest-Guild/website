@@ -1,51 +1,58 @@
 ---
-import Page from "../../../layouts/Page.astro";
+import Room from "../../../layouts/Room.astro";
+import musterYard from "../../../../assets/rooms/muster-yard.webp";
+import "../../../styles/room-event.css";
 ---
 
-<Page
+<Room
   title="Event · SideQuest"
   description="Roster, raid chart and signup for a SideQuest guild event."
   heading="EVENT"
+  art={musterYard}
+  artPosition="50% 55%"
   current="events"
+  longTitle
 >
+  <p class="event-meta shade" id="event-summary" slot="title"></p>
+
   <p class="status" id="event-status" role="status" aria-live="polite"></p>
 
   <div id="event-content" hidden>
-    <p class="lede" id="event-summary"></p>
-    <p class="aside event-notes" id="event-notes"></p>
-
-    <section aria-labelledby="h-roster" id="roster-section">
-      <span class="caps section-label" id="h-roster">
+    <section class="chamber" aria-labelledby="h-roster">
+      <h2 class="chamber-title" id="h-roster">
         Roster
-      </span>
-      <div class="roster-grid" id="roster-grid"></div>
+      </h2>
+      <p class="event-notes" id="event-notes" hidden></p>
+
+      <div class="roster-block" id="roster-section">
+        <div class="roster-grid" id="roster-grid"></div>
+      </div>
+
+      <div class="roster-block" id="status-section">
+        <h3 class="sr-only" id="h-status-lists">
+          Tentative &amp; absent
+        </h3>
+        <div class="roster-grid cols-2" id="roster-extra"></div>
+      </div>
+
+      <div class="roster-block" id="interest-section" hidden>
+        <h3 id="h-interest">Interested on Discord</h3>
+        <div id="interest-grid"></div>
+      </div>
     </section>
 
-    <section aria-labelledby="h-status-lists" id="status-section">
-      <span class="caps section-label" id="h-status-lists">
-        Tentative &amp; absent
-      </span>
-      <div class="roster-grid cols-2" id="roster-extra"></div>
-    </section>
-
-    <section aria-labelledby="h-interest" id="interest-section" hidden>
-      <span class="caps section-label" id="h-interest">
-        Interested on Discord
-      </span>
-      <div class="roster-grid" id="interest-grid"></div>
-    </section>
-
-    <section aria-labelledby="h-chart" id="chart-section">
-      <span class="caps section-label" id="h-chart">
+    <section class="chamber" aria-labelledby="h-chart" id="chart-section">
+      <h2 class="chamber-title" id="h-chart">
         Raid chart
-      </span>
-      <div class="chart-grid" id="chart-grid"></div>
+      </h2>
+      <div class="raid-frames" id="chart-grid"></div>
     </section>
 
-    <section aria-labelledby="h-signup" id="signup-section" hidden>
-      <span class="caps section-label" id="h-signup">
+    <section class="chamber" aria-labelledby="h-signup" id="signup-section">
+      <h2 class="chamber-title" id="h-signup">
         Your signup
-      </span>
+      </h2>
+      <p class="signup-invite" id="signup-invite" hidden></p>
       <form id="signup-form" class="form">
         <fieldset>
           <legend>Sign up for this event</legend>
@@ -92,7 +99,7 @@ import Page from "../../../layouts/Page.astro";
   <noscript>
     <p class="aside">Enable JavaScript to view this event's roster, chart and signup form.</p>
   </noscript>
-</Page>
+</Room>
 
 <script>
   import {
@@ -126,10 +133,11 @@ import Page from "../../../layouts/Page.astro";
   const statusHeading = requireElement("h-status-lists");
   const rosterExtra = requireElement("roster-extra");
   const interestSection = requireElement("interest-section");
+  const interestHeading = requireElement("h-interest");
   const interestGrid = requireElement("interest-grid");
   const chartSection = requireElement("chart-section");
   const chartGrid = requireElement("chart-grid");
-  const signupSection = requireElement("signup-section");
+  const signupInvite = requireElement("signup-invite");
   const signupForm = requireElement<HTMLFormElement>("signup-form");
   const withdrawBtn = requireElement<HTMLButtonElement>("withdraw-btn");
   const signupStatus = requireElement("signup-status");
@@ -152,17 +160,22 @@ import Page from "../../../layouts/Page.astro";
   let me: Me | null = null;
   let event: EventDetail | null = null;
 
-  function rosterList(signups: Signup[], emptyText: string, showRole: boolean): string {
+  // A character row: class color on the name when the event tracks classes, a role mark when the row mixes roles.
+  function memberRow(s: Signup, opts: { showClass: boolean; showRole: boolean }): string {
+    const name = s.character ?? s.member.display_name;
+    const roleIcon =
+      opts.showRole && s.role
+        ? `<svg class="ico role-${s.role}" aria-hidden="true"><use href="#i-${s.role}"></use></svg>`
+        : "";
+    const clsAttr = opts.showClass && s.class ? ` class="cls-${s.class}"` : "";
+    return `<li>${roleIcon}<span${clsAttr}>${escapeHtml(name)}</span></li>`;
+  }
+
+  function rosterList(signups: Signup[], emptyText: string, opts: { showClass: boolean; showRole: boolean }): string {
     if (signups.length === 0) {
       return `<li class="aside">${emptyText}</li>`;
     }
-    return signups
-      .map((s) => {
-        const name = s.character ?? s.member.display_name;
-        const detail = showRole && s.class ? ` <span class="aside">(${capitalize(s.class)})</span>` : "";
-        return `<li>${escapeHtml(name)}${detail}</li>`;
-      })
-      .join("");
+    return signups.map((s) => memberRow(s, opts)).join("");
   }
 
   function renderRoster(detail: EventDetail): void {
@@ -177,36 +190,36 @@ import Page from "../../../layouts/Page.astro";
         const members = signed.filter((s) => s.role === role);
         return `
           <div class="roster-col">
-            <h3 class="caps">${capitalize(role)} (${members.length})</h3>
-            <ul>${rosterList(members, "None yet", true)}</ul>
+            <h3><svg class="ico role-${role}" aria-hidden="true"><use href="#i-${role}"></use></svg> ${capitalize(role)} <span class="count">(${members.length})</span></h3>
+            <ul class="roster-list">${rosterList(members, "None yet", { showClass: true, showRole: false })}</ul>
           </div>`;
       }).join("");
       statusHeading.textContent = "Tentative & absent";
       rosterExtra.classList.add("cols-2");
       rosterExtra.innerHTML = `
         <div class="roster-col">
-          <h3 class="caps">Tentative (${tentative.length})</h3>
-          <ul>${rosterList(tentative, "None", true)}</ul>
+          <h3>Tentative <span class="count">(${tentative.length})</span></h3>
+          <ul class="roster-list">${rosterList(tentative, "None", { showClass: true, showRole: true })}</ul>
         </div>
         <div class="roster-col">
-          <h3 class="caps">Absent (${absent.length})</h3>
-          <ul>${rosterList(absent, "None", true)}</ul>
+          <h3>Absent <span class="count">(${absent.length})</span></h3>
+          <ul class="roster-list">${rosterList(absent, "None", { showClass: true, showRole: true })}</ul>
         </div>`;
     } else {
       statusHeading.textContent = "Going, maybe & can't make it";
       rosterExtra.classList.remove("cols-2");
       rosterExtra.innerHTML = `
         <div class="roster-col">
-          <h3 class="caps">Going (${signed.length})</h3>
-          <ul>${rosterList(signed, "None yet", false)}</ul>
+          <h3>Going <span class="count">(${signed.length})</span></h3>
+          <ul class="roster-list">${rosterList(signed, "None yet", { showClass: false, showRole: false })}</ul>
         </div>
         <div class="roster-col">
-          <h3 class="caps">Maybe (${tentative.length})</h3>
-          <ul>${rosterList(tentative, "None", false)}</ul>
+          <h3>Maybe <span class="count">(${tentative.length})</span></h3>
+          <ul class="roster-list">${rosterList(tentative, "None", { showClass: false, showRole: false })}</ul>
         </div>
         <div class="roster-col">
-          <h3 class="caps">Can't make it (${absent.length})</h3>
-          <ul>${rosterList(absent, "None", false)}</ul>
+          <h3>Can't make it <span class="count">(${absent.length})</span></h3>
+          <ul class="roster-list">${rosterList(absent, "None", { showClass: false, showRole: false })}</ul>
         </div>`;
     }
   }
@@ -214,34 +227,38 @@ import Page from "../../../layouts/Page.astro";
   function renderInterest(detail: EventDetail): void {
     const { count, members } = detail.discord_interest;
     interestSection.hidden = count === 0;
+    if (count === 0) {
+      return;
+    }
+    interestHeading.innerHTML = `Interested on Discord <span class="count">(${count})</span>`;
     const names = members.map((m) => `<li>${escapeHtml(m.display_name)}</li>`).join("");
     const others = count - members.length;
     const more = others > 0 ? `<li class="aside">${members.length > 0 ? "+ " : ""}${others} on Discord only</li>` : "";
-    interestGrid.innerHTML = `
-      <div class="roster-col">
-        <h3 class="caps">Interested (${count})</h3>
-        <ul>${names}${more}</ul>
-      </div>`;
+    interestGrid.innerHTML = `<ul class="roster-list">${names}${more}</ul>`;
   }
 
-  function chartCell(label: string, members: Signup[], isOfficer: boolean, isBench: boolean): string {
-    const rows = members
-      .map((s) => {
-        const name = s.character ?? s.member.display_name;
-        const control = isOfficer
-          ? `<select data-signup-id="${s.id}" aria-label="Group for ${escapeHtml(name)}">
-              ${Array.from({ length: 8 }, (_, i) => i + 1)
-                .map((g) => `<option value="${g}" ${!isBench && s.group === g ? "selected" : ""}>Group ${g}</option>`)
-                .join("")}
-              <option value="bench" ${isBench ? "selected" : ""}>Bench</option>
-            </select>`
-          : "";
-        const role = s.role ? ` <span class="aside">(${capitalize(s.role)})</span>` : "";
-        return `<li>${escapeHtml(name)}${role}${control}</li>`;
-      })
-      .join("");
-    const cellClass = isBench ? "chart-cell chart-bench" : "chart-cell";
-    return `<div class="${cellClass}"><h3>${label}</h3><ul>${rows || `<li class="aside">Empty</li>`}</ul></div>`;
+  // A raid-frame unit: the class color tints the bar and names the character; officers get a group/bench select.
+  function raidBar(s: Signup, isOfficer: boolean, isBench: boolean): string {
+    const name = s.character ?? s.member.display_name;
+    const barColor = s.class ? `var(--c-${s.class})` : "var(--mist-2)";
+    const roleIcon = s.role
+      ? `<svg class="ico role-${s.role}" aria-hidden="true"><use href="#i-${s.role}"></use></svg>`
+      : "";
+    const control = isOfficer
+      ? `<select data-signup-id="${s.id}" aria-label="Group for ${escapeHtml(name)}">
+          ${Array.from({ length: 8 }, (_, i) => i + 1)
+            .map((g) => `<option value="${g}" ${!isBench && s.group === g ? "selected" : ""}>Group ${g}</option>`)
+            .join("")}
+          <option value="bench" ${isBench ? "selected" : ""}>Bench</option>
+        </select>`
+      : "";
+    return `<li class="raid-bar" style="--bar-color: ${barColor}">${roleIcon}<span class="raid-bar-name">${escapeHtml(name)}</span>${control}</li>`;
+  }
+
+  function raidFrame(label: string, members: Signup[], isOfficer: boolean, isBench: boolean): string {
+    const rows = members.map((s) => raidBar(s, isOfficer, isBench)).join("");
+    const frameClass = isBench ? "raid-frame raid-frame-bench" : "raid-frame";
+    return `<div class="${frameClass}"><h3 class="raid-frame-title">${label}</h3><ul class="raid-roster">${rows || `<li class="raid-empty">Empty</li>`}</ul></div>`;
   }
 
   async function onChartAssign(ev: Event): Promise<void> {
@@ -267,14 +284,14 @@ import Page from "../../../layouts/Page.astro";
     }
     const signed = detail.signups.filter((s) => s.status === "signed");
     const isOfficer = me?.is_officer ?? false;
-    const cells: string[] = [];
+    const frames: string[] = [];
     for (let group = 1; group <= 8; group++) {
       const members = signed.filter((s) => s.group === group && !s.bench);
-      cells.push(chartCell(`Group ${group}`, members, isOfficer, false));
+      frames.push(raidFrame(`Group ${group}`, members, isOfficer, false));
     }
     const bench = signed.filter((s) => s.bench || s.group === null);
-    cells.push(chartCell("Bench", bench, isOfficer, true));
-    chartGrid.innerHTML = cells.join("");
+    frames.push(raidFrame("Bench", bench, isOfficer, true));
+    chartGrid.innerHTML = frames.join("");
 
     if (isOfficer) {
       chartGrid.querySelectorAll<HTMLSelectElement>("select[data-signup-id]").forEach((select) => {
@@ -284,11 +301,15 @@ import Page from "../../../layouts/Page.astro";
   }
 
   function renderSignupForm(detail: EventDetail): void {
-    if (!me || !me.is_guild_member) {
-      signupSection.hidden = true;
+    const eligible = me?.is_guild_member ?? false;
+    signupInvite.hidden = eligible;
+    signupForm.hidden = !eligible;
+    if (!eligible) {
+      signupInvite.innerHTML = me
+        ? "Only confirmed guild members can sign up for events. Contact an officer if this looks wrong."
+        : 'Sign in with Discord on the <a href="/account/">account page</a> to add your name to the muster.';
       return;
     }
-    signupSection.hidden = false;
     const roleKind = ROLE_KINDS.includes(detail.kind);
     classField.hidden = !roleKind;
     roleField.hidden = !roleKind;
@@ -364,6 +385,7 @@ import Page from "../../../layouts/Page.astro";
     ]
       .filter(Boolean)
       .join(" · ");
+    notesEl.hidden = !event.notes;
     notesEl.textContent = event.notes ?? "";
     renderRoster(event);
     renderInterest(event);

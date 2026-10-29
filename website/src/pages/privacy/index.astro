@@ -1,7 +1,6 @@
 ---
 import Charter from "../../layouts/Charter.astro";
 import Article from "../../components/Article.astro";
-import art from "../../../assets/plates/join-art.png";
 import { DISCORD_INVITE } from "../../config";
 
 const articles = [
@@ -23,8 +22,7 @@ const articles = [
   heading="PRIVACY"
   lede="What this site and the guild's Discord bot keep about you, who else touches it, and how to make it go away."
   effective="October 28, 2026"
-  art={art}
-  artPosition="88% 40%"
+  artPosition="12% 50%"
   articles={articles}
 >
   <Article id="short-version" n={1} title="The short version">
@@ -54,8 +52,14 @@ const articles = [
       Discord hands us. It's used once during sign-in and then thrown away.
     </p>
     <p>
-      When an officer confirms you're in the in-game guild, we also keep that and when it happened. It's what opens the
-      member channels in Discord, and an officer can remove it.
+      When a guild master confirms you're in the in-game guild, we also keep that and when it happened. It's what opens
+      the member channels in Discord, and a guild master can remove it.
+    </p>
+    <p>
+      Guild masters can see a members' list on this site with your Discord roles, sign-in and link dates, your event
+      sign-ups and comments, and any moderation records. When an officer creates, changes or deletes an event or addon,
+      or changes the roster, we keep a record of which officer did it and when. If an officer deletes their account,
+      those records keep only their display name.
     </p>
   </Article>
 
@@ -119,7 +123,8 @@ const articles = [
     </ul>
     <p>
       These belong to your Discord account in the server, not your site account, so deleting your site account doesn't
-      remove them. Ask an officer to clear your XP. Moderation records are kept to keep the guild safe.
+      remove them. Ask an officer to clear your XP. Moderation records are kept to keep the guild safe, and guild
+      masters can read them, and correct a reason, on this site.
     </p>
   </Article>
 
