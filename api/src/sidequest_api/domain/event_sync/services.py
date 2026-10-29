@@ -146,9 +146,10 @@ def _push_hash(
     ends_at: datetime,
     needs_thread: bool,
 ) -> str:
-    """``needs_thread`` is part of the hash so configuring the events forum (or a post failing to appear) pushes
-    already-synced events once more, which is when the bot creates their forum post; a failed attempt is acked under
-    the same hash, so it isn't retried every poll.
+    """Hash of everything a push changes on Discord, plus whether the event still needs its forum post.
+
+    ``needs_thread`` makes configuring the events forum push already-synced events once more, which is when the bot
+    creates their post; a failed attempt is acked under the same hash, so it isn't retried every poll.
     """
     payload = json.dumps(
         [
