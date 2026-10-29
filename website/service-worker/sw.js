@@ -97,7 +97,9 @@ async function page(path, request) {
 
 async function asset(request) {
   const cache = await caches.open(ASSET_CACHE);
-  const cached = await cache.match(request);
+  // A hashed file is the same bytes whatever the request headers, so a `Vary` (e.g. `Vary: Origin` from a proxy)
+  // must not turn a stored copy into a miss; module scripts and fonts are requested with an Origin header.
+  const cached = await cache.match(request, { ignoreVary: true });
   if (cached) {
     return cached;
   }

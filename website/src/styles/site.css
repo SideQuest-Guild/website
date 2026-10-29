@@ -106,11 +106,13 @@ img {
 .skip:focus {
   top: 16px;
 }
-/* <Art> wraps each plate in a <picture> that lays out as if it were just its <img>; the <source>s never render. */
+/* <Art> wraps each plate in a <picture> that lays out as if it were just its <img> (`display: contents`, as is the
+   hero's picture on phones). A contents picture hands its children to the parent's grid, so no <source> may ever
+   render: it would take a grid slot and shove the painting aside. */
 .art-pic {
   display: contents;
 }
-.art-pic source {
+picture source {
   display: none;
 }
 .sr-only {
@@ -840,7 +842,7 @@ html:not(.officer) [data-officer-nav] {
   position: relative;
   display: grid;
   place-items: center;
-  width: clamp(280px, 21.7vw, 400px);
+  width: min(clamp(280px, 21.7vw, 400px), 100%);
   aspect-ratio: 344 / 60;
   margin-top: clamp(28px, 2.4vw, 40px);
   transition:
@@ -1271,12 +1273,16 @@ html:not(.officer) [data-officer-nav] {
     overflow: visible;
     overflow-x: clip;
     display: grid;
-    grid-template-columns: 20px 1fr 1fr 20px;
+    /* minmax(0, …): a fixed-width item (the 300px plate) must never widen the grid past a 320px phone. */
+    grid-template-columns: 20px minmax(0, 1fr) minmax(0, 1fr) 20px;
     grid-template-rows: 150px auto auto auto auto auto 170px auto auto auto 48px;
   }
-  .frame > * {
+  /* <Art> pictures are `display: contents`: reach their <img> too, at no extra weight so `.hero-art` still wins. */
+  .frame > *,
+  :where(.frame > picture) > img {
     grid-column: 2 / 4;
     justify-self: center;
+    max-width: 100%;
   }
   .hero-pic {
     display: contents;
