@@ -851,28 +851,6 @@ img {
   filter: brightness(1.1);
   transform: translateY(-1px);
 }
-.channels {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 6px 0;
-  margin: 12px 0 0;
-  padding: 0;
-  list-style: none;
-  color: var(--ink-3);
-}
-.channels li {
-  display: flex;
-  align-items: center;
-}
-.channels li + li::before {
-  content: "";
-  width: 4px;
-  height: 4px;
-  margin: 0 14px;
-  border: 1px solid var(--gold-2);
-  transform: rotate(45deg);
-}
 .channels-label {
   margin: clamp(38px, 3.4vw, 54px) 0 0;
   color: var(--ink-2);
@@ -884,14 +862,6 @@ img {
 }
 .channels-online {
   color: var(--gold);
-}
-.channels li.live {
-  color: var(--ink-2);
-}
-.voice-count {
-  margin-left: 0.5em;
-  color: var(--gold);
-  font-variant-numeric: tabular-nums;
 }
 
 .foot {
@@ -946,7 +916,7 @@ img {
   margin: 0;
   color: var(--ink-3);
 }
-/* Rules · Privacy · Terms: quiet 44px links separated by the channel list's small gold diamonds. */
+/* Rules · Privacy · Terms: quiet 44px links separated by small gold diamonds. */
 .foot-legal {
   display: flex;
   flex-wrap: wrap;
@@ -1530,7 +1500,7 @@ img {
   position: relative;
   padding-left: 1.4em;
 }
-/* The same small gold diamond that separates the Discord channel names. */
+/* The same small gold diamond that separates the footer's legal links. */
 .article-body li::before {
   content: "";
   position: absolute;

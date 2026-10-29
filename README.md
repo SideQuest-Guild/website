@@ -205,8 +205,8 @@ restored.
   Messages in Threads** and **Create Posts**.
 
 ### Live status
-The homepage "In the Discord" band shows live counts, never names: how many people are in each public voice/stage
-channel, plus the guild's approximate online/member counts. Every 60 seconds the bot refreshes
+The bot reports live counts, never names: how many people are in each public voice/stage channel, plus the guild's
+approximate online/member counts (the homepage "In the Discord" label shows the online count). Every 60 seconds the bot refreshes
 `approximate_presence_count`/`approximate_member_count` (`fetch_guild(..., with_counts=True)`, keeping the last
 known values if that fetch fails) and pushes a full report; voice/stage channel changes also push immediately,
 debounced ~5 seconds per guild so a burst of joins/leaves coalesces into one push (mute/deafen toggles don't count

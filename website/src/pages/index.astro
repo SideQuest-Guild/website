@@ -42,9 +42,6 @@ const panels = [
     copy: "For players chasing the hardest content, pushing as a team under the same banner.",
   },
 ];
-
-// Text channels start with "#"; the rest are voice channels, which get live counts from discord-live.ts.
-const channels = ["#general", "#rules", "Lobby", "dungeon-1", "dungeon-2", "dungeon-3", "raid-1", "raid-2"];
 ---
 
 <Site
@@ -306,18 +303,6 @@ const channels = ["#general", "#rules", "Lobby", "dungeon-1", "dungeon-2", "dung
         <p class="channels-label caps">
           In the Discord<span class="channels-online" data-discord-online hidden></span>
         </p>
-        <ul class="channels caps" aria-label="Discord channels">
-          {channels.map((channel) =>
-            channel.startsWith("#") ? (
-              <li>{channel}</li>
-            ) : (
-              <li data-voice={channel.toLowerCase()}>
-                {channel}
-                <span class="voice-count" hidden></span>
-              </li>
-            ),
-          )}
-        </ul>
       </div>
     </section>
   </main>
