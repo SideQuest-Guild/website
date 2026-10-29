@@ -6,14 +6,20 @@ public, at ``/api/discord/live``, and never 404s: missing or stale data reports 
 """
 
 from litestar import Controller, get, put
+from litestar.datastructures import ResponseHeader
 from litestar.di import NamedDependency, Provide
 from litestar.exceptions import NotFoundException
 from litestar.params import FromPath, JSONBody
 
 from sidequest_api.domain.discord_live.dependencies import provide_discord_live_service
 from sidequest_api.domain.discord_live.services import DiscordLiveService
+from sidequest_api.lib.website import EDGE_CACHE_HEADER, SKIP_SESSION
 from sidequest_common.schemas import DiscordLive, DiscordLiveReport
 from sidequest_common.settings import WebSettings
+
+# Same counts for every visitor, refreshed by the bot about once a minute: Cloudflare may serve it for 15 seconds
+# (then stale while one fetch refreshes it). Cloudflare strips this header, so browsers always ask again.
+EDGE_LIVE_CACHE = ResponseHeader(name=EDGE_CACHE_HEADER, value="max-age=15, stale-while-revalidate=60")
 
 
 def _require_site_guild(guild_id: int, web_settings: WebSettings) -> None:
@@ -49,7 +55,7 @@ class DiscordLivePublicController(Controller):
     tags = ["Discord Live"]
     dependencies = {"discord_live_service": Provide(provide_discord_live_service)}
 
-    @get("/live", operation_id="GetDiscordLive")
+    @get("/live", operation_id="GetDiscordLive", response_headers=[EDGE_LIVE_CACHE], opt=SKIP_SESSION)
     async def get_live(
         self,
         discord_live_service: NamedDependency[DiscordLiveService],

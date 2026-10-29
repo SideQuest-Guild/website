@@ -337,3 +337,25 @@ Environment (secrets in Vault, the rest in Consul):
 
 Register `https://sidequest-guild.com/auth/discord/callback` as a Discord OAuth redirect (the Battle.net one is
 already registered).
+
+### Cloudflare
+The origin is a single low-traffic pod, so every request Cloudflare passes through pays a fresh TLS handshake to it
+(200-500 ms). The site is built so Cloudflare can answer almost everything itself:
+
+| What | Origin headers | At the edge |
+|---|---|---|
+| `/_astro/*` (hashed images, JS, fonts) | `public, max-age=31536000, immutable` | Cached for a year |
+| Pages (`/`, `/events/`, `404.html`, …) | `Cache-Control: no-cache` plus `Cloudflare-CDN-Cache-Control: max-age=60, stale-while-revalidate=86400, stale-if-error=86400` | Fresh for a minute, then served stale while one background fetch refreshes it; a deploy reaches everyone within about a minute |
+| `/api/discord/live` | `Cloudflare-CDN-Cache-Control: max-age=15, stale-while-revalidate=60` | Same counts for everyone |
+| Every other `/api/*`, `/auth/*` | none | Never cached |
+
+Browsers only ever see `no-cache` on pages (Cloudflare strips its own header), so they always ask the edge. None of the
+cached routes run the session middleware, so they can never carry a `Set-Cookie`.
+
+Zone settings (`cf` CLI or dashboard, zone `sidequest-guild.com`):
+
+- **Cache rule** "Pages and live counts at the edge" (phase `http_request_cache_settings`): when the path doesn't
+  start with `/api/`, `/auth/`, `/schema` or `/health`, or is exactly `/api/discord/live`, mark it eligible for
+  cache with edge TTL "use origin headers" and browser TTL "respect origin".
+- **Smart Tiered Cache** on, so one regional Cloudflare copy feeds the others instead of each going to the origin.
+- **0-RTT** and **Early Hints** on.

@@ -11,7 +11,9 @@ const LITESTAR_PORT = process.env.LITESTAR_PORT ?? "8000";
 export default defineConfig({
   output: "static",
   outDir: "dist",
-  build: { format: "directory" },
+  // CSS goes inside each page (about 10 KB compressed) so the first paint never waits on a second request; the
+  // pages are cached at Cloudflare's edge, so this costs nothing on the critical path.
+  build: { format: "directory", inlineStylesheets: "always" },
   // Astro.site: used for og:/canonical tags. Defaults to the local API origin.
   site: process.env.SITE_URL ?? "http://localhost:8000",
   integrations: [

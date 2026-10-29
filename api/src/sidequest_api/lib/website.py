@@ -28,6 +28,7 @@ from litestar.datastructures import CacheControlHeader
 from litestar.static_files import create_static_files_router
 
 if TYPE_CHECKING:
+    from litestar import Response
     from litestar.types import ControllerRouterHandler
     from litestar_vite import VitePlugin
 
@@ -39,10 +40,26 @@ _TRUE_VALUES = {"1", "true", "yes", "on"}
 
 # Astro puts every built asset (images, CSS, JS, fonts) in ``_astro/`` under a content hash, so a changed file is a
 # new URL: browsers and Cloudflare may keep them for a year. Pages and the other root files keep their URLs across
-# deploys, so they're revalidated on each visit (cheap: unchanged files answer 304) and a deploy shows at once.
+# deploys, so browsers revalidate them on each visit (cheap: unchanged files answer 304) and a deploy shows at once.
 ASSETS_DIR = "_astro"
 HASHED_ASSET_CACHE = CacheControlHeader(public=True, max_age=31_536_000, immutable=True)
 PAGE_CACHE = CacheControlHeader(no_cache=True)
+
+# Cloudflare reads this header and strips it, so it governs only the edge copy; browsers still see ``no-cache``.
+# Pages stay fresh at the edge for a minute, then the stale copy is served while one background fetch refreshes
+# it, so visitors never wait on the origin and a deploy reaches every visitor within about a minute.
+EDGE_CACHE_HEADER = "Cloudflare-CDN-Cache-Control"
+EDGE_PAGE_CACHE = "max-age=60, stale-while-revalidate=86400, stale-if-error=86400"
+
+# The site never reads the session. Skipping the middleware means a page can never carry ``Set-Cookie``, which
+# would stop Cloudflare from storing it (and must never be stored for other visitors if it were).
+SKIP_SESSION = {"skip_session": True}
+
+
+def _edge_cache_page(response: Response) -> Response:
+    response.headers[EDGE_CACHE_HEADER] = EDGE_PAGE_CACHE
+    return response
+
 
 _PLACEHOLDER = """<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -69,7 +86,8 @@ def website_placeholder() -> str:
 def website_routes(dist_dir: Path = DEFAULT_WEBSITE_DIST) -> list[ControllerRouterHandler]:
     """Static site at ``/`` (with ``index.html`` resolution and ``404.html``) if built, else the placeholder.
 
-    ``/_astro/`` gets its own router so its hashed files can be cached for good; everything else revalidates.
+    ``/_astro/`` gets its own router so its hashed files can be cached for good; pages revalidate in browsers and
+    cache briefly at the edge. Neither router runs the session middleware.
     """
     if (dist_dir / "index.html").is_file():
         return [
@@ -78,9 +96,16 @@ def website_routes(dist_dir: Path = DEFAULT_WEBSITE_DIST) -> list[ControllerRout
                 directories=[dist_dir / ASSETS_DIR],
                 cache_control=HASHED_ASSET_CACHE,
                 name="website-assets",
+                opt=SKIP_SESSION,
             ),
             create_static_files_router(
-                path="/", directories=[dist_dir], html_mode=True, cache_control=PAGE_CACHE, name="website"
+                path="/",
+                directories=[dist_dir],
+                html_mode=True,
+                cache_control=PAGE_CACHE,
+                after_request=_edge_cache_page,
+                name="website",
+                opt=SKIP_SESSION,
             ),
         ]
     return [website_placeholder]
