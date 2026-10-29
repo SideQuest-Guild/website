@@ -18,7 +18,7 @@ class DatabaseSettings(BaseSettings):
 
     model_config = SettingsConfigDict(env_prefix="DB_", **_BASE_CONFIG)
 
-    URL: str = "postgresql+asyncpg://sidequest:sidequest@localhost:5432/sidequest"
+    URL: str = "postgresql+asyncpg://sidequest:sidequest@localhost:55432/sidequest"
     ECHO: bool = False
     POOL_DISABLE: bool = False
 

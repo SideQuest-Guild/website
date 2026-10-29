@@ -15,8 +15,10 @@ services:
       POSTGRES_USER: sidequest
       POSTGRES_PASSWORD: sidequest
       POSTGRES_DB: sidequest
+    # Host port 55432, not 5432, so it never collides with another project's Postgres on the default port.
+    # Containers still reach it as postgres:5432.
     ports:
-      - "5432:5432"
+      - "55432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
