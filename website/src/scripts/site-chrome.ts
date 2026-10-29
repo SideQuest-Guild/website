@@ -1,10 +1,11 @@
-// Shared page chrome on every page: the narrow-screen Menu disclosure, the back-to-top control, and the
-// officer-only Officers nav link.
+// Shared page chrome on every page: the narrow-screen Menu disclosure, the back-to-top control, the officer-only
+// Officers nav link, and (once per visit) the service worker, link warm-up and full loads for sign-in links.
 import { ApiError, fetchMe } from "./api";
+import { onPage } from "./page";
 
 const MOBILE_QUERY = window.matchMedia("(max-width: 900px)");
 
-function setupMenu(toggle: HTMLButtonElement): void {
+function setupMenu(toggle: HTMLButtonElement, signal: AbortSignal): void {
   const listId = toggle.getAttribute("aria-controls");
   const list = listId ? document.getElementById(listId) : null;
   const label = toggle.querySelector<HTMLElement>("[data-nav-label]");
@@ -27,22 +28,30 @@ function setupMenu(toggle: HTMLButtonElement): void {
       setOpen(false);
     }
   });
-  document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape" && toggle.getAttribute("aria-expanded") === "true") {
-      setOpen(false);
-      toggle.focus();
-    }
-  });
-  document.addEventListener("click", (event) => {
-    const target = event.target;
-    if (target instanceof Node && !toggle.contains(target) && !list.contains(target)) {
-      setOpen(false);
-    }
-  });
-  MOBILE_QUERY.addEventListener("change", () => setOpen(false));
+  document.addEventListener(
+    "keydown",
+    (event) => {
+      if (event.key === "Escape" && toggle.getAttribute("aria-expanded") === "true") {
+        setOpen(false);
+        toggle.focus();
+      }
+    },
+    { signal },
+  );
+  document.addEventListener(
+    "click",
+    (event) => {
+      const target = event.target;
+      if (target instanceof Node && !toggle.contains(target) && !list.contains(target)) {
+        setOpen(false);
+      }
+    },
+    { signal },
+  );
+  MOBILE_QUERY.addEventListener("change", () => setOpen(false), { signal });
 }
 
-function setupToTop(link: HTMLElement): void {
+function setupToTop(link: HTMLElement, signal: AbortSignal): void {
   let ticking = false;
   const update = (): void => {
     link.classList.toggle("show", window.scrollY > window.innerHeight * 1.2);
@@ -56,7 +65,7 @@ function setupToTop(link: HTMLElement): void {
         requestAnimationFrame(update);
       }
     },
-    { passive: true },
+    { passive: true, signal },
   );
   update();
 }
@@ -135,6 +144,8 @@ function setupWarmUp(): void {
   document.addEventListener("touchstart", onIntent, { passive: true });
 }
 
+const UPDATE_CHECK_MS = 60_000;
+
 function registerServiceWorker(): void {
   navigator.serviceWorker.register("/sw.js").catch(() => undefined);
 }
@@ -149,20 +160,59 @@ function setupServiceWorker(): void {
   } else {
     window.addEventListener("load", registerServiceWorker, { once: true });
   }
+  // Moving between pages never loads a document, so the browser never re-checks sw.js on its own; ask it to (at
+  // most once a minute) so a deploy reaches someone who keeps the site open.
+  let lastCheck = Date.now();
+  document.addEventListener("astro:page-load", () => {
+    if (Date.now() - lastCheck > UPDATE_CHECK_MS) {
+      lastCheck = Date.now();
+      void navigator.serviceWorker.getRegistration().then((registration) => registration?.update());
+    }
+  });
   const connection = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection;
   if (!connection?.saveData) {
     setupWarmUp();
   }
 }
 
-for (const toggle of document.querySelectorAll<HTMLButtonElement>("[data-nav-toggle]")) {
-  setupMenu(toggle);
+/** A page from a newer deploy needs that deploy's scripts, so it gets a full load instead of being swapped into a
+ * document still running this one's. */
+function setupBuildGuard(): void {
+  document.addEventListener("astro:before-swap", (event) => {
+    const next = event.newDocument.querySelector('meta[name="sq-build"]')?.getAttribute("content");
+    if (next && next !== SQ_BUILD) {
+      event.swap = () => location.assign(event.to.href);
+    }
+  });
 }
-const toTop = document.querySelector<HTMLElement>("[data-to-top]");
-if (toTop) {
-  setupToTop(toTop);
+
+/** Sign-in, sign-out and API links leave the site (Discord, Battle.net) or return data, so they get a full page
+ * load instead of the in-page swap. Runs before the router's own click handler. */
+function setupFullLoadLinks(): void {
+  document.addEventListener(
+    "click",
+    (event) => {
+      const link = event.target instanceof Element ? event.target.closest<HTMLAnchorElement>("a[href]") : null;
+      if (link && /^\/(api|auth|schema|health)(\/|$)/.test(new URL(link.href).pathname)) {
+        link.dataset.astroReload = "";
+      }
+    },
+    { capture: true },
+  );
 }
-if (document.querySelector("[data-officer-nav]")) {
-  void syncOfficerNav();
-}
+
+onPage("body", (signal) => {
+  for (const toggle of document.querySelectorAll<HTMLButtonElement>("[data-nav-toggle]")) {
+    setupMenu(toggle, signal);
+  }
+  const toTop = document.querySelector<HTMLElement>("[data-to-top]");
+  if (toTop) {
+    setupToTop(toTop, signal);
+  }
+  if (document.querySelector("[data-officer-nav]")) {
+    void syncOfficerNav();
+  }
+});
+setupFullLoadLinks();
+setupBuildGuard();
 setupServiceWorker();

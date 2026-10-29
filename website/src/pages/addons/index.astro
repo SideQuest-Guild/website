@@ -34,6 +34,7 @@ import "../../styles/room-addons.css";
     ADDON_ORIGIN_LABELS,
     type Addon,
   } from "../../scripts/api";
+  import { onPage } from "../../scripts/page";
 
   function addonCard(addon: Addon): string {
     const homepage = addon.homepage_url
@@ -78,6 +79,8 @@ import "../../styles/room-addons.css";
     }
   }
 
-  onFreshData("/api/addons", () => void loadAddons());
-  loadAddons();
+  onPage("#addons-list", () => {
+    onFreshData("/api/addons", () => void loadAddons());
+    void loadAddons();
+  });
 </script>

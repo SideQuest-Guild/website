@@ -339,7 +339,26 @@ export function fetchMe({ fresh = false }: { fresh?: boolean } = {}): Promise<Me
   return sharedMe;
 }
 
+// Page scripts register what they show; the router swapping the page away drops them all (scripts/page.ts).
 const freshListeners = new Map<string, Set<() => void>>();
+let listeningForFresh = false;
+
+function listenForFresh(): void {
+  listeningForFresh = true;
+  document.addEventListener("astro:before-swap", () => freshListeners.clear());
+  navigator.serviceWorker.addEventListener("message", (event: MessageEvent<{ type?: string; url?: string }>) => {
+    if (event.data?.type !== "sq-fresh" || !event.data.url) {
+      return;
+    }
+    if (event.data.url === "*") {
+      sharedMe = null;
+    }
+    const targets = event.data.url === "*" ? [...freshListeners.values()] : [freshListeners.get(event.data.url)];
+    for (const reloads of targets) {
+      reloads?.forEach((run) => run());
+    }
+  });
+}
 
 /**
  * Re-runs ``reload`` when the service worker has a newer copy of ``path`` than the one it just answered from the
@@ -350,19 +369,8 @@ export function onFreshData(path: string, reload: () => void): void {
   if (!("serviceWorker" in navigator)) {
     return;
   }
-  if (freshListeners.size === 0) {
-    navigator.serviceWorker.addEventListener("message", (event: MessageEvent<{ type?: string; url?: string }>) => {
-      if (event.data?.type !== "sq-fresh" || !event.data.url) {
-        return;
-      }
-      if (event.data.url === "*") {
-        sharedMe = null;
-      }
-      const targets = event.data.url === "*" ? [...freshListeners.values()] : [freshListeners.get(event.data.url)];
-      for (const reloads of targets) {
-        reloads?.forEach((run) => run());
-      }
-    });
+  if (!listeningForFresh) {
+    listenForFresh();
   }
   let reloads = freshListeners.get(path);
   if (!reloads) {

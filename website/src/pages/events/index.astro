@@ -108,48 +108,49 @@ const eventKinds = Object.keys(EVENT_KIND_LABELS);
     type EventKind,
     type EventSummary,
   } from "../../scripts/api";
+  import { onPage } from "../../scripts/page";
   import { weekdayPhrase } from "../../scripts/series";
-
-  const params = new URLSearchParams(location.search);
-  const requestedKind = params.get("kind");
-  const kind: EventKind | null =
-    requestedKind && requestedKind in EVENT_KIND_LABELS ? (requestedKind as EventKind) : null;
-
-  for (const link of document.querySelectorAll<HTMLAnchorElement>("#kind-filter-list a")) {
-    if (link.dataset.kind === (kind ?? "")) {
-      link.setAttribute("aria-current", "page");
-    }
-  }
-
-  const dayFormat = new Intl.DateTimeFormat(undefined, { weekday: "short", month: "short", day: "numeric" });
-  const timeFormat = new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" });
 
   // Quest-giver marks: a gold "!" for an event still open to sign-ups, a dim "?" once it has run.
   function questMark(event: EventSummary): string {
     const open = event.status === "scheduled" && new Date(event.starts_at).getTime() > Date.now();
     return `<svg class="ico ico-quest${open ? "" : " is-done"}" aria-hidden="true"><use href="#${open ? "i-quest" : "i-quest-done"}"></use></svg>`;
   }
+  onPage("#events-upcoming", () => {
+    const params = new URLSearchParams(location.search);
+    const requestedKind = params.get("kind");
+    const kind: EventKind | null =
+      requestedKind && requestedKind in EVENT_KIND_LABELS ? (requestedKind as EventKind) : null;
 
-  function eventRow(event: EventSummary): string {
-    const start = new Date(event.starts_at);
-    const counts = (() => {
-      if (!event.counts) {
-        return "";
+    for (const link of document.querySelectorAll<HTMLAnchorElement>("#kind-filter-list a")) {
+      if (link.dataset.kind === (kind ?? "")) {
+        link.setAttribute("aria-current", "page");
       }
-      const signupCounts = ROLE_KINDS.includes(event.kind)
-        ? `${event.counts.tank}T · ${event.counts.healer}H · ${event.counts.dps}D${
-            event.counts.tentative > 0 ? ` · ${event.counts.tentative} tentative` : ""
-          }`
-        : `${event.counts.signed} going${event.counts.tentative > 0 ? ` · ${event.counts.tentative} maybe` : ""}`;
-      return event.counts.interested > 0
-        ? `${signupCounts} · ${event.counts.interested} interested on Discord`
-        : signupCounts;
-    })();
-    const statusSuffix =
-      event.status === "scheduled" ? "" : ` · ${event.status === "cancelled" ? "Cancelled" : "Completed"}`;
-    const seriesText = event.series ? weekdayPhrase(event.series.weekdays, event.series.interval_weeks) : "";
-    const meta = [EVENT_KIND_LABELS[event.kind], event.location, seriesText, counts].filter(Boolean).join(" · ");
-    return `
+    }
+
+    const dayFormat = new Intl.DateTimeFormat(undefined, { weekday: "short", month: "short", day: "numeric" });
+    const timeFormat = new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" });
+
+    function eventRow(event: EventSummary): string {
+      const start = new Date(event.starts_at);
+      const counts = (() => {
+        if (!event.counts) {
+          return "";
+        }
+        const signupCounts = ROLE_KINDS.includes(event.kind)
+          ? `${event.counts.tank}T · ${event.counts.healer}H · ${event.counts.dps}D${
+              event.counts.tentative > 0 ? ` · ${event.counts.tentative} tentative` : ""
+            }`
+          : `${event.counts.signed} going${event.counts.tentative > 0 ? ` · ${event.counts.tentative} maybe` : ""}`;
+        return event.counts.interested > 0
+          ? `${signupCounts} · ${event.counts.interested} interested on Discord`
+          : signupCounts;
+      })();
+      const statusSuffix =
+        event.status === "scheduled" ? "" : ` · ${event.status === "cancelled" ? "Cancelled" : "Completed"}`;
+      const seriesText = event.series ? weekdayPhrase(event.series.weekdays, event.series.interval_weeks) : "";
+      const meta = [EVENT_KIND_LABELS[event.kind], event.location, seriesText, counts].filter(Boolean).join(" · ");
+      return `
       <li>
         <a class="quest" href="/events/detail/?id=${event.id}">
           ${questMark(event)}
@@ -160,26 +161,28 @@ const eventKinds = Object.keys(EVENT_KIND_LABELS);
           <span class="quest-when">${escapeHtml(timeFormat.format(start))}<small>${escapeHtml(dayFormat.format(start))}</small></span>
         </a>
       </li>`;
-  }
-
-  async function loadEvents(when: "upcoming" | "past", listId: string, emptyText: string): Promise<void> {
-    const list = requireElement(listId);
-    const query = `/api/events?when=${when}${kind ? `&kind=${kind}` : ""}`;
-    try {
-      const events = await apiFetch<EventSummary[]>(query);
-      list.innerHTML = events.length > 0 ? events.map(eventRow).join("") : `<li class="quest-empty">${emptyText}</li>`;
-    } catch (err) {
-      list.innerHTML = `<li class="quest-empty">${escapeHtml(statusMessage(err))}</li>`;
     }
-  }
 
-  const lists = [
-    ["upcoming", "events-upcoming", "Nothing on the war table yet. Events appear here as they're planned."],
-    ["past", "events-past", "No past events yet."],
-  ] as const;
-  for (const [when, listId, emptyText] of lists) {
-    const load = (): Promise<void> => loadEvents(when, listId, emptyText);
-    onFreshData(`/api/events?when=${when}${kind ? `&kind=${kind}` : ""}`, () => void load());
-    void load();
-  }
+    async function loadEvents(when: "upcoming" | "past", listId: string, emptyText: string): Promise<void> {
+      const list = requireElement(listId);
+      const query = `/api/events?when=${when}${kind ? `&kind=${kind}` : ""}`;
+      try {
+        const events = await apiFetch<EventSummary[]>(query);
+        list.innerHTML =
+          events.length > 0 ? events.map(eventRow).join("") : `<li class="quest-empty">${emptyText}</li>`;
+      } catch (err) {
+        list.innerHTML = `<li class="quest-empty">${escapeHtml(statusMessage(err))}</li>`;
+      }
+    }
+
+    const lists = [
+      ["upcoming", "events-upcoming", "Nothing on the war table yet. Events appear here as they're planned."],
+      ["past", "events-past", "No past events yet."],
+    ] as const;
+    for (const [when, listId, emptyText] of lists) {
+      const load = (): Promise<void> => loadEvents(when, listId, emptyText);
+      onFreshData(`/api/events?when=${when}${kind ? `&kind=${kind}` : ""}`, () => void load());
+      void load();
+    }
+  });
 </script>

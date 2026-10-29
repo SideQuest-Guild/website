@@ -362,6 +362,12 @@ Zone settings (`cf` CLI or dashboard, zone `sidequest-guild.com`):
 - **Smart Tiered Cache** on, so one regional Cloudflare copy feeds the others instead of each going to the origin.
 - **0-RTT** and **Early Hints** on.
 
+### Moving between pages
+Links swap the page in place with Astro's ClientRouter instead of loading a new document: the header holds still and
+the painting dissolves into the next room. Each page script starts through `onPage` (`website/src/scripts/page.ts`),
+which runs it on arrival and aborts its listeners and timers when the page is swapped away. A new page script must
+do the same, or it runs only on the first visit. Sign-in, sign-out and `/api` links always get a full load.
+
 ### Service worker
 After the first visit, `website/service-worker/sw.js` answers from the device: every page and its scripts and fonts
 (precached per build), and each painting once it has loaded. Hovering, focusing or touching a link also fetches that
@@ -369,7 +375,9 @@ page's painting ahead of the click (`setupWarmUp` in `site-chrome.ts`).
 
 - **Builds stay whole.** Every build gets a random id, in each page's `<meta name="sq-build">` and in the worker. The
   worker only caches a page that carries its own id, retrying while Cloudflare still serves the previous deploy;
-  otherwise the install fails and the current worker stays. A deploy shows from the second visit after it.
+  otherwise the install fails and the current worker stays. The site re-checks for a new worker at most once a
+  minute while someone moves between pages, and a page from a newer build gets a full load rather than being
+  swapped into the old one.
 - **Data shows from the device, then refreshes.** The homepage, `/events/`, event pages and `/addons/` get their
   public data from the device first; when the fresh answer differs, the page re-renders (`onFreshData` in
   `api.ts`). Every other request, `/api/me`, `/account/` and `/officers/` always go to the network.

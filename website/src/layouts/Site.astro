@@ -1,5 +1,6 @@
 ---
 import { getImage } from "astro:assets";
+import { ClientRouter } from "astro:transitions";
 import "../styles/site.css";
 import "../styles/citadel.css";
 import Sprites from "../components/Sprites.astro";
@@ -34,20 +35,6 @@ const ogImage = await getImage({
   quality: 78,
 });
 const ogImageUrl = new URL(ogImage.src, origin).toString();
-const speculationRules = {
-  prerender: [
-    {
-      where: {
-        and: [
-          { href_matches: "/*" },
-          { not: { href_matches: ["/api/*", "/auth/*", "/schema/*", "/health/*"] } },
-          { not: { selector_matches: "[download], [target=_blank]" } },
-        ],
-      },
-      eagerness: "moderate",
-    },
-  ],
-};
 ---
 
 <!doctype html>
@@ -80,16 +67,20 @@ const speculationRules = {
          the scripts load. crossorigin="anonymous" matches apiFetch's same-origin credentials, so the fetch reuses it. -->
     <link rel="preload" as="fetch" href="/api/me" crossorigin="anonymous" />
     <slot name="head" />
-    <!-- Chromium browsers prerender a page when a link to it is hovered or pressed, so walking between rooms is
-         instant; others ignore this. Never for the API, sign-in/out or docs. -->
-    <script type="speculationrules" is:inline set:html={JSON.stringify(speculationRules)} />
+    <!-- Following a link swaps the page body in place instead of loading a new document (see scripts/page.ts). -->
+    <ClientRouter />
     <!-- Lets CSS collapse the mobile menu only when the script that opens it will run, and shows the Officers
-         link before first paint for a browser that was an officer last visit (site-chrome.ts re-checks /api/me). -->
+         link before first paint for a browser that was an officer last visit (site-chrome.ts re-checks /api/me).
+         The router replaces <html>'s attributes on every swap, so the classes go back on right after. -->
     <script is:inline>
-      document.documentElement.classList.add("js");
-      try {
-        if (localStorage.getItem("sq-officer") === "1") document.documentElement.classList.add("officer");
-      } catch {}
+      function sqMarkRoot() {
+        document.documentElement.classList.add("js");
+        try {
+          if (localStorage.getItem("sq-officer") === "1") document.documentElement.classList.add("officer");
+        } catch {}
+      }
+      sqMarkRoot();
+      document.addEventListener("astro:after-swap", sqMarkRoot);
     </script>
   </head>
   <body>

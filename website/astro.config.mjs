@@ -23,6 +23,8 @@ export default defineConfig({
   build: { format: "directory", inlineStylesheets: "always" },
   // Astro.site: used for og:/canonical tags. Defaults to the local API origin.
   site: process.env.SITE_URL ?? "http://localhost:8000",
+  // With the ClientRouter, hovering a link fetches its page ahead of the click (free once the service worker has it).
+  prefetch: { prefetchAll: true, defaultStrategy: "hover" },
   integrations: [
     litestar({
       apiProxy: `http://127.0.0.1:${LITESTAR_PORT}`,

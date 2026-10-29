@@ -339,15 +339,8 @@ import "../../styles/room-officers.css";
     type Me,
     type RoleTag,
   } from "../../scripts/api";
+  import { onPage } from "../../scripts/page";
   import { seriesRuleText, weekdayPhrase, WEEKDAY_SHORT_LABELS } from "../../scripts/series";
-
-  const statusEl = requireElement("officers-status");
-  const gateEl = requireElement("officers-gate");
-  const bodyEl = requireElement("officers-body");
-
-  const dayFormat = new Intl.DateTimeFormat(undefined, { weekday: "short", month: "short", day: "numeric" });
-  const timeFormat = new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" });
-  const dateFormat = new Intl.DateTimeFormat(undefined, { dateStyle: "medium" });
 
   function avatarMarkup(name: string, avatarUrl: string | null, size: number): string {
     if (avatarUrl) {
@@ -357,7 +350,6 @@ import "../../styles/room-officers.css";
     const fontSize = Math.round(size * 0.45);
     return `<span class="avatar" style="width:${size}px;height:${size}px;font-size:${fontSize}px" aria-hidden="true">${initial}</span>`;
   }
-
   // Generic roving-tabindex tablist: click or arrow-key between the visible tabs, Home/End jump to the ends.
   function setupTablist(
     container: HTMLElement,
@@ -402,202 +394,14 @@ import "../../styles/room-officers.css";
 
     return { select };
   }
-
-  // ——— Events ———
-  const eventForm = requireElement<HTMLFormElement>("event-form");
-  const eventLegend = requireElement("event-form-legend");
-  const eventSeriesAside = requireElement("e-series-aside");
-  const eventKind = requireElement<HTMLSelectElement>("e-kind");
-  const eventTitle = requireElement<HTMLInputElement>("e-title");
-  const eventLocation = requireElement<HTMLInputElement>("e-location");
-  const eventStarts = requireElement<HTMLInputElement>("e-starts");
-  const eventEnds = requireElement<HTMLInputElement>("e-ends");
-  const eventSize = requireElement<HTMLInputElement>("e-size");
-  const eventEp = requireElement<HTMLInputElement>("e-ep");
-  const eventStatusField = requireElement("e-status-field");
-  const eventStatusSelect = requireElement<HTMLSelectElement>("e-status");
-  const eventRepeatsField = requireElement("e-repeats-field");
-  const eventRepeats = requireElement<HTMLSelectElement>("e-repeats");
-  const eventWeekdaysFieldset = requireElement("e-weekdays-fieldset");
-  const eventWeekdayGrid = requireElement("e-weekday-grid");
-  const eventUntilField = requireElement("e-until-field");
-  const eventUntil = requireElement<HTMLInputElement>("e-until");
-  const eventNotes = requireElement<HTMLTextAreaElement>("e-notes");
-  const eventResetBtn = requireElement<HTMLButtonElement>("event-reset");
-  const eventDeleteBtn = requireElement<HTMLButtonElement>("event-delete");
-  const eventFormStatus = requireElement("event-form-status");
-  const eventListEl = requireElement("officer-event-list");
-  const seriesListEl = requireElement("officer-series-list");
-
-  eventKind.innerHTML = EVENT_KINDS.map((k) => `<option value="${k}">${EVENT_KIND_LABELS[k]}</option>`).join("");
-  eventEp.max = String(MAX_EVENT_EP);
-
-  // A blank EP box means the kind's preset, shown as the placeholder so officers see what attending is worth.
-  function syncEpPlaceholder(): void {
-    eventEp.placeholder = `${EVENT_KIND_EP[eventKind.value as EventKind]} (preset)`;
-  }
-  eventKind.addEventListener("change", syncEpPlaceholder);
-
-  eventWeekdayGrid.innerHTML = WEEKDAY_SHORT_LABELS.map(
-    (label, i) => `
-      <label class="weekday-toggle">
-        <input type="checkbox" value="${i}" />
-        <span>${label}</span>
-      </label>`,
-  ).join("");
-  const weekdayCheckboxes = Array.from(eventWeekdayGrid.querySelectorAll<HTMLInputElement>("input[type=checkbox]"));
-
-  let events: EventSummary[] = [];
-  let series: EventSeriesSummary[] = [];
-  let editingEventId: string | null = null;
-  let editingSeriesId: string | null = null;
-  let weekdaysTouched = false;
-
   function pad(n: number): string {
     return String(n).padStart(2, "0");
   }
-
-  function localDateTimeInput(iso: string): string {
-    const d = new Date(iso);
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-  }
-
-  function addMinutesToLocalDateTime(dateStr: string, timeStr: string, minutes: number): string {
-    const [y, m, d] = dateStr.split("-").map(Number);
-    const [hh, mm] = timeStr.split(":").map(Number);
-    const dt = new Date(y ?? 1970, (m ?? 1) - 1, d ?? 1, hh ?? 0, (mm ?? 0) + minutes);
-    return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}T${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
-  }
-
-  function applyDefaultWeekdays(): void {
-    const d = eventStarts.value ? new Date(eventStarts.value) : new Date();
-    const day = (d.getDay() + 6) % 7;
-    for (const cb of weekdayCheckboxes) {
-      cb.checked = Number(cb.value) === day;
-    }
-  }
-
-  for (const cb of weekdayCheckboxes) {
-    cb.addEventListener("change", () => {
-      weekdaysTouched = true;
-    });
-  }
-
-  eventRepeats.addEventListener("change", () => {
-    const repeating = eventRepeats.value !== "";
-    eventWeekdaysFieldset.hidden = !repeating;
-    eventUntilField.hidden = !repeating;
-    if (repeating && !weekdaysTouched) {
-      applyDefaultWeekdays();
-    }
-  });
-
-  eventStarts.addEventListener("change", () => {
-    if (eventRepeats.value !== "" && !weekdaysTouched) {
-      applyDefaultWeekdays();
-    }
-  });
-
-  function resetEventForm(): void {
-    eventForm.reset();
-    editingEventId = null;
-    editingSeriesId = null;
-    weekdaysTouched = false;
-    eventLegend.textContent = "New event";
-    eventSeriesAside.hidden = true;
-    eventKind.value = "raid";
-    syncEpPlaceholder();
-    eventStatusField.hidden = false;
-    eventStatusSelect.value = "scheduled";
-    eventRepeatsField.hidden = false;
-    eventRepeats.value = "";
-    eventWeekdaysFieldset.hidden = true;
-    eventUntilField.hidden = true;
-    eventDeleteBtn.hidden = true;
-    eventFormStatus.textContent = "";
-  }
-
-  function fillEventForm(event: EventSummary): void {
-    editingEventId = event.id;
-    editingSeriesId = null;
-    weekdaysTouched = false;
-    eventLegend.textContent = event.series ? `Edit · ${event.title} (this night only)` : `Edit · ${event.title}`;
-    eventSeriesAside.hidden = !event.series;
-    eventStatusField.hidden = false;
-    eventRepeatsField.hidden = true;
-    eventRepeats.value = "";
-    eventWeekdaysFieldset.hidden = true;
-    eventUntilField.hidden = true;
-    eventKind.value = event.kind;
-    syncEpPlaceholder();
-    eventTitle.value = event.title;
-    eventLocation.value = event.location;
-    eventStarts.value = localDateTimeInput(event.starts_at);
-    eventEnds.value = event.ends_at ? localDateTimeInput(event.ends_at) : "";
-    eventSize.value = event.size === null ? "" : String(event.size);
-    eventEp.value = event.ep_override === null ? "" : String(event.ep_override);
-    eventStatusSelect.value = event.status;
-    eventNotes.value = event.notes ?? "";
-    eventDeleteBtn.hidden = false;
-    eventFormStatus.textContent = "";
-  }
-
-  function fillSeriesForm(s: EventSeriesSummary): void {
-    editingEventId = null;
-    editingSeriesId = s.id;
-    weekdaysTouched = true;
-    eventLegend.textContent = `Edit series · ${s.title}`;
-    eventSeriesAside.hidden = true;
-    eventStatusField.hidden = true;
-    eventRepeatsField.hidden = false;
-    eventWeekdaysFieldset.hidden = false;
-    eventUntilField.hidden = false;
-    eventKind.value = s.kind;
-    syncEpPlaceholder();
-    eventTitle.value = s.title;
-    eventLocation.value = s.location;
-    eventStarts.value = `${s.rule.starts_on}T${s.rule.start_time}`;
-    eventEnds.value = s.rule.duration_minutes
-      ? addMinutesToLocalDateTime(s.rule.starts_on, s.rule.start_time, s.rule.duration_minutes)
-      : "";
-    eventSize.value = s.size === null ? "" : String(s.size);
-    eventEp.value = s.ep_override === null ? "" : String(s.ep_override);
-    eventNotes.value = s.notes ?? "";
-    eventRepeats.value = String(s.rule.interval_weeks);
-    for (const cb of weekdayCheckboxes) {
-      cb.checked = s.rule.weekdays.includes(Number(cb.value));
-    }
-    eventUntil.value = s.rule.until ?? "";
-    eventDeleteBtn.hidden = true;
-    eventFormStatus.textContent = "";
-  }
-
   // Quest-giver marks: a gold "!" for an event still open to sign-ups, a dim "?" once it has run.
   function questMark(event: EventSummary): string {
     const open = event.status === "scheduled" && new Date(event.starts_at).getTime() > Date.now();
     return `<svg class="ico ico-quest${open ? "" : " is-done"}" aria-hidden="true"><use href="#${open ? "i-quest" : "i-quest-done"}"></use></svg>`;
   }
-
-  function officerEventRow(e: EventSummary): string {
-    const start = new Date(e.starts_at);
-    const seriesText = e.series ? weekdayPhrase(e.series.weekdays, e.series.interval_weeks) : "";
-    const statusSuffix = e.status === "scheduled" ? "" : e.status === "cancelled" ? "Cancelled" : "Completed";
-    const meta = [EVENT_KIND_LABELS[e.kind], e.location, seriesText, `${e.ep} EP`, statusSuffix]
-      .filter(Boolean)
-      .join(" · ");
-    return `
-      <li>
-        <button type="button" class="quest quest-btn" data-edit-event="${e.id}">
-          ${questMark(e)}
-          <span>
-            <span class="quest-name">${escapeHtml(e.title)}</span>
-            <span class="quest-meta">${escapeHtml(meta)}</span>
-          </span>
-          <span class="quest-when">${escapeHtml(timeFormat.format(start))}<small>${escapeHtml(dayFormat.format(start))}</small></span>
-        </button>
-      </li>`;
-  }
-
   function officerSeriesRow(s: EventSeriesSummary): string {
     const ruleText = seriesRuleText(s.rule, s.next_starts_at);
     const nextText = s.next_starts_at ? new Date(s.next_starts_at).toLocaleDateString() : "No upcoming night";
@@ -614,261 +418,6 @@ import "../../styles/room-officers.css";
         <button type="button" class="btn-quiet btn-small" data-end-series="${s.id}">End series</button>
       </li>`;
   }
-
-  function renderEventList(): void {
-    eventListEl.innerHTML =
-      events.length > 0 ? events.map(officerEventRow).join("") : `<li class="quest-empty">No events yet.</li>`;
-    eventListEl.querySelectorAll<HTMLButtonElement>("[data-edit-event]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const match = events.find((e) => e.id === btn.dataset.editEvent);
-        if (match) {
-          fillEventForm(match);
-        }
-      });
-    });
-  }
-
-  function renderSeriesList(): void {
-    seriesListEl.innerHTML =
-      series.length > 0
-        ? series.map(officerSeriesRow).join("")
-        : `<li class="quest-empty">No repeating events yet.</li>`;
-    seriesListEl.querySelectorAll<HTMLButtonElement>("[data-edit-series]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const match = series.find((s) => s.id === btn.dataset.editSeries);
-        if (match) {
-          fillSeriesForm(match);
-        }
-      });
-    });
-    seriesListEl.querySelectorAll<HTMLButtonElement>("[data-end-series]").forEach((btn) => {
-      btn.addEventListener("click", () => onEndSeries(btn.dataset.endSeries));
-    });
-  }
-
-  async function loadEvents(): Promise<void> {
-    try {
-      const [upcoming, past] = await Promise.all([
-        apiFetch<EventSummary[]>("/api/events?when=upcoming"),
-        apiFetch<EventSummary[]>("/api/events?when=past"),
-      ]);
-      events = [...upcoming, ...past];
-      renderEventList();
-    } catch (err) {
-      eventListEl.innerHTML = `<li class="quest-empty">${escapeHtml(statusMessage(err))}</li>`;
-    }
-  }
-
-  async function loadSeries(): Promise<void> {
-    try {
-      series = await apiFetch<EventSeriesSummary[]>("/api/event-series");
-      renderSeriesList();
-    } catch (err) {
-      seriesListEl.innerHTML = `<li class="quest-empty">${escapeHtml(statusMessage(err))}</li>`;
-    }
-  }
-
-  async function onEndSeries(id: string | undefined): Promise<void> {
-    if (!id) {
-      return;
-    }
-    if (
-      !confirm(
-        "End this series? Future nights without sign-ups will be removed; nights with sign-ups will be cancelled.",
-      )
-    ) {
-      return;
-    }
-    eventFormStatus.textContent = "Ending series…";
-    try {
-      await apiFetch(`/api/event-series/${id}`, { method: "DELETE" });
-      if (editingSeriesId === id) {
-        resetEventForm();
-      }
-      eventFormStatus.textContent = "Series ended.";
-      await Promise.all([loadEvents(), loadSeries()]);
-    } catch (err) {
-      eventFormStatus.textContent = statusMessage(err);
-    }
-  }
-
-  eventForm.addEventListener("submit", async (ev) => {
-    ev.preventDefault();
-    const kind = eventKind.value as EventKind;
-    const location = eventLocation.value.trim();
-    if (ROLE_KINDS.includes(kind) && location.length === 0) {
-      eventFormStatus.textContent = "Location is required for raids and dungeons.";
-      eventLocation.focus();
-      return;
-    }
-    const notes = eventNotes.value.trim();
-    const startsAt = new Date(eventStarts.value);
-    const endsAt = eventEnds.value ? new Date(eventEnds.value) : null;
-    if (endsAt && endsAt <= startsAt) {
-      eventFormStatus.textContent = "The end has to be after the start.";
-      eventEnds.focus();
-      return;
-    }
-    const sizeRaw = eventSize.value.trim();
-    const epRaw = eventEp.value.trim();
-    const repeating = eventRepeats.value !== "";
-
-    if (repeating) {
-      const weekdays = weekdayCheckboxes.filter((cb) => cb.checked).map((cb) => Number(cb.value));
-      if (weekdays.length === 0) {
-        eventFormStatus.textContent = "Pick at least one day of the week.";
-        return;
-      }
-      const seriesBody: Record<string, unknown> = {
-        kind,
-        title: eventTitle.value.trim(),
-        location,
-        weekdays,
-        interval_weeks: Number(eventRepeats.value),
-        start_time: `${pad(startsAt.getHours())}:${pad(startsAt.getMinutes())}`,
-        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        starts_on: eventStarts.value.slice(0, 10),
-      };
-      if (notes.length > 0) {
-        seriesBody.notes = notes;
-      } else if (editingSeriesId) {
-        seriesBody.notes = null;
-      }
-      if (eventUntil.value.length > 0) {
-        seriesBody.until = eventUntil.value;
-      } else if (editingSeriesId) {
-        seriesBody.until = null;
-      }
-      if (endsAt) {
-        seriesBody.duration_minutes = Math.round((endsAt.getTime() - startsAt.getTime()) / 60000);
-      } else if (editingSeriesId) {
-        seriesBody.duration_minutes = null;
-      }
-      if (sizeRaw.length > 0) {
-        seriesBody.size = Number(sizeRaw);
-      } else if (editingSeriesId) {
-        seriesBody.size = null;
-      }
-      if (epRaw.length > 0) {
-        seriesBody.ep_override = Number(epRaw);
-      } else if (editingSeriesId) {
-        seriesBody.ep_override = null;
-      }
-      eventFormStatus.textContent = "Saving…";
-      try {
-        if (editingSeriesId) {
-          await apiFetch(`/api/event-series/${editingSeriesId}`, {
-            method: "PATCH",
-            body: JSON.stringify(seriesBody),
-          });
-        } else {
-          await apiFetch("/api/event-series", { method: "POST", body: JSON.stringify(seriesBody) });
-        }
-        resetEventForm();
-        eventFormStatus.textContent = "Saved.";
-        await Promise.all([loadEvents(), loadSeries()]);
-      } catch (err) {
-        eventFormStatus.textContent = statusMessage(err);
-      }
-      return;
-    }
-
-    const body: Record<string, unknown> = {
-      kind,
-      title: eventTitle.value.trim(),
-      location,
-      starts_at: startsAt.toISOString(),
-      notes: notes.length > 0 ? notes : undefined,
-    };
-    if (sizeRaw.length > 0) {
-      body.size = Number(sizeRaw);
-    } else if (editingEventId) {
-      body.size = null;
-    }
-    if (epRaw.length > 0) {
-      body.ep_override = Number(epRaw);
-    } else if (editingEventId) {
-      body.ep_override = null;
-    }
-    if (endsAt) {
-      body.ends_at = endsAt.toISOString();
-    } else if (editingEventId) {
-      body.ends_at = null;
-    }
-    eventFormStatus.textContent = "Saving…";
-    try {
-      if (editingEventId) {
-        body.status = eventStatusSelect.value;
-        await apiFetch(`/api/events/${editingEventId}`, { method: "PATCH", body: JSON.stringify(body) });
-      } else {
-        await apiFetch("/api/events", { method: "POST", body: JSON.stringify(body) });
-      }
-      resetEventForm();
-      eventFormStatus.textContent = "Saved.";
-      await loadEvents();
-    } catch (err) {
-      eventFormStatus.textContent = statusMessage(err);
-    }
-  });
-
-  eventResetBtn.addEventListener("click", resetEventForm);
-
-  eventDeleteBtn.addEventListener("click", async () => {
-    if (!editingEventId || !confirm("Cancel and remove this event?")) {
-      return;
-    }
-    eventFormStatus.textContent = "Deleting…";
-    try {
-      await apiFetch(`/api/events/${editingEventId}`, { method: "DELETE" });
-      resetEventForm();
-      eventFormStatus.textContent = "Deleted.";
-      await loadEvents();
-    } catch (err) {
-      eventFormStatus.textContent = statusMessage(err);
-    }
-  });
-
-  // ——— Addons ———
-  const addonForm = requireElement<HTMLFormElement>("addon-form");
-  const addonLegend = requireElement("addon-form-legend");
-  const addonName = requireElement<HTMLInputElement>("a-name");
-  const addonSlug = requireElement<HTMLInputElement>("a-slug");
-  const addonVersion = requireElement<HTMLInputElement>("a-version");
-  const addonDownload = requireElement<HTMLInputElement>("a-download");
-  const addonHomepage = requireElement<HTMLInputElement>("a-homepage");
-  const addonOrigin = requireElement<HTMLSelectElement>("a-origin");
-  const addonSummary = requireElement<HTMLTextAreaElement>("a-summary");
-  const addonResetBtn = requireElement<HTMLButtonElement>("addon-reset");
-  const addonDeleteBtn = requireElement<HTMLButtonElement>("addon-delete");
-  const addonFormStatus = requireElement("addon-form-status");
-  const addonListEl = requireElement("officer-addon-list");
-
-  let addons: Addon[] = [];
-  let editingAddonId: string | null = null;
-
-  function resetAddonForm(): void {
-    addonForm.reset();
-    editingAddonId = null;
-    addonLegend.textContent = "New addon";
-    addonOrigin.value = "community";
-    addonDeleteBtn.hidden = true;
-    addonFormStatus.textContent = "";
-  }
-
-  function fillAddonForm(addon: Addon): void {
-    editingAddonId = addon.id;
-    addonLegend.textContent = `Edit · ${addon.name}`;
-    addonName.value = addon.name;
-    addonSlug.value = addon.slug;
-    addonVersion.value = addon.version;
-    addonDownload.value = addon.download_url;
-    addonHomepage.value = addon.homepage_url ?? "";
-    addonSummary.value = addon.summary;
-    addonOrigin.value = addon.origin;
-    addonDeleteBtn.hidden = false;
-    addonFormStatus.textContent = "";
-  }
-
   function officerAddonRow(a: Addon): string {
     return `
       <li>
@@ -878,89 +427,6 @@ import "../../styles/room-officers.css";
         </button>
       </li>`;
   }
-
-  function renderAddonList(): void {
-    addonListEl.innerHTML =
-      addons.length > 0 ? addons.map(officerAddonRow).join("") : `<li class="quest-empty">No addons yet.</li>`;
-    addonListEl.querySelectorAll<HTMLButtonElement>("[data-edit-addon]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const addon = addons.find((a) => a.id === btn.dataset.editAddon);
-        if (addon) {
-          fillAddonForm(addon);
-        }
-      });
-    });
-  }
-
-  async function loadAddons(): Promise<void> {
-    try {
-      addons = await apiFetch<Addon[]>("/api/addons");
-      renderAddonList();
-    } catch (err) {
-      addonListEl.innerHTML = `<li class="quest-empty">${escapeHtml(statusMessage(err))}</li>`;
-    }
-  }
-
-  addonForm.addEventListener("submit", async (ev) => {
-    ev.preventDefault();
-    const homepage = addonHomepage.value.trim();
-    const body = {
-      slug: addonSlug.value.trim(),
-      name: addonName.value.trim(),
-      summary: addonSummary.value.trim(),
-      version: addonVersion.value.trim(),
-      download_url: addonDownload.value.trim(),
-      homepage_url: homepage.length > 0 ? homepage : undefined,
-      origin: addonOrigin.value as AddonOrigin,
-    };
-    addonFormStatus.textContent = "Saving…";
-    try {
-      if (editingAddonId) {
-        await apiFetch(`/api/addons/${editingAddonId}`, { method: "PATCH", body: JSON.stringify(body) });
-      } else {
-        await apiFetch("/api/addons", { method: "POST", body: JSON.stringify(body) });
-      }
-      resetAddonForm();
-      addonFormStatus.textContent = "Saved.";
-      await loadAddons();
-    } catch (err) {
-      addonFormStatus.textContent = statusMessage(err);
-    }
-  });
-
-  addonResetBtn.addEventListener("click", resetAddonForm);
-
-  addonDeleteBtn.addEventListener("click", async () => {
-    if (!editingAddonId || !confirm("Delete this addon?")) {
-      return;
-    }
-    addonFormStatus.textContent = "Deleting…";
-    try {
-      await apiFetch(`/api/addons/${editingAddonId}`, { method: "DELETE" });
-      resetAddonForm();
-      addonFormStatus.textContent = "Deleted.";
-      await loadAddons();
-    } catch (err) {
-      addonFormStatus.textContent = statusMessage(err);
-    }
-  });
-
-  // ——— Members (Quest Masters only) ———
-  const memberSearch = requireElement<HTMLInputElement>("m-search");
-  const memberFilterTabsEl = requireElement("member-filter-tabs");
-  const memberCountEl = requireElement("member-count");
-  const memberListEl = requireElement("officer-member-list");
-  const memberDetailEmpty = requireElement("member-detail-empty");
-  const memberDetailBody = requireElement("member-detail-body");
-
-  type MemberFilter = "all" | "guests" | "roster" | "officers" | "linked" | "unlinked-discord";
-
-  let allMembers: GmMember[] = [];
-  let memberFilter: MemberFilter = "all";
-  let memberQuery = "";
-  let selectedMemberId: number | null = null;
-  let membersLoaded = false;
-
   function roleChips(roles: RoleTag[]): string {
     if (roles.length === 0) {
       return `<span class="role-chip">No Discord roles</span>`;
@@ -976,7 +442,6 @@ import "../../styles/room-officers.css";
       )
       .join("");
   }
-
   function memberTags(m: GmMember): string {
     return [
       m.is_gm ? "Quest Master" : m.is_officer ? "Officer" : null,
@@ -986,44 +451,618 @@ import "../../styles/room-officers.css";
       .filter(Boolean)
       .join(" · ");
   }
+  function signupStatusLabel(s: GmSignup["status"]): string {
+    return s === "signed" ? "Going" : s === "tentative" ? "Maybe" : "Can't make it";
+  }
+  function caseQuality(action: string): "common" | "uncommon" | "rare" | "epic" {
+    const a = action.toLowerCase();
+    if (a.includes("ban")) {
+      return "epic";
+    }
+    if (a.includes("kick")) {
+      return "rare";
+    }
+    if (a.includes("mute") || a.includes("timeout")) {
+      return "uncommon";
+    }
+    return "common";
+  }
+  function durationText(seconds: number | null): string {
+    if (seconds === null) {
+      return "";
+    }
+    if (seconds >= 86400) {
+      return `${Math.round(seconds / 86400)}d`;
+    }
+    if (seconds >= 3600) {
+      return `${Math.round(seconds / 3600)}h`;
+    }
+    if (seconds >= 60) {
+      return `${Math.round(seconds / 60)}m`;
+    }
+    return `${seconds}s`;
+  }
+  function memberStat(label: string, value: string): string {
+    return `<div class="member-stat"><span class="member-stat-label">${escapeHtml(label)}</span><span class="member-stat-value">${escapeHtml(value)}</span></div>`;
+  }
+  function parseHash(): { tab: string; memberId: number | null } {
+    const raw = location.hash.slice(1);
+    const [tab, query] = raw.split("?");
+    let memberId: number | null = null;
+    if (query) {
+      const value = new URLSearchParams(query).get("member");
+      if (value && /^\d+$/.test(value)) {
+        memberId = Number(value);
+      }
+    }
+    return { tab: tab ?? "", memberId };
+  }
+  function localDateTimeInput(iso: string): string {
+    const d = new Date(iso);
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
 
-  function matchesMemberFilter(m: GmMember): boolean {
-    switch (memberFilter) {
-      case "guests":
-        return m.roster_confirmed_at === null;
-      case "roster":
-        return m.roster_confirmed_at !== null;
-      case "officers":
-        return m.is_officer;
-      case "linked":
-        return m.battletag !== null;
-      case "unlinked-discord":
-        return !m.is_guild_member;
-      default:
+  function addMinutesToLocalDateTime(dateStr: string, timeStr: string, minutes: number): string {
+    const [y, m, d] = dateStr.split("-").map(Number);
+    const [hh, mm] = timeStr.split(":").map(Number);
+    const dt = new Date(y ?? 1970, (m ?? 1) - 1, d ?? 1, hh ?? 0, (mm ?? 0) + minutes);
+    return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}T${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
+  }
+  onPage("#officers-body", (signal) => {
+    const statusEl = requireElement("officers-status");
+    const gateEl = requireElement("officers-gate");
+    const bodyEl = requireElement("officers-body");
+
+    const dayFormat = new Intl.DateTimeFormat(undefined, { weekday: "short", month: "short", day: "numeric" });
+    const timeFormat = new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" });
+    const dateFormat = new Intl.DateTimeFormat(undefined, { dateStyle: "medium" });
+
+    // ——— Events ———
+    const eventForm = requireElement<HTMLFormElement>("event-form");
+    const eventLegend = requireElement("event-form-legend");
+    const eventSeriesAside = requireElement("e-series-aside");
+    const eventKind = requireElement<HTMLSelectElement>("e-kind");
+    const eventTitle = requireElement<HTMLInputElement>("e-title");
+    const eventLocation = requireElement<HTMLInputElement>("e-location");
+    const eventStarts = requireElement<HTMLInputElement>("e-starts");
+    const eventEnds = requireElement<HTMLInputElement>("e-ends");
+    const eventSize = requireElement<HTMLInputElement>("e-size");
+    const eventEp = requireElement<HTMLInputElement>("e-ep");
+    const eventStatusField = requireElement("e-status-field");
+    const eventStatusSelect = requireElement<HTMLSelectElement>("e-status");
+    const eventRepeatsField = requireElement("e-repeats-field");
+    const eventRepeats = requireElement<HTMLSelectElement>("e-repeats");
+    const eventWeekdaysFieldset = requireElement("e-weekdays-fieldset");
+    const eventWeekdayGrid = requireElement("e-weekday-grid");
+    const eventUntilField = requireElement("e-until-field");
+    const eventUntil = requireElement<HTMLInputElement>("e-until");
+    const eventNotes = requireElement<HTMLTextAreaElement>("e-notes");
+    const eventResetBtn = requireElement<HTMLButtonElement>("event-reset");
+    const eventDeleteBtn = requireElement<HTMLButtonElement>("event-delete");
+    const eventFormStatus = requireElement("event-form-status");
+    const eventListEl = requireElement("officer-event-list");
+    const seriesListEl = requireElement("officer-series-list");
+
+    eventKind.innerHTML = EVENT_KINDS.map((k) => `<option value="${k}">${EVENT_KIND_LABELS[k]}</option>`).join("");
+    eventEp.max = String(MAX_EVENT_EP);
+
+    // A blank EP box means the kind's preset, shown as the placeholder so officers see what attending is worth.
+    function syncEpPlaceholder(): void {
+      eventEp.placeholder = `${EVENT_KIND_EP[eventKind.value as EventKind]} (preset)`;
+    }
+    eventKind.addEventListener("change", syncEpPlaceholder);
+
+    eventWeekdayGrid.innerHTML = WEEKDAY_SHORT_LABELS.map(
+      (label, i) => `
+      <label class="weekday-toggle">
+        <input type="checkbox" value="${i}" />
+        <span>${label}</span>
+      </label>`,
+    ).join("");
+    const weekdayCheckboxes = Array.from(eventWeekdayGrid.querySelectorAll<HTMLInputElement>("input[type=checkbox]"));
+
+    let events: EventSummary[] = [];
+    let series: EventSeriesSummary[] = [];
+    let editingEventId: string | null = null;
+    let editingSeriesId: string | null = null;
+    let weekdaysTouched = false;
+
+    function applyDefaultWeekdays(): void {
+      const d = eventStarts.value ? new Date(eventStarts.value) : new Date();
+      const day = (d.getDay() + 6) % 7;
+      for (const cb of weekdayCheckboxes) {
+        cb.checked = Number(cb.value) === day;
+      }
+    }
+
+    for (const cb of weekdayCheckboxes) {
+      cb.addEventListener("change", () => {
+        weekdaysTouched = true;
+      });
+    }
+
+    eventRepeats.addEventListener("change", () => {
+      const repeating = eventRepeats.value !== "";
+      eventWeekdaysFieldset.hidden = !repeating;
+      eventUntilField.hidden = !repeating;
+      if (repeating && !weekdaysTouched) {
+        applyDefaultWeekdays();
+      }
+    });
+
+    eventStarts.addEventListener("change", () => {
+      if (eventRepeats.value !== "" && !weekdaysTouched) {
+        applyDefaultWeekdays();
+      }
+    });
+
+    function resetEventForm(): void {
+      eventForm.reset();
+      editingEventId = null;
+      editingSeriesId = null;
+      weekdaysTouched = false;
+      eventLegend.textContent = "New event";
+      eventSeriesAside.hidden = true;
+      eventKind.value = "raid";
+      syncEpPlaceholder();
+      eventStatusField.hidden = false;
+      eventStatusSelect.value = "scheduled";
+      eventRepeatsField.hidden = false;
+      eventRepeats.value = "";
+      eventWeekdaysFieldset.hidden = true;
+      eventUntilField.hidden = true;
+      eventDeleteBtn.hidden = true;
+      eventFormStatus.textContent = "";
+    }
+
+    function fillEventForm(event: EventSummary): void {
+      editingEventId = event.id;
+      editingSeriesId = null;
+      weekdaysTouched = false;
+      eventLegend.textContent = event.series ? `Edit · ${event.title} (this night only)` : `Edit · ${event.title}`;
+      eventSeriesAside.hidden = !event.series;
+      eventStatusField.hidden = false;
+      eventRepeatsField.hidden = true;
+      eventRepeats.value = "";
+      eventWeekdaysFieldset.hidden = true;
+      eventUntilField.hidden = true;
+      eventKind.value = event.kind;
+      syncEpPlaceholder();
+      eventTitle.value = event.title;
+      eventLocation.value = event.location;
+      eventStarts.value = localDateTimeInput(event.starts_at);
+      eventEnds.value = event.ends_at ? localDateTimeInput(event.ends_at) : "";
+      eventSize.value = event.size === null ? "" : String(event.size);
+      eventEp.value = event.ep_override === null ? "" : String(event.ep_override);
+      eventStatusSelect.value = event.status;
+      eventNotes.value = event.notes ?? "";
+      eventDeleteBtn.hidden = false;
+      eventFormStatus.textContent = "";
+    }
+
+    function fillSeriesForm(s: EventSeriesSummary): void {
+      editingEventId = null;
+      editingSeriesId = s.id;
+      weekdaysTouched = true;
+      eventLegend.textContent = `Edit series · ${s.title}`;
+      eventSeriesAside.hidden = true;
+      eventStatusField.hidden = true;
+      eventRepeatsField.hidden = false;
+      eventWeekdaysFieldset.hidden = false;
+      eventUntilField.hidden = false;
+      eventKind.value = s.kind;
+      syncEpPlaceholder();
+      eventTitle.value = s.title;
+      eventLocation.value = s.location;
+      eventStarts.value = `${s.rule.starts_on}T${s.rule.start_time}`;
+      eventEnds.value = s.rule.duration_minutes
+        ? addMinutesToLocalDateTime(s.rule.starts_on, s.rule.start_time, s.rule.duration_minutes)
+        : "";
+      eventSize.value = s.size === null ? "" : String(s.size);
+      eventEp.value = s.ep_override === null ? "" : String(s.ep_override);
+      eventNotes.value = s.notes ?? "";
+      eventRepeats.value = String(s.rule.interval_weeks);
+      for (const cb of weekdayCheckboxes) {
+        cb.checked = s.rule.weekdays.includes(Number(cb.value));
+      }
+      eventUntil.value = s.rule.until ?? "";
+      eventDeleteBtn.hidden = true;
+      eventFormStatus.textContent = "";
+    }
+
+    function officerEventRow(e: EventSummary): string {
+      const start = new Date(e.starts_at);
+      const seriesText = e.series ? weekdayPhrase(e.series.weekdays, e.series.interval_weeks) : "";
+      const statusSuffix = e.status === "scheduled" ? "" : e.status === "cancelled" ? "Cancelled" : "Completed";
+      const meta = [EVENT_KIND_LABELS[e.kind], e.location, seriesText, `${e.ep} EP`, statusSuffix]
+        .filter(Boolean)
+        .join(" · ");
+      return `
+      <li>
+        <button type="button" class="quest quest-btn" data-edit-event="${e.id}">
+          ${questMark(e)}
+          <span>
+            <span class="quest-name">${escapeHtml(e.title)}</span>
+            <span class="quest-meta">${escapeHtml(meta)}</span>
+          </span>
+          <span class="quest-when">${escapeHtml(timeFormat.format(start))}<small>${escapeHtml(dayFormat.format(start))}</small></span>
+        </button>
+      </li>`;
+    }
+
+    function renderEventList(): void {
+      eventListEl.innerHTML =
+        events.length > 0 ? events.map(officerEventRow).join("") : `<li class="quest-empty">No events yet.</li>`;
+      eventListEl.querySelectorAll<HTMLButtonElement>("[data-edit-event]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const match = events.find((e) => e.id === btn.dataset.editEvent);
+          if (match) {
+            fillEventForm(match);
+          }
+        });
+      });
+    }
+
+    function renderSeriesList(): void {
+      seriesListEl.innerHTML =
+        series.length > 0
+          ? series.map(officerSeriesRow).join("")
+          : `<li class="quest-empty">No repeating events yet.</li>`;
+      seriesListEl.querySelectorAll<HTMLButtonElement>("[data-edit-series]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const match = series.find((s) => s.id === btn.dataset.editSeries);
+          if (match) {
+            fillSeriesForm(match);
+          }
+        });
+      });
+      seriesListEl.querySelectorAll<HTMLButtonElement>("[data-end-series]").forEach((btn) => {
+        btn.addEventListener("click", () => onEndSeries(btn.dataset.endSeries));
+      });
+    }
+
+    async function loadEvents(): Promise<void> {
+      try {
+        const [upcoming, past] = await Promise.all([
+          apiFetch<EventSummary[]>("/api/events?when=upcoming"),
+          apiFetch<EventSummary[]>("/api/events?when=past"),
+        ]);
+        events = [...upcoming, ...past];
+        renderEventList();
+      } catch (err) {
+        eventListEl.innerHTML = `<li class="quest-empty">${escapeHtml(statusMessage(err))}</li>`;
+      }
+    }
+
+    async function loadSeries(): Promise<void> {
+      try {
+        series = await apiFetch<EventSeriesSummary[]>("/api/event-series");
+        renderSeriesList();
+      } catch (err) {
+        seriesListEl.innerHTML = `<li class="quest-empty">${escapeHtml(statusMessage(err))}</li>`;
+      }
+    }
+
+    async function onEndSeries(id: string | undefined): Promise<void> {
+      if (!id) {
+        return;
+      }
+      if (
+        !confirm(
+          "End this series? Future nights without sign-ups will be removed; nights with sign-ups will be cancelled.",
+        )
+      ) {
+        return;
+      }
+      eventFormStatus.textContent = "Ending series…";
+      try {
+        await apiFetch(`/api/event-series/${id}`, { method: "DELETE" });
+        if (editingSeriesId === id) {
+          resetEventForm();
+        }
+        eventFormStatus.textContent = "Series ended.";
+        await Promise.all([loadEvents(), loadSeries()]);
+      } catch (err) {
+        eventFormStatus.textContent = statusMessage(err);
+      }
+    }
+
+    eventForm.addEventListener("submit", async (ev) => {
+      ev.preventDefault();
+      const kind = eventKind.value as EventKind;
+      const location = eventLocation.value.trim();
+      if (ROLE_KINDS.includes(kind) && location.length === 0) {
+        eventFormStatus.textContent = "Location is required for raids and dungeons.";
+        eventLocation.focus();
+        return;
+      }
+      const notes = eventNotes.value.trim();
+      const startsAt = new Date(eventStarts.value);
+      const endsAt = eventEnds.value ? new Date(eventEnds.value) : null;
+      if (endsAt && endsAt <= startsAt) {
+        eventFormStatus.textContent = "The end has to be after the start.";
+        eventEnds.focus();
+        return;
+      }
+      const sizeRaw = eventSize.value.trim();
+      const epRaw = eventEp.value.trim();
+      const repeating = eventRepeats.value !== "";
+
+      if (repeating) {
+        const weekdays = weekdayCheckboxes.filter((cb) => cb.checked).map((cb) => Number(cb.value));
+        if (weekdays.length === 0) {
+          eventFormStatus.textContent = "Pick at least one day of the week.";
+          return;
+        }
+        const seriesBody: Record<string, unknown> = {
+          kind,
+          title: eventTitle.value.trim(),
+          location,
+          weekdays,
+          interval_weeks: Number(eventRepeats.value),
+          start_time: `${pad(startsAt.getHours())}:${pad(startsAt.getMinutes())}`,
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          starts_on: eventStarts.value.slice(0, 10),
+        };
+        if (notes.length > 0) {
+          seriesBody.notes = notes;
+        } else if (editingSeriesId) {
+          seriesBody.notes = null;
+        }
+        if (eventUntil.value.length > 0) {
+          seriesBody.until = eventUntil.value;
+        } else if (editingSeriesId) {
+          seriesBody.until = null;
+        }
+        if (endsAt) {
+          seriesBody.duration_minutes = Math.round((endsAt.getTime() - startsAt.getTime()) / 60000);
+        } else if (editingSeriesId) {
+          seriesBody.duration_minutes = null;
+        }
+        if (sizeRaw.length > 0) {
+          seriesBody.size = Number(sizeRaw);
+        } else if (editingSeriesId) {
+          seriesBody.size = null;
+        }
+        if (epRaw.length > 0) {
+          seriesBody.ep_override = Number(epRaw);
+        } else if (editingSeriesId) {
+          seriesBody.ep_override = null;
+        }
+        eventFormStatus.textContent = "Saving…";
+        try {
+          if (editingSeriesId) {
+            await apiFetch(`/api/event-series/${editingSeriesId}`, {
+              method: "PATCH",
+              body: JSON.stringify(seriesBody),
+            });
+          } else {
+            await apiFetch("/api/event-series", { method: "POST", body: JSON.stringify(seriesBody) });
+          }
+          resetEventForm();
+          eventFormStatus.textContent = "Saved.";
+          await Promise.all([loadEvents(), loadSeries()]);
+        } catch (err) {
+          eventFormStatus.textContent = statusMessage(err);
+        }
+        return;
+      }
+
+      const body: Record<string, unknown> = {
+        kind,
+        title: eventTitle.value.trim(),
+        location,
+        starts_at: startsAt.toISOString(),
+        notes: notes.length > 0 ? notes : undefined,
+      };
+      if (sizeRaw.length > 0) {
+        body.size = Number(sizeRaw);
+      } else if (editingEventId) {
+        body.size = null;
+      }
+      if (epRaw.length > 0) {
+        body.ep_override = Number(epRaw);
+      } else if (editingEventId) {
+        body.ep_override = null;
+      }
+      if (endsAt) {
+        body.ends_at = endsAt.toISOString();
+      } else if (editingEventId) {
+        body.ends_at = null;
+      }
+      eventFormStatus.textContent = "Saving…";
+      try {
+        if (editingEventId) {
+          body.status = eventStatusSelect.value;
+          await apiFetch(`/api/events/${editingEventId}`, { method: "PATCH", body: JSON.stringify(body) });
+        } else {
+          await apiFetch("/api/events", { method: "POST", body: JSON.stringify(body) });
+        }
+        resetEventForm();
+        eventFormStatus.textContent = "Saved.";
+        await loadEvents();
+      } catch (err) {
+        eventFormStatus.textContent = statusMessage(err);
+      }
+    });
+
+    eventResetBtn.addEventListener("click", resetEventForm);
+
+    eventDeleteBtn.addEventListener("click", async () => {
+      if (!editingEventId || !confirm("Cancel and remove this event?")) {
+        return;
+      }
+      eventFormStatus.textContent = "Deleting…";
+      try {
+        await apiFetch(`/api/events/${editingEventId}`, { method: "DELETE" });
+        resetEventForm();
+        eventFormStatus.textContent = "Deleted.";
+        await loadEvents();
+      } catch (err) {
+        eventFormStatus.textContent = statusMessage(err);
+      }
+    });
+
+    // ——— Addons ———
+    const addonForm = requireElement<HTMLFormElement>("addon-form");
+    const addonLegend = requireElement("addon-form-legend");
+    const addonName = requireElement<HTMLInputElement>("a-name");
+    const addonSlug = requireElement<HTMLInputElement>("a-slug");
+    const addonVersion = requireElement<HTMLInputElement>("a-version");
+    const addonDownload = requireElement<HTMLInputElement>("a-download");
+    const addonHomepage = requireElement<HTMLInputElement>("a-homepage");
+    const addonOrigin = requireElement<HTMLSelectElement>("a-origin");
+    const addonSummary = requireElement<HTMLTextAreaElement>("a-summary");
+    const addonResetBtn = requireElement<HTMLButtonElement>("addon-reset");
+    const addonDeleteBtn = requireElement<HTMLButtonElement>("addon-delete");
+    const addonFormStatus = requireElement("addon-form-status");
+    const addonListEl = requireElement("officer-addon-list");
+
+    let addons: Addon[] = [];
+    let editingAddonId: string | null = null;
+
+    function resetAddonForm(): void {
+      addonForm.reset();
+      editingAddonId = null;
+      addonLegend.textContent = "New addon";
+      addonOrigin.value = "community";
+      addonDeleteBtn.hidden = true;
+      addonFormStatus.textContent = "";
+    }
+
+    function fillAddonForm(addon: Addon): void {
+      editingAddonId = addon.id;
+      addonLegend.textContent = `Edit · ${addon.name}`;
+      addonName.value = addon.name;
+      addonSlug.value = addon.slug;
+      addonVersion.value = addon.version;
+      addonDownload.value = addon.download_url;
+      addonHomepage.value = addon.homepage_url ?? "";
+      addonSummary.value = addon.summary;
+      addonOrigin.value = addon.origin;
+      addonDeleteBtn.hidden = false;
+      addonFormStatus.textContent = "";
+    }
+
+    function renderAddonList(): void {
+      addonListEl.innerHTML =
+        addons.length > 0 ? addons.map(officerAddonRow).join("") : `<li class="quest-empty">No addons yet.</li>`;
+      addonListEl.querySelectorAll<HTMLButtonElement>("[data-edit-addon]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const addon = addons.find((a) => a.id === btn.dataset.editAddon);
+          if (addon) {
+            fillAddonForm(addon);
+          }
+        });
+      });
+    }
+
+    async function loadAddons(): Promise<void> {
+      try {
+        addons = await apiFetch<Addon[]>("/api/addons");
+        renderAddonList();
+      } catch (err) {
+        addonListEl.innerHTML = `<li class="quest-empty">${escapeHtml(statusMessage(err))}</li>`;
+      }
+    }
+
+    addonForm.addEventListener("submit", async (ev) => {
+      ev.preventDefault();
+      const homepage = addonHomepage.value.trim();
+      const body = {
+        slug: addonSlug.value.trim(),
+        name: addonName.value.trim(),
+        summary: addonSummary.value.trim(),
+        version: addonVersion.value.trim(),
+        download_url: addonDownload.value.trim(),
+        homepage_url: homepage.length > 0 ? homepage : undefined,
+        origin: addonOrigin.value as AddonOrigin,
+      };
+      addonFormStatus.textContent = "Saving…";
+      try {
+        if (editingAddonId) {
+          await apiFetch(`/api/addons/${editingAddonId}`, { method: "PATCH", body: JSON.stringify(body) });
+        } else {
+          await apiFetch("/api/addons", { method: "POST", body: JSON.stringify(body) });
+        }
+        resetAddonForm();
+        addonFormStatus.textContent = "Saved.";
+        await loadAddons();
+      } catch (err) {
+        addonFormStatus.textContent = statusMessage(err);
+      }
+    });
+
+    addonResetBtn.addEventListener("click", resetAddonForm);
+
+    addonDeleteBtn.addEventListener("click", async () => {
+      if (!editingAddonId || !confirm("Delete this addon?")) {
+        return;
+      }
+      addonFormStatus.textContent = "Deleting…";
+      try {
+        await apiFetch(`/api/addons/${editingAddonId}`, { method: "DELETE" });
+        resetAddonForm();
+        addonFormStatus.textContent = "Deleted.";
+        await loadAddons();
+      } catch (err) {
+        addonFormStatus.textContent = statusMessage(err);
+      }
+    });
+
+    // ——— Members (Quest Masters only) ———
+    const memberSearch = requireElement<HTMLInputElement>("m-search");
+    const memberFilterTabsEl = requireElement("member-filter-tabs");
+    const memberCountEl = requireElement("member-count");
+    const memberListEl = requireElement("officer-member-list");
+    const memberDetailEmpty = requireElement("member-detail-empty");
+    const memberDetailBody = requireElement("member-detail-body");
+
+    type MemberFilter = "all" | "guests" | "roster" | "officers" | "linked" | "unlinked-discord";
+
+    let allMembers: GmMember[] = [];
+    let memberFilter: MemberFilter = "all";
+    let memberQuery = "";
+    let selectedMemberId: number | null = null;
+    let membersLoaded = false;
+
+    function matchesMemberFilter(m: GmMember): boolean {
+      switch (memberFilter) {
+        case "guests":
+          return m.roster_confirmed_at === null;
+        case "roster":
+          return m.roster_confirmed_at !== null;
+        case "officers":
+          return m.is_officer;
+        case "linked":
+          return m.battletag !== null;
+        case "unlinked-discord":
+          return !m.is_guild_member;
+        default:
+          return true;
+      }
+    }
+
+    function matchesMemberQuery(m: GmMember): boolean {
+      if (memberQuery.length === 0) {
         return true;
+      }
+      const q = memberQuery.toLowerCase();
+      return (
+        m.display_name.toLowerCase().includes(q) ||
+        m.username.toLowerCase().includes(q) ||
+        (m.battletag ?? "").toLowerCase().includes(q)
+      );
     }
-  }
 
-  function matchesMemberQuery(m: GmMember): boolean {
-    if (memberQuery.length === 0) {
-      return true;
-    }
-    const q = memberQuery.toLowerCase();
-    return (
-      m.display_name.toLowerCase().includes(q) ||
-      m.username.toLowerCase().includes(q) ||
-      (m.battletag ?? "").toLowerCase().includes(q)
-    );
-  }
-
-  function renderMemberList(): void {
-    const rows = allMembers.filter((m) => matchesMemberFilter(m) && matchesMemberQuery(m));
-    memberCountEl.textContent = allMembers.length > 0 ? `${rows.length} of ${allMembers.length}` : "";
-    memberListEl.innerHTML =
-      rows.length > 0
-        ? rows
-            .map(
-              (m) => `
+    function renderMemberList(): void {
+      const rows = allMembers.filter((m) => matchesMemberFilter(m) && matchesMemberQuery(m));
+      memberCountEl.textContent = allMembers.length > 0 ? `${rows.length} of ${allMembers.length}` : "";
+      memberListEl.innerHTML =
+        rows.length > 0
+          ? rows
+              .map(
+                (m) => `
       <li class="row-pair">
         <button type="button" class="roster-row" data-select-member="${m.id}" aria-current="${m.id === selectedMemberId}">
           ${avatarMarkup(m.display_name, m.avatar_url, 40)}
@@ -1042,69 +1081,65 @@ import "../../styles/room-officers.css";
           ${m.roster_confirmed_at ? "Remove from roster" : "Confirm in guild"}
         </button>
       </li>`,
-            )
-            .join("")
-        : `<li class="quest-empty">No members match.</li>`;
-    memberListEl.querySelectorAll<HTMLButtonElement>("[data-select-member]").forEach((btn) => {
-      btn.addEventListener("click", () => selectMember(Number(btn.dataset.selectMember)));
-    });
-    memberListEl.querySelectorAll<HTMLButtonElement>("[data-roster]").forEach((btn) => {
-      btn.addEventListener("click", () => onToggleRoster(btn));
-    });
-  }
-
-  async function onToggleRoster(btn: HTMLButtonElement): Promise<void> {
-    const confirmed = btn.dataset.confirmed === "true";
-    const id = Number(btn.dataset.roster);
-    if (confirmed && !confirm("Remove from the roster? They lose New Arrival and drop back to the Guest Hall.")) {
-      return;
+              )
+              .join("")
+          : `<li class="quest-empty">No members match.</li>`;
+      memberListEl.querySelectorAll<HTMLButtonElement>("[data-select-member]").forEach((btn) => {
+        btn.addEventListener("click", () => selectMember(Number(btn.dataset.selectMember)));
+      });
+      memberListEl.querySelectorAll<HTMLButtonElement>("[data-roster]").forEach((btn) => {
+        btn.addEventListener("click", () => onToggleRoster(btn));
+      });
     }
-    btn.disabled = true;
-    try {
-      await apiFetch(`/api/members/${id}/roster-confirmation`, { method: confirmed ? "DELETE" : "PUT" });
-      await loadMembers();
-      if (selectedMemberId === id) {
-        await loadMemberDetail(id);
+
+    async function onToggleRoster(btn: HTMLButtonElement): Promise<void> {
+      const confirmed = btn.dataset.confirmed === "true";
+      const id = Number(btn.dataset.roster);
+      if (confirmed && !confirm("Remove from the roster? They lose New Arrival and drop back to the Guest Hall.")) {
+        return;
       }
-    } catch (err) {
-      btn.disabled = false;
-      btn.textContent = statusMessage(err);
+      btn.disabled = true;
+      try {
+        await apiFetch(`/api/members/${id}/roster-confirmation`, { method: confirmed ? "DELETE" : "PUT" });
+        await loadMembers();
+        if (selectedMemberId === id) {
+          await loadMemberDetail(id);
+        }
+      } catch (err) {
+        btn.disabled = false;
+        btn.textContent = statusMessage(err);
+      }
     }
-  }
 
-  async function loadMembers(): Promise<void> {
-    memberListEl.innerHTML = `<li class="quest-empty">Loading roster…</li>`;
-    try {
-      allMembers = await apiFetch<GmMember[]>("/api/gm/members");
-      renderMemberList();
-    } catch (err) {
-      memberListEl.innerHTML = `<li class="quest-empty">${escapeHtml(statusMessage(err))}</li>`;
-      memberCountEl.textContent = "";
+    async function loadMembers(): Promise<void> {
+      memberListEl.innerHTML = `<li class="quest-empty">Loading roster…</li>`;
+      try {
+        allMembers = await apiFetch<GmMember[]>("/api/gm/members");
+        renderMemberList();
+      } catch (err) {
+        memberListEl.innerHTML = `<li class="quest-empty">${escapeHtml(statusMessage(err))}</li>`;
+        memberCountEl.textContent = "";
+      }
     }
-  }
 
-  function signupStatusLabel(s: GmSignup["status"]): string {
-    return s === "signed" ? "Going" : s === "tentative" ? "Maybe" : "Can't make it";
-  }
-
-  function memberSignupRow(s: GmSignup): string {
-    const start = new Date(s.starts_at);
-    const roleMark = s.role
-      ? `<svg class="ico role-${s.role}" aria-hidden="true"><use href="#i-${s.role}"></use></svg>`
-      : `<svg class="ico ico-quest" aria-hidden="true"><use href="#i-quest"></use></svg>`;
-    const classText = s.class ? ` · <span class="cls-${s.class}">${escapeHtml(capitalize(s.class))}</span>` : "";
-    const statusSuffix =
-      s.event_status === "scheduled" ? null : s.event_status === "cancelled" ? "Cancelled" : "Completed";
-    const meta = [
-      EVENT_KIND_LABELS[s.kind],
-      signupStatusLabel(s.status),
-      statusSuffix,
-      s.comment ? `“${s.comment}”` : null,
-    ]
-      .filter(Boolean)
-      .map((part) => escapeHtml(part as string))
-      .join(" · ");
-    return `
+    function memberSignupRow(s: GmSignup): string {
+      const start = new Date(s.starts_at);
+      const roleMark = s.role
+        ? `<svg class="ico role-${s.role}" aria-hidden="true"><use href="#i-${s.role}"></use></svg>`
+        : `<svg class="ico ico-quest" aria-hidden="true"><use href="#i-quest"></use></svg>`;
+      const classText = s.class ? ` · <span class="cls-${s.class}">${escapeHtml(capitalize(s.class))}</span>` : "";
+      const statusSuffix =
+        s.event_status === "scheduled" ? null : s.event_status === "cancelled" ? "Cancelled" : "Completed";
+      const meta = [
+        EVENT_KIND_LABELS[s.kind],
+        signupStatusLabel(s.status),
+        statusSuffix,
+        s.comment ? `“${s.comment}”` : null,
+      ]
+        .filter(Boolean)
+        .map((part) => escapeHtml(part as string))
+        .join(" · ");
+      return `
       <li>
         <a class="quest" href="/events/detail/?id=${s.event_id}">
           ${roleMark}
@@ -1115,42 +1150,12 @@ import "../../styles/room-officers.css";
           <span class="quest-when">${escapeHtml(timeFormat.format(start))}<small>${escapeHtml(dayFormat.format(start))}</small></span>
         </a>
       </li>`;
-  }
+    }
 
-  function caseQuality(action: string): "common" | "uncommon" | "rare" | "epic" {
-    const a = action.toLowerCase();
-    if (a.includes("ban")) {
-      return "epic";
-    }
-    if (a.includes("kick")) {
-      return "rare";
-    }
-    if (a.includes("mute") || a.includes("timeout")) {
-      return "uncommon";
-    }
-    return "common";
-  }
-
-  function durationText(seconds: number | null): string {
-    if (seconds === null) {
-      return "";
-    }
-    if (seconds >= 86400) {
-      return `${Math.round(seconds / 86400)}d`;
-    }
-    if (seconds >= 3600) {
-      return `${Math.round(seconds / 3600)}h`;
-    }
-    if (seconds >= 60) {
-      return `${Math.round(seconds / 60)}m`;
-    }
-    return `${seconds}s`;
-  }
-
-  function memberCaseRow(c: GmCase): string {
-    const quality = caseQuality(c.action);
-    const duration = durationText(c.duration_seconds);
-    return `
+    function memberCaseRow(c: GmCase): string {
+      const quality = caseQuality(c.action);
+      const duration = durationText(c.duration_seconds);
+      return `
       <li class="case-row">
         <div class="case-head">
           <span class="case-number">#${c.case_number}</span>
@@ -1162,22 +1167,18 @@ import "../../styles/room-officers.css";
         </p>
         <p class="case-reason${c.reason ? "" : " is-empty"}">${c.reason ? escapeHtml(c.reason) : "No reason given."}</p>
       </li>`;
-  }
+    }
 
-  function memberStat(label: string, value: string): string {
-    return `<div class="member-stat"><span class="member-stat-label">${escapeHtml(label)}</span><span class="member-stat-value">${escapeHtml(value)}</span></div>`;
-  }
-
-  function renderMemberDetail(detail: GmMemberDetail): void {
-    const m = detail.member;
-    const stats = [
-      memberStat("First seen", dateFormat.format(new Date(m.first_seen_at))),
-      memberStat("Last login", m.last_login_at ? dateFormat.format(new Date(m.last_login_at)) : "Never"),
-      memberStat("Level", m.level !== null ? String(m.level) : "—"),
-      memberStat("XP", detail.xp !== null ? detail.xp.toLocaleString() : "—"),
-      memberStat("Messages", detail.message_count !== null ? detail.message_count.toLocaleString() : "—"),
-    ].join("");
-    memberDetailBody.innerHTML = `
+    function renderMemberDetail(detail: GmMemberDetail): void {
+      const m = detail.member;
+      const stats = [
+        memberStat("First seen", dateFormat.format(new Date(m.first_seen_at))),
+        memberStat("Last login", m.last_login_at ? dateFormat.format(new Date(m.last_login_at)) : "Never"),
+        memberStat("Level", m.level !== null ? String(m.level) : "—"),
+        memberStat("XP", detail.xp !== null ? detail.xp.toLocaleString() : "—"),
+        memberStat("Messages", detail.message_count !== null ? detail.message_count.toLocaleString() : "—"),
+      ].join("");
+      memberDetailBody.innerHTML = `
       <div class="member-detail-head">
         ${avatarMarkup(m.display_name, m.avatar_url, 56)}
         <div>
@@ -1195,53 +1196,53 @@ import "../../styles/room-officers.css";
       <ul class="case-list" aria-label="Moderation cases">
         ${detail.cases.length > 0 ? detail.cases.map(memberCaseRow).join("") : `<li class="quest-empty">No cases.</li>`}
       </ul>`;
-  }
-
-  async function loadMemberDetail(id: number): Promise<void> {
-    memberDetailEmpty.hidden = true;
-    memberDetailBody.hidden = false;
-    memberDetailBody.innerHTML = `<p class="aside">Loading…</p>`;
-    try {
-      const detail = await apiFetch<GmMemberDetail>(`/api/gm/members/${id}`);
-      renderMemberDetail(detail);
-    } catch (err) {
-      memberDetailBody.innerHTML = `<p class="status" data-tone="error">${escapeHtml(statusMessage(err))}</p>`;
     }
-  }
 
-  async function selectMember(id: number): Promise<void> {
-    selectedMemberId = id;
-    renderMemberList();
-    await loadMemberDetail(id);
-  }
+    async function loadMemberDetail(id: number): Promise<void> {
+      memberDetailEmpty.hidden = true;
+      memberDetailBody.hidden = false;
+      memberDetailBody.innerHTML = `<p class="aside">Loading…</p>`;
+      try {
+        const detail = await apiFetch<GmMemberDetail>(`/api/gm/members/${id}`);
+        renderMemberDetail(detail);
+      } catch (err) {
+        memberDetailBody.innerHTML = `<p class="status" data-tone="error">${escapeHtml(statusMessage(err))}</p>`;
+      }
+    }
 
-  memberSearch.addEventListener("input", () => {
-    memberQuery = memberSearch.value.trim();
-    renderMemberList();
-  });
+    async function selectMember(id: number): Promise<void> {
+      selectedMemberId = id;
+      renderMemberList();
+      await loadMemberDetail(id);
+    }
 
-  setupTablist(memberFilterTabsEl, (tab) => {
-    memberFilter = (tab.dataset.filter ?? "all") as MemberFilter;
-    renderMemberList();
-  });
+    memberSearch.addEventListener("input", () => {
+      memberQuery = memberSearch.value.trim();
+      renderMemberList();
+    });
 
-  // ——— Guild log (Quest Masters only) ———
-  const logFilterTabsEl = requireElement("log-filter-tabs");
-  const logTimelineEl = requireElement("log-timeline");
-  const logLoadMoreBtn = requireElement<HTMLButtonElement>("log-load-more");
+    setupTablist(memberFilterTabsEl, (tab) => {
+      memberFilter = (tab.dataset.filter ?? "all") as MemberFilter;
+      renderMemberList();
+    });
 
-  let logKind = "";
-  let logBefore: string | null = null;
-  let logEntries: LogEntry[] = [];
-  let logLoaded = false;
+    // ——— Guild log (Quest Masters only) ———
+    const logFilterTabsEl = requireElement("log-filter-tabs");
+    const logTimelineEl = requireElement("log-timeline");
+    const logLoadMoreBtn = requireElement<HTMLButtonElement>("log-load-more");
 
-  function logRow(entry: LogEntry): string {
-    const link = entry.event_id
-      ? `<a href="/events/detail/?id=${entry.event_id}">${escapeHtml(entry.summary)}</a>`
-      : entry.member_id !== null
-        ? `<a href="#members" data-jump-member="${entry.member_id}">${escapeHtml(entry.summary)}</a>`
-        : escapeHtml(entry.summary);
-    return `
+    let logKind = "";
+    let logBefore: string | null = null;
+    let logEntries: LogEntry[] = [];
+    let logLoaded = false;
+
+    function logRow(entry: LogEntry): string {
+      const link = entry.event_id
+        ? `<a href="/events/detail/?id=${entry.event_id}">${escapeHtml(entry.summary)}</a>`
+        : entry.member_id !== null
+          ? `<a href="#members" data-jump-member="${entry.member_id}">${escapeHtml(entry.summary)}</a>`
+          : escapeHtml(entry.summary);
+      return `
       <li class="log-entry">
         ${entry.actor ? avatarMarkup(entry.actor.display_name, entry.actor.avatar_url, 32) : ""}
         <span class="log-entry-body">
@@ -1250,91 +1251,91 @@ import "../../styles/room-officers.css";
         </span>
         <span class="log-entry-when">${escapeHtml(timeFormat.format(new Date(entry.at)))}</span>
       </li>`;
-  }
+    }
 
-  function renderLog(): void {
-    if (logEntries.length === 0) {
-      logTimelineEl.innerHTML = `<p class="aside">Nothing recorded yet.</p>`;
-      return;
-    }
-    const groups = new Map<string, LogEntry[]>();
-    for (const entry of logEntries) {
-      const key = dateFormat.format(new Date(entry.at));
-      const bucket = groups.get(key);
-      if (bucket) {
-        bucket.push(entry);
-      } else {
-        groups.set(key, [entry]);
+    function renderLog(): void {
+      if (logEntries.length === 0) {
+        logTimelineEl.innerHTML = `<p class="aside">Nothing recorded yet.</p>`;
+        return;
       }
-    }
-    logTimelineEl.innerHTML = Array.from(groups.entries())
-      .map(
-        ([day, dayEntries]) => `
+      const groups = new Map<string, LogEntry[]>();
+      for (const entry of logEntries) {
+        const key = dateFormat.format(new Date(entry.at));
+        const bucket = groups.get(key);
+        if (bucket) {
+          bucket.push(entry);
+        } else {
+          groups.set(key, [entry]);
+        }
+      }
+      logTimelineEl.innerHTML = Array.from(groups.entries())
+        .map(
+          ([day, dayEntries]) => `
       <div class="log-day">
         <h3 class="sub-title">${escapeHtml(day)}</h3>
         <ul class="log-list">${dayEntries.map(logRow).join("")}</ul>
       </div>`,
-      )
-      .join("");
-  }
-
-  async function loadLog(reset: boolean): Promise<void> {
-    if (reset) {
-      logEntries = [];
-      logBefore = null;
-      logTimelineEl.innerHTML = `<p class="aside">Loading…</p>`;
+        )
+        .join("");
     }
-    const params = new URLSearchParams();
-    if (logKind) {
-      params.set("kind", logKind);
+
+    async function loadLog(reset: boolean): Promise<void> {
+      if (reset) {
+        logEntries = [];
+        logBefore = null;
+        logTimelineEl.innerHTML = `<p class="aside">Loading…</p>`;
+      }
+      const params = new URLSearchParams();
+      if (logKind) {
+        params.set("kind", logKind);
+      }
+      if (logBefore) {
+        params.set("before", logBefore);
+      }
+      try {
+        const page = await apiFetch<LogPage>(`/api/gm/log?${params.toString()}`);
+        logEntries = reset ? page.entries : [...logEntries, ...page.entries];
+        logBefore = page.next_before;
+        logLoadMoreBtn.hidden = logBefore === null;
+        renderLog();
+      } catch (err) {
+        logTimelineEl.innerHTML = `<p class="status" data-tone="error">${escapeHtml(statusMessage(err))}</p>`;
+        logLoadMoreBtn.hidden = true;
+      }
     }
-    if (logBefore) {
-      params.set("before", logBefore);
-    }
-    try {
-      const page = await apiFetch<LogPage>(`/api/gm/log?${params.toString()}`);
-      logEntries = reset ? page.entries : [...logEntries, ...page.entries];
-      logBefore = page.next_before;
-      logLoadMoreBtn.hidden = logBefore === null;
-      renderLog();
-    } catch (err) {
-      logTimelineEl.innerHTML = `<p class="status" data-tone="error">${escapeHtml(statusMessage(err))}</p>`;
-      logLoadMoreBtn.hidden = true;
-    }
-  }
 
-  setupTablist(logFilterTabsEl, (tab) => {
-    logKind = tab.dataset.kind ?? "";
-    loadLog(true);
-  });
+    setupTablist(logFilterTabsEl, (tab) => {
+      logKind = tab.dataset.kind ?? "";
+      loadLog(true);
+    });
 
-  logLoadMoreBtn.addEventListener("click", () => loadLog(false));
+    logLoadMoreBtn.addEventListener("click", () => loadLog(false));
 
-  logTimelineEl.addEventListener("click", (ev) => {
-    const target = (ev.target as HTMLElement).closest<HTMLAnchorElement>("[data-jump-member]");
-    if (!target) {
-      return;
-    }
-    ev.preventDefault();
-    const memberTab = document.getElementById("tab-members") as HTMLButtonElement | null;
-    if (memberTab && !memberTab.hidden && tablist) {
-      tablist.select(memberTab);
-    }
-    selectMember(Number(target.dataset.jumpMember));
-  });
+    logTimelineEl.addEventListener("click", (ev) => {
+      const target = (ev.target as HTMLElement).closest<HTMLAnchorElement>("[data-jump-member]");
+      if (!target) {
+        return;
+      }
+      ev.preventDefault();
+      const memberTab = document.getElementById("tab-members") as HTMLButtonElement | null;
+      if (memberTab && !memberTab.hidden && tablist) {
+        tablist.select(memberTab);
+      }
+      selectMember(Number(target.dataset.jumpMember));
+    });
 
-  // ——— Moderation cases (Quest Masters only) ———
-  const caseListEl = requireElement("officer-case-list");
+    // ——— Moderation cases (Quest Masters only) ———
+    const caseListEl = requireElement("officer-case-list");
 
-  let cases: GmCase[] = [];
-  let editingCaseNumber: number | null = null;
-  let casesLoaded = false;
+    let cases: GmCase[] = [];
+    let editingCaseNumber: number | null = null;
+    let casesLoaded = false;
 
-  function caseRow(c: GmCase): string {
-    const quality = caseQuality(c.action);
-    const duration = durationText(c.duration_seconds);
-    const editing = editingCaseNumber === c.case_number;
-    return `
+    function caseRow(c: GmCase): string {
+      const quality = caseQuality(c.action);
+      const duration = durationText(c.duration_seconds);
+      const editing = editingCaseNumber === c.case_number;
+      return `
       <li class="case-row">
         <div class="case-head">
           <span class="case-number">#${c.case_number}</span>
@@ -1363,159 +1364,151 @@ import "../../styles/room-officers.css";
         </div>`
         }
       </li>`;
-  }
+    }
 
-  function renderCases(): void {
-    caseListEl.innerHTML =
-      cases.length > 0 ? cases.map(caseRow).join("") : `<li class="quest-empty">No cases yet.</li>`;
-    caseListEl.querySelectorAll<HTMLButtonElement>("[data-edit-case]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        editingCaseNumber = Number(btn.dataset.editCase);
-        renderCases();
+    function renderCases(): void {
+      caseListEl.innerHTML =
+        cases.length > 0 ? cases.map(caseRow).join("") : `<li class="quest-empty">No cases yet.</li>`;
+      caseListEl.querySelectorAll<HTMLButtonElement>("[data-edit-case]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          editingCaseNumber = Number(btn.dataset.editCase);
+          renderCases();
+        });
       });
-    });
-    caseListEl.querySelectorAll<HTMLButtonElement>("[data-cancel-case]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        editingCaseNumber = null;
-        renderCases();
+      caseListEl.querySelectorAll<HTMLButtonElement>("[data-cancel-case]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          editingCaseNumber = null;
+          renderCases();
+        });
       });
-    });
-    caseListEl.querySelectorAll<HTMLButtonElement>("[data-save-case]").forEach((btn) => {
-      btn.addEventListener("click", () => onSaveCase(btn));
-    });
-  }
-
-  async function onSaveCase(btn: HTMLButtonElement): Promise<void> {
-    const num = Number(btn.dataset.saveCase);
-    const row = btn.closest("li");
-    const textarea = row?.querySelector<HTMLTextAreaElement>("[data-case-reason-input]");
-    const rowStatus = row?.querySelector<HTMLElement>(`[data-case-status="${num}"]`);
-    const reason = textarea?.value.trim() ?? "";
-    if (reason.length === 0 || reason.length > 500) {
-      if (rowStatus) {
-        rowStatus.textContent = "Reason must be 1–500 characters.";
-      }
-      return;
-    }
-    btn.disabled = true;
-    try {
-      const updated = await apiFetch<GmCase>(`/api/gm/cases/${num}`, {
-        method: "PATCH",
-        body: JSON.stringify({ reason }),
+      caseListEl.querySelectorAll<HTMLButtonElement>("[data-save-case]").forEach((btn) => {
+        btn.addEventListener("click", () => onSaveCase(btn));
       });
-      cases = cases.map((c) => (c.case_number === num ? updated : c));
-      editingCaseNumber = null;
-      renderCases();
-    } catch (err) {
-      if (rowStatus) {
-        rowStatus.textContent = statusMessage(err);
-      }
-      btn.disabled = false;
     }
-  }
 
-  async function loadCases(): Promise<void> {
-    caseListEl.innerHTML = `<li class="quest-empty">Loading…</li>`;
-    try {
-      cases = await apiFetch<GmCase[]>("/api/gm/cases");
-      renderCases();
-    } catch (err) {
-      caseListEl.innerHTML = `<li class="quest-empty">${escapeHtml(statusMessage(err))}</li>`;
-    }
-  }
-
-  // ——— Tabs & gate ———
-  const VALID_TABS = ["events", "addons", "members", "log", "moderation"] as const;
-  const GM_TABS = new Set(["members", "log", "moderation"]);
-
-  let isGm = false;
-  let tablist: { select: (tab: HTMLButtonElement, opts?: { focus?: boolean }) => void } | null = null;
-
-  function showPanel(name: string): void {
-    document.querySelectorAll<HTMLElement>('[role="tabpanel"]').forEach((panel) => {
-      panel.hidden = panel.id !== `panel-${name}`;
-    });
-    if (location.hash.slice(1) !== name) {
-      history.replaceState(null, "", `#${name}`);
-    }
-    if (name === "members" && !membersLoaded) {
-      membersLoaded = true;
-      loadMembers();
-    } else if (name === "log" && !logLoaded) {
-      logLoaded = true;
-      loadLog(true);
-    } else if (name === "moderation" && !casesLoaded) {
-      casesLoaded = true;
-      loadCases();
-    }
-  }
-
-  function parseHash(): { tab: string; memberId: number | null } {
-    const raw = location.hash.slice(1);
-    const [tab, query] = raw.split("?");
-    let memberId: number | null = null;
-    if (query) {
-      const value = new URLSearchParams(query).get("member");
-      if (value && /^\d+$/.test(value)) {
-        memberId = Number(value);
-      }
-    }
-    return { tab: tab ?? "", memberId };
-  }
-
-  function initialTabName(): string {
-    const { tab: requested } = parseHash();
-    if ((VALID_TABS as readonly string[]).includes(requested) && (!GM_TABS.has(requested) || isGm)) {
-      return requested;
-    }
-    return "events";
-  }
-
-  // ——— Gate ———
-  async function init(): Promise<void> {
-    let me: Me | null = null;
-    try {
-      me = await fetchMe();
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 0) {
-        statusEl.textContent = statusMessage(err);
-      }
-      me = null;
-    }
-    if (!me || !me.is_officer) {
-      gateEl.hidden = false;
-      return;
-    }
-    bodyEl.hidden = false;
-    isGm = me.is_gm;
-    for (const id of ["tab-members", "tab-log", "tab-moderation"]) {
-      requireElement<HTMLButtonElement>(id).hidden = !isGm;
-    }
-    resetEventForm();
-    resetAddonForm();
-    const tabsEl = requireElement("officers-body").querySelector<HTMLElement>('[role="tablist"]')!;
-    tablist = setupTablist(tabsEl, (tab) => showPanel(tab.id.slice(4)));
-    const startMemberId = parseHash().memberId;
-    const initialName = initialTabName();
-    tablist.select(requireElement<HTMLButtonElement>(`tab-${initialName}`));
-    if (initialName === "members" && startMemberId !== null) {
-      selectMember(startMemberId);
-    }
-    window.addEventListener("hashchange", () => {
-      const { tab: name, memberId } = parseHash();
-      if (!(VALID_TABS as readonly string[]).includes(name) || (GM_TABS.has(name) && !isGm)) {
+    async function onSaveCase(btn: HTMLButtonElement): Promise<void> {
+      const num = Number(btn.dataset.saveCase);
+      const row = btn.closest("li");
+      const textarea = row?.querySelector<HTMLTextAreaElement>("[data-case-reason-input]");
+      const rowStatus = row?.querySelector<HTMLElement>(`[data-case-status="${num}"]`);
+      const reason = textarea?.value.trim() ?? "";
+      if (reason.length === 0 || reason.length > 500) {
+        if (rowStatus) {
+          rowStatus.textContent = "Reason must be 1–500 characters.";
+        }
         return;
       }
-      const tab = document.getElementById(`tab-${name}`) as HTMLButtonElement | null;
-      if (tab && !tab.hidden && tablist) {
-        tablist.select(tab);
+      btn.disabled = true;
+      try {
+        const updated = await apiFetch<GmCase>(`/api/gm/cases/${num}`, {
+          method: "PATCH",
+          body: JSON.stringify({ reason }),
+        });
+        cases = cases.map((c) => (c.case_number === num ? updated : c));
+        editingCaseNumber = null;
+        renderCases();
+      } catch (err) {
+        if (rowStatus) {
+          rowStatus.textContent = statusMessage(err);
+        }
+        btn.disabled = false;
       }
-      if (name === "members" && memberId !== null) {
-        selectMember(memberId);
-      }
-    });
-    await Promise.all([loadEvents(), loadSeries(), loadAddons()]);
-  }
+    }
 
-  init();
+    async function loadCases(): Promise<void> {
+      caseListEl.innerHTML = `<li class="quest-empty">Loading…</li>`;
+      try {
+        cases = await apiFetch<GmCase[]>("/api/gm/cases");
+        renderCases();
+      } catch (err) {
+        caseListEl.innerHTML = `<li class="quest-empty">${escapeHtml(statusMessage(err))}</li>`;
+      }
+    }
+
+    // ——— Tabs & gate ———
+    const VALID_TABS = ["events", "addons", "members", "log", "moderation"] as const;
+    const GM_TABS = new Set(["members", "log", "moderation"]);
+
+    let isGm = false;
+    let tablist: { select: (tab: HTMLButtonElement, opts?: { focus?: boolean }) => void } | null = null;
+
+    function showPanel(name: string): void {
+      document.querySelectorAll<HTMLElement>('[role="tabpanel"]').forEach((panel) => {
+        panel.hidden = panel.id !== `panel-${name}`;
+      });
+      if (location.hash.slice(1) !== name) {
+        history.replaceState(null, "", `#${name}`);
+      }
+      if (name === "members" && !membersLoaded) {
+        membersLoaded = true;
+        loadMembers();
+      } else if (name === "log" && !logLoaded) {
+        logLoaded = true;
+        loadLog(true);
+      } else if (name === "moderation" && !casesLoaded) {
+        casesLoaded = true;
+        loadCases();
+      }
+    }
+
+    function initialTabName(): string {
+      const { tab: requested } = parseHash();
+      if ((VALID_TABS as readonly string[]).includes(requested) && (!GM_TABS.has(requested) || isGm)) {
+        return requested;
+      }
+      return "events";
+    }
+
+    // ——— Gate ———
+    async function init(): Promise<void> {
+      let me: Me | null = null;
+      try {
+        me = await fetchMe();
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 0) {
+          statusEl.textContent = statusMessage(err);
+        }
+        me = null;
+      }
+      if (!me || !me.is_officer) {
+        gateEl.hidden = false;
+        return;
+      }
+      bodyEl.hidden = false;
+      isGm = me.is_gm;
+      for (const id of ["tab-members", "tab-log", "tab-moderation"]) {
+        requireElement<HTMLButtonElement>(id).hidden = !isGm;
+      }
+      resetEventForm();
+      resetAddonForm();
+      const tabsEl = requireElement("officers-body").querySelector<HTMLElement>('[role="tablist"]')!;
+      tablist = setupTablist(tabsEl, (tab) => showPanel(tab.id.slice(4)));
+      const startMemberId = parseHash().memberId;
+      const initialName = initialTabName();
+      tablist.select(requireElement<HTMLButtonElement>(`tab-${initialName}`));
+      if (initialName === "members" && startMemberId !== null) {
+        selectMember(startMemberId);
+      }
+      window.addEventListener(
+        "hashchange",
+        () => {
+          const { tab: name, memberId } = parseHash();
+          if (!(VALID_TABS as readonly string[]).includes(name) || (GM_TABS.has(name) && !isGm)) {
+            return;
+          }
+          const tab = document.getElementById(`tab-${name}`) as HTMLButtonElement | null;
+          if (tab && !tab.hidden && tablist) {
+            tablist.select(tab);
+          }
+          if (name === "members" && memberId !== null) {
+            selectMember(memberId);
+          }
+        },
+        { signal },
+      );
+      await Promise.all([loadEvents(), loadSeries(), loadAddons()]);
+    }
+
+    void init();
+  });
 </script>

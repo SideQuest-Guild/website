@@ -114,60 +114,7 @@ import "../../styles/room-account.css";
 
 <script>
   import { apiFetch, fetchMe, requireElement, statusMessage, type Me } from "../../scripts/api";
-
-  const ERROR_MESSAGES: Record<string, string> = {
-    state: "That sign-in took too long or was opened twice. Try again.",
-    oauth_not_configured: "Discord sign-in isn't set up yet.",
-    discord_unreachable: "Couldn't reach Discord. Try again in a moment.",
-    token_exchange_failed: "Discord didn't accept the sign-in. Try again.",
-    user_fetch_failed: "Discord didn't send your profile. Try again.",
-    guild_member_fetch_failed: "Couldn't check your SideQuest membership with Discord. Try again.",
-    signin_first: "Sign in with Discord first, then link Battle.net.",
-    battlenet_not_configured: "Battle.net linking isn't set up yet.",
-    battlenet_denied: "Battle.net linking was cancelled.",
-    battlenet_unreachable: "Couldn't reach Battle.net. Try again in a moment.",
-    battlenet_failed: "Battle.net didn't confirm your account. Try again.",
-    battlenet_taken:
-      "That Battle.net account is already linked to another SideQuest member. Ask an officer if that's wrong.",
-  };
-
-  const statusEl = requireElement("account-status");
-  const signedOut = requireElement("account-signed-out");
-  const notMember = requireElement("account-not-member");
-  const notMemberText = requireElement("not-member-text");
-  const signedIn = requireElement("account-signed-in");
-  const avatarImg = requireElement<HTMLImageElement>("account-avatar");
-  const nameEl = requireElement("account-name");
-  const roleEl = requireElement("account-role");
-  const rosterEl = requireElement("account-roster");
-  const discordEl = requireElement("account-discord");
-  const signOutBtn = requireElement<HTMLButtonElement>("sign-out-btn");
-  const bnetLinked = requireElement("bnet-linked");
-  const bnetUnlinked = requireElement("bnet-unlinked");
-  const bnetTag = requireElement("bnet-tag");
-  const bnetLink = requireElement<HTMLAnchorElement>("bnet-link");
-  const bnetUnlinkBtn = requireElement<HTMLButtonElement>("bnet-unlink-btn");
-  const deleteAccountBtn = requireElement<HTMLButtonElement>("delete-account-btn");
-
-  function show(target: HTMLElement): void {
-    for (const el of [signedOut, notMember, signedIn]) {
-      el.hidden = el !== target;
-    }
-  }
-
-  function showRedirectError(): void {
-    const params = new URLSearchParams(location.search);
-    const errorCode = params.get("error");
-    if (!errorCode) {
-      return;
-    }
-    statusEl.dataset.tone = "error";
-    statusEl.textContent = ERROR_MESSAGES[errorCode] ?? "Something went wrong. Try again.";
-    // Drop ?error= so a reload or a later re-render doesn't repeat a stale message.
-    params.delete("error");
-    const query = params.toString();
-    history.replaceState(null, "", `${location.pathname}${query ? `?${query}` : ""}${location.hash}`);
-  }
+  import { onPage } from "../../scripts/page";
 
   /** `is_gm` isn't on `Me` yet; read it defensively so the rank line is ready the day it ships. */
   function rankLabel(me: Me): string {
@@ -177,94 +124,149 @@ import "../../styles/room-account.css";
     }
     return me.is_officer ? "Officer" : "Member";
   }
+  onPage("#account-status", () => {
+    const ERROR_MESSAGES: Record<string, string> = {
+      state: "That sign-in took too long or was opened twice. Try again.",
+      oauth_not_configured: "Discord sign-in isn't set up yet.",
+      discord_unreachable: "Couldn't reach Discord. Try again in a moment.",
+      token_exchange_failed: "Discord didn't accept the sign-in. Try again.",
+      user_fetch_failed: "Discord didn't send your profile. Try again.",
+      guild_member_fetch_failed: "Couldn't check your SideQuest membership with Discord. Try again.",
+      signin_first: "Sign in with Discord first, then link Battle.net.",
+      battlenet_not_configured: "Battle.net linking isn't set up yet.",
+      battlenet_denied: "Battle.net linking was cancelled.",
+      battlenet_unreachable: "Couldn't reach Battle.net. Try again in a moment.",
+      battlenet_failed: "Battle.net didn't confirm your account. Try again.",
+      battlenet_taken:
+        "That Battle.net account is already linked to another SideQuest member. Ask an officer if that's wrong.",
+    };
 
-  async function render({ fresh = false }: { fresh?: boolean } = {}): Promise<void> {
-    let me: Me | null = null;
-    try {
-      me = await fetchMe({ fresh });
-    } catch {
-      me = null;
+    const statusEl = requireElement("account-status");
+    const signedOut = requireElement("account-signed-out");
+    const notMember = requireElement("account-not-member");
+    const notMemberText = requireElement("not-member-text");
+    const signedIn = requireElement("account-signed-in");
+    const avatarImg = requireElement<HTMLImageElement>("account-avatar");
+    const nameEl = requireElement("account-name");
+    const roleEl = requireElement("account-role");
+    const rosterEl = requireElement("account-roster");
+    const discordEl = requireElement("account-discord");
+    const signOutBtn = requireElement<HTMLButtonElement>("sign-out-btn");
+    const bnetLinked = requireElement("bnet-linked");
+    const bnetUnlinked = requireElement("bnet-unlinked");
+    const bnetTag = requireElement("bnet-tag");
+    const bnetLink = requireElement<HTMLAnchorElement>("bnet-link");
+    const bnetUnlinkBtn = requireElement<HTMLButtonElement>("bnet-unlink-btn");
+    const deleteAccountBtn = requireElement<HTMLButtonElement>("delete-account-btn");
+
+    function show(target: HTMLElement): void {
+      for (const el of [signedOut, notMember, signedIn]) {
+        el.hidden = el !== target;
+      }
     }
 
-    if (!me) {
-      show(signedOut);
-      return;
-    }
-    if (!me.is_guild_member) {
-      notMemberText.textContent = `Signed in as ${me.username}, but you're not in the SideQuest Discord yet.`;
-      show(notMember);
-      return;
-    }
-    nameEl.textContent = me.display_name;
-    roleEl.textContent = rankLabel(me);
-    rosterEl.textContent = me.roster_confirmed
-      ? "Confirmed on the guild roster."
-      : "Not yet confirmed on the guild roster.";
-    discordEl.textContent = `@${me.username}`;
-    if (me.avatar_url) {
-      avatarImg.src = me.avatar_url;
-      avatarImg.hidden = false;
-    }
-    const linked = me.battletag !== null;
-    bnetTag.textContent = me.battletag ?? "";
-    bnetLinked.hidden = !linked;
-    bnetUnlinked.hidden = linked;
-    bnetLink.hidden = linked;
-    bnetUnlinkBtn.hidden = !linked;
-    show(signedIn);
-  }
-
-  signOutBtn.addEventListener("click", async () => {
-    signOutBtn.disabled = true;
-    try {
-      await apiFetch("/auth/logout", { method: "POST" });
-    } catch {
-      // The session cookie may already be gone; reload regardless to reflect the signed-out state.
-    }
-    location.reload();
-  });
-
-  bnetUnlinkBtn.addEventListener("click", async () => {
-    if (!confirm("Unlink Battle.net? Your BattleTag is erased from SideQuest right away.")) {
-      return;
-    }
-    bnetUnlinkBtn.disabled = true;
-    try {
-      await apiFetch("/auth/battlenet/unlink", { method: "POST" });
-      statusEl.dataset.tone = "";
-      statusEl.textContent = "Battle.net unlinked.";
-      await render({ fresh: true });
-    } catch (err) {
+    function showRedirectError(): void {
+      const params = new URLSearchParams(location.search);
+      const errorCode = params.get("error");
+      if (!errorCode) {
+        return;
+      }
       statusEl.dataset.tone = "error";
-      statusEl.textContent = statusMessage(err);
-    } finally {
-      bnetUnlinkBtn.disabled = false;
+      statusEl.textContent = ERROR_MESSAGES[errorCode] ?? "Something went wrong. Try again.";
+      // Drop ?error= so a reload or a later re-render doesn't repeat a stale message.
+      params.delete("error");
+      const query = params.toString();
+      history.replaceState(null, "", `${location.pathname}${query ? `?${query}` : ""}${location.hash}`);
     }
-  });
 
-  deleteAccountBtn.addEventListener("click", async () => {
-    if (
-      !confirm(
-        "Delete your SideQuest account? Your profile and every event sign-up are erased right away, and you're stripped of every Discord role in the SideQuest server and put back behind #sign-the-ledger. This can't be undone.",
-      )
-    ) {
-      return;
-    }
-    deleteAccountBtn.disabled = true;
-    try {
-      await apiFetch("/api/me", { method: "DELETE" });
-      statusEl.dataset.tone = "";
-      statusEl.textContent =
-        "Your account and sign-ups are deleted, and your Discord roles are on their way out too. Signing in again starts a fresh account.";
-      show(signedOut);
-    } catch (err) {
-      statusEl.dataset.tone = "error";
-      statusEl.textContent = statusMessage(err);
-    } finally {
-      deleteAccountBtn.disabled = false;
-    }
-  });
+    async function render({ fresh = false }: { fresh?: boolean } = {}): Promise<void> {
+      let me: Me | null = null;
+      try {
+        me = await fetchMe({ fresh });
+      } catch {
+        me = null;
+      }
 
-  showRedirectError();
-  render();
+      if (!me) {
+        show(signedOut);
+        return;
+      }
+      if (!me.is_guild_member) {
+        notMemberText.textContent = `Signed in as ${me.username}, but you're not in the SideQuest Discord yet.`;
+        show(notMember);
+        return;
+      }
+      nameEl.textContent = me.display_name;
+      roleEl.textContent = rankLabel(me);
+      rosterEl.textContent = me.roster_confirmed
+        ? "Confirmed on the guild roster."
+        : "Not yet confirmed on the guild roster.";
+      discordEl.textContent = `@${me.username}`;
+      if (me.avatar_url) {
+        avatarImg.src = me.avatar_url;
+        avatarImg.hidden = false;
+      }
+      const linked = me.battletag !== null;
+      bnetTag.textContent = me.battletag ?? "";
+      bnetLinked.hidden = !linked;
+      bnetUnlinked.hidden = linked;
+      bnetLink.hidden = linked;
+      bnetUnlinkBtn.hidden = !linked;
+      show(signedIn);
+    }
+
+    signOutBtn.addEventListener("click", async () => {
+      signOutBtn.disabled = true;
+      try {
+        await apiFetch("/auth/logout", { method: "POST" });
+      } catch {
+        // The session cookie may already be gone; reload regardless to reflect the signed-out state.
+      }
+      location.reload();
+    });
+
+    bnetUnlinkBtn.addEventListener("click", async () => {
+      if (!confirm("Unlink Battle.net? Your BattleTag is erased from SideQuest right away.")) {
+        return;
+      }
+      bnetUnlinkBtn.disabled = true;
+      try {
+        await apiFetch("/auth/battlenet/unlink", { method: "POST" });
+        statusEl.dataset.tone = "";
+        statusEl.textContent = "Battle.net unlinked.";
+        await render({ fresh: true });
+      } catch (err) {
+        statusEl.dataset.tone = "error";
+        statusEl.textContent = statusMessage(err);
+      } finally {
+        bnetUnlinkBtn.disabled = false;
+      }
+    });
+
+    deleteAccountBtn.addEventListener("click", async () => {
+      if (
+        !confirm(
+          "Delete your SideQuest account? Your profile and every event sign-up are erased right away, and you're stripped of every Discord role in the SideQuest server and put back behind #sign-the-ledger. This can't be undone.",
+        )
+      ) {
+        return;
+      }
+      deleteAccountBtn.disabled = true;
+      try {
+        await apiFetch("/api/me", { method: "DELETE" });
+        statusEl.dataset.tone = "";
+        statusEl.textContent =
+          "Your account and sign-ups are deleted, and your Discord roles are on their way out too. Signing in again starts a fresh account.";
+        show(signedOut);
+      } catch (err) {
+        statusEl.dataset.tone = "error";
+        statusEl.textContent = statusMessage(err);
+      } finally {
+        deleteAccountBtn.disabled = false;
+      }
+    });
+
+    showRedirectError();
+    render();
+  });
 </script>

@@ -339,7 +339,8 @@ const panels = [
 
   <SiteFooter />
 
-  <script define:vars={{ launch: LAUNCH }}>
+  <!-- Inline (define:vars), so it would run only on the first visit under the ClientRouter; rerun on every arrival. -->
+  <script define:vars={{ launch: LAUNCH }} data-astro-rerun>
     // Days until launch, in whole calendar days (the launch hour is not announced).
     const launchDay = new Date(launch.year, launch.month - 1, launch.day);
     const today = new Date();

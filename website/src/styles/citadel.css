@@ -609,8 +609,9 @@ textarea {
 }
 
 /* ——— Walking between rooms ———
-   Same-origin page loads crossfade; the painting itself dissolves from one room into the next while the nav holds
-   still. Browsers without cross-document view transitions simply load the page. */
+   Links swap the page in place (Astro's ClientRouter, scripts/page.ts) inside a view transition: the painting
+   dissolves from one room into the next while the nav holds still. The cross-document rule below covers the few
+   full page loads (returning from sign-in). Browsers without view transitions get the router's plain fade. */
 @media (prefers-reduced-motion: no-preference) {
   @view-transition {
     navigation: auto;

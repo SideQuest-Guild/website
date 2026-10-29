@@ -135,52 +135,8 @@ import "../../../styles/room-event.css";
     type Role,
     type Signup,
   } from "../../../scripts/api";
+  import { onPage } from "../../../scripts/page";
   import { weekdayPhrase } from "../../../scripts/series";
-
-  const LOCKED_MESSAGE = "This event is no longer open for signups.";
-
-  const params = new URLSearchParams(location.search);
-  const eventId = params.get("id");
-
-  const statusEl = requireElement("event-status");
-  const contentEl = requireElement("event-content");
-  const rosterChamber = requireElement("roster-chamber");
-  const summaryEl = requireElement("event-summary");
-  const notesEl = requireElement("event-notes");
-  const rosterSection = requireElement("roster-section");
-  const rosterGrid = requireElement("roster-grid");
-  const statusHeading = requireElement("h-status-lists");
-  const rosterExtra = requireElement("roster-extra");
-  const interestSection = requireElement("interest-section");
-  const interestHeading = requireElement("h-interest");
-  const interestGrid = requireElement("interest-grid");
-  const chartSection = requireElement("chart-section");
-  const chartGrid = requireElement("chart-grid");
-  const signupInvite = requireElement("signup-invite");
-  const signupSection = requireElement("signup-section");
-  const signedOutSection = requireElement("signed-out-section");
-  const signedOutMessage = requireElement("signed-out-message");
-  const signupForm = requireElement<HTMLFormElement>("signup-form");
-  const withdrawBtn = requireElement<HTMLButtonElement>("withdraw-btn");
-  const signupStatus = requireElement("signup-status");
-  const classField = requireElement("su-class-field");
-  const classSelect = requireElement<HTMLSelectElement>("su-class");
-  const roleField = requireElement("su-role-field");
-  const characterInput = requireElement<HTMLInputElement>("su-character");
-  const statusSelect = requireElement<HTMLSelectElement>("su-status");
-
-  classSelect.innerHTML = CLASSES.map((c) => `<option value="${c}">${capitalize(c)}</option>`).join("");
-
-  const dateFormat = new Intl.DateTimeFormat(undefined, {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
-
-  let me: Me | null = null;
-  let event: EventDetail | null = null;
 
   // A character row: class color on the name when the event tracks classes, a role mark when the row mixes roles.
   function memberRow(s: Signup, opts: { showClass: boolean; showRole: boolean }): string {
@@ -192,77 +148,6 @@ import "../../../styles/room-event.css";
     const clsAttr = opts.showClass && s.class ? ` class="cls-${s.class}"` : "";
     return `<li>${roleIcon}<span${clsAttr}>${escapeHtml(name)}</span></li>`;
   }
-
-  function rosterList(signups: Signup[], emptyText: string, opts: { showClass: boolean; showRole: boolean }): string {
-    if (signups.length === 0) {
-      return `<li class="aside">${emptyText}</li>`;
-    }
-    return signups.map((s) => memberRow(s, opts)).join("");
-  }
-
-  function renderRoster(detail: EventDetail): void {
-    const roleKind = ROLE_KINDS.includes(detail.kind);
-    const signed = detail.signups.filter((s) => s.status === "signed");
-    const tentative = detail.signups.filter((s) => s.status === "tentative");
-    const absent = detail.signups.filter((s) => s.status === "absent");
-
-    rosterSection.hidden = !roleKind;
-    if (roleKind) {
-      rosterGrid.innerHTML = ROLES.map((role: Role) => {
-        const members = signed.filter((s) => s.role === role);
-        return `
-          <div class="roster-col">
-            <h3><svg class="ico role-${role}" aria-hidden="true"><use href="#i-${role}"></use></svg> ${capitalize(role)} <span class="count">(${members.length})</span></h3>
-            <ul class="roster-list">${rosterList(members, "None yet", { showClass: true, showRole: false })}</ul>
-          </div>`;
-      }).join("");
-      statusHeading.textContent = "Tentative & absent";
-      rosterExtra.classList.add("cols-2");
-      rosterExtra.innerHTML = `
-        <div class="roster-col">
-          <h3>Tentative <span class="count">(${tentative.length})</span></h3>
-          <ul class="roster-list">${rosterList(tentative, "None", { showClass: true, showRole: true })}</ul>
-        </div>
-        <div class="roster-col">
-          <h3>Absent <span class="count">(${absent.length})</span></h3>
-          <ul class="roster-list">${rosterList(absent, "None", { showClass: true, showRole: true })}</ul>
-        </div>`;
-    } else {
-      statusHeading.textContent = "Going, maybe & can't make it";
-      rosterExtra.classList.remove("cols-2");
-      rosterExtra.innerHTML = `
-        <div class="roster-col">
-          <h3>Going <span class="count">(${signed.length})</span></h3>
-          <ul class="roster-list">${rosterList(signed, "None yet", { showClass: false, showRole: false })}</ul>
-        </div>
-        <div class="roster-col">
-          <h3>Maybe <span class="count">(${tentative.length})</span></h3>
-          <ul class="roster-list">${rosterList(tentative, "None", { showClass: false, showRole: false })}</ul>
-        </div>
-        <div class="roster-col">
-          <h3>Can't make it <span class="count">(${absent.length})</span></h3>
-          <ul class="roster-list">${rosterList(absent, "None", { showClass: false, showRole: false })}</ul>
-        </div>`;
-    }
-  }
-
-  function renderInterest(detail: EventDetail): void {
-    if (!detail.discord_interest) {
-      interestSection.hidden = true;
-      return;
-    }
-    const { count, members } = detail.discord_interest;
-    interestSection.hidden = count === 0;
-    if (count === 0) {
-      return;
-    }
-    interestHeading.innerHTML = `Interested on Discord <span class="count">(${count})</span>`;
-    const names = members.map((m) => `<li>${escapeHtml(m.display_name)}</li>`).join("");
-    const others = count - members.length;
-    const more = others > 0 ? `<li class="aside">${members.length > 0 ? "+ " : ""}${others} on Discord only</li>` : "";
-    interestGrid.innerHTML = `<ul class="roster-list">${names}${more}</ul>`;
-  }
-
   // A raid-frame unit: the class color tints the bar and names the character; officers get a group/bench select.
   function raidBar(s: Signup, isOfficer: boolean, isBench: boolean): string {
     const name = s.character ?? s.member.display_name;
@@ -280,206 +165,321 @@ import "../../../styles/room-event.css";
       : "";
     return `<li class="raid-bar" style="--bar-color: ${barColor}">${roleIcon}<span class="raid-bar-name">${escapeHtml(name)}</span>${control}</li>`;
   }
-
+  function rosterList(signups: Signup[], emptyText: string, opts: { showClass: boolean; showRole: boolean }): string {
+    if (signups.length === 0) {
+      return `<li class="aside">${emptyText}</li>`;
+    }
+    return signups.map((s) => memberRow(s, opts)).join("");
+  }
   function raidFrame(label: string, members: Signup[], isOfficer: boolean, isBench: boolean): string {
     const rows = members.map((s) => raidBar(s, isOfficer, isBench)).join("");
     const frameClass = isBench ? "raid-frame raid-frame-bench" : "raid-frame";
     return `<div class="${frameClass}"><h3 class="raid-frame-title">${label}</h3><ul class="raid-roster">${rows || `<li class="raid-empty">Empty</li>`}</ul></div>`;
   }
+  onPage("#event-content", () => {
+    const LOCKED_MESSAGE = "This event is no longer open for signups.";
 
-  async function onChartAssign(ev: Event): Promise<void> {
-    const select = ev.currentTarget as HTMLSelectElement;
-    const signupId = select.dataset.signupId;
-    if (!signupId || !event) {
-      return;
-    }
-    const value = select.value;
-    const body = value === "bench" ? { bench: true, group: null } : { bench: false, group: Number(value) };
-    try {
-      await apiFetch(`/api/events/${event.id}/signups/${signupId}`, { method: "PATCH", body: JSON.stringify(body) });
-      await refresh();
-    } catch (err) {
-      signupStatus.textContent = statusMessage(err);
-    }
-  }
+    const params = new URLSearchParams(location.search);
+    const eventId = params.get("id");
 
-  function renderChart(detail: EventDetail): void {
-    chartSection.hidden = detail.kind !== "raid";
-    if (detail.kind !== "raid") {
-      return;
-    }
-    const signed = detail.signups.filter((s) => s.status === "signed");
-    const isOfficer = me?.is_officer ?? false;
-    const frames: string[] = [];
-    for (let group = 1; group <= 8; group++) {
-      const members = signed.filter((s) => s.group === group && !s.bench);
-      frames.push(raidFrame(`Group ${group}`, members, isOfficer, false));
-    }
-    const bench = signed.filter((s) => s.bench || s.group === null);
-    frames.push(raidFrame("Bench", bench, isOfficer, true));
-    chartGrid.innerHTML = frames.join("");
+    const statusEl = requireElement("event-status");
+    const contentEl = requireElement("event-content");
+    const rosterChamber = requireElement("roster-chamber");
+    const summaryEl = requireElement("event-summary");
+    const notesEl = requireElement("event-notes");
+    const rosterSection = requireElement("roster-section");
+    const rosterGrid = requireElement("roster-grid");
+    const statusHeading = requireElement("h-status-lists");
+    const rosterExtra = requireElement("roster-extra");
+    const interestSection = requireElement("interest-section");
+    const interestHeading = requireElement("h-interest");
+    const interestGrid = requireElement("interest-grid");
+    const chartSection = requireElement("chart-section");
+    const chartGrid = requireElement("chart-grid");
+    const signupInvite = requireElement("signup-invite");
+    const signupSection = requireElement("signup-section");
+    const signedOutSection = requireElement("signed-out-section");
+    const signedOutMessage = requireElement("signed-out-message");
+    const signupForm = requireElement<HTMLFormElement>("signup-form");
+    const withdrawBtn = requireElement<HTMLButtonElement>("withdraw-btn");
+    const signupStatus = requireElement("signup-status");
+    const classField = requireElement("su-class-field");
+    const classSelect = requireElement<HTMLSelectElement>("su-class");
+    const roleField = requireElement("su-role-field");
+    const characterInput = requireElement<HTMLInputElement>("su-character");
+    const statusSelect = requireElement<HTMLSelectElement>("su-status");
 
-    if (isOfficer) {
-      chartGrid.querySelectorAll<HTMLSelectElement>("select[data-signup-id]").forEach((select) => {
-        select.addEventListener("change", onChartAssign);
-      });
-    }
-  }
+    classSelect.innerHTML = CLASSES.map((c) => `<option value="${c}">${capitalize(c)}</option>`).join("");
 
-  function renderSignupForm(detail: EventDetail): void {
-    const eligible = me?.is_guild_member ?? false;
-    signupInvite.hidden = eligible;
-    signupForm.hidden = !eligible;
-    if (!eligible) {
-      signupInvite.innerHTML = me
-        ? "Only confirmed guild members can sign up for events. Contact an officer if this looks wrong."
-        : 'Sign in with Discord on the <a href="/account/">account page</a> to add your name to the muster.';
-      return;
-    }
-    const roleKind = ROLE_KINDS.includes(detail.kind);
-    classField.hidden = !roleKind;
-    roleField.hidden = !roleKind;
-    characterInput.required = roleKind;
-    classSelect.required = roleKind;
-    requireElement<HTMLSelectElement>("su-role").required = roleKind;
-    statusSelect.innerHTML = roleKind
-      ? `<option value="signed">Signed</option><option value="tentative">Tentative</option><option value="absent">Absent</option>`
-      : `<option value="signed">Going</option><option value="tentative">Maybe</option><option value="absent">Can't make it</option>`;
+    const dateFormat = new Intl.DateTimeFormat(undefined, {
+      weekday: "long",
+      month: "long",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    });
 
-    const mine = detail.my_signup;
-    const locked = detail.status !== "scheduled";
+    let me: Me | null = null;
+    let event: EventDetail | null = null;
 
-    characterInput.value = mine?.character ?? "";
-    classSelect.value = mine?.class ?? CLASSES[0];
-    requireElement<HTMLSelectElement>("su-role").value = mine?.role ?? "dps";
-    statusSelect.value = mine?.status ?? "signed";
-    requireElement<HTMLTextAreaElement>("su-comment").value = mine?.comment ?? "";
-    withdrawBtn.hidden = !mine;
+    function renderRoster(detail: EventDetail): void {
+      const roleKind = ROLE_KINDS.includes(detail.kind);
+      const signed = detail.signups.filter((s) => s.status === "signed");
+      const tentative = detail.signups.filter((s) => s.status === "tentative");
+      const absent = detail.signups.filter((s) => s.status === "absent");
 
-    for (const field of signupForm.elements) {
-      if (
-        field instanceof HTMLInputElement ||
-        field instanceof HTMLSelectElement ||
-        field instanceof HTMLTextAreaElement
-      ) {
-        field.disabled = locked;
+      rosterSection.hidden = !roleKind;
+      if (roleKind) {
+        rosterGrid.innerHTML = ROLES.map((role: Role) => {
+          const members = signed.filter((s) => s.role === role);
+          return `
+          <div class="roster-col">
+            <h3><svg class="ico role-${role}" aria-hidden="true"><use href="#i-${role}"></use></svg> ${capitalize(role)} <span class="count">(${members.length})</span></h3>
+            <ul class="roster-list">${rosterList(members, "None yet", { showClass: true, showRole: false })}</ul>
+          </div>`;
+        }).join("");
+        statusHeading.textContent = "Tentative & absent";
+        rosterExtra.classList.add("cols-2");
+        rosterExtra.innerHTML = `
+        <div class="roster-col">
+          <h3>Tentative <span class="count">(${tentative.length})</span></h3>
+          <ul class="roster-list">${rosterList(tentative, "None", { showClass: true, showRole: true })}</ul>
+        </div>
+        <div class="roster-col">
+          <h3>Absent <span class="count">(${absent.length})</span></h3>
+          <ul class="roster-list">${rosterList(absent, "None", { showClass: true, showRole: true })}</ul>
+        </div>`;
+      } else {
+        statusHeading.textContent = "Going, maybe & can't make it";
+        rosterExtra.classList.remove("cols-2");
+        rosterExtra.innerHTML = `
+        <div class="roster-col">
+          <h3>Going <span class="count">(${signed.length})</span></h3>
+          <ul class="roster-list">${rosterList(signed, "None yet", { showClass: false, showRole: false })}</ul>
+        </div>
+        <div class="roster-col">
+          <h3>Maybe <span class="count">(${tentative.length})</span></h3>
+          <ul class="roster-list">${rosterList(tentative, "None", { showClass: false, showRole: false })}</ul>
+        </div>
+        <div class="roster-col">
+          <h3>Can't make it <span class="count">(${absent.length})</span></h3>
+          <ul class="roster-list">${rosterList(absent, "None", { showClass: false, showRole: false })}</ul>
+        </div>`;
       }
     }
-    // Keep "Saved." / "Withdrawn." from the action that triggered this re-render; only the lock notice is owned here.
-    if (locked) {
-      signupStatus.textContent = LOCKED_MESSAGE;
-    } else if (signupStatus.textContent === LOCKED_MESSAGE) {
-      signupStatus.textContent = "";
-    }
-  }
 
-  async function refresh(): Promise<void> {
-    if (!eventId) {
-      statusEl.textContent = "No event specified.";
-      return;
+    function renderInterest(detail: EventDetail): void {
+      if (!detail.discord_interest) {
+        interestSection.hidden = true;
+        return;
+      }
+      const { count, members } = detail.discord_interest;
+      interestSection.hidden = count === 0;
+      if (count === 0) {
+        return;
+      }
+      interestHeading.innerHTML = `Interested on Discord <span class="count">(${count})</span>`;
+      const names = members.map((m) => `<li>${escapeHtml(m.display_name)}</li>`).join("");
+      const others = count - members.length;
+      const more =
+        others > 0 ? `<li class="aside">${members.length > 0 ? "+ " : ""}${others} on Discord only</li>` : "";
+      interestGrid.innerHTML = `<ul class="roster-list">${names}${more}</ul>`;
     }
-    const [meResult, eventResult] = await Promise.allSettled([
-      fetchMe(),
-      apiFetch<EventDetail>(`/api/events/${eventId}`),
-    ]);
-    me = meResult.status === "fulfilled" ? meResult.value : null;
-    if (eventResult.status === "rejected") {
-      contentEl.hidden = true;
-      statusEl.textContent = statusMessage(eventResult.reason);
-      return;
-    }
-    event = eventResult.value;
-    statusEl.textContent = "";
-    contentEl.hidden = false;
-    const headingEl = requireElement<HTMLHeadingElement>("page-heading");
-    headingEl.textContent = event.title;
-    headingEl.classList.add("heading-title");
-    document.title = `${event.title} · SideQuest`;
-    const start = new Date(event.starts_at);
-    let when = dateFormat.format(start);
-    if (event.ends_at) {
-      const end = new Date(event.ends_at);
-      const sameDay = end.toDateString() === start.toDateString();
-      when += ` to ${sameDay ? end.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" }) : dateFormat.format(end)}`;
-    }
-    summaryEl.textContent = [
-      EVENT_KIND_LABELS[event.kind],
-      event.location,
-      when,
-      event.size === null ? "" : `${event.size}-player`,
-      event.series ? weekdayPhrase(event.series.weekdays, event.series.interval_weeks) : "",
-    ]
-      .filter(Boolean)
-      .join(" · ");
-    const signedOut = event.counts === null;
-    rosterChamber.hidden = signedOut;
-    signupSection.hidden = signedOut;
-    signedOutSection.hidden = !signedOut;
-    if (signedOut) {
-      chartSection.hidden = true;
-      const next = encodeURIComponent(location.pathname + location.search);
-      signedOutMessage.innerHTML = `The plan and who's going are for guild members. <a href="/auth/discord/login?next=${next}">Sign in with Discord</a> to see them.`;
-      return;
-    }
-    notesEl.hidden = !event.notes;
-    notesEl.textContent = event.notes ?? "";
-    renderRoster(event);
-    renderInterest(event);
-    renderChart(event);
-    renderSignupForm(event);
-  }
 
-  signupForm.addEventListener("submit", async (ev) => {
-    ev.preventDefault();
-    if (!event) {
-      return;
+    async function onChartAssign(ev: Event): Promise<void> {
+      const select = ev.currentTarget as HTMLSelectElement;
+      const signupId = select.dataset.signupId;
+      if (!signupId || !event) {
+        return;
+      }
+      const value = select.value;
+      const body = value === "bench" ? { bench: true, group: null } : { bench: false, group: Number(value) };
+      try {
+        await apiFetch(`/api/events/${event.id}/signups/${signupId}`, { method: "PATCH", body: JSON.stringify(body) });
+        await refresh();
+      } catch (err) {
+        signupStatus.textContent = statusMessage(err);
+      }
     }
-    const roleKind = ROLE_KINDS.includes(event.kind);
-    const data = new FormData(signupForm);
-    const character = String(data.get("character") ?? "").trim();
-    const comment = String(data.get("comment") ?? "").trim();
-    const body: Record<string, unknown> = {
-      status: String(data.get("status")),
-      comment: comment.length > 0 ? comment : undefined,
-    };
-    if (roleKind) {
-      body.character = character;
-      body.class = String(data.get("class"));
-      body.role = String(data.get("role"));
-    } else if (character.length > 0) {
-      body.character = character;
-    }
-    signupStatus.textContent = "Saving…";
-    try {
-      await apiFetch<Signup>(`/api/events/${event.id}/signup`, { method: "PUT", body: JSON.stringify(body) });
-      signupStatus.textContent = "Saved.";
-      await refresh();
-    } catch (err) {
-      signupStatus.textContent = statusMessage(err);
-    }
-  });
 
-  withdrawBtn.addEventListener("click", async () => {
-    if (!event) {
-      return;
-    }
-    signupStatus.textContent = "Withdrawing…";
-    try {
-      await apiFetch(`/api/events/${event.id}/signup`, { method: "DELETE" });
-      signupStatus.textContent = "Withdrawn.";
-      await refresh();
-    } catch (err) {
-      signupStatus.textContent = statusMessage(err);
-    }
-  });
+    function renderChart(detail: EventDetail): void {
+      chartSection.hidden = detail.kind !== "raid";
+      if (detail.kind !== "raid") {
+        return;
+      }
+      const signed = detail.signups.filter((s) => s.status === "signed");
+      const isOfficer = me?.is_officer ?? false;
+      const frames: string[] = [];
+      for (let group = 1; group <= 8; group++) {
+        const members = signed.filter((s) => s.group === group && !s.bench);
+        frames.push(raidFrame(`Group ${group}`, members, isOfficer, false));
+      }
+      const bench = signed.filter((s) => s.bench || s.group === null);
+      frames.push(raidFrame("Bench", bench, isOfficer, true));
+      chartGrid.innerHTML = frames.join("");
 
-  // A newer copy from the service worker re-renders the page, unless someone is part-way through the sign-up form.
-  if (eventId) {
-    onFreshData(`/api/events/${eventId}`, () => {
-      if (!signupForm.contains(document.activeElement)) {
-        void refresh();
+      if (isOfficer) {
+        chartGrid.querySelectorAll<HTMLSelectElement>("select[data-signup-id]").forEach((select) => {
+          select.addEventListener("change", onChartAssign);
+        });
+      }
+    }
+
+    function renderSignupForm(detail: EventDetail): void {
+      const eligible = me?.is_guild_member ?? false;
+      signupInvite.hidden = eligible;
+      signupForm.hidden = !eligible;
+      if (!eligible) {
+        signupInvite.innerHTML = me
+          ? "Only confirmed guild members can sign up for events. Contact an officer if this looks wrong."
+          : 'Sign in with Discord on the <a href="/account/">account page</a> to add your name to the muster.';
+        return;
+      }
+      const roleKind = ROLE_KINDS.includes(detail.kind);
+      classField.hidden = !roleKind;
+      roleField.hidden = !roleKind;
+      characterInput.required = roleKind;
+      classSelect.required = roleKind;
+      requireElement<HTMLSelectElement>("su-role").required = roleKind;
+      statusSelect.innerHTML = roleKind
+        ? `<option value="signed">Signed</option><option value="tentative">Tentative</option><option value="absent">Absent</option>`
+        : `<option value="signed">Going</option><option value="tentative">Maybe</option><option value="absent">Can't make it</option>`;
+
+      const mine = detail.my_signup;
+      const locked = detail.status !== "scheduled";
+
+      characterInput.value = mine?.character ?? "";
+      classSelect.value = mine?.class ?? CLASSES[0];
+      requireElement<HTMLSelectElement>("su-role").value = mine?.role ?? "dps";
+      statusSelect.value = mine?.status ?? "signed";
+      requireElement<HTMLTextAreaElement>("su-comment").value = mine?.comment ?? "";
+      withdrawBtn.hidden = !mine;
+
+      for (const field of signupForm.elements) {
+        if (
+          field instanceof HTMLInputElement ||
+          field instanceof HTMLSelectElement ||
+          field instanceof HTMLTextAreaElement
+        ) {
+          field.disabled = locked;
+        }
+      }
+      // Keep "Saved." / "Withdrawn." from the action that triggered this re-render; only the lock notice is owned here.
+      if (locked) {
+        signupStatus.textContent = LOCKED_MESSAGE;
+      } else if (signupStatus.textContent === LOCKED_MESSAGE) {
+        signupStatus.textContent = "";
+      }
+    }
+
+    async function refresh(): Promise<void> {
+      if (!eventId) {
+        statusEl.textContent = "No event specified.";
+        return;
+      }
+      const [meResult, eventResult] = await Promise.allSettled([
+        fetchMe(),
+        apiFetch<EventDetail>(`/api/events/${eventId}`),
+      ]);
+      me = meResult.status === "fulfilled" ? meResult.value : null;
+      if (eventResult.status === "rejected") {
+        contentEl.hidden = true;
+        statusEl.textContent = statusMessage(eventResult.reason);
+        return;
+      }
+      event = eventResult.value;
+      statusEl.textContent = "";
+      contentEl.hidden = false;
+      const headingEl = requireElement<HTMLHeadingElement>("page-heading");
+      headingEl.textContent = event.title;
+      headingEl.classList.add("heading-title");
+      document.title = `${event.title} · SideQuest`;
+      const start = new Date(event.starts_at);
+      let when = dateFormat.format(start);
+      if (event.ends_at) {
+        const end = new Date(event.ends_at);
+        const sameDay = end.toDateString() === start.toDateString();
+        when += ` to ${sameDay ? end.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" }) : dateFormat.format(end)}`;
+      }
+      summaryEl.textContent = [
+        EVENT_KIND_LABELS[event.kind],
+        event.location,
+        when,
+        event.size === null ? "" : `${event.size}-player`,
+        event.series ? weekdayPhrase(event.series.weekdays, event.series.interval_weeks) : "",
+      ]
+        .filter(Boolean)
+        .join(" · ");
+      const signedOut = event.counts === null;
+      rosterChamber.hidden = signedOut;
+      signupSection.hidden = signedOut;
+      signedOutSection.hidden = !signedOut;
+      if (signedOut) {
+        chartSection.hidden = true;
+        const next = encodeURIComponent(location.pathname + location.search);
+        signedOutMessage.innerHTML = `The plan and who's going are for guild members. <a href="/auth/discord/login?next=${next}">Sign in with Discord</a> to see them.`;
+        return;
+      }
+      notesEl.hidden = !event.notes;
+      notesEl.textContent = event.notes ?? "";
+      renderRoster(event);
+      renderInterest(event);
+      renderChart(event);
+      renderSignupForm(event);
+    }
+
+    signupForm.addEventListener("submit", async (ev) => {
+      ev.preventDefault();
+      if (!event) {
+        return;
+      }
+      const roleKind = ROLE_KINDS.includes(event.kind);
+      const data = new FormData(signupForm);
+      const character = String(data.get("character") ?? "").trim();
+      const comment = String(data.get("comment") ?? "").trim();
+      const body: Record<string, unknown> = {
+        status: String(data.get("status")),
+        comment: comment.length > 0 ? comment : undefined,
+      };
+      if (roleKind) {
+        body.character = character;
+        body.class = String(data.get("class"));
+        body.role = String(data.get("role"));
+      } else if (character.length > 0) {
+        body.character = character;
+      }
+      signupStatus.textContent = "Saving…";
+      try {
+        await apiFetch<Signup>(`/api/events/${event.id}/signup`, { method: "PUT", body: JSON.stringify(body) });
+        signupStatus.textContent = "Saved.";
+        await refresh();
+      } catch (err) {
+        signupStatus.textContent = statusMessage(err);
       }
     });
-  }
-  refresh();
+
+    withdrawBtn.addEventListener("click", async () => {
+      if (!event) {
+        return;
+      }
+      signupStatus.textContent = "Withdrawing…";
+      try {
+        await apiFetch(`/api/events/${event.id}/signup`, { method: "DELETE" });
+        signupStatus.textContent = "Withdrawn.";
+        await refresh();
+      } catch (err) {
+        signupStatus.textContent = statusMessage(err);
+      }
+    });
+
+    // A newer copy from the service worker re-renders the page, unless someone is part-way through the sign-up form.
+    if (eventId) {
+      onFreshData(`/api/events/${eventId}`, () => {
+        if (!signupForm.contains(document.activeElement)) {
+          void refresh();
+        }
+      });
+    }
+    refresh();
+  });
 </script>

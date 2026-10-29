@@ -2,15 +2,13 @@
 // each voice channel someone is sitting in, with one ember per person. Counts only, never names. Any fetch
 // failure, or a bot that hasn't reported recently, leaves the band as it is.
 import { apiFetch, onFreshData, type DiscordLive, type VoiceChannelCount } from "./api";
+import { onPage } from "./page";
 
 const REFRESH_MS = 60_000;
 /** More people than this in one channel: the rest are a "+N" after the embers. */
 const MAX_EMBERS = 8;
 /** Matches the longest exit transition in site.css (.hearth / .ember leaving). */
 const EXIT_MS = 700;
-
-const online = document.querySelector<HTMLElement>("[data-discord-online]");
-const hearths = document.querySelector<HTMLUListElement>("[data-hearths]");
 
 const FLAME_SVG = `<svg class="hearth-fire" viewBox="0 0 32 44" aria-hidden="true" focusable="false">
   <path class="flame-outer" d="M16 2c1.6 6.4 9 9.8 9 19.2C25 29 21.2 34 16 34S7 29 7 21.6c0-5.4 3.4-8 4.6-12.4 1.2 3 2.4 4.4 3.6 5.4.2-4.8-.6-8.4.8-12.6Z"/>
@@ -88,7 +86,7 @@ function renderHearths(list: HTMLUListElement, voice: VoiceChannelCount[]): void
   }
 }
 
-function render(live: DiscordLive): void {
+function render(live: DiscordLive, online: HTMLElement | null, hearths: HTMLUListElement | null): void {
   if (online) {
     online.hidden = live.online === null;
     online.textContent = live.online === null ? "" : `${live.online.toLocaleString()} online`;
@@ -98,27 +96,32 @@ function render(live: DiscordLive): void {
   }
 }
 
-async function refresh(): Promise<void> {
-  try {
-    render(await apiFetch<DiscordLive>("/api/discord/live"));
-  } catch {
-    // Keep whatever is showing: no network error should surface on the homepage.
+onPage("[data-discord-online], [data-hearths]", (signal) => {
+  const online = document.querySelector<HTMLElement>("[data-discord-online]");
+  const hearths = document.querySelector<HTMLUListElement>("[data-hearths]");
+  const refresh = async (): Promise<void> => {
+    try {
+      render(await apiFetch<DiscordLive>("/api/discord/live"), online, hearths);
+    } catch {
+      // Keep whatever is showing: no network error should surface on the homepage.
+    }
+  };
+
+  if (hearths) {
+    // Flames only burn while the band is on screen; off screen their animations pause.
+    const observer = new IntersectionObserver(([entry]) => {
+      hearths.classList.toggle("is-idle", !entry?.isIntersecting);
+    });
+    observer.observe(hearths);
+    signal.addEventListener("abort", () => observer.disconnect());
   }
-}
 
-if (hearths) {
-  // Flames only burn while the band is on screen; off screen their animations pause.
-  new IntersectionObserver(([entry]) => {
-    hearths.classList.toggle("is-idle", !entry?.isIntersecting);
-  }).observe(hearths);
-}
-
-if (online || hearths) {
   onFreshData("/api/discord/live", () => void refresh());
   void refresh();
-  window.setInterval(() => {
+  const timer = window.setInterval(() => {
     if (document.visibilityState === "visible") {
       void refresh();
     }
   }, REFRESH_MS);
-}
+  signal.addEventListener("abort", () => window.clearInterval(timer));
+});
