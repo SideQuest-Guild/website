@@ -15,9 +15,9 @@ export type Me = {
   roster_confirmed: boolean;
 };
 
-export type EventKind = "raid" | "dungeon" | "leveling" | "pvp" | "social" | "other";
+export type EventKind = "raid" | "dungeon" | "leveling" | "pvp" | "social" | "transmog" | "other";
 
-export const EVENT_KINDS: EventKind[] = ["raid", "dungeon", "leveling", "pvp", "social", "other"];
+export const EVENT_KINDS: EventKind[] = ["raid", "dungeon", "leveling", "pvp", "social", "transmog", "other"];
 
 export const EVENT_KIND_LABELS: Record<EventKind, string> = {
   raid: "Raid",
@@ -25,8 +25,23 @@ export const EVENT_KIND_LABELS: Record<EventKind, string> = {
   leveling: "Leveling",
   pvp: "PvP",
   social: "Social",
+  transmog: "Transmog",
   other: "Other",
 };
+
+/** Attendance EP per kind when an event has no override; mirrors `EVENT_KIND_EP` in sidequest_common. */
+export const EVENT_KIND_EP: Record<EventKind, number> = {
+  raid: 10,
+  dungeon: 5,
+  leveling: 3,
+  pvp: 3,
+  social: 2,
+  transmog: 2,
+  other: 2,
+};
+
+/** The highest attendance EP an officer can set on one event. */
+export const MAX_EVENT_EP = 50;
 
 /** Kinds whose sign-ups require character, class and role. */
 export const ROLE_KINDS: EventKind[] = ["raid", "dungeon"];
@@ -64,6 +79,8 @@ export type EventSeriesSummary = {
   title: string;
   location: string;
   size: number | null;
+  ep: number;
+  ep_override: number | null;
   notes: string | null;
   rule: SeriesRule;
   active: boolean;
@@ -91,6 +108,9 @@ export type EventSummary = {
   ends_at: string | null;
   /** `null` for events first created in Discord, or when no size was set. */
   size: number | null;
+  /** Attendance EP: `ep_override` if an officer set one, else the kind's preset. */
+  ep: number;
+  ep_override: number | null;
   status: EventStatus;
   notes: string | null;
   counts: EventCounts;

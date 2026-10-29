@@ -224,6 +224,39 @@ async def test_officer_can_create_and_manage_event(member_client: AsyncTestClien
     assert delete_response.status_code == 204
 
 
+async def test_event_ep_follows_kind_preset_until_an_officer_overrides_it(
+    member_client: AsyncTestClient, discord_state: dict
+) -> None:
+    await login_as(member_client, discord_state, discord_id=2031, roles=[OFFICER_ROLE_ID])
+    created = await member_client.post(
+        "/api/events",
+        json={"kind": "social", "title": "Movie Night", "starts_at": "2026-12-05T20:00:00Z"},
+    )
+    assert created.status_code == 201
+    assert (created.json()["ep"], created.json()["ep_override"]) == (2, None)
+    event_id = created.json()["id"]
+
+    async def patch(body: dict) -> dict:
+        response = await member_client.patch(f"/api/events/{event_id}", json=body)
+        assert response.status_code == 200
+        return response.json()
+
+    assert (await patch({"kind": "dungeon"}))["ep"] == 5
+    assert (await patch({"ep_override": 7}))["ep"] == 7
+    assert (await patch({"kind": "transmog"}))["ep"] == 7
+    assert (await patch({"ep_override": 0}))["ep"] == 0
+    reverted = await patch({"ep_override": None})
+    assert (reverted["ep"], reverted["ep_override"]) == (2, None)
+
+    too_much = await member_client.patch(f"/api/events/{event_id}", json={"ep_override": 51})
+    assert too_much.status_code == 400
+    negative = await member_client.post(
+        "/api/events",
+        json={"kind": "social", "title": "Movie Night", "starts_at": "2026-12-05T20:00:00Z", "ep_override": -1},
+    )
+    assert negative.status_code == 400
+
+
 async def test_officer_raid_chart_places_signup_in_group(
     member_client: AsyncTestClient, discord_state: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
 ) -> None:

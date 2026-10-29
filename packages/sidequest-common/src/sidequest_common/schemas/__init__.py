@@ -15,6 +15,7 @@ from sidequest_common.schemas.discord_events import (
 )
 from sidequest_common.schemas.discord_live import DiscordLive, DiscordLiveReport, VoiceChannelCount
 from sidequest_common.schemas.events import (
+    EVENT_KIND_EP,
     EVENT_KIND_LABELS,
     ROLE_KINDS,
     ChartUpdate,
@@ -37,6 +38,7 @@ from sidequest_common.schemas.events import (
     SignupStatus,
     SignupUpsert,
     WowClass,
+    event_ep,
 )
 from sidequest_common.schemas.gm import (
     GmCase,
@@ -73,6 +75,7 @@ from sidequest_common.schemas.role_menus import (
 )
 
 __all__ = (
+    "EVENT_KIND_EP",
     "EVENT_KIND_LABELS",
     "ROLE_KINDS",
     "ActivityAck",
@@ -144,4 +147,5 @@ __all__ = (
     "VoiceChannelCount",
     "WowClass",
     "XPAwardResult",
+    "event_ep",
 )

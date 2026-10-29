@@ -13,7 +13,7 @@ from advanced_alchemy.types import DateTimeUTC, JsonB
 from sqlalchemy import BigInteger, Boolean, Date, ForeignKey, Integer, String, Text, Time, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-EVENT_KINDS = ("raid", "dungeon", "leveling", "pvp", "social", "other")
+EVENT_KINDS = ("raid", "dungeon", "leveling", "pvp", "social", "transmog", "other")
 ROLE_KINDS = ("raid", "dungeon")
 EVENT_STATUSES = ("scheduled", "cancelled", "completed")
 SIGNUP_ROLES = ("tank", "healer", "dps")
@@ -38,7 +38,7 @@ class EventSeries(UUIDAuditBase):
     other week, anchored on ``starts_on``'s week). ``start_time`` is wall-clock time in ``timezone`` (IANA, e.g.
     ``"America/Chicago"``); occurrences convert it to UTC per-occurrence via ``zoneinfo``, so DST shifts land
     correctly. ``skipped_dates`` (ISO date strings) are occurrence dates a member deleted; they are never
-    recreated. ``active`` is cleared once ``until`` has passed.
+    recreated. ``active`` is cleared once ``until`` has passed. ``ep_override`` is copied onto occurrences.
     """
 
     __tablename__ = "event_series"
@@ -48,6 +48,7 @@ class EventSeries(UUIDAuditBase):
     title: Mapped[str] = mapped_column(Text)
     location: Mapped[str] = mapped_column(Text)
     size: Mapped[int | None] = mapped_column(Integer, default=None)
+    ep_override: Mapped[int | None] = mapped_column(Integer, default=None)
     notes: Mapped[str | None] = mapped_column(Text, default=None)
     weekdays: Mapped[list[int]] = mapped_column(JsonB, default=list)
     interval_weeks: Mapped[int] = mapped_column(Integer, default=1)
@@ -73,13 +74,14 @@ class GuildEvent(UUIDAuditBase):
     when its current desired-state hash differs from ``discord_pushed_hash``; a Discord report whose hash equals
     ``discord_seen_hash`` is our own echo and is ignored. ``series_id``/``occurrence_date`` link an occurrence back
     to the ``EventSeries`` that materialized it; ``series_detached`` is set once an officer edits or deletes that
-    one occurrence, so series-wide edits stop touching it.
+    one occurrence, so series-wide edits stop touching it. ``ep_override`` is the officer-set attendance EP; ``None``
+    means the kind's preset (``EVENT_KIND_EP``), so retuning a preset reaches every event that kept it.
     """
 
     __tablename__ = "guild_event"
     __table_args__ = (
         UniqueConstraint("series_id", "occurrence_date", name="uq_guild_event_series_occurrence"),
-        {"comment": "Scheduled guild events (raids, dungeons, leveling, pvp, social, other)."},
+        {"comment": "Scheduled guild events (raids, dungeons, leveling, pvp, social, transmog, other)."},
     )
 
     kind: Mapped[str] = mapped_column(String(20), default="other")
@@ -88,6 +90,7 @@ class GuildEvent(UUIDAuditBase):
     starts_at: Mapped[datetime] = mapped_column(DateTimeUTC(timezone=True), index=True)
     ends_at: Mapped[datetime | None] = mapped_column(DateTimeUTC(timezone=True), default=None)
     size: Mapped[int | None] = mapped_column(Integer, default=None)
+    ep_override: Mapped[int | None] = mapped_column(Integer, default=None)
     status: Mapped[str] = mapped_column(String(20), default="scheduled")
     notes: Mapped[str | None] = mapped_column(Text, default=None)
     discord_event_id: Mapped[int | None] = mapped_column(BigInteger, unique=True, default=None)

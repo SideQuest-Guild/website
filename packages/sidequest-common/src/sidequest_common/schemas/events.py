@@ -22,6 +22,7 @@ class EventKind(StrEnum):
     LEVELING = "leveling"
     PVP = "pvp"
     SOCIAL = "social"
+    TRANSMOG = "transmog"
     OTHER = "other"
 
 
@@ -33,8 +34,31 @@ EVENT_KIND_LABELS: dict[EventKind, str] = {
     EventKind.LEVELING: "Leveling",
     EventKind.PVP: "PvP",
     EventKind.SOCIAL: "Social",
+    EventKind.TRANSMOG: "Transmog",
     EventKind.OTHER: "Other",
 }
+
+EVENT_KIND_EP: dict[EventKind, int] = {
+    EventKind.RAID: 10,
+    EventKind.DUNGEON: 5,
+    EventKind.LEVELING: 3,
+    EventKind.PVP: 3,
+    EventKind.SOCIAL: 2,
+    EventKind.TRANSMOG: 2,
+    EventKind.OTHER: 2,
+}
+"""EP (effort points) for attending an event of each kind, unless an officer overrides it on the event.
+
+A raid boss kill is worth 10 EP, so these keep guild nights a small nudge next to raiding. A raid's 10 is its on-time
+and full-night attendance bonus; boss kills earn their own EP on top.
+"""
+
+MAX_EVENT_EP = 50
+
+
+def event_ep(kind: str, ep_override: int | None) -> int:
+    """The EP an event awards: the officer's override, else its kind's preset."""
+    return ep_override if ep_override is not None else EVENT_KIND_EP[EventKind(kind)]
 
 
 class SignupRole(StrEnum):
@@ -108,7 +132,10 @@ class SeriesRef(BaseModel):
 
 
 class EventSummary(BaseModel):
-    """One event as returned in list views. ``location`` is ``""`` and ``size`` ``None`` for Discord-created events."""
+    """One event as returned in list views. ``location`` is ``""`` and ``size`` ``None`` for Discord-created events.
+
+    ``ep`` is what attending awards; ``ep_override`` is the officer-set value behind it (``None``: the kind's preset).
+    """
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -119,6 +146,8 @@ class EventSummary(BaseModel):
     starts_at: datetime
     ends_at: datetime | None
     size: int | None
+    ep: int
+    ep_override: int | None
     status: EventStatus
     notes: str | None
     counts: EventCounts
@@ -175,6 +204,7 @@ class EventCreate(BaseModel):
     starts_at: datetime
     ends_at: datetime | None = None
     size: int | None = Field(default=None, ge=1, le=40)
+    ep_override: int | None = Field(default=None, ge=0, le=MAX_EVENT_EP)
     notes: str | None = Field(default=None, max_length=2000)
 
     @model_validator(mode="after")
@@ -188,6 +218,8 @@ class EventCreate(BaseModel):
 class EventUpdate(BaseModel):
     """Body for ``PATCH /api/events/{id}`` (officer). Only present fields change; ``ends_at: null`` clears the end.
 
+    ``ep_override: null`` goes back to the kind's EP preset.
+
     ``ends_at`` vs ``starts_at`` is checked against the stored event by the service when only one of them is sent.
     """
 
@@ -197,6 +229,7 @@ class EventUpdate(BaseModel):
     starts_at: datetime | None = None
     ends_at: datetime | None = None
     size: int | None = Field(default=None, ge=1, le=40)
+    ep_override: int | None = Field(default=None, ge=0, le=MAX_EVENT_EP)
     notes: str | None = Field(default=None, max_length=2000)
     status: EventStatus | None = None
 
@@ -267,7 +300,10 @@ class SeriesRule(BaseModel):
 
 
 class EventSeriesSummary(BaseModel):
-    """One repeating event series, as returned by ``GET/POST/PATCH /api/event-series``."""
+    """One repeating event series, as returned by ``GET/POST/PATCH /api/event-series``.
+
+    ``ep``/``ep_override`` as on ``EventSummary``; occurrences copy ``ep_override``.
+    """
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -276,6 +312,8 @@ class EventSeriesSummary(BaseModel):
     title: str
     location: str
     size: int | None
+    ep: int
+    ep_override: int | None
     notes: str | None
     rule: SeriesRule
     active: bool
@@ -289,6 +327,7 @@ class EventSeriesCreate(BaseModel):
     title: str = Field(min_length=1, max_length=200)
     location: str = Field(default="", max_length=200)
     size: int | None = Field(default=None, ge=1, le=40)
+    ep_override: int | None = Field(default=None, ge=0, le=MAX_EVENT_EP)
     notes: str | None = Field(default=None, max_length=2000)
     weekdays: list[int]
     interval_weeks: int = Field(default=1)
@@ -319,6 +358,7 @@ class EventSeriesUpdate(BaseModel):
     title: str | None = Field(default=None, min_length=1, max_length=200)
     location: str | None = Field(default=None, max_length=200)
     size: int | None = Field(default=None, ge=1, le=40)
+    ep_override: int | None = Field(default=None, ge=0, le=MAX_EVENT_EP)
     notes: str | None = Field(default=None, max_length=2000)
     weekdays: list[int] | None = None
     interval_weeks: int | None = None

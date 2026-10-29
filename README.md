@@ -37,7 +37,7 @@ flowchart LR
 | `/auth/battlenet/link`, `/auth/battlenet/callback`, `/auth/battlenet/unlink` | signed in | Link a Battle.net account (BattleTag) to the member |
 | `/api/me` (GET), `/api/me` (DELETE) | signed in | The signed-in member; `DELETE` permanently deletes the member, their event signups, and their sign-up activity rows, and clears the session cookie |
 | `/api/members/{member_id}/roster-confirmation` (PUT, DELETE) | GM | Confirm or clear that a member is on the in-game guild roster |
-| `/api/events`, `/api/event-series`, `/api/addons` (GET) | none | Guild events (raids, dungeons, leveling, pvp, social, other) with roster + raid chart, repeating event series, guild addon links |
+| `/api/events`, `/api/event-series`, `/api/addons` (GET) | none | Guild events (raids, dungeons, leveling, pvp, social, transmog, other) with roster + raid chart, attendance EP, repeating event series, guild addon links |
 | `/api/events/{id}/signup` | guild member | Sign up for / withdraw from a guild event |
 | `/api/events`, `/api/event-series`, `/api/addons` (POST/PATCH/DELETE), `/api/events/{id}/signups/{id}` | officer | Manage guild events, repeating event series, the raid chart and addons |
 | `/api/gm/members`, `/api/gm/members/{member_id}`, `/api/gm/log`, `/api/gm/cases` (GET), `/api/gm/cases/{case_number}` (PATCH) | GM | Member management detail, unified activity log (sign-ups, sign-ins, Battle.net links, officer actions, moderation), and moderation case review/edit |
@@ -191,13 +191,18 @@ restored.
   than the series rule itself. Editing a single occurrence detaches it from the series; editing the series updates
   its still-attached future occurrences (re-timing or cancelling ones a schedule change no longer matches); ending
   a series cancels its signed-up future occurrences and deletes the signup-less ones, keeping past occurrences.
+- Every event and series carries the EP (effort points) attending it is worth: `ep_override` if an officer set one
+  (0–50), else its kind's preset (`EVENT_KIND_EP`: raid 10, dungeon 5, leveling 3, PvP 3, social 2, transmog 2,
+  other 2). Responses return both `ep` (what attending awards) and `ep_override`; a blank EP box on the officer form
+  sends `null`, which follows the kind's preset (including after a kind change or a preset retune). Series copy
+  their override onto occurrences.
 - Clicking "Interested" on the Discord event reports the full interested-user list to the site (one-way: the API
   can't mark a Discord user interested on the bot's behalf), debounced ~5s per event; `EventDetail.discord_interest`
   shows the total count plus the names/avatars of interested users who also have a site account (others stay
   anonymous since event pages are public).
 - `/eventsync forum [channel]` (Manage Server) points upcoming events at a forum channel: one thread per guild
-  event, named after the event and tagged by kind (`Raid`/`Dungeon`/`Leveling`/`PvP`/`Social`/`Other`; the bot
-  creates missing tags, needs **Manage Channels**). The starter post is edited in place as the event changes;
+  event, named after the event and tagged by kind (`Raid`/`Dungeon`/`Leveling`/`PvP`/`Social`/`Transmog`/`Other`;
+  the bot creates missing tags, needs **Manage Channels**). The starter post is edited in place as the event changes;
   cancelling posts a notice and archives+locks the thread, completing just archives+locks it, and deleting the
   guild event on the site posts a removal notice and archives+locks it too. Sign-ups, status changes, new
   comments, and withdrawals get a short forum comment that @-mentions the member without pinging them and quotes

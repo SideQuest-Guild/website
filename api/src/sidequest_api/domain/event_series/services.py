@@ -14,12 +14,12 @@ from sqlalchemy import func, select
 
 from sidequest_api.domain.event_series.materializer import materialize_series, occurrence_matches
 from sidequest_common.models import DiscordEventTombstone, EventSeries, EventSignup, GuildEvent
-from sidequest_common.schemas import EventSeriesCreate, EventSeriesSummary, EventSeriesUpdate
+from sidequest_common.schemas import EventSeriesCreate, EventSeriesSummary, EventSeriesUpdate, event_ep
 
 if TYPE_CHECKING:
     from uuid import UUID
 
-CONTENT_FIELDS = ("kind", "title", "location", "size", "notes", "duration_minutes")
+CONTENT_FIELDS = ("kind", "title", "location", "size", "ep_override", "notes", "duration_minutes")
 SCHEDULE_FIELDS = ("weekdays", "interval_weeks", "start_time", "timezone", "starts_on", "until")
 
 
@@ -40,6 +40,8 @@ def _summary(series: EventSeries, next_starts_at: datetime | None) -> EventSerie
             "title": series.title,
             "location": series.location,
             "size": series.size,
+            "ep": event_ep(series.kind, series.ep_override),
+            "ep_override": series.ep_override,
             "notes": series.notes,
             "rule": {
                 "weekdays": series.weekdays,
@@ -91,6 +93,7 @@ class EventSeriesService(SQLAlchemyAsyncRepositoryService[EventSeries]):
             title=data.title,
             location=data.location,
             size=data.size,
+            ep_override=data.ep_override,
             notes=data.notes,
             weekdays=sorted(set(data.weekdays)),
             interval_weeks=data.interval_weeks,
@@ -181,6 +184,7 @@ class EventSeriesService(SQLAlchemyAsyncRepositoryService[EventSeries]):
             occurrence.title = series.title
             occurrence.location = series.location
             occurrence.size = series.size
+            occurrence.ep_override = series.ep_override
             occurrence.notes = series.notes
             occurrence.ends_at = occurrence.starts_at + duration if duration is not None else None
         await self.repository.session.commit()

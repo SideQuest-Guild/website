@@ -98,6 +98,7 @@ async def materialize_series(session: AsyncSession, series: EventSeries, *, now:
                 starts_at=starts_at,
                 ends_at=starts_at + duration if duration is not None else None,
                 size=series.size,
+                ep_override=series.ep_override,
                 status="scheduled",
                 notes=series.notes,
                 series_id=series.id,

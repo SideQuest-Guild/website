@@ -136,6 +136,27 @@ async def test_create_series_materializes_and_returns_summary(
         assert occurrence["series"]["start_time"] == "19:00"
 
 
+async def test_series_ep_override_reaches_its_occurrences(member_client: AsyncTestClient, discord_state: dict) -> None:
+    await login_as(member_client, discord_state, discord_id=3006, roles=[OFFICER_ROLE_ID])
+    created = await member_client.post(
+        "/api/event-series", json={**_SERIES_BODY, "kind": "social", "location": "", "ep_override": 4}
+    )
+    assert created.status_code == 201
+    series_id = created.json()["id"]
+    assert (created.json()["ep"], created.json()["ep_override"]) == (4, 4)
+
+    async def occurrence_eps() -> set[int]:
+        events = (await member_client.get("/api/events", params={"when": "upcoming"})).json()
+        return {event["ep"] for event in events if event["series"] and event["series"]["id"] == series_id}
+
+    assert await occurrence_eps() == {4}
+
+    patched = await member_client.patch(f"/api/event-series/{series_id}", json={"ep_override": None})
+    assert patched.status_code == 200
+    assert patched.json()["ep"] == 2
+    assert await occurrence_eps() == {2}
+
+
 async def test_create_series_rejects_unknown_timezone(member_client: AsyncTestClient, discord_state: dict) -> None:
     await login_as(member_client, discord_state, discord_id=3003, roles=[OFFICER_ROLE_ID])
     response = await member_client.post("/api/event-series", json={**_SERIES_BODY, "timezone": "Not/AZone"})

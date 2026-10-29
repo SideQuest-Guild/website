@@ -34,6 +34,7 @@ from sidequest_common.schemas import (
     Signup,
     SignupMember,
     SignupUpsert,
+    event_ep,
 )
 
 if TYPE_CHECKING:
@@ -64,6 +65,8 @@ def _event_summary_fields(event: GuildEvent) -> dict[str, object]:
         "starts_at": event.starts_at,
         "ends_at": event.ends_at,
         "size": event.size,
+        "ep": event_ep(event.kind, event.ep_override),
+        "ep_override": event.ep_override,
         "status": event.status,
         "notes": event.notes,
         "series": _series_ref(event),
@@ -206,6 +209,7 @@ class EventsService(SQLAlchemyAsyncRepositoryService[GuildEvent]):
             starts_at=data.starts_at,
             ends_at=data.ends_at,
             size=data.size,
+            ep_override=data.ep_override,
             notes=data.notes,
         )
         return await self.create(event, auto_commit=True)
