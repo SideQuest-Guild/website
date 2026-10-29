@@ -102,10 +102,24 @@ unknown paths). `make web-dev` on its own still works too (plain Astro on `http:
 `DISCORD_GUILD_ID` makes slash commands sync to that server instantly instead of globally.
 
 `make ci` runs what GitHub Actions runs: ruff format and lint, pyrefly, codespell, the test suite (deprecation warnings
-are errors), and for the website oxfmt, oxlint, `astro check`, and a build. pyrefly fails only on type errors that
-aren't recorded in `pyrefly-baseline.json`; after fixing some, `make type-baseline` re-records it. `make fmt` formats
-both sides, `make lint` runs every prek hook (`make install-prek` installs them), and `make help` lists the rest.
-`make migration MSG="..."` autogenerates a migration after a model change.
+are errors), and for the website oxfmt, oxlint, `astro check`, a build, and the end-to-end tests. pyrefly fails only on
+type errors that aren't recorded in `pyrefly-baseline.json`; after fixing some, `make type-baseline` re-records it.
+`make fmt` formats both sides, `make lint` runs every prek hook (`make install-prek` installs them), and `make help`
+lists the rest. `make migration MSG="..."` autogenerates a migration after a model change.
+
+### End-to-end tests
+`make web-e2e` builds the site and runs it in Playwright (`website/e2e/`): desktop Chrome, iPhone (WebKit, the engine
+of every iPhone browser), Android Chrome and a 320px phone. The API is mocked from `e2e/data.ts` (typed against
+`src/scripts/api.ts`), so no database is needed; an API call the mock doesn't handle, or any page error, fails the
+test. Run `make web-e2e-install` once for the browsers.
+
+- `layout.spec.ts`: every page, signed out and in, at every size: nothing scrolls sideways or sits past the screen
+  edge, the painting spans the screen, pictures on screen load, the header fits. Screenshots of each land in
+  `website/test-results/` and the HTML report (`npx playwright show-report` in `website/`).
+- `navigation.spec.ts`: links change the page in place (desktop nav and phone menu), back works, sign-in is a full load,
+  the Officers link is for officers only.
+- `pages.spec.ts`: what each page shows signed out, to members, officers and GMs; signing up for a raid.
+- `offline.spec.ts`: after one visit the service worker opens pages with the network off.
 
 The website's Discord buttons read one constant, `DISCORD_INVITE` in `website/src/config.ts`. Its paintings live in
 `website/assets/plates/` and are resized to WebP at build time.

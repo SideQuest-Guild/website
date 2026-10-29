@@ -90,10 +90,11 @@ web-fmt: ## Format the website with oxfmt
 web-fmt-check: ## Check website formatting with oxfmt
 	@$(WEB) npx oxfmt --check
 
-web-check: ## Type check the website's Astro files
+web-check: ## Type check the website's Astro files and its end-to-end tests
 	@$(WEB) npx astro check
+	@$(WEB) npx tsc -p e2e
 
-check-all: fmt-check ruff-check type-check web-lint web-check test web-build ## Run every check CI runs
+check-all: fmt-check ruff-check type-check web-lint web-check test web-e2e ## Run every check CI runs
 	@$(UV) run --no-sync codespell
 
 ci: check-all ## Run all checks for CI
@@ -104,7 +105,7 @@ ci: check-all ## Run all checks for CI
 
 ##@ Website
 
-.PHONY: web-dev web-build web-preview
+.PHONY: web-dev web-build web-preview web-e2e web-e2e-install
 web-dev: ## Run the Astro dev server (http://localhost:4321)
 	@$(WEB) npm run dev
 
@@ -113,6 +114,12 @@ web-build: ## Build the site to website/dist (served by the API at /)
 
 web-preview: web-build ## Serve the built site with Astro's preview server
 	@$(WEB) npm run preview
+
+web-e2e: web-build ## End-to-end tests: the built site in Chrome and WebKit at desktop and phone sizes (API mocked)
+	@$(WEB) npm run e2e
+
+web-e2e-install: ## Download the browsers the end-to-end tests use
+	@$(WEB) npx playwright install chromium webkit
 
 # =============================================================================
 # Database

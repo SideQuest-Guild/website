@@ -10,7 +10,8 @@
     "lint": "oxlint",
     "lint:fix": "oxlint --fix",
     "fmt": "oxfmt",
-    "fmt:check": "oxfmt --check"
+    "fmt:check": "oxfmt --check",
+    "e2e": "playwright test"
   },
   "dependencies": {
     "astro": "^7.4.2"
@@ -18,6 +19,8 @@
   "devDependencies": {
     "@astrojs/check": "^0.9.12",
     "@astrojs/compiler-rs": "^0.5.2",
+    "@playwright/test": "1.64.1",
+    "@types/node": "^24.19.2",
     "litestar-vite-plugin": "^0.32.0",
     "oxfmt": "^0.75.0",
     "oxlint": "^1.90.0",

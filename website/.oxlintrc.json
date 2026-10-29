@@ -21,5 +21,12 @@
       }
     ]
   },
-  "ignorePatterns": [".impeccable/**", "dist/**", ".astro/**"]
+  "ignorePatterns": [".impeccable/**", "dist/**", ".astro/**", "test-results/**", "playwright-report/**"],
+  "overrides": [
+    {
+      "files": ["e2e/**", "playwright.config.ts"],
+      "env": { "node": true },
+      "rules": { "no-await-in-loop": "off" }
+    }
+  ]
 }
