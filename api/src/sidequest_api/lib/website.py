@@ -24,6 +24,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from litestar import MediaType, get
+from litestar.datastructures import CacheControlHeader
 from litestar.static_files import create_static_files_router
 
 if TYPE_CHECKING:
@@ -35,6 +36,13 @@ WEBSITE_ROOT = Path(__file__).resolve().parents[4] / "website"
 DEFAULT_WEBSITE_DIST = WEBSITE_ROOT / "dist"
 
 _TRUE_VALUES = {"1", "true", "yes", "on"}
+
+# Astro puts every built asset (images, CSS, JS, fonts) in ``_astro/`` under a content hash, so a changed file is a
+# new URL: browsers and Cloudflare may keep them for a year. Pages and the other root files keep their URLs across
+# deploys, so they're revalidated on each visit (cheap: unchanged files answer 304) and a deploy shows at once.
+ASSETS_DIR = "_astro"
+HASHED_ASSET_CACHE = CacheControlHeader(public=True, max_age=31_536_000, immutable=True)
+PAGE_CACHE = CacheControlHeader(no_cache=True)
 
 _PLACEHOLDER = """<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -59,9 +67,22 @@ def website_placeholder() -> str:
 
 
 def website_routes(dist_dir: Path = DEFAULT_WEBSITE_DIST) -> list[ControllerRouterHandler]:
-    """Static site at ``/`` (with ``index.html`` resolution and ``404.html``) if built, else the placeholder."""
+    """Static site at ``/`` (with ``index.html`` resolution and ``404.html``) if built, else the placeholder.
+
+    ``/_astro/`` gets its own router so its hashed files can be cached for good; everything else revalidates.
+    """
     if (dist_dir / "index.html").is_file():
-        return [create_static_files_router(path="/", directories=[dist_dir], html_mode=True, name="website")]
+        return [
+            create_static_files_router(
+                path=f"/{ASSETS_DIR}",
+                directories=[dist_dir / ASSETS_DIR],
+                cache_control=HASHED_ASSET_CACHE,
+                name="website-assets",
+            ),
+            create_static_files_router(
+                path="/", directories=[dist_dir], html_mode=True, cache_control=PAGE_CACHE, name="website"
+            ),
+        ]
     return [website_placeholder]
 
 

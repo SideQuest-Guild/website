@@ -19,8 +19,14 @@ import raidsArt from "../../assets/plates/raids-art.png";
 
 const desktopQuery = "(min-width: 901px)";
 const mobileQuery = "(max-width: 900px)";
-const hero = await getImage({ src: heroArt, widths: [1280, 1920, 2400], format: "webp" });
-const heroMobile = await getImage({ src: heroArtMobile, widths: [600, 941], format: "webp" });
+// WebP for browsers without AVIF; AVIF (quality 48, about a third of the WebP's bytes) for everyone else. The
+// preloads ask for AVIF only: a browser that can't decode it skips the preload and the <picture> falls back.
+const [hero, heroAvif, heroMobile, heroMobileAvif] = await Promise.all([
+  getImage({ src: heroArt, widths: [1280, 1920, 2400], format: "webp" }),
+  getImage({ src: heroArt, widths: [1280, 1920, 2400], format: "avif", quality: 48 }),
+  getImage({ src: heroArtMobile, widths: [600, 941], format: "webp" }),
+  getImage({ src: heroArtMobile, widths: [600, 941], format: "avif", quality: 48 }),
+]);
 
 const panels = [
   {
@@ -49,8 +55,22 @@ const panels = [
   description="SideQuest is an Alliance guild for World of Warcraft: Forever. The journey and the raid both count."
 >
   <Fragment slot="head">
-    <link rel="preload" as="image" imagesrcset={hero.srcSet.attribute} imagesizes="100vw" media={desktopQuery} />
-    <link rel="preload" as="image" imagesrcset={heroMobile.srcSet.attribute} imagesizes="100vw" media={mobileQuery} />
+    <link
+      rel="preload"
+      as="image"
+      type="image/avif"
+      imagesrcset={heroAvif.srcSet.attribute}
+      imagesizes="100vw"
+      media={desktopQuery}
+    />
+    <link
+      rel="preload"
+      as="image"
+      type="image/avif"
+      imagesrcset={heroMobileAvif.srcSet.attribute}
+      imagesizes="100vw"
+      media={mobileQuery}
+    />
   </Fragment>
 
   <header class="site-header">
@@ -100,7 +120,9 @@ const panels = [
   <main id="top" tabindex="-1">
     <div class="frame">
       <picture class="hero-pic">
+        <source media={mobileQuery} srcset={heroMobileAvif.srcSet.attribute} sizes="100vw" type="image/avif" />
         <source media={mobileQuery} srcset={heroMobile.srcSet.attribute} sizes="100vw" type="image/webp" />
+        <source srcset={heroAvif.srcSet.attribute} sizes="100vw" type="image/avif" />
         <img
           class="r hero-art fill"
           src={hero.src}
@@ -306,6 +328,7 @@ const panels = [
         <p class="channels-label caps">
           In the Discord<span class="channels-online" data-discord-online hidden></span>
         </p>
+        <ul class="hearths" aria-label="In voice now" data-hearths hidden></ul>
       </div>
     </section>
   </main>

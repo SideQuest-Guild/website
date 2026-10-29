@@ -19,8 +19,9 @@ const { title, description } = Astro.props;
 // up in astro.config.mjs from SITE_URL.
 const origin = Astro.site ?? new URL("http://localhost:8000");
 const canonicalUrl = new URL(Astro.url.pathname, origin).toString();
-// The ground tiles at 512px; one 1024px WebP covers 2x screens.
-const ground = await getImage({ src: groundPlate, width: 1024, format: "webp", quality: 82 });
+// The ground tiles at 512px; one 1024px WebP covers 2x screens. It always sits under a 42%+ wash (more on the
+// night rooms), so quality 62 loses nothing visible and saves ~100 KB on every first visit. AVIF smears its grain.
+const ground = await getImage({ src: groundPlate, width: 1024, format: "webp", quality: 62 });
 const favicon = await getImage({ src: guildLogo, width: 32, format: "png" });
 const touchIcon = await getImage({ src: guildLogo, width: 180, format: "png" });
 const ogImage = await getImage({

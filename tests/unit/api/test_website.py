@@ -21,6 +21,8 @@ def dist(tmp_path: Path) -> Path:
     (site / "index.html").write_text("<h1>home</h1>")
     (site / "events" / "index.html").write_text("<h1>events</h1>")
     (site / "404.html").write_text("<h1>lost</h1>")
+    (site / "_astro").mkdir()
+    (site / "_astro" / "room.AbC123.webp").write_bytes(b"webp")
     return site
 
 
@@ -40,6 +42,16 @@ async def test_unknown_site_path_gets_the_site_404_page(site_client: AsyncTestCl
     response = await site_client.get("/no-such-page")
     assert response.status_code == 404
     assert response.text == "<h1>lost</h1>"
+
+
+async def test_hashed_assets_cache_for_good_and_pages_revalidate(site_client: AsyncTestClient[Litestar]) -> None:
+    """A deploy must show at once (pages revalidate) while hashed assets never refetch."""
+    asset = await site_client.get("/_astro/room.AbC123.webp")
+    assert asset.content == b"webp"
+    assert set(asset.headers["cache-control"].split(", ")) == {"public", "max-age=31536000", "immutable"}
+    for path in ("/", "/events/"):
+        assert (await site_client.get(path)).headers["cache-control"] == "no-cache"
+    assert (await site_client.get("/_astro/missing.webp")).status_code == 404
 
 
 async def test_site_at_root_does_not_shadow_backend_routes(site_client: AsyncTestClient[Litestar]) -> None:
