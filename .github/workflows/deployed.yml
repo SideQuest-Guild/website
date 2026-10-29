@@ -1,0 +1,75 @@
+name: Deployed
+
+# Cabotage reports every production deploy to GitHub as a deployment. Once the web deploy succeeds, empty
+# Cloudflare's cache (pages are kept at the edge for up to a day and would point at the old build's files), then
+# run the end-to-end tests against the live site. The API stays mocked, so this checks the deployed pages and code.
+
+on:
+  deployment_status:
+
+concurrency:
+  group: deployed
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  purge:
+    name: Purge Cloudflare cache
+    if: >-
+      github.event.deployment_status.state == 'success' &&
+      github.event.deployment.environment == 'coffee/sidequest/production/web'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      # Token: zone sidequest-guild.com, Cache Purge only (Cloudflare token "sidequest-ci-cache-purge").
+      - name: Purge everything
+        env:
+          TOKEN: ${{ secrets.CLOUDFLARE_PURGE_TOKEN }}
+          ZONE: ${{ vars.CLOUDFLARE_ZONE_ID }}
+        run: |
+          curl --fail-with-body --silent --show-error --retry 3 \
+            -X POST "https://api.cloudflare.com/client/v4/zones/$ZONE/purge_cache" \
+            -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+            --data '{"purge_everything":true}'
+
+  e2e:
+    name: End-to-end against sidequest-guild.com
+    needs: purge
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: website
+    env:
+      E2E_BASE_URL: https://sidequest-guild.com
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.deployment.sha }}
+
+      - name: Install Node (website/mise.toml)
+        uses: jdx/mise-action@v5
+        with:
+          working_directory: website
+          cache: true
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install browsers
+        run: npx playwright install --with-deps chromium webkit
+
+      - name: Playwright
+        run: npm run e2e
+
+      - name: Upload report and screenshots
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report-live
+          path: |
+            website/playwright-report
+            website/test-results
+          retention-days: 14

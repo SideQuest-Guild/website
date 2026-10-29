@@ -114,12 +114,18 @@ of every iPhone browser), Android Chrome and a 320px phone. The API is mocked fr
 test. Run `make web-e2e-install` once for the browsers.
 
 - `layout.spec.ts`: every page, signed out and in, at every size: nothing scrolls sideways or sits past the screen
-  edge, the painting spans the screen, pictures on screen load, the header fits. Screenshots of each land in
+  edge, the painting spans the screen, pictures on screen load, the header fits; plus each officers console tab at
+  1568px (desktop project only), with the addon list full and empty. Screenshots of each land in
   `website/test-results/` and the HTML report (`npx playwright show-report` in `website/`).
 - `navigation.spec.ts`: links change the page in place (desktop nav and phone menu), back works, sign-in is a full load,
   the Officers link is for officers only.
 - `pages.spec.ts`: what each page shows signed out, to members, officers and GMs; signing up for a raid.
 - `offline.spec.ts`: after one visit the service worker opens pages with the network off.
+
+`E2E_BASE_URL=https://sidequest-guild.com npm run e2e` runs the same tests against a deployed site (the API stays
+mocked). The `Deployed` workflow (`.github/workflows/deployed.yml`) does that after every production web deploy: Cabotage
+reports each deploy to GitHub as a deployment, and on its `success` status the workflow purges Cloudflare's cache, then
+runs the suite against the live site. A failure shows on the commit's checks with the report and screenshots attached.
 
 The website's Discord buttons read one constant, `DISCORD_INVITE` in `website/src/config.ts`. Its paintings live in
 `website/assets/plates/` and are resized to WebP at build time.
@@ -260,6 +266,18 @@ reject those anyway) and immediately re-gated, rather than waiting for the next 
 
 - `/linkroles site | battlenet | gate | roster` (Manage Server)
 
+### Guest welcome
+The moment a member is granted the site link role (the gate -> guest transition, see Link roles above), the bot DMs
+them a one-time gold-embed welcome: they're in as a guest, a Quest Master will confirm them soon, and pointers to
+`#choose-your-class` and the events page. It's derived from the role grant itself, not a stored flag, so it can't
+double-send and needs no migration. A closed DM (or any other HTTP error) is only logged; it never breaks the role
+sync. Since Discord won't let the bot send an unprompted ephemeral message, the same welcome is also reachable
+on demand: `/guestwelcome post` posts a pinned "Start here" button (a persistent component surviving restarts, like
+`role_menus`/`signup_notices`) into a chosen channel (e.g. `#guest-chat`); clicking it replies ephemerally with the
+identical embed (`bot/src/sidequest_bot/plugins/guest_welcome.py`).
+
+- `/guestwelcome post <channel>` (Manage Server)
+
 ### Signup notices
 Every 60 seconds, for each guild with a signup-notice channel configured, the bot posts a gold embed in that channel
 for every member who signed in for the first time since the last check (`GET /api/guilds/{guild_id}/signup-notices`):
@@ -375,6 +393,10 @@ Zone settings (`cf` CLI or dashboard, zone `sidequest-guild.com`):
   `/events/detail/?id=…` is the same page).
 - **Smart Tiered Cache** on, so one regional Cloudflare copy feeds the others instead of each going to the origin.
 - **0-RTT** and **Early Hints** on.
+- **Purge after deploy:** the `Deployed` workflow empties the whole zone cache once a web deploy succeeds, so nobody
+  gets a previous build's page pointing at files the new build removed. It uses a Cloudflare user token
+  `sidequest-ci-cache-purge` (Cache Purge on this zone only) stored as the `CLOUDFLARE_PURGE_TOKEN` repository
+  secret, and the zone id as the `CLOUDFLARE_ZONE_ID` repository variable.
 
 ### Moving between pages
 Links swap the page in place with Astro's ClientRouter instead of loading a new document: the header holds still and

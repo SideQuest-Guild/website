@@ -13,16 +13,18 @@ import bodyFont from "../fonts/EBGaramond.woff2?url";
 interface Props {
   title: string;
   description: string;
+  /** The tiled stone ground under the page. Rooms paint an 86%+ night wash over it, so they skip the download. */
+  ground?: boolean;
 }
 
-const { title, description } = Astro.props;
+const { title, description, ground: showGround = true } = Astro.props;
 // Falls back to the WebSettings default origin so previews build correctly before `site` is wired
 // up in astro.config.mjs from SITE_URL.
 const origin = Astro.site ?? new URL("http://localhost:8000");
 const canonicalUrl = new URL(Astro.url.pathname, origin).toString();
-// The ground tiles at 512px; one 1024px WebP covers 2x screens. It always sits under a 42%+ wash (more on the
-// night rooms), so quality 62 loses nothing visible and saves ~100 KB on every first visit. AVIF smears its grain.
-const ground = await getImage({ src: groundPlate, width: 1024, format: "webp", quality: 62 });
+// The ground tiles at 512px; one 1024px WebP covers 2x screens. It always sits under a 42%+ wash, so quality 62
+// loses nothing visible and saves ~100 KB on every first visit. AVIF smears its grain.
+const ground = showGround ? await getImage({ src: groundPlate, width: 1024, format: "webp", quality: 62 }) : null;
 const favicon = await getImage({ src: guildLogo, width: 32, format: "png" });
 const touchIcon = await getImage({ src: guildLogo, width: 180, format: "png" });
 const ogImage = await getImage({
@@ -38,7 +40,7 @@ const ogImageUrl = new URL(ogImage.src, origin).toString();
 ---
 
 <!doctype html>
-<html lang="en" style={`--ground: url(${ground.src})`}>
+<html lang="en" style={ground ? `--ground: url(${ground.src})` : undefined}>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />

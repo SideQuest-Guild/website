@@ -4,12 +4,14 @@
 // full page loads. Any API call the mock doesn't know fails the test, so a page can't quietly drift from it.
 import { test as base, expect, type Page, type Route } from "@playwright/test";
 
-import type { EventDetail, EventSummary, Me } from "../src/scripts/api";
+import type { Addon, EventDetail, EventSummary, Me } from "../src/scripts/api";
 import { ADDONS, EVENTS, GM_MEMBERS, LIVE, eventDetail, gmMemberDetail } from "./data";
 
 type Site = {
   /** Who `/api/me` says is signed in; `null` (the default) is a signed-out visitor. */
   signIn(me: Me | null): void;
+  /** What `/api/addons` lists; `ADDONS` by default. */
+  addons(list: Addon[]): void;
   /** API calls that reached the mock without a handler. */
   unmocked: string[];
   /** Uncaught page errors and `console.error` lines. */
@@ -30,6 +32,7 @@ const json = (route: Route, body: unknown, status = 200) =>
 export const test = base.extend<{ site: Site }>({
   site: async ({ context, baseURL }, use) => {
     let me: Me | null = null;
+    let addons = ADDONS;
     const unmocked: string[] = [];
     const errors: string[] = [];
 
@@ -53,7 +56,7 @@ export const test = base.extend<{ site: Site }>({
         return json(route, LIVE);
       }
       if (path === "/api/addons" && method === "GET") {
-        return json(route, ADDONS);
+        return json(route, addons);
       }
       if (path === "/api/event-series" && method === "GET") {
         return json(route, []);
@@ -110,7 +113,7 @@ export const test = base.extend<{ site: Site }>({
       watchErrors(page, origin, errors);
     }
     context.on("page", (page) => watchErrors(page, origin, errors));
-    await use({ signIn: (who) => (me = who), unmocked, errors });
+    await use({ signIn: (who) => (me = who), addons: (list) => (addons = list), unmocked, errors });
     expect(unmocked, "API calls the mock doesn't handle").toEqual([]);
     expect(errors, "page errors").toEqual([]);
   },

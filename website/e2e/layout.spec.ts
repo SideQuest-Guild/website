@@ -103,3 +103,37 @@ for (const state of ["signed out", "signed in"] as const) {
     }
   });
 }
+
+// The officers console at the comp's own width, where the Addon Crate once ran off the right edge with nothing in it.
+test.describe("wide desktop officers console", () => {
+  test.use({ viewport: { width: 1568, height: 980 }, reducedMotion: "reduce" });
+
+  const tabs = [
+    { tab: "events", empty: false },
+    { tab: "addons", empty: false },
+    { tab: "addons", empty: true },
+    { tab: "members", empty: false },
+    { tab: "log", empty: false },
+    { tab: "moderation", empty: false },
+  ];
+  for (const { tab, empty } of tabs) {
+    test(`${tab}${empty ? " (empty crate)" : ""} fits`, async ({ page, site }, testInfo) => {
+      test.skip(testInfo.project.name !== "desktop", "a desktop width");
+      site.signIn(GM);
+      if (empty) {
+        site.addons([]);
+      }
+      await page.goto(`/officers/#${tab}`);
+      await expect(page.locator(`#tab-${tab}`)).toHaveAttribute("aria-selected", "true");
+      await page.waitForLoadState("networkidle");
+
+      const layout = await offScreen(page);
+      expect(layout.scrollWidth, "page scrolls sideways").toBeLessThanOrEqual(layout.width);
+      expect(layout.offenders, "content past the screen edge").toEqual([]);
+
+      const shot = testInfo.outputPath("page.png");
+      await page.screenshot({ path: shot, fullPage: true });
+      await testInfo.attach(`officers #${tab}${empty ? " empty" : ""}`, { path: shot, contentType: "image/png" });
+    });
+  }
+});
