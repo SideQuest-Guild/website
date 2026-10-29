@@ -121,6 +121,7 @@ import "../../../styles/room-event.css";
   import {
     apiFetch,
     fetchMe,
+    onFreshData,
     capitalize,
     escapeHtml,
     requireElement,
@@ -472,5 +473,13 @@ import "../../../styles/room-event.css";
     }
   });
 
+  // A newer copy from the service worker re-renders the page, unless someone is part-way through the sign-up form.
+  if (eventId) {
+    onFreshData(`/api/events/${eventId}`, () => {
+      if (!signupForm.contains(document.activeElement)) {
+        void refresh();
+      }
+    });
+  }
   refresh();
 </script>

@@ -1,7 +1,7 @@
 // Fills the homepage "In the Discord" line with live numbers: how many members are online, and a lit hearth for
 // each voice channel someone is sitting in, with one ember per person. Counts only, never names. Any fetch
 // failure, or a bot that hasn't reported recently, leaves the band as it is.
-import { apiFetch, type DiscordLive, type VoiceChannelCount } from "./api";
+import { apiFetch, onFreshData, type DiscordLive, type VoiceChannelCount } from "./api";
 
 const REFRESH_MS = 60_000;
 /** More people than this in one channel: the rest are a "+N" after the embers. */
@@ -114,6 +114,7 @@ if (hearths) {
 }
 
 if (online || hearths) {
+  onFreshData("/api/discord/live", () => void refresh());
   void refresh();
   window.setInterval(() => {
     if (document.visibilityState === "visible") {

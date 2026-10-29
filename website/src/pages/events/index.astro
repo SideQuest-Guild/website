@@ -99,6 +99,7 @@ const eventKinds = Object.keys(EVENT_KIND_LABELS);
 <script>
   import {
     apiFetch,
+    onFreshData,
     escapeHtml,
     requireElement,
     statusMessage,
@@ -172,6 +173,13 @@ const eventKinds = Object.keys(EVENT_KIND_LABELS);
     }
   }
 
-  loadEvents("upcoming", "events-upcoming", "Nothing on the war table yet. Events appear here as they're planned.");
-  loadEvents("past", "events-past", "No past events yet.");
+  const lists = [
+    ["upcoming", "events-upcoming", "Nothing on the war table yet. Events appear here as they're planned."],
+    ["past", "events-past", "No past events yet."],
+  ] as const;
+  for (const [when, listId, emptyText] of lists) {
+    const load = (): Promise<void> => loadEvents(when, listId, emptyText);
+    onFreshData(`/api/events?when=${when}${kind ? `&kind=${kind}` : ""}`, () => void load());
+    void load();
+  }
 </script>

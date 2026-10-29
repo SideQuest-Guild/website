@@ -2,11 +2,18 @@
 // (api/src/sidequest_api/lib/website.py). In dev (VITE_DEV_MODE=1), Litestar's VitePlugin
 // proxies this Astro dev server through its own origin instead (api/src/sidequest_api/app.py)
 // so /api, /auth and the site share cookies on http://localhost:8000.
+import { randomUUID } from "node:crypto";
 import { defineConfig } from "astro/config";
 import litestar from "litestar-vite-plugin/astro";
+import serviceWorker from "./service-worker/integration.mjs";
 
 // Backend port for Astro's dev-time /api proxy and HMR websocket target (default 8000).
 const LITESTAR_PORT = process.env.LITESTAR_PORT ?? "8000";
+
+// Kill switch: false ships a sw.js that deletes its caches and unregisters itself, and pages stop registering one.
+const SERVICE_WORKER = true;
+// Every page carries this in <meta name="sq-build">; the service worker only caches pages from its own build.
+const BUILD_ID = randomUUID().slice(0, 8);
 
 export default defineConfig({
   output: "static",
@@ -21,5 +28,12 @@ export default defineConfig({
       apiProxy: `http://127.0.0.1:${LITESTAR_PORT}`,
       apiPrefix: "/api",
     }),
+    serviceWorker({ enabled: SERVICE_WORKER, build: BUILD_ID }),
   ],
+  vite: {
+    define: {
+      SQ_BUILD: JSON.stringify(BUILD_ID),
+      SQ_SERVICE_WORKER: JSON.stringify(SERVICE_WORKER),
+    },
+  },
 });

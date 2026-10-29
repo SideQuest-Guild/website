@@ -339,6 +339,39 @@ export function fetchMe({ fresh = false }: { fresh?: boolean } = {}): Promise<Me
   return sharedMe;
 }
 
+const freshListeners = new Map<string, Set<() => void>>();
+
+/**
+ * Re-runs ``reload`` when the service worker has a newer copy of ``path`` than the one it just answered from the
+ * device (or ``"*"``: everything changed, e.g. a sign-out). Only pages listed in ``STALE_FIRST`` in
+ * ``service-worker/sw.js`` get device-first answers, and each of them must register here for what it shows.
+ */
+export function onFreshData(path: string, reload: () => void): void {
+  if (!("serviceWorker" in navigator)) {
+    return;
+  }
+  if (freshListeners.size === 0) {
+    navigator.serviceWorker.addEventListener("message", (event: MessageEvent<{ type?: string; url?: string }>) => {
+      if (event.data?.type !== "sq-fresh" || !event.data.url) {
+        return;
+      }
+      if (event.data.url === "*") {
+        sharedMe = null;
+      }
+      const targets = event.data.url === "*" ? [...freshListeners.values()] : [freshListeners.get(event.data.url)];
+      for (const reloads of targets) {
+        reloads?.forEach((run) => run());
+      }
+    });
+  }
+  let reloads = freshListeners.get(path);
+  if (!reloads) {
+    reloads = new Set();
+    freshListeners.set(path, reloads);
+  }
+  reloads.add(reload);
+}
+
 /** Plain-language copy for the error states the member hub can hit. */
 export function statusMessage(err: unknown): string {
   if (err instanceof ApiError) {

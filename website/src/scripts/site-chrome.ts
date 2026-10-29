@@ -87,6 +87,74 @@ async function syncOfficerNav(): Promise<void> {
   }
 }
 
+/** Starts loading the painting of a page the visitor is about to open (hover, focus or touch), so it's on the
+ * device before the click. The page itself comes from the service worker, so reading it costs nothing. */
+function setupWarmUp(): void {
+  const warmed = new Set<string>([location.pathname]);
+  const warm = async (target: EventTarget | null): Promise<void> => {
+    const link = target instanceof Element ? target.closest<HTMLAnchorElement>("a[href]") : null;
+    if (!link || !navigator.serviceWorker.controller) {
+      return;
+    }
+    const url = new URL(link.href);
+    if (url.origin !== location.origin || warmed.has(url.pathname) || /^\/(api|auth)\//.test(url.pathname)) {
+      return;
+    }
+    warmed.add(url.pathname);
+    const response = await fetch(url.pathname);
+    if (!response.ok) {
+      return;
+    }
+    const doc = new DOMParser().parseFromString(await response.text(), "text/html");
+    const images: { srcset: string; sizes: string }[] = [];
+    for (const preload of doc.querySelectorAll<HTMLLinkElement>('link[rel="preload"][as="image"]')) {
+      const media = preload.getAttribute("media");
+      if (!media || matchMedia(media).matches) {
+        images.push({
+          srcset: preload.getAttribute("imagesrcset") ?? "",
+          sizes: preload.getAttribute("imagesizes") ?? "",
+        });
+      }
+    }
+    const room = doc.querySelector<HTMLSourceElement>('picture.room-art-pic source[type="image/avif"]');
+    if (room) {
+      images.push({ srcset: room.getAttribute("srcset") ?? "", sizes: room.getAttribute("sizes") ?? "" });
+    }
+    for (const { srcset, sizes } of images) {
+      // A detached image still picks the candidate this screen would and loads it into the cache.
+      const image = new Image();
+      image.sizes = sizes;
+      image.srcset = srcset;
+    }
+  };
+  const onIntent = (event: Event): void => {
+    void warm(event.target).catch(() => undefined);
+  };
+  document.addEventListener("pointerover", onIntent, { passive: true });
+  document.addEventListener("focusin", onIntent);
+  document.addEventListener("touchstart", onIntent, { passive: true });
+}
+
+function registerServiceWorker(): void {
+  navigator.serviceWorker.register("/sw.js").catch(() => undefined);
+}
+
+/** Pages, scripts, fonts and paintings answer from the device after the first visit (service-worker/sw.js). */
+function setupServiceWorker(): void {
+  if (!import.meta.env.PROD || !SQ_SERVICE_WORKER || !("serviceWorker" in navigator)) {
+    return;
+  }
+  if (document.readyState === "complete") {
+    registerServiceWorker();
+  } else {
+    window.addEventListener("load", registerServiceWorker, { once: true });
+  }
+  const connection = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection;
+  if (!connection?.saveData) {
+    setupWarmUp();
+  }
+}
+
 for (const toggle of document.querySelectorAll<HTMLButtonElement>("[data-nav-toggle]")) {
   setupMenu(toggle);
 }
@@ -97,3 +165,4 @@ if (toTop) {
 if (document.querySelector("[data-officer-nav]")) {
   void syncOfficerNav();
 }
+setupServiceWorker();

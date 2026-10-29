@@ -27,6 +27,7 @@ import "../../styles/room-addons.css";
 <script>
   import {
     apiFetch,
+    onFreshData,
     escapeHtml,
     requireElement,
     statusMessage,
@@ -77,5 +78,6 @@ import "../../styles/room-addons.css";
     }
   }
 
+  onFreshData("/api/addons", () => void loadAddons());
   loadAddons();
 </script>

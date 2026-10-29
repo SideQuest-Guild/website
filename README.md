@@ -356,6 +356,24 @@ Zone settings (`cf` CLI or dashboard, zone `sidequest-guild.com`):
 
 - **Cache rule** "Pages and live counts at the edge" (phase `http_request_cache_settings`): when the path doesn't
   start with `/api/`, `/auth/`, `/schema` or `/health`, or is exactly `/api/discord/live`, mark it eligible for
-  cache with edge TTL "use origin headers" and browser TTL "respect origin".
+  cache with edge TTL "use cache-control header if present, bypass cache if not" (a route without the header is
+  never cached), browser TTL "respect origin", and the query string left out of the cache key (every
+  `/events/detail/?id=…` is the same page).
 - **Smart Tiered Cache** on, so one regional Cloudflare copy feeds the others instead of each going to the origin.
 - **0-RTT** and **Early Hints** on.
+
+### Service worker
+After the first visit, `website/service-worker/sw.js` answers from the device: every page and its scripts and fonts
+(precached per build), and each painting once it has loaded. Hovering, focusing or touching a link also fetches that
+page's painting ahead of the click (`setupWarmUp` in `site-chrome.ts`).
+
+- **Builds stay whole.** Every build gets a random id, in each page's `<meta name="sq-build">` and in the worker. The
+  worker only caches a page that carries its own id, retrying while Cloudflare still serves the previous deploy;
+  otherwise the install fails and the current worker stays. A deploy shows from the second visit after it.
+- **Data shows from the device, then refreshes.** The homepage, `/events/`, event pages and `/addons/` get their
+  public data from the device first; when the fresh answer differs, the page re-renders (`onFreshData` in
+  `api.ts`). Every other request, `/api/me`, `/account/` and `/officers/` always go to the network.
+- **Nobody sees someone else's data.** The data copies are deleted on any sign-up, edit, sign-in or sign-out, and
+  whenever `/api/me` names a different person than last time.
+- **Kill switch.** Set `SERVICE_WORKER = false` in `website/astro.config.mjs` and deploy: the shipped `sw.js` deletes
+  its caches, unregisters itself and reloads open pages, and pages stop registering a worker.
