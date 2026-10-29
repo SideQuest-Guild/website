@@ -11,6 +11,7 @@ from sidequest_common.models import (
     GuildEvent,
     Member,
     MemberLevel,
+    MemberRoleReset,
     ModCase,
     OfficerAudit,
 )
@@ -219,3 +220,17 @@ async def test_delete_account_removes_member_level_rows_in_every_guild_but_keeps
         assert len(mod_cases) == 1
         assert mod_cases[0].user_id == 9008
         assert mod_cases[0].reason == "Spamming"
+
+
+async def test_delete_account_writes_pending_role_reset(
+    member_client: AsyncTestClient, discord_state: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    await login_as(member_client, discord_state, discord_id=9010, username="role-haver")
+
+    assert (await member_client.delete("/api/me")).status_code == 204
+
+    async with db_sessionmaker() as session:
+        resets = (await session.execute(select(MemberRoleReset))).scalars().all()
+        assert len(resets) == 1
+        assert resets[0].discord_id == 9010
+        assert resets[0].done_at is None

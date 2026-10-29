@@ -9,7 +9,7 @@ from litestar.exceptions import NotFoundException
 from sqlalchemy import delete, select, update
 
 from sidequest_api.lib.battlenet import BattleNetOAuthError
-from sidequest_common.models import EventSignup, EventSignupActivity, Member, MemberLevel, OfficerAudit
+from sidequest_common.models import EventSignup, EventSignupActivity, Member, MemberLevel, MemberRoleReset, OfficerAudit
 
 SIGNUP_NOTICE_LIMIT = 25
 
@@ -83,6 +83,9 @@ class MembersService(SQLAlchemyAsyncRepositoryService[Member]):
         the member's sign-up activity (the GM console's sign-up log), the member's chat-XP totals in every guild
         (``MemberLevel``, keyed by Discord ID with no FK), and nulls any officer-audit rows they authored, keeping
         each row's ``actor_name`` snapshot. Moderation records (``ModCase``) are kept.
+
+        Also queues a ``MemberRoleReset`` outbox row (same transaction) so the bot's ``link_roles`` plugin strips
+        every Discord role it can manage from ``member``, leaving them gated behind #sign-the-ledger again.
         """
         session = self.repository.session
         await session.execute(delete(EventSignup).where(EventSignup.member_id == member.id))
@@ -91,6 +94,7 @@ class MembersService(SQLAlchemyAsyncRepositoryService[Member]):
         await session.execute(
             update(OfficerAudit).where(OfficerAudit.actor_member_id == member.id).values(actor_member_id=None)
         )
+        session.add(MemberRoleReset(discord_id=member.discord_id))
         await self.delete(member.id, auto_commit=True)
 
     async def get_for_officer_action(self, member_id: int) -> Member:

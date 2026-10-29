@@ -34,11 +34,11 @@ flowchart LR
 | `/api/guilds/{guild_id}/member-links` (GET) | `X-API-Key` | Bot reads every signed-in member's Discord id and Battle.net-link status for role syncing (404s for any guild other than the site guild) |
 | `/api/guilds/{guild_id}/member-profiles` (PUT) | `X-API-Key` | Bot pushes linked members' current Discord username/global name/nick/avatar/roles (full sweep plus debounced pushes on profile/role/membership changes), and reports departed linked members; only updates existing members, never creates them (404s for any guild other than the site guild) |
 | `/api/guilds/{guild_id}/signup-notices` (GET), `/signup-notices/{member_id}/ack` (POST) | `X-API-Key` | New-signup officer notice outbox: members with no notice posted yet, and posted notices whose message is stale (confirmed since, e.g. on the site); the bot acks a message's channel/message id once it accurately reflects the member's state (404s for any guild other than the site guild) |
-| `/api/guilds/{guild_id}/members/by-discord/{discord_id}/roster-confirmation` (PUT, DELETE) | `X-API-Key` | Same as the GM console's roster-confirmation route, but the actor is identified by Discord id (body `{actor_discord_id, actor_name}`) for the bot's signup-notice Approve button; 403 unless that Discord id has a `Member` row holding a `WEB_GM_ROLE_IDS` role (404s for any guild other than the site guild) |
+| `/api/guilds/{guild_id}/role-resets` (GET), `/role-resets/{reset_id}/ack` (POST) | `X-API-Key` | Discord role-reset outbox: members whose site account was deleted and still need every manageable Discord role stripped (requested_at oldest first, capped at 50; unacked rows older than 7 days are dropped); the bot acks once it has acted, or immediately if the member already left the guild (404s for any guild other than the site guild) |
 | `/api/discord/live` (GET) | none | Website reads the site guild's live counts; empty counts (not 404) if the bot hasn't reported recently |
 | `/auth/discord/login`, `/auth/discord/callback`, `/auth/logout` | none | Discord OAuth sign-in (session cookie `sq_session`) |
 | `/auth/battlenet/link`, `/auth/battlenet/callback`, `/auth/battlenet/unlink` | signed in | Link a Battle.net account (BattleTag) to the member |
-| `/api/me` (GET), `/api/me` (DELETE) | signed in | The signed-in member; `DELETE` permanently deletes the member, their event signups, and their sign-up activity rows, and clears the session cookie |
+| `/api/me` (GET), `/api/me` (DELETE) | signed in | The signed-in member; `DELETE` permanently deletes the member, their event signups, and their sign-up activity rows, clears the session cookie, and queues a Discord role-reset outbox row so the bot strips the member's Discord roles |
 | `/api/members/{member_id}/roster-confirmation` (PUT, DELETE) | GM | Confirm or clear that a member is on the in-game guild roster |
 | `/api/events`, `/api/event-series`, `/api/addons` (GET) | none | Guild events (raids, dungeons, leveling, pvp, social, transmog, other) with roster + raid chart, attendance EP, repeating event series, guild addon links (each addon carries an `origin` of `guild` or `community`); anonymous `/api/events` requests get the headline fields only (title, kind, time, location) — notes, counts, signups and Discord interest are `null`/empty unless the caller is signed in or presents the bot's `X-API-Key` |
 | `/api/events/{id}/signup` | guild member | Sign up for / withdraw from a guild event |
@@ -86,7 +86,7 @@ forum, **Manage Channels** (forum tags), **Send Messages in Threads**, and **Cre
 ```bash
 cp .env.example .env              # then set API_KEY to a random secret
 make install                      # uv sync + the website's Node and npm packages
-make db-up migrate                # Postgres in Docker + apply migrations
+make db-up migrate                # Postgres in Docker (host port 55432, clear of other projects' 5432) + migrations
 make dev                          # API + Astro dev server, hot reload, both on http://localhost:8000
 make bot                          # in another terminal
 ```
@@ -236,7 +236,12 @@ Discord to be visible only to the **Signed the Ledger** role (and `@everyone` lo
 role's only purpose is to show new members the sign-in channel until they're in; every member channel is further
 restricted to the roster role and ranks above it. A sync loop reconciles every member every 60 seconds against
 `GET /api/guilds/{guild_id}/member-links`, and joins/screening-clears apply the same plan immediately. Only
-configured roles are ever touched, and a role that's missing or unsafe to grant is skipped with a one-time warning
+configured roles are ever touched, and a role that's missing or unsafe to grant is skipped with a one-time warning.
+The same loop also drains the Discord role-reset outbox (`GET /api/guilds/{guild_id}/role-resets`): a member who
+deletes their site account keeps nothing but the gate role, stripped of every other role the bot can manage
+(skipping `@everyone`, managed/integration roles, and anything at or above the bot's own top role — Discord would
+reject those anyway) and immediately re-gated, rather than waiting for the next tick; the bot acks each reset
+(`POST .../role-resets/{reset_id}/ack`), acking immediately with no role changes if the member already left
 (`bot/src/sidequest_bot/plugins/link_roles.py`).
 
 - `/linkroles site | battlenet | gate | roster` (Manage Server)

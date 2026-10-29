@@ -74,6 +74,7 @@ from sidequest_common.schemas.role_menus import (
     RoleMenuSchema,
     RoleMenuUpdate,
 )
+from sidequest_common.schemas.role_resets import RoleResetCandidate
 from sidequest_common.schemas.signup_notices import (
     ConfirmByDiscordRequest,
     SignupNoticeAck,
@@ -147,6 +148,7 @@ __all__ = (
     "RoleMenuOptionUpsert",
     "RoleMenuSchema",
     "RoleMenuUpdate",
+    "RoleResetCandidate",
     "RoleTag",
     "SeriesRef",
     "SeriesRule",

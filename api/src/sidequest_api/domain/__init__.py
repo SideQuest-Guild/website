@@ -20,6 +20,7 @@ from sidequest_api.domain.member_links.controllers import MemberLinksController
 from sidequest_api.domain.member_profiles.controllers import MemberProfilesController
 from sidequest_api.domain.members.controllers import MembersController
 from sidequest_api.domain.role_menus.controllers import RoleMenusController
+from sidequest_api.domain.role_resets.controllers import RoleResetsController
 from sidequest_api.domain.signup_notices.controllers import SignupNoticesController
 from sidequest_api.domain.system.controllers import HealthController
 
@@ -35,6 +36,7 @@ guild_controllers = [
     MemberLinksController,
     MemberProfilesController,
     GuildRolesController,
+    RoleResetsController,
     SignupNoticesController,
 ]
 
