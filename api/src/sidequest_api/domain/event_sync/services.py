@@ -295,6 +295,8 @@ class EventSyncService(EventsService):
                 display_name=activity.display_name,
                 action=activity.action,
                 detail=activity.detail,
+                discord_id=activity.discord_id,
+                comment=activity.comment,
             )
             for activity, thread_id in rows
         ]

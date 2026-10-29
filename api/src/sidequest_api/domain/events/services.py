@@ -315,8 +315,8 @@ class EventSignupsService(SQLAlchemyAsyncRepositoryService[EventSignup]):
         """Create or replace the member's signup for ``event_id``. 409 if the event isn't scheduled.
 
         400 if the event's kind is ``raid``/``dungeon`` and ``character``/``class``/``role`` aren't all present.
-        Writes an ``EventSignupActivity`` row when the sign-up is created or its status changes; comment/character
-        edits that leave the status unchanged write nothing.
+        Writes an ``EventSignupActivity`` row when the sign-up is created, its status changes, or its comment changes
+        to a non-empty one; character/class/role edits alone and clearing the comment write nothing.
         """
         session = self.repository.session
         event = await session.get(GuildEvent, event_id)
@@ -333,6 +333,7 @@ class EventSignupsService(SQLAlchemyAsyncRepositoryService[EventSignup]):
             raise ValidationException(msg)
         existing = await self.get_one_or_none(event_id=event_id, member_id=member.id)
         previous_status = existing.status if existing is not None else None
+        previous_comment = existing.comment if existing is not None else None
         fields = {
             "character": data.character,
             "wow_class": data.wow_class.value if data.wow_class is not None else None,
@@ -352,15 +353,18 @@ class EventSignupsService(SQLAlchemyAsyncRepositoryService[EventSignup]):
             for field, value in fields.items():
                 setattr(existing, field, value)
             signup = await self.update(existing, auto_commit=True)
-        if previous_status != fields["status"]:
+        comment_changed = bool(fields["comment"]) and fields["comment"] != previous_comment
+        if previous_status != fields["status"] or comment_changed:
             session.add(
                 EventSignupActivity(
                     event_id=event_id,
                     display_name=member.display_name,
+                    discord_id=member.discord_id,
                     action=_ACTIVITY_ACTION_BY_STATUS[fields["status"]],
                     detail=_activity_detail(
                         event, character=fields["character"], wow_class=fields["wow_class"], role=fields["role"]
                     ),
+                    comment=fields["comment"] or None,
                 )
             )
             await session.commit()
@@ -373,7 +377,11 @@ class EventSignupsService(SQLAlchemyAsyncRepositoryService[EventSignup]):
             return
         session = self.repository.session
         await self.delete(existing.id, auto_commit=True)
-        session.add(EventSignupActivity(event_id=event_id, display_name=member.display_name, action="withdrew"))
+        session.add(
+            EventSignupActivity(
+                event_id=event_id, display_name=member.display_name, discord_id=member.discord_id, action="withdrew"
+            )
+        )
         await session.commit()
 
     async def update_chart(self, event_id: UUID, signup_id: UUID, data: ChartUpdate) -> Signup:

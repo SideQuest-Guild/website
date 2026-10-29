@@ -69,6 +69,8 @@ class SignupActivity(BaseModel):
     display_name: str
     action: str
     detail: str | None = None
+    discord_id: int | None = Field(default=None, description="Member to @-mention; None for rows from before.")
+    comment: str | None = None
 
 
 class DiscordSyncPending(BaseModel):

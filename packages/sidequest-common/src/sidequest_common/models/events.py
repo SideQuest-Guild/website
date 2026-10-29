@@ -133,12 +133,14 @@ class EventDiscordInterest(UUIDAuditBase):
 
 
 class EventSignupActivity(UUIDAuditBase):
-    """One sign-up status change, queued to post as a comment on the event's Discord forum thread.
+    """One sign-up status or comment change, queued to post as a comment on the event's Discord forum thread.
 
     ``action`` is one of ``SIGNUP_ACTIVITY_ACTIONS``: ``going``/``maybe``/``not_going`` mirror a signup's
     ``status``, and ``withdrew`` marks a deleted signup. ``detail`` is the short "Character · Class · Role" line
-    for role-kind events, else ``None``. ``posted_at`` is set once the bot acks it; rows for events with no
-    Discord thread stay unposted (and are dropped by the API if older than 24h) rather than posted.
+    for role-kind events, else ``None``. ``discord_id`` lets the bot @-mention the member (rows written before it
+    existed have none), and ``comment`` is the sign-up's comment when the row was written. ``posted_at`` is set once
+    the bot acks it; rows for events with no Discord thread stay unposted (and are dropped by the API if older than
+    24h) rather than posted.
     """
 
     __tablename__ = "event_signup_activity"
@@ -148,6 +150,8 @@ class EventSignupActivity(UUIDAuditBase):
     display_name: Mapped[str] = mapped_column(Text)
     action: Mapped[str] = mapped_column(String(10))
     detail: Mapped[str | None] = mapped_column(String(200), default=None)
+    discord_id: Mapped[int | None] = mapped_column(BigInteger, default=None)
+    comment: Mapped[str | None] = mapped_column(String(200), default=None)
     posted_at: Mapped[datetime | None] = mapped_column(DateTimeUTC(timezone=True), default=None)
 
 

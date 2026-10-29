@@ -196,8 +196,9 @@ restored.
   event, named after the event and tagged by kind (`Raid`/`Dungeon`/`Leveling`/`PvP`/`Social`/`Other`; the bot
   creates missing tags, needs **Manage Channels**). The starter post is edited in place as the event changes;
   cancelling posts a notice and archives+locks the thread, completing just archives+locks it, and deleting the
-  guild event on the site posts a removal notice and archives+locks it too. Sign-ups, status changes, and
-  withdrawals get a short forum comment ("✅ **Coffee** is going — Oakenshield · Warrior · Tank"); needs **Send
+  guild event on the site posts a removal notice and archives+locks it too. Sign-ups, status changes, new
+  comments, and withdrawals get a short forum comment that @-mentions the member without pinging them and quotes
+  their sign-up comment ("✅ @Coffee is going — Oakenshield · Warrior · Tank" then "> bring flasks"); needs **Send
   Messages in Threads** and **Create Posts**.
 
 ### Live status

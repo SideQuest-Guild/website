@@ -321,12 +321,16 @@ async def test_new_signup_writes_going_activity(
 ) -> None:
     event_id = await _seed_event(db_sessionmaker)
     await login_as(member_client, discord_state, discord_id=3001, roles=[])
-    response = await member_client.put(f"/api/events/{event_id}/signup", json=_signup_body(status="signed"))
+    body = _signup_body(status="signed")
+    body["comment"] = "Can we play Hello Kitty Island Adventure instead, please"
+    response = await member_client.put(f"/api/events/{event_id}/signup", json=body)
     assert response.status_code == 200
     rows = await _activity_rows(db_sessionmaker, event_id)
     assert len(rows) == 1
     assert rows[0].action == "going"
     assert rows[0].detail == "Thrall · Warrior · DPS"
+    assert rows[0].discord_id == 3001
+    assert rows[0].comment == "Can we play Hello Kitty Island Adventure instead, please"
 
 
 async def test_status_change_writes_new_activity_row(
@@ -340,17 +344,21 @@ async def test_status_change_writes_new_activity_row(
     assert [row.action for row in rows] == ["going", "maybe"]
 
 
-async def test_comment_only_edit_writes_no_activity(
+async def test_only_a_new_non_empty_comment_writes_activity_when_status_is_unchanged(
     member_client: AsyncTestClient, discord_state: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
 ) -> None:
     event_id = await _seed_event(db_sessionmaker)
     await login_as(member_client, discord_state, discord_id=3003, roles=[])
-    await member_client.put(f"/api/events/{event_id}/signup", json=_signup_body(status="signed"))
     body = _signup_body(status="signed")
-    body["comment"] = "bring flasks"
     await member_client.put(f"/api/events/{event_id}/signup", json=body)
+    body["comment"] = "bring flasks"
+    await member_client.put(f"/api/events/{event_id}/signup", json=body)  # new comment: posts
+    body["character"] = "Jaina"
+    await member_client.put(f"/api/events/{event_id}/signup", json=body)  # same comment: silent
+    body["comment"] = None
+    await member_client.put(f"/api/events/{event_id}/signup", json=body)  # cleared: silent
     rows = await _activity_rows(db_sessionmaker, event_id)
-    assert len(rows) == 1
+    assert [(row.action, row.comment) for row in rows] == [("going", None), ("going", "bring flasks")]
 
 
 async def test_withdraw_writes_withdrew_activity(
