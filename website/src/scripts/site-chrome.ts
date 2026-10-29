@@ -1,4 +1,6 @@
-// Shared page chrome on every page: the narrow-screen Menu disclosure and the back-to-top control.
+// Shared page chrome on every page: the narrow-screen Menu disclosure, the back-to-top control, and the
+// officer-only Officers nav link.
+import { ApiError, apiFetch, type Me } from "./api";
 
 const MOBILE_QUERY = window.matchMedia("(max-width: 900px)");
 
@@ -59,10 +61,39 @@ function setupToTop(link: HTMLElement): void {
   update();
 }
 
+const OFFICER_FLAG = "sq-officer";
+
+/** Shows the Officers link to signed-in officers only. The head script already applied last visit's answer to
+ * avoid a reflow; this confirms it. A network failure keeps that answer; any HTTP answer replaces it. */
+async function syncOfficerNav(): Promise<void> {
+  let officer: boolean;
+  try {
+    officer = (await apiFetch<Me>("/api/me")).is_officer;
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 0) {
+      return;
+    }
+    officer = false;
+  }
+  document.documentElement.classList.toggle("officer", officer);
+  try {
+    if (officer) {
+      localStorage.setItem(OFFICER_FLAG, "1");
+    } else {
+      localStorage.removeItem(OFFICER_FLAG);
+    }
+  } catch {
+    // Storage blocked: the link still follows /api/me, it just appears after the check.
+  }
+}
+
 for (const toggle of document.querySelectorAll<HTMLButtonElement>("[data-nav-toggle]")) {
   setupMenu(toggle);
 }
 const toTop = document.querySelector<HTMLElement>("[data-to-top]");
 if (toTop) {
   setupToTop(toTop);
+}
+if (document.querySelector("[data-officer-nav]")) {
+  void syncOfficerNav();
 }

@@ -61,9 +61,13 @@ const ogImageUrl = new URL(ogImage.src, origin).toString();
     <link rel="preload" as="font" type="font/woff2" href={displayFont} crossorigin />
     <link rel="preload" as="font" type="font/woff2" href={bodyFont} crossorigin />
     <slot name="head" />
-    <!-- Lets CSS collapse the mobile menu only when the script that opens it will run. -->
+    <!-- Lets CSS collapse the mobile menu only when the script that opens it will run, and shows the Officers
+         link before first paint for a browser that was an officer last visit (site-chrome.ts re-checks /api/me). -->
     <script is:inline>
       document.documentElement.classList.add("js");
+      try {
+        if (localStorage.getItem("sq-officer") === "1") document.documentElement.classList.add("officer");
+      } catch {}
     </script>
   </head>
   <body>

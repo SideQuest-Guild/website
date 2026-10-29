@@ -368,6 +368,10 @@ img {
   --w: 14%;
   --h: 2.72%;
   justify-content: flex-start;
+}
+/* One brand and nav voice on every page: the homepage comp sets the sizes, the room headers reuse them. */
+.nav-wordmark,
+.page-brand .wordmark {
   font-family: var(--display);
   font-size: calc(23 * var(--u));
   letter-spacing: 0.54em;
@@ -380,19 +384,27 @@ img {
   position: absolute;
   inset: -16px -8px;
 }
+/* Right-anchored at the comp's edge and spaced like the comp (26px between words), so the officer-only and
+   raid links can join without crowding the row. */
 .nav-links {
-  --x: 63.21%;
+  --x: auto;
   --y: 3.13%;
-  --w: 32%;
+  --w: auto;
   --h: 2.62%;
+  right: 4.79%;
   display: flex;
-  justify-content: space-between;
+  gap: calc(26 * var(--u));
   align-items: center;
   margin: 0;
   padding: 0;
   list-style: none;
 }
-.nav-links a {
+/* The Officers link: only for signed-in officers (html.officer, set in Site.astro and confirmed by site-chrome.ts). */
+html:not(.officer) [data-officer-nav] {
+  display: none;
+}
+.nav-links a,
+.page-nav a {
   position: relative;
   font-size: max(calc(20.5 * var(--u)), 13px);
   letter-spacing: 0.07em;
@@ -1005,6 +1017,7 @@ img {
   :where(.frame, .site-header) .r {
     position: relative;
     left: auto;
+    right: auto;
     top: auto;
     width: auto;
     height: auto;
@@ -1241,75 +1254,65 @@ img {
   align-items: center;
   justify-content: space-between;
   gap: 14px 32px;
-  padding: clamp(20px, 3vw, 34px) 0;
+  /* The homepage comp's edges: crest 4.22% from the left, links ending 4.79% from the right. */
+  padding: calc(6 * var(--u)) 4.79% calc(6 * var(--u)) 4.22%;
   border-bottom: 1px solid var(--hair);
 }
 .page-brand {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: calc(8 * var(--u));
   min-width: 0;
   min-height: 44px;
 }
 .page-brand img {
-  width: 32px;
+  width: calc(63 * var(--u));
   height: auto;
-}
-.page-brand .wordmark {
-  font-family: var(--display);
-  font-size: 15px;
-  letter-spacing: 0.4em;
-  padding-left: 0.4em;
-  line-height: 1;
-  white-space: nowrap;
+  filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.55));
 }
 .page-nav {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 4px 6px;
-  margin: 0 -12px;
+  gap: 0;
+  margin: 0 calc(-13 * var(--u));
   padding: 0;
   list-style: none;
 }
-/* Button-sized targets that still read as tracked caps: a hairline frame appears on hover/focus, and the
-   current page carries a gold underline. */
+/* The homepage's spacing (26 comp px between words), as 44px-tall targets; the current page is gold, underlined. */
 .page-nav a {
   display: inline-flex;
   align-items: center;
   min-height: 44px;
-  padding: 0 12px;
-  border: 1px solid transparent;
-  font-weight: 500;
-  font-size: var(--caps);
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  transition:
-    color 0.3s,
-    border-color 0.3s;
+  padding: 0 calc(13 * var(--u));
 }
 .page-nav a:hover,
-.page-nav a:focus-visible {
-  color: var(--gold);
-  border-color: var(--hair);
-}
+.page-nav a:focus-visible,
 .page-nav a[aria-current="page"] {
   color: var(--gold);
-  border-bottom-color: var(--gold-2);
+}
+.page-nav a[aria-current="page"] {
+  text-decoration: underline 1px var(--gold-2);
+  text-underline-offset: 0.35em;
 }
 
 /* ——— Narrow screens: one compact bar, links behind the Menu button ——— */
 @media (max-width: 900px) {
   .page-header {
     position: relative;
+    z-index: 20;
     flex-wrap: nowrap;
-    padding: 12px 0;
+    gap: 12px;
+    padding: 12px 16px 12px 20px;
+  }
+  .page-brand {
+    gap: 12px;
   }
   .page-brand img {
-    width: 36px;
+    width: 40px;
   }
   .page-brand .wordmark {
-    font-size: 14px;
+    font-size: 15px;
     letter-spacing: 0.34em;
   }
   .js .nav-toggle {
@@ -1369,15 +1372,9 @@ img {
 }
 /* The smallest phones (320–360px): the crest, wordmark and Menu button still share one row. */
 @media (max-width: 380px) {
+  .site-header,
   .page-header {
-    gap: 10px;
-  }
-  .page-brand {
-    gap: 10px;
-  }
-  .page-brand .wordmark {
-    font-size: 13px;
-    letter-spacing: 0.24em;
+    padding-inline: 16px 12px;
   }
   .nav-toggle {
     padding: 0 12px;

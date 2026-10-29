@@ -10,9 +10,9 @@ interface Props {
 const { current } = Astro.props;
 ---
 
-<header class="page-header wrap">
+<header class="page-header">
   <a class="page-brand" href="/#top">
-    <Image src={guildLogo} width={40} alt="" />
+    <Image src={guildLogo} width={160} alt="" loading="eager" />
     <span class="wordmark">SIDEQUEST</span>
   </a>
   <nav aria-label="Main">
@@ -31,7 +31,7 @@ const { current } = Astro.props;
           Addons
         </a>
       </li>
-      <li>
+      <li data-officer-nav>
         <a href="/officers/" aria-current={current === "officers" ? "page" : undefined}>
           Officers
         </a>
