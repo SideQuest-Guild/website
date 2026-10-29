@@ -66,6 +66,7 @@ async def test_delete_account_removes_member_and_own_signups_only(
         assert len(remaining_signups) == 1
         assert remaining_signups[0].character == "Survivor"
 
+    await login_as(member_client, discord_state, discord_id=9002, username="survivor", roles=[])
     event_detail = await member_client.get(f"/api/events/{event_id}")
     assert event_detail.json()["counts"]["dps"] == 1
     assert event_detail.json()["counts"]["signed"] == 1

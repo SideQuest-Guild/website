@@ -37,7 +37,7 @@ flowchart LR
 | `/auth/battlenet/link`, `/auth/battlenet/callback`, `/auth/battlenet/unlink` | signed in | Link a Battle.net account (BattleTag) to the member |
 | `/api/me` (GET), `/api/me` (DELETE) | signed in | The signed-in member; `DELETE` permanently deletes the member, their event signups, and their sign-up activity rows, and clears the session cookie |
 | `/api/members/{member_id}/roster-confirmation` (PUT, DELETE) | GM | Confirm or clear that a member is on the in-game guild roster |
-| `/api/events`, `/api/event-series`, `/api/addons` (GET) | none | Guild events (raids, dungeons, leveling, pvp, social, transmog, other) with roster + raid chart, attendance EP, repeating event series, guild addon links |
+| `/api/events`, `/api/event-series`, `/api/addons` (GET) | none | Guild events (raids, dungeons, leveling, pvp, social, transmog, other) with roster + raid chart, attendance EP, repeating event series, guild addon links (each addon carries an `origin` of `guild` or `community`); anonymous `/api/events` requests get the headline fields only (title, kind, time, location) — notes, counts, signups and Discord interest are `null`/empty unless the caller is signed in or presents the bot's `X-API-Key` |
 | `/api/events/{id}/signup` | guild member | Sign up for / withdraw from a guild event |
 | `/api/events`, `/api/event-series`, `/api/addons` (POST/PATCH/DELETE), `/api/events/{id}/signups/{id}` | officer | Manage guild events, repeating event series, the raid chart and addons |
 | `/api/gm/members`, `/api/gm/members/{member_id}`, `/api/gm/log`, `/api/gm/cases` (GET), `/api/gm/cases/{case_number}` (PATCH) | GM | Member management detail, unified activity log (sign-ups, sign-ins, Battle.net links, officer actions, moderation), and moderation case review/edit |
@@ -199,7 +199,7 @@ restored.
 - Clicking "Interested" on the Discord event reports the full interested-user list to the site (one-way: the API
   can't mark a Discord user interested on the bot's behalf), debounced ~5s per event; `EventDetail.discord_interest`
   shows the total count plus the names/avatars of interested users who also have a site account (others stay
-  anonymous since event pages are public).
+  anonymous), visible only to signed-in site members (or the bot) — anonymous visitors get `discord_interest: null`.
 - `/eventsync forum [channel]` (Manage Server) points upcoming events at a forum channel: one thread per guild
   event, named after the event and tagged by kind (`Raid`/`Dungeon`/`Leveling`/`PvP`/`Social`/`Transmog`/`Other`;
   the bot creates missing tags, needs **Manage Channels**). The starter post is edited in place as the event changes;

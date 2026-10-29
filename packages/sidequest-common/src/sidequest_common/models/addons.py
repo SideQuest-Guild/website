@@ -1,7 +1,7 @@
 """WoW addons the guild recommends. Files are hosted elsewhere; we only store links."""
 
 from advanced_alchemy.base import UUIDAuditBase
-from sqlalchemy import Text
+from sqlalchemy import String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 
@@ -17,3 +17,4 @@ class Addon(UUIDAuditBase):
     version: Mapped[str] = mapped_column(Text)
     download_url: Mapped[str] = mapped_column(Text)
     homepage_url: Mapped[str | None] = mapped_column(Text, default=None)
+    origin: Mapped[str] = mapped_column(String(20), default="community")

@@ -112,8 +112,10 @@ export type EventSummary = {
   ep: number;
   ep_override: number | null;
   status: EventStatus;
+  /** `null` for anonymous visitors (no session, no bot `X-API-Key`). */
   notes: string | null;
-  counts: EventCounts;
+  /** `null` for anonymous visitors (no session, no bot `X-API-Key`). */
+  counts: EventCounts | null;
   /** Null for one-off events, or occurrences detached from their series. */
   series: SeriesRef | null;
 };
@@ -137,9 +139,21 @@ export type Signup = {
 export type DiscordInterest = { count: number; members: SignupMember[] };
 
 export type EventDetail = EventSummary & {
+  /** Empty for anonymous visitors (no session, no bot `X-API-Key`). */
   signups: Signup[];
   my_signup: Signup | null;
-  discord_interest: DiscordInterest;
+  /** `null` for anonymous visitors (no session, no bot `X-API-Key`). */
+  discord_interest: DiscordInterest | null;
+};
+
+export type AddonOrigin = "guild" | "community";
+
+export const ADDON_ORIGINS: AddonOrigin[] = ["guild", "community"];
+
+/** Mirrors `ADDON_ORIGIN_LABELS` in sidequest_common. */
+export const ADDON_ORIGIN_LABELS: Record<AddonOrigin, string> = {
+  guild: "Made by SideQuest",
+  community: "Community pick",
 };
 
 export type Addon = {
@@ -150,6 +164,7 @@ export type Addon = {
   version: string;
   download_url: string;
   homepage_url: string | null;
+  origin: AddonOrigin;
   updated_at: string;
 };
 

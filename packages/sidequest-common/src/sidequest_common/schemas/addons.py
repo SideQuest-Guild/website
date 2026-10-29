@@ -2,11 +2,25 @@
 
 import re
 from datetime import datetime  # pydantic needs it at runtime
+from enum import StrEnum
 from uuid import UUID  # pydantic needs it at runtime
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 _SLUG_RE = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
+
+
+class AddonOrigin(StrEnum):
+    """Who made the addon: the guild itself, or a community addon it recommends."""
+
+    GUILD = "guild"
+    COMMUNITY = "community"
+
+
+ADDON_ORIGIN_LABELS: dict[AddonOrigin, str] = {
+    AddonOrigin.GUILD: "Made by SideQuest",
+    AddonOrigin.COMMUNITY: "Community pick",
+}
 
 
 def _validate_https_url(value: str | None) -> str | None:
@@ -28,6 +42,7 @@ class AddonSchema(BaseModel):
     version: str
     download_url: str
     homepage_url: str | None
+    origin: AddonOrigin = AddonOrigin.COMMUNITY
     updated_at: datetime
 
 
@@ -40,6 +55,7 @@ class AddonCreate(BaseModel):
     version: str = Field(min_length=1, max_length=50)
     download_url: str = Field(max_length=2000)
     homepage_url: str | None = Field(default=None, max_length=2000)
+    origin: AddonOrigin = AddonOrigin.COMMUNITY
 
     @field_validator("slug")
     @classmethod
@@ -68,6 +84,7 @@ class AddonUpdate(BaseModel):
     version: str | None = Field(default=None, min_length=1, max_length=50)
     download_url: str | None = Field(default=None, max_length=2000)
     homepage_url: str | None = Field(default=None, max_length=2000)
+    origin: AddonOrigin | None = Field(default=None)
 
     @field_validator("download_url")
     @classmethod

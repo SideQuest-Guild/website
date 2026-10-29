@@ -4,7 +4,9 @@ from uuid import UUID
 
 from sqlalchemy import select
 
+from sidequest_bot.api_client import API_KEY_HEADER
 from sidequest_common.models import EventDiscordInterest, EventSignupActivity, GuildEvent
+from tests.conftest import TEST_API_KEY
 from tests.unit.api.conftest import OFFICER_ROLE_ID, login_as
 
 if TYPE_CHECKING:
@@ -427,12 +429,83 @@ async def test_discord_interest_counts_everyone_but_names_only_site_members(
 
 
 async def test_event_summary_counts_include_interested(
-    member_client: AsyncTestClient, db_sessionmaker: async_sessionmaker[AsyncSession]
+    member_client: AsyncTestClient, discord_state: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
 ) -> None:
     event_id = await _seed_event(db_sessionmaker)
     async with db_sessionmaker() as session:
         session.add(EventDiscordInterest(event_id=UUID(event_id), discord_id=5001))
         await session.commit()
+    await login_as(member_client, discord_state, discord_id=5002)
     response = await member_client.get("/api/events", params={"when": "upcoming"})
     summary = next(event for event in response.json() if event["id"] == event_id)
     assert summary["counts"]["interested"] == 1
+
+
+async def test_anonymous_list_hides_counts_but_keeps_headline_fields(
+    member_client: AsyncTestClient, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    event_id = await _seed_event(db_sessionmaker, title="Molten Core")
+    response = await member_client.get("/api/events", params={"when": "upcoming"})
+    assert response.status_code == 200
+    summary = next(event for event in response.json() if event["id"] == event_id)
+    assert summary["title"] == "Molten Core"
+    assert summary["kind"] == "raid"
+    assert summary["location"] == "Molten Core"
+    assert summary["counts"] is None
+
+
+async def test_anonymous_detail_hides_signups_counts_notes_and_interest(
+    member_client: AsyncTestClient, discord_state: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    event_id = await _seed_event(db_sessionmaker)
+    await login_as(member_client, discord_state, discord_id=6001, username="watcher", roles=[])
+    await member_client.put(f"/api/events/{event_id}/signup", json=_signup_body(character="Watcher"))
+    async with db_sessionmaker() as session:
+        session.add(EventDiscordInterest(event_id=UUID(event_id), discord_id=6001))
+        await session.commit()
+    await member_client.post("/auth/logout")
+
+    response = await member_client.get(f"/api/events/{event_id}")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["title"] == "Molten Core"
+    assert body["signups"] == []
+    assert body["my_signup"] is None
+    assert body["notes"] is None
+    assert body["counts"] is None
+    assert body["discord_interest"] is None
+
+
+async def test_bot_api_key_gets_full_list_and_detail(
+    member_client: AsyncTestClient, discord_state: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    event_id = await _seed_event(db_sessionmaker)
+    await login_as(member_client, discord_state, discord_id=6101, username="raider", roles=[])
+    await member_client.put(f"/api/events/{event_id}/signup", json=_signup_body(character="Raider"))
+    await member_client.post("/auth/logout")
+
+    headers = {API_KEY_HEADER: TEST_API_KEY}
+    list_response = await member_client.get("/api/events", params={"when": "upcoming"}, headers=headers)
+    summary = next(event for event in list_response.json() if event["id"] == event_id)
+    assert summary["counts"]["signed"] == 1
+
+    detail_response = await member_client.get(f"/api/events/{event_id}", headers=headers)
+    body = detail_response.json()
+    assert body["counts"]["signed"] == 1
+    assert [s["character"] for s in body["signups"]] == ["Raider"]
+    assert body["discord_interest"] is not None
+
+
+async def test_signed_in_guest_sees_full_roster(
+    member_client: AsyncTestClient, discord_state: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    event_id = await _seed_event(db_sessionmaker)
+    await login_as(member_client, discord_state, discord_id=6201, username="confirmed", roles=[])
+    await member_client.put(f"/api/events/{event_id}/signup", json=_signup_body(character="Confirmed"))
+
+    await login_as(member_client, discord_state, discord_id=6202, username="guest", is_guild_member=False)
+    response = await member_client.get(f"/api/events/{event_id}")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["counts"] is not None
+    assert [s["character"] for s in body["signups"]] == ["Confirmed"]

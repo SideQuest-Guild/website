@@ -135,6 +135,7 @@ class EventSummary(BaseModel):
     """One event as returned in list views. ``location`` is ``""`` and ``size`` ``None`` for Discord-created events.
 
     ``ep`` is what attending awards; ``ep_override`` is the officer-set value behind it (``None``: the kind's preset).
+    ``notes``/``counts`` are ``None`` for anonymous visitors (no session, no bot ``X-API-Key``).
     """
 
     model_config = ConfigDict(from_attributes=True)
@@ -150,7 +151,7 @@ class EventSummary(BaseModel):
     ep_override: int | None
     status: EventStatus
     notes: str | None
-    counts: EventCounts
+    counts: EventCounts | None
     series: SeriesRef | None
 
 
@@ -188,11 +189,14 @@ class Signup(BaseModel):
 
 
 class EventDetail(EventSummary):
-    """A single event with its full roster."""
+    """A single event with its full roster.
+
+    ``signups``/``my_signup`` are empty and ``discord_interest`` is ``None`` for anonymous visitors.
+    """
 
     signups: list[Signup]
     my_signup: Signup | None
-    discord_interest: DiscordInterest
+    discord_interest: DiscordInterest | None
 
 
 class EventCreate(BaseModel):

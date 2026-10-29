@@ -26,6 +26,17 @@
   letter-spacing: 0.02em;
   color: var(--q-epic);
 }
+.tt-origin {
+  margin: 0;
+  font-size: var(--caps);
+  letter-spacing: 0.04em;
+}
+.tt-origin-guild {
+  color: var(--gold);
+}
+.tt-origin-community {
+  color: var(--mist-2);
+}
 .tt-version {
   margin: 0;
   font-family: var(--serif);

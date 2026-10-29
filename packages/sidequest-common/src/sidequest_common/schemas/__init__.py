@@ -1,6 +1,6 @@
 """Pydantic request/response schemas shared by the API and the bot's API client."""
 
-from sidequest_common.schemas.addons import AddonCreate, AddonSchema, AddonUpdate
+from sidequest_common.schemas.addons import ADDON_ORIGIN_LABELS, AddonCreate, AddonOrigin, AddonSchema, AddonUpdate
 from sidequest_common.schemas.discord_events import (
     ActivityAck,
     DiscordEventPush,
@@ -75,11 +75,13 @@ from sidequest_common.schemas.role_menus import (
 )
 
 __all__ = (
+    "ADDON_ORIGIN_LABELS",
     "EVENT_KIND_EP",
     "EVENT_KIND_LABELS",
     "ROLE_KINDS",
     "ActivityAck",
     "AddonCreate",
+    "AddonOrigin",
     "AddonSchema",
     "AddonUpdate",
     "CaseAction",

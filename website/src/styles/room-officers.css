@@ -67,12 +67,14 @@
   font-family: var(--display);
   font-size: 17px;
   letter-spacing: 0.06em;
+  overflow-wrap: anywhere;
 }
 .item-meta {
   display: block;
   margin-top: 4px;
   font-size: 14px;
   color: var(--mist-2);
+  overflow-wrap: anywhere;
 }
 
 /* ——— Avatars: square, never a costume circle ——— */

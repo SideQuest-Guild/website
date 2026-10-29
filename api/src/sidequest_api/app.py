@@ -44,6 +44,7 @@ def create_app(
         build_session_config,
         create_current_gm_provider,
         create_current_officer_provider,
+        create_full_access_provider,
         provide_authenticated_member,
         provide_current_member,
     )
@@ -72,6 +73,7 @@ def create_app(
             "web_settings": Provide(lambda: web_settings, sync_to_thread=False),
             "authenticated_member": Provide(provide_authenticated_member),
             "current_member": Provide(provide_current_member),
+            "full_access": Provide(create_full_access_provider(api_settings.KEY.get_secret_value())),
             "current_officer": Provide(create_current_officer_provider(web_settings.OFFICER_ROLE_IDS)),
             "current_gm": Provide(create_current_gm_provider(web_settings.GM_ROLE_IDS)),
         },

@@ -113,13 +113,19 @@ import warRoom from "../../../assets/rooms/war-room.webp";
 
   function eventRow(event: EventSummary): string {
     const start = new Date(event.starts_at);
-    const signupCounts = ROLE_KINDS.includes(event.kind)
-      ? `${event.counts.tank}T · ${event.counts.healer}H · ${event.counts.dps}D${
-          event.counts.tentative > 0 ? ` · ${event.counts.tentative} tentative` : ""
-        }`
-      : `${event.counts.signed} going${event.counts.tentative > 0 ? ` · ${event.counts.tentative} maybe` : ""}`;
-    const counts =
-      event.counts.interested > 0 ? `${signupCounts} · ${event.counts.interested} interested on Discord` : signupCounts;
+    const counts = (() => {
+      if (!event.counts) {
+        return "";
+      }
+      const signupCounts = ROLE_KINDS.includes(event.kind)
+        ? `${event.counts.tank}T · ${event.counts.healer}H · ${event.counts.dps}D${
+            event.counts.tentative > 0 ? ` · ${event.counts.tentative} tentative` : ""
+          }`
+        : `${event.counts.signed} going${event.counts.tentative > 0 ? ` · ${event.counts.tentative} maybe` : ""}`;
+      return event.counts.interested > 0
+        ? `${signupCounts} · ${event.counts.interested} interested on Discord`
+        : signupCounts;
+    })();
     const statusSuffix =
       event.status === "scheduled" ? "" : ` · ${event.status === "cancelled" ? "Cancelled" : "Completed"}`;
     const seriesText = event.series ? weekdayPhrase(event.series.weekdays, event.series.interval_weeks) : "";

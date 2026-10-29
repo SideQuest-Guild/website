@@ -18,13 +18,17 @@ if TYPE_CHECKING:
 API_KEY_HEADER = "X-API-Key"
 
 
+def is_valid_api_key(connection: ASGIConnection, expected_key: str) -> bool:
+    """Whether ``connection``'s ``X-API-Key`` header matches ``expected_key``."""
+    supplied = connection.headers.get(API_KEY_HEADER, "")
+    return hmac.compare_digest(supplied.encode(), expected_key.encode())
+
+
 def api_key_guard(expected_key: str) -> Callable[[ASGIConnection, BaseRouteHandler], None]:
     """Guard that rejects requests whose ``X-API-Key`` doesn't match ``expected_key``."""
-    expected = expected_key.encode()
 
     def guard(connection: ASGIConnection, _handler: BaseRouteHandler) -> None:
-        supplied = connection.headers.get(API_KEY_HEADER, "")
-        if not hmac.compare_digest(supplied.encode(), expected):
+        if not is_valid_api_key(connection, expected_key):
             msg = "Missing or invalid API key"
             raise NotAuthorizedException(msg)
 

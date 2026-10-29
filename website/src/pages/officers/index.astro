@@ -187,6 +187,13 @@ import "../../styles/room-officers.css";
                 <label for="a-homepage">Homepage URL</label>
                 <input id="a-homepage" type="url" />
               </div>
+              <div class="field">
+                <label for="a-origin">Who made it</label>
+                <select id="a-origin" required>
+                  <option value="guild">Made by SideQuest</option>
+                  <option value="community">Community pick</option>
+                </select>
+              </div>
             </div>
             <div class="field">
               <label for="a-summary">Summary</label>
@@ -316,7 +323,9 @@ import "../../styles/room-officers.css";
     EVENT_KIND_LABELS,
     MAX_EVENT_EP,
     ROLE_KINDS,
+    ADDON_ORIGIN_LABELS,
     type Addon,
+    type AddonOrigin,
     type EventKind,
     type EventSeriesSummary,
     type EventSummary,
@@ -826,6 +835,7 @@ import "../../styles/room-officers.css";
   const addonVersion = requireElement<HTMLInputElement>("a-version");
   const addonDownload = requireElement<HTMLInputElement>("a-download");
   const addonHomepage = requireElement<HTMLInputElement>("a-homepage");
+  const addonOrigin = requireElement<HTMLSelectElement>("a-origin");
   const addonSummary = requireElement<HTMLTextAreaElement>("a-summary");
   const addonResetBtn = requireElement<HTMLButtonElement>("addon-reset");
   const addonDeleteBtn = requireElement<HTMLButtonElement>("addon-delete");
@@ -839,6 +849,7 @@ import "../../styles/room-officers.css";
     addonForm.reset();
     editingAddonId = null;
     addonLegend.textContent = "New addon";
+    addonOrigin.value = "community";
     addonDeleteBtn.hidden = true;
     addonFormStatus.textContent = "";
   }
@@ -852,6 +863,7 @@ import "../../styles/room-officers.css";
     addonDownload.value = addon.download_url;
     addonHomepage.value = addon.homepage_url ?? "";
     addonSummary.value = addon.summary;
+    addonOrigin.value = addon.origin;
     addonDeleteBtn.hidden = false;
     addonFormStatus.textContent = "";
   }
@@ -861,7 +873,7 @@ import "../../styles/room-officers.css";
       <li>
         <button type="button" class="item-row" data-edit-addon="${a.id}">
           <span class="item-title">${escapeHtml(a.name)}</span>
-          <span class="item-meta">v${escapeHtml(a.version)} · ${escapeHtml(a.slug)}</span>
+          <span class="item-meta">v${escapeHtml(a.version)} · ${escapeHtml(a.slug)} · ${escapeHtml(ADDON_ORIGIN_LABELS[a.origin])}</span>
         </button>
       </li>`;
   }
@@ -898,6 +910,7 @@ import "../../styles/room-officers.css";
       version: addonVersion.value.trim(),
       download_url: addonDownload.value.trim(),
       homepage_url: homepage.length > 0 ? homepage : undefined,
+      origin: addonOrigin.value as AddonOrigin,
     };
     addonFormStatus.textContent = "Saving…";
     try {

@@ -22,6 +22,7 @@ if TYPE_CHECKING:
 
     from sidequest_common.settings import WebSettings
 
+from sidequest_api.lib.auth import is_valid_api_key
 from sidequest_common.models import Member
 
 logger = logging.getLogger(__name__)
@@ -83,6 +84,22 @@ async def provide_optional_member(request: Request, db_session: NamedDependency[
     if member_id is None:
         return None
     return await db_session.get(Member, int(member_id))
+
+
+def create_full_access_provider(api_key: str) -> Callable[[Request, Member | None], Awaitable[bool]]:
+    """Dependency factory: whether the caller may see full event data (signed in, or the bot's ``X-API-Key``).
+
+    Used by public endpoints that personalize but also redact personal data (signups, Discord interest names)
+    from anonymous site visitors while still serving the bot, which authenticates with ``X-API-Key`` instead
+    of a session.
+    """
+
+    async def provide_full_access(request: Request, optional_member: NamedDependency[Member | None]) -> bool:
+        if optional_member is not None:
+            return True
+        return is_valid_api_key(request, api_key)
+
+    return provide_full_access
 
 
 def is_officer(member: Member, officer_role_ids: list[int]) -> bool:

@@ -43,11 +43,16 @@ class EventsController(Controller):
     async def list_events(
         self,
         events_service: NamedDependency[EventsService],
+        full_access: NamedDependency[bool],
         when: FromQuery[Literal["upcoming", "past"]] = "upcoming",
         kind: FromQuery[EventKind | None] = None,
     ) -> list[EventSummary]:
-        """Events for the given window (default ``upcoming``), optionally filtered to one ``kind``."""
-        return await events_service.list_summaries(when, kind)
+        """Events for the given window (default ``upcoming``), optionally filtered to one ``kind``.
+
+        Anonymous visitors (no session, no bot ``X-API-Key``) get the headline fields only: ``counts`` is
+        ``None``.
+        """
+        return await events_service.list_summaries(when, kind, full_access=full_access)
 
     @get("/{event_id:uuid}", operation_id="GetEvent")
     async def get_event(
@@ -55,9 +60,14 @@ class EventsController(Controller):
         event_id: FromPath[UUID],
         events_service: NamedDependency[EventsService],
         optional_member: NamedDependency[Member | None],
+        full_access: NamedDependency[bool],
     ) -> EventDetail:
-        """An event with its full roster. ``my_signup`` is the caller's own signup, if any."""
-        return await events_service.get_detail(event_id, viewer=optional_member)
+        """An event with its full roster. ``my_signup`` is the caller's own signup, if any.
+
+        Anonymous visitors (no session, no bot ``X-API-Key``) get the headline fields only: ``notes``,
+        ``counts``, and ``discord_interest`` are ``None`` and ``signups``/``my_signup`` are empty.
+        """
+        return await events_service.get_detail(event_id, viewer=optional_member, full_access=full_access)
 
     @put("/{event_id:uuid}/signup", operation_id="UpsertSignup")
     async def upsert_signup(
@@ -97,7 +107,7 @@ class EventsController(Controller):
             subject_id=str(event.id),
             summary=f'Created {event.kind} "{event.title}" for {event.starts_at:%b %-d}',
         )
-        return await events_service.get_detail(event.id, viewer=None)
+        return await events_service.get_detail(event.id, viewer=None, full_access=True)
 
     @patch("/{event_id:uuid}", operation_id="UpdateEvent")
     async def update_event(
@@ -117,7 +127,7 @@ class EventsController(Controller):
             subject_id=str(event.id),
             summary=f'Updated event "{event.title}"',
         )
-        return await events_service.get_detail(event.id, viewer=None)
+        return await events_service.get_detail(event.id, viewer=None, full_access=True)
 
     @delete("/{event_id:uuid}", operation_id="DeleteEvent")
     async def delete_event(

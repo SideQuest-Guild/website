@@ -138,9 +138,13 @@ class EventsService(SQLAlchemyAsyncRepositoryService[GuildEvent]):
     repository_type = EventsRepository
 
     async def list_summaries(
-        self, when: Literal["upcoming", "past"], kind: EventKind | None = None
+        self, when: Literal["upcoming", "past"], kind: EventKind | None = None, *, full_access: bool
     ) -> list[EventSummary]:
-        """Events for the given window, with headcounts. Upcoming is ascending; past is descending, limit 50."""
+        """Events for the given window, with headcounts. Upcoming is ascending; past is descending, limit 50.
+
+        Anonymous callers (``full_access=False``) get the headline fields only: ``notes`` and ``counts`` are
+        ``None``, no headcount queries run.
+        """
         session = self.repository.session
         await materialize_all(session)
         statement = select(GuildEvent)
@@ -158,15 +162,35 @@ class EventsService(SQLAlchemyAsyncRepositoryService[GuildEvent]):
         if kind is not None:
             statement = statement.where(GuildEvent.kind == kind.value)
         events = list((await session.execute(statement)).scalars().all())
+        if not full_access:
+            return [
+                EventSummary.model_validate({**_event_summary_fields(event), "notes": None, "counts": None})
+                for event in events
+            ]
         counts = await self._counts_for([event.id for event in events])
         return [
             EventSummary.model_validate({**_event_summary_fields(event), "counts": counts[event.id]})
             for event in events
         ]
 
-    async def get_detail(self, event_id: UUID, *, viewer: Member | None) -> EventDetail:
-        """An event with its full roster and the viewer's own signup (``None`` if anonymous or not signed up)."""
+    async def get_detail(self, event_id: UUID, *, viewer: Member | None, full_access: bool) -> EventDetail:
+        """An event with its full roster and the viewer's own signup (``None`` if anonymous or not signed up).
+
+        Anonymous callers (``full_access=False``) get the headline fields only: ``notes``, ``counts``, and
+        ``discord_interest`` are ``None``, and ``signups``/``my_signup`` are empty; no roster queries run.
+        """
         event = await self.get_event_or_404(event_id)
+        if not full_access:
+            return EventDetail.model_validate(
+                {
+                    **_event_summary_fields(event),
+                    "notes": None,
+                    "counts": None,
+                    "signups": [],
+                    "my_signup": None,
+                    "discord_interest": None,
+                }
+            )
         session = self.repository.session
         statement = (
             select(EventSignup, Member)

@@ -25,15 +25,24 @@ import "../../styles/room-addons.css";
 </Room>
 
 <script>
-  import { apiFetch, escapeHtml, requireElement, statusMessage, type Addon } from "../../scripts/api";
+  import {
+    apiFetch,
+    escapeHtml,
+    requireElement,
+    statusMessage,
+    ADDON_ORIGIN_LABELS,
+    type Addon,
+  } from "../../scripts/api";
 
   function addonCard(addon: Addon): string {
     const homepage = addon.homepage_url
       ? `<a class="btn-quiet btn-small" href="${escapeHtml(addon.homepage_url)}">Homepage</a>`
       : "";
+    const originClass = addon.origin === "guild" ? "tt-origin tt-origin-guild" : "tt-origin tt-origin-community";
     return `
       <li class="tooltip-card">
         <p class="tt-name">${escapeHtml(addon.name)}</p>
+        <p class="${originClass}">${escapeHtml(ADDON_ORIGIN_LABELS[addon.origin])}</p>
         <p class="tt-version">Version ${escapeHtml(addon.version)}</p>
         <p class="tt-flavor">“${escapeHtml(addon.summary)}”</p>
         <div class="form-actions">
@@ -47,13 +56,18 @@ import "../../styles/room-addons.css";
     return `<li class="armory-empty"><p class="armory-empty-label">${escapeHtml(label)}</p><p>${escapeHtml(text)}</p></li>`;
   }
 
+  /** Guild-made addons rack first, then community picks; each group keeps the API's name order. */
+  function sortedAddons(addons: Addon[]): Addon[] {
+    return addons.toSorted((a, b) => Number(b.origin === "guild") - Number(a.origin === "guild"));
+  }
+
   async function loadAddons(): Promise<void> {
     const list = requireElement("addons-list");
     try {
       const addons = await apiFetch<Addon[]>("/api/addons");
       list.innerHTML =
         addons.length > 0
-          ? addons.map(addonCard).join("")
+          ? sortedAddons(addons).map(addonCard).join("")
           : emptySlot(
               "Empty",
               "The racks stand empty for now. The guild's addons will be posted here, and announced in the Discord, once they're ready.",

@@ -18,7 +18,7 @@ import "../../../styles/room-event.css";
   <p class="status" id="event-status" role="status" aria-live="polite"></p>
 
   <div id="event-content" hidden>
-    <section class="chamber" aria-labelledby="h-roster">
+    <section class="chamber" aria-labelledby="h-roster" id="roster-chamber">
       <h2 class="chamber-title" id="h-roster">
         Roster
       </h2>
@@ -39,6 +39,13 @@ import "../../../styles/room-event.css";
         <h3 id="h-interest">Interested on Discord</h3>
         <div id="interest-grid"></div>
       </div>
+    </section>
+
+    <section class="chamber" aria-labelledby="h-signed-out" id="signed-out-section" hidden>
+      <h2 class="chamber-title" id="h-signed-out">
+        Roster
+      </h2>
+      <p class="signup-invite" id="signed-out-message"></p>
     </section>
 
     <section class="chamber" aria-labelledby="h-chart" id="chart-section">
@@ -126,6 +133,7 @@ import "../../../styles/room-event.css";
 
   const statusEl = requireElement("event-status");
   const contentEl = requireElement("event-content");
+  const rosterChamber = requireElement("roster-chamber");
   const summaryEl = requireElement("event-summary");
   const notesEl = requireElement("event-notes");
   const rosterSection = requireElement("roster-section");
@@ -138,6 +146,9 @@ import "../../../styles/room-event.css";
   const chartSection = requireElement("chart-section");
   const chartGrid = requireElement("chart-grid");
   const signupInvite = requireElement("signup-invite");
+  const signupSection = requireElement("signup-section");
+  const signedOutSection = requireElement("signed-out-section");
+  const signedOutMessage = requireElement("signed-out-message");
   const signupForm = requireElement<HTMLFormElement>("signup-form");
   const withdrawBtn = requireElement<HTMLButtonElement>("withdraw-btn");
   const signupStatus = requireElement("signup-status");
@@ -225,6 +236,10 @@ import "../../../styles/room-event.css";
   }
 
   function renderInterest(detail: EventDetail): void {
+    if (!detail.discord_interest) {
+      interestSection.hidden = true;
+      return;
+    }
     const { count, members } = detail.discord_interest;
     interestSection.hidden = count === 0;
     if (count === 0) {
@@ -385,6 +400,16 @@ import "../../../styles/room-event.css";
     ]
       .filter(Boolean)
       .join(" · ");
+    const signedOut = event.counts === null;
+    rosterChamber.hidden = signedOut;
+    signupSection.hidden = signedOut;
+    signedOutSection.hidden = !signedOut;
+    if (signedOut) {
+      chartSection.hidden = true;
+      const next = encodeURIComponent(location.pathname + location.search);
+      signedOutMessage.innerHTML = `The plan and who's going are for guild members. <a href="/auth/discord/login?next=${next}">Sign in with Discord</a> to see them.`;
+      return;
+    }
     notesEl.hidden = !event.notes;
     notesEl.textContent = event.notes ?? "";
     renderRoster(event);

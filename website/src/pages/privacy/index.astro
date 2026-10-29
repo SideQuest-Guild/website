@@ -21,7 +21,7 @@ const articles = [
   description="What SideQuest's site and Discord bot keep about you, and how to delete it."
   heading="PRIVACY"
   lede="What this site and the guild's Discord bot keep about you, who else touches it, and how to make it go away."
-  effective="October 28, 2026"
+  effective="October 29, 2026"
   artPosition="12% 50%"
   articles={articles}
 >
@@ -79,8 +79,9 @@ const articles = [
       class, role and note. On raid nights officers may also place you in a group or on the bench.
     </p>
     <p>
-      <strong>Event pages are public:</strong> anyone with the link can see who signed up (Discord display name and
-      avatar) along with those details. Don't put anything in a note you wouldn't say in guild chat.
+      <strong>Event details and sign-ups are for signed-in members:</strong> the public can see an event's name, kind,
+      time and place, but who's going, the plan (notes), the raid chart and the roster are only visible once you sign in
+      with Discord. Don't put anything in a note you wouldn't say in guild chat.
     </p>
     <p>
       Each event also has a post in the Discord <strong>#events</strong> forum, where the bot notes when someone signs
@@ -88,8 +89,9 @@ const articles = [
       notification) and repeats their sign-up comment there.
     </p>
     <p>
-      If you click <strong>Interested</strong> on an event in Discord, we keep your Discord ID against that event. The
-      event page counts everyone who did, but only shows the names of people who have signed in on this site.
+      If you click <strong>Interested</strong> on an event in Discord, we keep your Discord ID against that event.
+      Signed-in members can see the count and the names of people who have signed in on this site; the public only sees
+      the event's name, kind, time and place.
     </p>
   </Article>
 
@@ -102,6 +104,11 @@ const articles = [
       <li>
         During a Discord or Battle.net sign-in, the same cookie briefly holds a one-time code that stops forged
         sign-ins.
+      </li>
+      <li>
+        If you're an officer, your browser's local storage keeps one flag, <strong>sq-officer</strong>, so the Officers
+        link shows without a flicker. It's checked against your account on every page and removed once you're signed out
+        or no longer an officer.
       </li>
     </ul>
     <p>No analytics or advertising cookies. If you never sign in, you get no cookies at all.</p>
