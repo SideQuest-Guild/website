@@ -12,6 +12,7 @@ from litestar.params import FromPath, JSONBody
 
 from sidequest_api.domain.event_series.dependencies import provide_event_series_service
 from sidequest_api.domain.event_series.services import EventSeriesService
+from sidequest_api.lib.officer_audit import record_officer_audit
 from sidequest_common.models import Member
 from sidequest_common.schemas import EventSeriesCreate, EventSeriesSummary, EventSeriesUpdate
 
@@ -36,8 +37,16 @@ class EventSeriesController(Controller):
         current_officer: NamedDependency[Member],
     ) -> EventSeriesSummary:
         """Create a repeating series (officer); materializes its occurrences immediately."""
-        del current_officer
-        return await event_series_service.create_series(data)
+        series = await event_series_service.create_series(data)
+        await record_officer_audit(
+            event_series_service.repository.session,
+            actor=current_officer,
+            action="series.create",
+            subject_type="series",
+            subject_id=str(series.id),
+            summary=f'Created series "{series.title}"',
+        )
+        return series
 
     @patch("/{series_id:uuid}", operation_id="UpdateEventSeries")
     async def update_series(
@@ -48,8 +57,16 @@ class EventSeriesController(Controller):
         current_officer: NamedDependency[Member],
     ) -> EventSeriesSummary:
         """Edit a series' content or schedule (officer); retimes/retires affected occurrences, then materializes."""
-        del current_officer
-        return await event_series_service.update_series(series_id, data)
+        series = await event_series_service.update_series(series_id, data)
+        await record_officer_audit(
+            event_series_service.repository.session,
+            actor=current_officer,
+            action="series.update",
+            subject_type="series",
+            subject_id=str(series.id),
+            summary=f'Updated series "{series.title}"',
+        )
+        return series
 
     @delete("/{series_id:uuid}", operation_id="DeleteEventSeries")
     async def delete_series(
@@ -59,5 +76,13 @@ class EventSeriesController(Controller):
         current_officer: NamedDependency[Member],
     ) -> None:
         """End a series (officer): keeps past occurrences, deletes/cancels future ones, deletes the series row."""
-        del current_officer
+        series = await event_series_service.get_series_or_404(series_id)
         await event_series_service.end_series(series_id)
+        await record_officer_audit(
+            event_series_service.repository.session,
+            actor=current_officer,
+            action="series.delete",
+            subject_type="series",
+            subject_id=str(series_id),
+            summary=f'Ended series "{series.title}"',
+        )

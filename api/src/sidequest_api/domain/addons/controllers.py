@@ -8,6 +8,7 @@ from litestar.params import FromPath, JSONBody
 
 from sidequest_api.domain.addons.dependencies import provide_addons_service
 from sidequest_api.domain.addons.services import AddonsService
+from sidequest_api.lib.officer_audit import record_officer_audit
 from sidequest_common.models import Member
 from sidequest_common.schemas import AddonCreate, AddonSchema, AddonUpdate
 
@@ -33,8 +34,15 @@ class AddonsController(Controller):
         current_officer: NamedDependency[Member],
     ) -> AddonSchema:
         """Add a recommended addon (officer). 409 if ``slug`` is already taken."""
-        del current_officer
         addon = await addons_service.create_addon(data)
+        await record_officer_audit(
+            addons_service.repository.session,
+            actor=current_officer,
+            action="addon.create",
+            subject_type="addon",
+            subject_id=str(addon.id),
+            summary=f'Added addon "{addon.name}"',
+        )
         return AddonSchema.model_validate(addon)
 
     @patch("/{addon_id:uuid}", operation_id="UpdateAddon")
@@ -46,8 +54,15 @@ class AddonsController(Controller):
         current_officer: NamedDependency[Member],
     ) -> AddonSchema:
         """Edit an addon (officer)."""
-        del current_officer
         addon = await addons_service.update_addon(addon_id, data)
+        await record_officer_audit(
+            addons_service.repository.session,
+            actor=current_officer,
+            action="addon.update",
+            subject_type="addon",
+            subject_id=str(addon.id),
+            summary=f'Updated addon "{addon.name}"',
+        )
         return AddonSchema.model_validate(addon)
 
     @delete("/{addon_id:uuid}", operation_id="DeleteAddon")
@@ -58,5 +73,13 @@ class AddonsController(Controller):
         current_officer: NamedDependency[Member],
     ) -> None:
         """Remove an addon (officer)."""
-        del current_officer
+        addon = await addons_service.get_addon_or_404(addon_id)
         await addons_service.delete_addon(addon_id)
+        await record_officer_audit(
+            addons_service.repository.session,
+            actor=current_officer,
+            action="addon.delete",
+            subject_type="addon",
+            subject_id=str(addon_id),
+            summary=f'Removed addon "{addon.name}"',
+        )

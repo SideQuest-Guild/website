@@ -31,6 +31,7 @@ SESSION_MAX_AGE = 60 * 60 * 24 * 30  # 30 days
 _NO_SESSION_MESSAGE = "Not authenticated"
 _NOT_A_MEMBER_MESSAGE = "Not a guild member"
 _NOT_AN_OFFICER_MESSAGE = "Officers only"
+_NOT_A_GM_MESSAGE = "GMs only"
 
 
 def build_session_config(web_settings: WebSettings) -> CookieBackendConfig:
@@ -98,6 +99,22 @@ def create_current_officer_provider(officer_role_ids: list[int]) -> Callable[[Me
         return current_member
 
     return provide_current_officer
+
+
+def is_gm(member: Member, gm_role_ids: list[int]) -> bool:
+    """Whether ``member`` holds any of ``gm_role_ids`` (their Discord roles as of their last sign-in)."""
+    return bool(set(gm_role_ids) & set(member.roles))
+
+
+def create_current_gm_provider(gm_role_ids: list[int]) -> Callable[[Member], Awaitable[Member]]:
+    """Dependency factory: the signed-in member, 403 unless they hold one of ``gm_role_ids``."""
+
+    async def provide_current_gm(current_member: NamedDependency[Member]) -> Member:
+        if not is_gm(current_member, gm_role_ids):
+            raise PermissionDeniedException(_NOT_A_GM_MESSAGE)
+        return current_member
+
+    return provide_current_gm
 
 
 def safe_next_path(value: str | None) -> str | None:

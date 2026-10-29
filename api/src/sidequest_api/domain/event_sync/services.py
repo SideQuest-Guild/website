@@ -264,16 +264,22 @@ class EventSyncService(EventsService):
         return DiscordSyncPending(pushes=pushes, deletions=tombstone_ids, activity=activity)
 
     async def _drop_stale_unthreaded_activity(self, now: datetime) -> None:
-        """Delete unposted activity rows older than 24h for events with no Discord thread; they'd never post."""
+        """Mark unposted activity rows older than 24h as posted for events with no Discord thread.
+
+        They'd never post (pending only lists unposted rows for events with a thread), but stay in the table as
+        the GM console's sign-up log rather than being deleted.
+        """
         session = self.repository.session
         cutoff = now - ACTIVITY_MAX_AGE
         threadless_event_ids = select(GuildEvent.id).where(GuildEvent.discord_thread_id.is_(None))
         await session.execute(
-            delete(EventSignupActivity).where(
+            update(EventSignupActivity)
+            .where(
                 EventSignupActivity.posted_at.is_(None),
                 EventSignupActivity.created_at < cutoff,
                 EventSignupActivity.event_id.in_(threadless_event_ids),
             )
+            .values(posted_at=now)
         )
         await session.commit()
 

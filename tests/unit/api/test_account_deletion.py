@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy import select
 
-from sidequest_common.models import EventSignup, GuildEvent, Member
+from sidequest_common.models import EventSignup, EventSignupActivity, GuildEvent, Member, OfficerAudit
 from tests.unit.api.conftest import link_battlenet, login_as
 
 if TYPE_CHECKING:
@@ -112,3 +112,58 @@ async def test_unlink_battlenet_clears_id_tag_and_linked_at(
         assert member.battlenet_id is None
         assert member.battletag is None
         assert member.battlenet_linked_at is None
+
+
+async def test_delete_account_removes_event_signup_activity_by_discord_id(
+    member_client: AsyncTestClient, discord_state: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    event_id = await _seed_event(db_sessionmaker)
+    await login_as(member_client, discord_state, discord_id=9006, username="activity-owner", roles=[])
+    await member_client.put(f"/api/events/{event_id}/signup", json=_signup_body(character="Jaina"))
+
+    async with db_sessionmaker() as session:
+        rows = (
+            (await session.execute(select(EventSignupActivity).where(EventSignupActivity.discord_id == 9006)))
+            .scalars()
+            .all()
+        )
+        assert len(rows) == 1
+
+    assert (await member_client.delete("/api/me")).status_code == 204
+
+    async with db_sessionmaker() as session:
+        rows = (
+            (await session.execute(select(EventSignupActivity).where(EventSignupActivity.discord_id == 9006)))
+            .scalars()
+            .all()
+        )
+        assert rows == []
+
+
+async def test_delete_account_nulls_officer_audit_actor_but_keeps_actor_name(
+    member_client: AsyncTestClient, discord_state: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    await login_as(member_client, discord_state, discord_id=9007, username="Captain Officer", roles=[])
+    actor_id = (await member_client.get("/api/me")).json()["id"]
+
+    async with db_sessionmaker() as session:
+        session.add(
+            OfficerAudit(
+                actor_member_id=actor_id,
+                actor_name="Captain Officer",
+                action="event.create",
+                subject_type="event",
+                subject_id=None,
+                summary='Created raid "Molten Core" for Nov 6',
+            )
+        )
+        await session.commit()
+
+    assert (await member_client.delete("/api/me")).status_code == 204
+
+    async with db_sessionmaker() as session:
+        audit = (
+            (await session.execute(select(OfficerAudit).where(OfficerAudit.action == "event.create"))).scalars().one()
+        )
+        assert audit.actor_member_id is None
+        assert audit.actor_name == "Captain Officer"

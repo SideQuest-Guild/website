@@ -21,6 +21,7 @@ class Me(BaseModel):
     avatar_url: str | None
     is_guild_member: bool
     is_officer: bool
+    is_gm: bool
     battletag: str | None
     roster_confirmed: bool
 

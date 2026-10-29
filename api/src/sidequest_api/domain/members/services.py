@@ -6,10 +6,10 @@ from typing import Any
 from advanced_alchemy.repository import SQLAlchemyAsyncRepository
 from advanced_alchemy.service import SQLAlchemyAsyncRepositoryService
 from litestar.exceptions import NotFoundException
-from sqlalchemy import delete
+from sqlalchemy import delete, update
 
 from sidequest_api.lib.battlenet import BattleNetOAuthError
-from sidequest_common.models import EventSignup, Member
+from sidequest_common.models import EventSignup, EventSignupActivity, Member, OfficerAudit
 
 
 class MembersRepository(SQLAlchemyAsyncRepository[Member]):
@@ -77,9 +77,16 @@ class MembersService(SQLAlchemyAsyncRepositoryService[Member]):
         """Permanently delete ``member`` and every row that belongs to them.
 
         Deletes event signups explicitly rather than relying on the database's ``ON DELETE CASCADE`` alone, so
-        this holds regardless of whether the engine enforces foreign keys (e.g. SQLite in tests).
+        this holds regardless of whether the engine enforces foreign keys (e.g. SQLite in tests). Also deletes
+        the member's sign-up activity (the GM console's sign-up log) and nulls any officer-audit rows they
+        authored, keeping each row's ``actor_name`` snapshot.
         """
-        await self.repository.session.execute(delete(EventSignup).where(EventSignup.member_id == member.id))
+        session = self.repository.session
+        await session.execute(delete(EventSignup).where(EventSignup.member_id == member.id))
+        await session.execute(delete(EventSignupActivity).where(EventSignupActivity.discord_id == member.discord_id))
+        await session.execute(
+            update(OfficerAudit).where(OfficerAudit.actor_member_id == member.id).values(actor_member_id=None)
+        )
         await self.delete(member.id, auto_commit=True)
 
     async def get_for_officer_action(self, member_id: int) -> Member:
@@ -101,8 +108,3 @@ class MembersService(SQLAlchemyAsyncRepositoryService[Member]):
         """Clear ``member``'s roster confirmation."""
         member.roster_confirmed_at = None
         return await self.update(member, auto_commit=True)
-
-    async def list_for_officers(self) -> list[Member]:
-        """Every member who has signed in, current guild members first, then by display name."""
-        members = list(await self.get_many())
-        return sorted(members, key=lambda m: (not m.is_guild_member, m.display_name.casefold()))

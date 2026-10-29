@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 from sqlalchemy import select
 
 from sidequest_common.models import Member
-from tests.unit.api.conftest import OFFICER_ROLE_ID, login_as
+from tests.unit.api.conftest import GM_ROLE_ID, login_as
 
 if TYPE_CHECKING:
     from litestar.testing import AsyncTestClient
@@ -20,7 +20,7 @@ async def test_confirm_requires_signed_in(member_client: AsyncTestClient) -> Non
     assert response.status_code == 401
 
 
-async def test_confirm_requires_officer(member_client: AsyncTestClient, discord_state: dict) -> None:
+async def test_confirm_requires_gm(member_client: AsyncTestClient, discord_state: dict) -> None:
     member_id = await _signed_in_member_id(member_client, discord_state, discord_id=7002)
     await login_as(member_client, discord_state, discord_id=7003, username="rando", roles=[])
     response = await member_client.put(f"/api/members/{member_id}/roster-confirmation")
@@ -28,22 +28,18 @@ async def test_confirm_requires_officer(member_client: AsyncTestClient, discord_
 
 
 async def test_confirm_unknown_member_is_404(member_client: AsyncTestClient, discord_state: dict) -> None:
-    await login_as(member_client, discord_state, discord_id=7004, username="officer", roles=[OFFICER_ROLE_ID])
+    await login_as(member_client, discord_state, discord_id=7004, username="gm", roles=[GM_ROLE_ID])
     response = await member_client.put("/api/members/999999/roster-confirmation")
     assert response.status_code == 404
 
 
-async def test_officer_confirms_member_roster(member_client: AsyncTestClient, discord_state: dict) -> None:
+async def test_gm_confirms_member_roster(member_client: AsyncTestClient, discord_state: dict) -> None:
     member_id = await _signed_in_member_id(member_client, discord_state, discord_id=7005)
 
-    await login_as(member_client, discord_state, discord_id=7006, username="officer", roles=[OFFICER_ROLE_ID])
+    await login_as(member_client, discord_state, discord_id=7006, username="gm", roles=[GM_ROLE_ID])
     response = await member_client.put(f"/api/members/{member_id}/roster-confirmation")
     assert response.status_code == 200
     assert response.json()["roster_confirmed"] is True
-
-    listing = await member_client.get("/api/members")
-    by_id = {row["id"]: row for row in listing.json()}
-    assert by_id[member_id]["roster_confirmed"] is True
 
     await login_as(member_client, discord_state, discord_id=7005, username="member-7005", roles=[])
     assert (await member_client.get("/api/me")).json()["roster_confirmed"] is True
@@ -53,7 +49,7 @@ async def test_confirm_is_idempotent_keeps_first_timestamp(
     member_client: AsyncTestClient, discord_state: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
 ) -> None:
     member_id = await _signed_in_member_id(member_client, discord_state, discord_id=7007)
-    await login_as(member_client, discord_state, discord_id=7008, username="officer", roles=[OFFICER_ROLE_ID])
+    await login_as(member_client, discord_state, discord_id=7008, username="gm", roles=[GM_ROLE_ID])
 
     first = await member_client.put(f"/api/members/{member_id}/roster-confirmation")
     assert first.status_code == 200
@@ -77,7 +73,7 @@ async def test_unconfirm_requires_signed_in(member_client: AsyncTestClient) -> N
     assert response.status_code == 401
 
 
-async def test_unconfirm_requires_officer(member_client: AsyncTestClient, discord_state: dict) -> None:
+async def test_unconfirm_requires_gm(member_client: AsyncTestClient, discord_state: dict) -> None:
     member_id = await _signed_in_member_id(member_client, discord_state, discord_id=7010)
     await login_as(member_client, discord_state, discord_id=7011, username="rando", roles=[])
     response = await member_client.delete(f"/api/members/{member_id}/roster-confirmation")
@@ -85,20 +81,16 @@ async def test_unconfirm_requires_officer(member_client: AsyncTestClient, discor
 
 
 async def test_unconfirm_unknown_member_is_404(member_client: AsyncTestClient, discord_state: dict) -> None:
-    await login_as(member_client, discord_state, discord_id=7012, username="officer", roles=[OFFICER_ROLE_ID])
+    await login_as(member_client, discord_state, discord_id=7012, username="gm", roles=[GM_ROLE_ID])
     response = await member_client.delete("/api/members/999999/roster-confirmation")
     assert response.status_code == 404
 
 
-async def test_officer_unconfirms_member_roster(member_client: AsyncTestClient, discord_state: dict) -> None:
+async def test_gm_unconfirms_member_roster(member_client: AsyncTestClient, discord_state: dict) -> None:
     member_id = await _signed_in_member_id(member_client, discord_state, discord_id=7013)
-    await login_as(member_client, discord_state, discord_id=7014, username="officer", roles=[OFFICER_ROLE_ID])
+    await login_as(member_client, discord_state, discord_id=7014, username="gm", roles=[GM_ROLE_ID])
     await member_client.put(f"/api/members/{member_id}/roster-confirmation")
 
     response = await member_client.delete(f"/api/members/{member_id}/roster-confirmation")
     assert response.status_code == 200
     assert response.json()["roster_confirmed"] is False
-
-    listing = await member_client.get("/api/members")
-    by_id = {row["id"]: row for row in listing.json()}
-    assert by_id[member_id]["roster_confirmed"] is False

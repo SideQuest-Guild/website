@@ -42,6 +42,7 @@ def create_app(
     from sidequest_api.lib.discord import DISCORD_TRANSPORT_STATE_KEY
     from sidequest_api.lib.member_auth import (
         build_session_config,
+        create_current_gm_provider,
         create_current_officer_provider,
         provide_authenticated_member,
         provide_current_member,
@@ -72,6 +73,7 @@ def create_app(
             "authenticated_member": Provide(provide_authenticated_member),
             "current_member": Provide(provide_current_member),
             "current_officer": Provide(create_current_officer_provider(web_settings.OFFICER_ROLE_IDS)),
+            "current_gm": Provide(create_current_gm_provider(web_settings.GM_ROLE_IDS)),
         },
         state=State(
             {DISCORD_TRANSPORT_STATE_KEY: discord_transport, BATTLENET_TRANSPORT_STATE_KEY: battlenet_transport}

@@ -70,8 +70,10 @@ class WebSettings(BaseSettings):
     BATTLENET_CLIENT_ID: str | None = None
     BATTLENET_CLIENT_SECRET: SecretStr | None = None
     GUILD_ID: int = 1564671275316543508
-    # NoDecode: parsed by _parse_role_ids, so both `123,456` and `[123,456]` work in .env.
-    OFFICER_ROLE_IDS: Annotated[list[int], NoDecode] = []
+    # Defaults are the SideQuest server's Quest Master (GM) and Quest Guide roles, like GUILD_ID above; the env vars
+    # override them. NoDecode: parsed by _parse_role_ids, so both `123,456` and `[123,456]` work in .env.
+    OFFICER_ROLE_IDS: Annotated[list[int], NoDecode] = [1564678042381586532, 1564678035117178960]
+    GM_ROLE_IDS: Annotated[list[int], NoDecode] = [1564678042381586532]
     COOKIE_SECURE: bool = False
 
     @property
@@ -84,7 +86,7 @@ class WebSettings(BaseSettings):
         """Whether both Battle.net OAuth client credentials are set."""
         return self.BATTLENET_CLIENT_ID is not None and self.BATTLENET_CLIENT_SECRET is not None
 
-    @field_validator("OFFICER_ROLE_IDS", mode="before")
+    @field_validator("OFFICER_ROLE_IDS", "GM_ROLE_IDS", mode="before")
     @classmethod
     def _parse_role_ids(cls, value: Any) -> Any:
         """Accept a JSON array (``[123,456]``) or a comma-separated list (``123,456``) from the environment."""

@@ -21,6 +21,7 @@ if TYPE_CHECKING:
     from litestar import Litestar
 
 OFFICER_ROLE_ID = 999_111
+GM_ROLE_ID = 999_222
 MEMBER_SESSION_SECRET = "a" * 32
 
 
@@ -71,7 +72,7 @@ def battlenet_state() -> dict:
 
 @pytest.fixture
 def member_web_settings() -> WebSettings:
-    """Discord OAuth configured, with one officer role (``OFFICER_ROLE_ID``)."""
+    """Discord OAuth configured, with one officer role (``OFFICER_ROLE_ID``) and one GM role (``GM_ROLE_ID``)."""
     return WebSettings(
         DISCORD_CLIENT_ID="test-client-id",
         DISCORD_CLIENT_SECRET="test-client-secret",
@@ -80,6 +81,7 @@ def member_web_settings() -> WebSettings:
         SESSION_SECRET=MEMBER_SESSION_SECRET,
         GUILD_ID=GUILD_ID,
         OFFICER_ROLE_IDS=[OFFICER_ROLE_ID],
+        GM_ROLE_IDS=[GM_ROLE_ID],
         COOKIE_SECURE=False,
     )
 

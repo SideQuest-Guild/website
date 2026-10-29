@@ -12,6 +12,8 @@ from sidequest_api.domain.discord_live.controllers import DiscordLiveController,
 from sidequest_api.domain.event_series.controllers import EventSeriesController
 from sidequest_api.domain.event_sync.controllers import EventSyncController
 from sidequest_api.domain.events.controllers import EventsController
+from sidequest_api.domain.gm.controllers import GmController
+from sidequest_api.domain.guild_roles.controllers import GuildRolesController
 from sidequest_api.domain.guilds.controllers import GuildConfigController
 from sidequest_api.domain.levels.controllers import LevelsController
 from sidequest_api.domain.member_links.controllers import MemberLinksController
@@ -29,6 +31,7 @@ guild_controllers = [
     EventSyncController,
     DiscordLiveController,
     MemberLinksController,
+    GuildRolesController,
 ]
 
 public_routes = [
@@ -40,4 +43,5 @@ public_routes = [
     EventSeriesController,
     AddonsController,
     DiscordLivePublicController,
+    GmController,
 ]

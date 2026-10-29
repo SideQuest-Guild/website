@@ -30,29 +30,32 @@ flowchart LR
 | `/api/guilds/{guild_id}/...` | `X-API-Key` (shared secret with the bot) | Guild config, XP/levels, moderation cases, role menus |
 | `/api/guilds/{guild_id}/event-sync` (GET), `/event-sync/{event_id}/ack`, `/event-sync/events`, `/event-sync/events/{event_id}` (DELETE), `/event-sync/tombstones/{event_id}` (DELETE), `/event-sync/reconcile`, `/event-sync/interest/{discord_event_id}` (PUT), `/event-sync/activity/ack` | `X-API-Key` | Two-way guild event <-> Discord scheduled event sync, Discord "Interested" reporting, and sign-up activity for forum comments (404s for any guild other than the site guild) |
 | `/api/guilds/{guild_id}/live` (PUT) | `X-API-Key` | Bot reports the guild's live online/member/voice-channel counts (404s for any guild other than the site guild) |
+| `/api/guilds/{guild_id}/roles` (PUT) | `X-API-Key` | Bot reports the guild's full current role set (names, colors, positions); `@everyone` excluded (404s for any guild other than the site guild) |
 | `/api/guilds/{guild_id}/member-links` (GET) | `X-API-Key` | Bot reads every signed-in member's Discord id and Battle.net-link status for role syncing (404s for any guild other than the site guild) |
 | `/api/discord/live` (GET) | none | Website reads the site guild's live counts; empty counts (not 404) if the bot hasn't reported recently |
 | `/auth/discord/login`, `/auth/discord/callback`, `/auth/logout` | none | Discord OAuth sign-in (session cookie `sq_session`) |
 | `/auth/battlenet/link`, `/auth/battlenet/callback`, `/auth/battlenet/unlink` | signed in | Link a Battle.net account (BattleTag) to the member |
-| `/api/me` (GET), `/api/me` (DELETE) | signed in | The signed-in member; `DELETE` permanently deletes the member and their event signups and clears the session cookie |
-| `/api/members` | officer | Everyone who has signed in, with linked BattleTags, for checking the guild roster |
-| `/api/members/{member_id}/roster-confirmation` (PUT, DELETE) | officer | Confirm or clear that a member is on the in-game guild roster |
+| `/api/me` (GET), `/api/me` (DELETE) | signed in | The signed-in member; `DELETE` permanently deletes the member, their event signups, and their sign-up activity rows, and clears the session cookie |
+| `/api/members/{member_id}/roster-confirmation` (PUT, DELETE) | GM | Confirm or clear that a member is on the in-game guild roster |
 | `/api/events`, `/api/event-series`, `/api/addons` (GET) | none | Guild events (raids, dungeons, leveling, pvp, social, other) with roster + raid chart, repeating event series, guild addon links |
 | `/api/events/{id}/signup` | guild member | Sign up for / withdraw from a guild event |
 | `/api/events`, `/api/event-series`, `/api/addons` (POST/PATCH/DELETE), `/api/events/{id}/signups/{id}` | officer | Manage guild events, repeating event series, the raid chart and addons |
+| `/api/gm/members`, `/api/gm/members/{member_id}`, `/api/gm/log`, `/api/gm/cases` (GET), `/api/gm/cases/{case_number}` (PATCH) | GM | Member management detail, unified activity log (sign-ups, sign-ins, Battle.net links, officer actions, moderation), and moderation case review/edit |
 | `/health`, `/health/live` | none | Health checks |
 | `/schema` | none | OpenAPI docs |
 
 Only the bot's guild router is behind the bot key. Members sign in with Discord: a "guild member" is anyone in the
-SideQuest server, and an officer is a member holding a role listed in `WEB_OFFICER_ROLE_IDS` (roles and nickname
-refresh at each sign-in). The site's member pages are `/events/`, `/addons/`, `/account/` and `/officers/`.
+SideQuest server, an officer is a member holding a role listed in `WEB_OFFICER_ROLE_IDS` (default: Quest Master and
+Quest Guide), and a GM is a member holding a role listed in `WEB_GM_ROLE_IDS` (default: Quest Master); roles and
+nickname refresh at each sign-in. The site's member pages
+are `/events/`, `/addons/`, `/account/` and `/officers/` (the GM console).
 
 ### Discord sign-in setup
 
 In the Developer Portal → Game Master → OAuth2, add the redirect `{WEB_BASE_URL}/auth/discord/callback` (locally
 `http://localhost:8000/auth/discord/callback`) and copy the client ID and secret into `WEB_DISCORD_CLIENT_ID` and
 `WEB_DISCORD_CLIENT_SECRET`. Set `WEB_SESSION_SECRET` to a long random string (without it, sessions end on every
-restart), `WEB_OFFICER_ROLE_IDS` to a JSON list of officer role IDs (e.g. `[123456789012345678]`), and
+restart), `WEB_OFFICER_ROLE_IDS` / `WEB_GM_ROLE_IDS` only to override the SideQuest role defaults, and
 `WEB_COOKIE_SECURE=true` behind HTTPS. Until the client ID and secret are set, sign-in returns 503 and the public
 pages keep working. See `.env.example`.
 
@@ -215,7 +218,7 @@ Members who sign in on the site get a role (default name **Signed the Ledger**);
 get a second one (**Battle-Tagged**). Unlinking Battle.net drops just that role; unlinking the site account (or no
 longer appearing in the sign-in list) drops both. New joiners who haven't signed in get a third role, the gate role
 (**At the Gate**), removed the moment they sign in; it's granted immediately on join (or screening-clear) just like
-the other two. Once an officer confirms a member on the Officers page as actually being on the in-game guild
+the other two. Once a GM confirms a member on the Officers page's Members tab as actually being on the in-game guild
 roster (ahead of the WoW Forever roster API that will later set the same flag automatically), the member gets a
 fourth role, the roster role (**New Arrival**) — but never if they already hold a rank above it, so a promoted
 member who dropped the role doesn't get it back every minute. Channels other than the sign-in channel are set in
@@ -287,7 +290,8 @@ Environment (secrets in Vault, the rest in Consul):
 | `WEB_SESSION_SECRET` | at least 32 characters | web |
 | `WEB_DISCORD_CLIENT_ID` / `WEB_DISCORD_CLIENT_SECRET` | Discord OAuth app | web |
 | `WEB_BATTLENET_CLIENT_ID` / `WEB_BATTLENET_CLIENT_SECRET` | Battle.net API client | web |
-| `WEB_OFFICER_ROLE_IDS` | `1564678042381586532,1564678035117178960` | web |
+| `WEB_OFFICER_ROLE_IDS` | optional; defaults to Quest Master + Quest Guide | web |
+| `WEB_GM_ROLE_IDS` | optional; defaults to Quest Master | web |
 
 Register `https://sidequest-guild.com/auth/discord/callback` as a Discord OAuth redirect (the Battle.net one is
 already registered).

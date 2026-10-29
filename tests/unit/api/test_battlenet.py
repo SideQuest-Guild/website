@@ -2,7 +2,7 @@ import base64
 from typing import TYPE_CHECKING
 from urllib.parse import parse_qs, urlparse
 
-from tests.unit.api.conftest import OFFICER_ROLE_ID, link_battlenet, login_as
+from tests.unit.api.conftest import link_battlenet, login_as
 
 if TYPE_CHECKING:
     from litestar.testing import AsyncTestClient
@@ -87,18 +87,3 @@ async def test_unlink_clears_battletag(
     await login_as(member_client, discord_state, discord_id=5008)
     response = await link_battlenet(member_client, battlenet_state, account_id=99, battletag="Gone#4242")
     assert response.headers["location"] == "/account/"
-
-
-async def test_member_list_is_officer_only_and_carries_battletags(
-    member_client: AsyncTestClient, discord_state: dict, battlenet_state: dict
-) -> None:
-    await login_as(member_client, discord_state, discord_id=5009, username="raider")
-    await link_battlenet(member_client, battlenet_state, account_id=101, battletag="Raider#5555")
-    assert (await member_client.get("/api/members")).status_code == 403
-
-    await login_as(member_client, discord_state, discord_id=5010, username="officer", roles=[OFFICER_ROLE_ID])
-    listing = await member_client.get("/api/members")
-    assert listing.status_code == 200, listing.text
-    by_name = {row["username"]: row for row in listing.json()}
-    assert by_name["raider"]["battletag"] == "Raider#5555"
-    assert by_name["officer"]["is_officer"] is True

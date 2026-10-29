@@ -14,6 +14,7 @@ from litestar.params import FromPath, FromQuery, JSONBody
 from sidequest_api.domain.events.dependencies import provide_event_signups_service, provide_events_service
 from sidequest_api.domain.events.services import EventSignupsService, EventsService
 from sidequest_api.lib.member_auth import provide_optional_member
+from sidequest_api.lib.officer_audit import record_officer_audit
 from sidequest_common.models import Member
 from sidequest_common.schemas import (
     ChartUpdate,
@@ -87,8 +88,15 @@ class EventsController(Controller):
         current_officer: NamedDependency[Member],
     ) -> EventDetail:
         """Schedule a new guild event (officer)."""
-        del current_officer
         event = await events_service.create_event(data)
+        await record_officer_audit(
+            events_service.repository.session,
+            actor=current_officer,
+            action="event.create",
+            subject_type="event",
+            subject_id=str(event.id),
+            summary=f'Created {event.kind} "{event.title}" for {event.starts_at:%b %-d}',
+        )
         return await events_service.get_detail(event.id, viewer=None)
 
     @patch("/{event_id:uuid}", operation_id="UpdateEvent")
@@ -100,8 +108,15 @@ class EventsController(Controller):
         current_officer: NamedDependency[Member],
     ) -> EventDetail:
         """Edit an event, including its kind and status (officer)."""
-        del current_officer
         event = await events_service.update_event(event_id, data)
+        await record_officer_audit(
+            events_service.repository.session,
+            actor=current_officer,
+            action="event.update",
+            subject_type="event",
+            subject_id=str(event.id),
+            summary=f'Updated event "{event.title}"',
+        )
         return await events_service.get_detail(event.id, viewer=None)
 
     @delete("/{event_id:uuid}", operation_id="DeleteEvent")
@@ -112,8 +127,16 @@ class EventsController(Controller):
         current_officer: NamedDependency[Member],
     ) -> None:
         """Delete an event and its signups (officer)."""
-        del current_officer
+        event = await events_service.get_event_or_404(event_id)
         await events_service.delete_event(event_id)
+        await record_officer_audit(
+            events_service.repository.session,
+            actor=current_officer,
+            action="event.delete",
+            subject_type="event",
+            subject_id=str(event_id),
+            summary=f'Deleted event "{event.title}"',
+        )
 
     @patch("/{event_id:uuid}/signups/{signup_id:uuid}", operation_id="UpdateEventChart")
     async def update_event_chart(
@@ -125,5 +148,19 @@ class EventsController(Controller):
         current_officer: NamedDependency[Member],
     ) -> Signup:
         """Place a signed-up player into a raid chart group (1-8) or the bench (officer). 409 for non-raid events."""
-        del current_officer
-        return await event_signups_service.update_chart(event_id, signup_id, data)
+        signup = await event_signups_service.update_chart(event_id, signup_id, data)
+        if data.bench:
+            summary = f"Benched {signup.member.display_name} on the raid chart"
+        elif data.group is not None:
+            summary = f"Placed {signup.member.display_name} in chart group {data.group}"
+        else:
+            summary = f"Updated {signup.member.display_name}'s raid chart slot"
+        await record_officer_audit(
+            event_signups_service.repository.session,
+            actor=current_officer,
+            action="event.chart",
+            subject_type="event",
+            subject_id=str(event_id),
+            summary=summary,
+        )
+        return signup

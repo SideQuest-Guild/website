@@ -471,3 +471,29 @@ async def test_configuring_the_forum_pushes_synced_events_once_for_their_post(
     await _ack(client, event.id, 555_100)  # the bot couldn't create the post: no thread_id in the ack
     pending = (await client.get(f"{SYNC_PATH}/")).json()
     assert str(event.id) not in {p["event_id"] for p in pending["pushes"]}
+
+
+async def test_stale_threadless_activity_is_marked_posted_not_deleted(
+    client: AsyncTestClient, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    event = await _seed_event(db_sessionmaker, title="Onyxia's Lair Redux")  # no discord_thread_id: threadless
+    old_created_at = datetime.now(UTC) - timedelta(hours=25)
+    async with db_sessionmaker() as session:
+        activity = EventSignupActivity(
+            event_id=event.id,
+            display_name="Jaina",
+            action="going",
+            discord_id=12345,
+            created_at=old_created_at,
+        )
+        session.add(activity)
+        await session.commit()
+        activity_id = activity.id
+
+    response = await client.get(f"{SYNC_PATH}/")
+    assert response.status_code == 200
+
+    async with db_sessionmaker() as session:
+        stored = await session.get(EventSignupActivity, activity_id)
+        assert stored is not None
+        assert stored.posted_at is not None
