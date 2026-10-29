@@ -21,6 +21,7 @@ from sidequest_common.models import (
     EventDiscordInterest,
     EventSeries,
     EventSignupActivity,
+    GuildConfig,
     GuildEvent,
 )
 from sidequest_common.schemas import (
@@ -136,8 +137,19 @@ def _extract_linked_event_id(description: str | None) -> UUID | None:
 
 
 def _push_hash(
-    *, action: str, name: str, description: str, location: str, starts_at: datetime, ends_at: datetime
+    *,
+    action: str,
+    name: str,
+    description: str,
+    location: str,
+    starts_at: datetime,
+    ends_at: datetime,
+    needs_thread: bool,
 ) -> str:
+    """``needs_thread`` is part of the hash so configuring the events forum (or a post failing to appear) pushes
+    already-synced events once more, which is when the bot creates their forum post; a failed attempt is acked under
+    the same hash, so it isn't retried every poll.
+    """
     payload = json.dumps(
         [
             action,
@@ -146,6 +158,7 @@ def _push_hash(
             location,
             starts_at.astimezone(UTC).isoformat(),
             ends_at.astimezone(UTC).isoformat(),
+            needs_thread,
         ],
         separators=(",", ":"),
     )
@@ -162,7 +175,9 @@ def _state_hash(state: DiscordEventState) -> str:
     return hashlib.sha256(normalized.model_dump_json().encode()).hexdigest()
 
 
-def _desired_state(event: GuildEvent, counts: EventCounts, web_base_url: str) -> DiscordEventPush:
+def _desired_state(
+    event: GuildEvent, counts: EventCounts, web_base_url: str, *, forum_configured: bool
+) -> DiscordEventPush:
     footer = _build_footer(event, counts, web_base_url)
     description = _build_description(event, footer)
     name = event.title[:100]
@@ -170,7 +185,13 @@ def _desired_state(event: GuildEvent, counts: EventCounts, web_base_url: str) ->
     ends_at = event.ends_at or (event.starts_at + DEFAULT_DURATION)
     action = _ACTION_BY_STATUS[event.status]
     push_hash = _push_hash(
-        action=action, name=name, description=description, location=location, starts_at=event.starts_at, ends_at=ends_at
+        action=action,
+        name=name,
+        description=description,
+        location=location,
+        starts_at=event.starts_at,
+        ends_at=ends_at,
+        needs_thread=forum_configured and action == "upsert" and event.discord_thread_id is None,
     )
     return DiscordEventPush(
         event_id=event.id,
@@ -214,16 +235,19 @@ class EventSyncService(EventsService):
     footer's "Signed"/"Going" line.
     """
 
-    async def list_pending(self, web_base_url: str) -> DiscordSyncPending:
+    async def list_pending(self, web_base_url: str, guild_id: int) -> DiscordSyncPending:
         """Every event whose desired Discord state is out of date, plus tombstoned event ids and unposted activity."""
         session = self.repository.session
         await materialize_all(session)
         now = datetime.now(UTC)
+        forum_id = await session.scalar(
+            select(GuildConfig.events_forum_channel_id).where(GuildConfig.guild_id == guild_id)
+        )
         events = list((await session.execute(select(GuildEvent))).scalars().all())
         counts = await self._counts_for([event.id for event in events])
         pushes = []
         for event in events:
-            push = _desired_state(event, counts[event.id], web_base_url)
+            push = _desired_state(event, counts[event.id], web_base_url, forum_configured=forum_id is not None)
             if push.push_hash == event.discord_pushed_hash:
                 continue
             linked = event.discord_event_id is not None

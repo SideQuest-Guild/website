@@ -46,7 +46,7 @@ class EventSyncController(Controller):
     ) -> DiscordSyncPending:
         """Every event push and tombstone the bot should apply to Discord now."""
         _require_site_guild(guild_id, web_settings)
-        return await event_sync_service.list_pending(web_settings.BASE_URL)
+        return await event_sync_service.list_pending(web_settings.BASE_URL, guild_id)
 
     @post("/{event_id:uuid}/ack", operation_id="AckEventSync", status_code=204)
     async def ack(

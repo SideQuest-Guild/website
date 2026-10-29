@@ -452,3 +452,22 @@ async def test_activity_ack_sets_posted_at_and_excludes_from_pending(
         stored = await session.get(EventSignupActivity, activity_id)
         assert stored is not None
         assert stored.posted_at is not None
+
+
+async def test_configuring_the_forum_pushes_synced_events_once_for_their_post(
+    client: AsyncTestClient, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    # An event already on Discord before the events forum existed must come back once so the bot can make its post,
+    # and a post that couldn't be made (acked without a thread) must not come back every poll.
+    event = await _seed_event(db_sessionmaker, title="Movie Night", kind="social")
+    await _ack(client, event.id, 555_100)
+    assert str(event.id) not in {p["event_id"] for p in (await client.get(f"{SYNC_PATH}/")).json()["pushes"]}
+
+    response = await client.patch(f"/api/guilds/{GUILD_ID}/config", json={"events_forum_channel_id": 900})
+    assert response.status_code == 200
+    pending = (await client.get(f"{SYNC_PATH}/")).json()
+    assert str(event.id) in {p["event_id"] for p in pending["pushes"]}
+
+    await _ack(client, event.id, 555_100)  # the bot couldn't create the post: no thread_id in the ack
+    pending = (await client.get(f"{SYNC_PATH}/")).json()
+    assert str(event.id) not in {p["event_id"] for p in pending["pushes"]}
