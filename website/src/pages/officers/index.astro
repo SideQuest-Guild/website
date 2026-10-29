@@ -230,7 +230,7 @@ import "../../styles/room-officers.css";
           </p>
           <div class="field">
             <label for="m-search">Search</label>
-            <input id="m-search" type="search" placeholder="Name or BattleTag" />
+            <input id="m-search" type="search" placeholder="Name, username or BattleTag" />
           </div>
           <div class="tabs" role="tablist" aria-label="Filter roster" id="member-filter-tabs">
             <button type="button" role="tab" data-filter="all" aria-selected="true" tabindex="0">
@@ -1008,7 +1008,11 @@ import "../../styles/room-officers.css";
       return true;
     }
     const q = memberQuery.toLowerCase();
-    return m.display_name.toLowerCase().includes(q) || (m.battletag ?? "").toLowerCase().includes(q);
+    return (
+      m.display_name.toLowerCase().includes(q) ||
+      m.username.toLowerCase().includes(q) ||
+      (m.battletag ?? "").toLowerCase().includes(q)
+    );
   }
 
   function renderMemberList(): void {
@@ -1023,7 +1027,7 @@ import "../../styles/room-officers.css";
         <button type="button" class="roster-row" data-select-member="${m.id}" aria-current="${m.id === selectedMemberId}">
           ${avatarMarkup(m.display_name, m.avatar_url, 40)}
           <span>
-            <span class="roster-name">${escapeHtml(m.display_name)}</span>
+            <span class="roster-name">${escapeHtml(m.display_name)}<span class="roster-username">@${escapeHtml(m.username)}</span></span>
             <span class="roster-roles">${roleChips(m.roles)}</span>
             <span class="roster-meta">${escapeHtml(memberTags(m))}${m.battletag ? ` · ${escapeHtml(m.battletag)}` : " · No Battle.net linked"}</span>
           </span>

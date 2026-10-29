@@ -32,6 +32,7 @@ flowchart LR
 | `/api/guilds/{guild_id}/live` (PUT) | `X-API-Key` | Bot reports the guild's live online/member/voice-channel counts (404s for any guild other than the site guild) |
 | `/api/guilds/{guild_id}/roles` (PUT) | `X-API-Key` | Bot reports the guild's full current role set (names, colors, positions); `@everyone` excluded (404s for any guild other than the site guild) |
 | `/api/guilds/{guild_id}/member-links` (GET) | `X-API-Key` | Bot reads every signed-in member's Discord id and Battle.net-link status for role syncing (404s for any guild other than the site guild) |
+| `/api/guilds/{guild_id}/member-profiles` (PUT) | `X-API-Key` | Bot pushes linked members' current Discord username/global name/nick/avatar/roles (full sweep plus debounced pushes on profile/role/membership changes), and reports departed linked members; only updates existing members, never creates them (404s for any guild other than the site guild) |
 | `/api/discord/live` (GET) | none | Website reads the site guild's live counts; empty counts (not 404) if the bot hasn't reported recently |
 | `/auth/discord/login`, `/auth/discord/callback`, `/auth/logout` | none | Discord OAuth sign-in (session cookie `sq_session`) |
 | `/auth/battlenet/link`, `/auth/battlenet/callback`, `/auth/battlenet/unlink` | signed in | Link a Battle.net account (BattleTag) to the member |
@@ -47,7 +48,8 @@ flowchart LR
 Only the bot's guild router is behind the bot key. Members sign in with Discord: a "guild member" is anyone in the
 SideQuest server, an officer is a member holding a role listed in `WEB_OFFICER_ROLE_IDS` (default: Quest Master and
 Quest Guide), and a GM is a member holding a role listed in `WEB_GM_ROLE_IDS` (default: Quest Master); roles and
-nickname refresh at each sign-in. The site's member pages
+nickname refresh at each sign-in and continuously thereafter via the bot's member-profile push (see "Member
+profile sync" below). The site's member pages
 are `/events/`, `/addons/`, `/account/` and `/officers/` (the GM console).
 
 ### Discord sign-in setup
@@ -235,6 +237,18 @@ configured roles are ever touched, and a role that's missing or unsafe to grant 
 (`bot/src/sidequest_bot/plugins/link_roles.py`).
 
 - `/linkroles site | battlenet | gate | roster` (Manage Server)
+
+### Member profile sync
+Member rows (username, global name, nick, avatar, roles, guild membership) stay current with Discord continuously,
+not just at sign-in: on `on_ready` and every 10 minutes, the bot pushes a full sweep — the current profile for
+every linked member (from `GET /api/guilds/{guild_id}/member-links`) still in the guild, plus the ids of linked
+members no longer in the guild. It also pushes immediately, debounced ~5 seconds per guild and coalescing ids, on
+nick/role/guild-avatar changes (`on_member_update`), username/global-name/avatar changes
+(`on_user_update`, checked against every site guild the user shares with the bot), joins (`on_member_join`), and
+departures (`on_member_remove`). Only linked members are ever pushed; the periodic sweep keeps that linked set
+current. `PUT /api/guilds/{guild_id}/member-profiles` only updates existing `Member` rows (never creates one) and
+never touches `last_login_at`, Battle.net fields, or roster confirmation
+(`bot/src/sidequest_bot/plugins/member_profiles.py`).
 
 ## Role safety
 Anything the bot hands out on its own (level rewards, the auto-role, role-menu buttons, link roles) goes through

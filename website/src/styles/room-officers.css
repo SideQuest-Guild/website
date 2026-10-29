@@ -129,6 +129,15 @@
   letter-spacing: 0.05em;
   overflow-wrap: anywhere;
 }
+.roster-username {
+  display: inline-block;
+  margin-left: 8px;
+  font-family: inherit;
+  font-size: 12px;
+  letter-spacing: normal;
+  color: var(--mist-2);
+  overflow-wrap: anywhere;
+}
 .roster-roles {
   display: flex;
   flex-wrap: wrap;

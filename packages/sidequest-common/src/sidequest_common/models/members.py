@@ -12,9 +12,12 @@ class Member(BigIntAuditBase):
     """One Discord user who has logged into the member hub.
 
     ``id`` is a small internal integer (the contract's ``Me.id``), distinct from ``discord_id`` (Discord's
-    64-bit snowflake, carried as a string in JSON). ``roles``/``guild_nick``/``is_guild_member`` are refreshed
-    from Discord on every login; they may be stale between logins. ``avatar_hash`` is Discord's raw avatar hash
-    (``null`` for the default avatar); build the CDN URL from it rather than storing a URL that can go stale.
+    64-bit snowflake, carried as a string in JSON). ``username``/``global_name``/``roles``/``guild_nick``/
+    ``avatar_hash``/``is_guild_member`` are refreshed from Discord both at sign-in and continuously by the bot
+    (``PUT /api/guilds/{guild_id}/member-profiles``: a full sweep plus debounced pushes on Discord profile/role/
+    membership changes), so they stay current even for a member who never signs in again after renaming.
+    ``avatar_hash`` is Discord's raw avatar hash (``null`` for the default avatar); build the CDN URL from it
+    rather than storing a URL that can go stale.
 
     ``battlenet_id``/``battletag`` are set when the member links Battle.net (one Battle.net account per member, so
     one Blizzard account can't vouch for several Discord accounts); officers compare the BattleTag to the roster.

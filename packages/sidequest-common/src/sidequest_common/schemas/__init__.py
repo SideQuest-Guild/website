@@ -64,6 +64,7 @@ from sidequest_common.schemas.levels import (
     XPAwardResult,
 )
 from sidequest_common.schemas.member_links import MemberLink
+from sidequest_common.schemas.member_profiles import MemberProfileIn, MemberProfilesReplace
 from sidequest_common.schemas.members import Me, MemberListing
 from sidequest_common.schemas.moderation import CaseAction, ModCaseCreate, ModCaseSchema, ModCaseUpdate
 from sidequest_common.schemas.role_menus import (
@@ -126,6 +127,8 @@ __all__ = (
     "MemberLevelSchema",
     "MemberLink",
     "MemberListing",
+    "MemberProfileIn",
+    "MemberProfilesReplace",
     "ModCaseCreate",
     "ModCaseSchema",
     "ModCaseUpdate",
