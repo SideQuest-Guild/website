@@ -28,7 +28,7 @@ flowchart LR
 |---|---|---|
 | `/` | none | Website (`website/dist`, built by `make web-build`; a placeholder page until the first build) |
 | `/api/guilds/{guild_id}/...` | `X-API-Key` (shared secret with the bot) | Guild config, XP/levels, moderation cases, role menus |
-| `/api/guilds/{guild_id}/event-sync` (GET), `/event-sync/{event_id}/ack`, `/event-sync/events`, `/event-sync/events/{event_id}` (DELETE), `/event-sync/tombstones/{event_id}` (DELETE), `/event-sync/reconcile` | `X-API-Key` | Two-way guild event <-> Discord scheduled event sync (404s for any guild other than the site guild) |
+| `/api/guilds/{guild_id}/event-sync` (GET), `/event-sync/{event_id}/ack`, `/event-sync/events`, `/event-sync/events/{event_id}` (DELETE), `/event-sync/tombstones/{event_id}` (DELETE), `/event-sync/reconcile`, `/event-sync/interest/{discord_event_id}` (PUT), `/event-sync/activity/ack` | `X-API-Key` | Two-way guild event <-> Discord scheduled event sync, Discord "Interested" reporting, and sign-up activity for forum comments (404s for any guild other than the site guild) |
 | `/api/guilds/{guild_id}/live` (PUT) | `X-API-Key` | Bot reports the guild's live online/member/voice-channel counts (404s for any guild other than the site guild) |
 | `/api/guilds/{guild_id}/member-links` (GET) | `X-API-Key` | Bot reads every signed-in member's Discord id and Battle.net-link status for role syncing (404s for any guild other than the site guild) |
 | `/api/discord/live` (GET) | none | Website reads the site guild's live counts; empty counts (not 404) if the bot hasn't reported recently |
@@ -73,7 +73,8 @@ Create a client at [develop.battle.net/access/clients](https://develop.battle.ne
 Requires uv (Python 3.15 is installed from `.python-version`), [mise](https://mise.jdx.dev) (the website's Node is
 pinned in `website/mise.toml`), Docker (for Postgres), and the bot's token (Developer Portal → Game Master → Bot). The
 bot needs the **Server Members** and **Message Content** privileged intents enabled in the portal, plus the
-**Manage Events** server permission (Create Events + Manage Events) for event sync.
+**Manage Events** server permission (Create Events + Manage Events) for event sync, and, if using the events
+forum, **Manage Channels** (forum tags), **Send Messages in Threads**, and **Create Posts**.
 
 ```bash
 cp .env.example .env              # then set API_KEY to a random secret
@@ -135,6 +136,14 @@ Button panels for self-assignable roles. Buttons keep working across bot restart
 
 - `/rolemenu create | add | remove | edit | delete | list | refresh` (Manage Roles)
 
+### Class halls
+A forum post named `<role name> Hall` (e.g. `Warrior Hall` for `@Warrior`) belongs to that role. Gaining the role
+adds the member to the post, so it shows in their channel list; losing the role takes them out. Anyone who can see
+the forum can still browse and follow any hall. No config: the bot pairs roles and posts by name, indexes halls at
+startup and every 6 hours (adding role holders it missed while offline, never removing anyone), and picks up new
+hall posts as they're created. Needs Manage Threads to reopen archived halls. In SideQuest, `#choose-your-class` is
+a role menu for the nine class roles and `#class-halls` holds their halls.
+
 ### Moderation
 Each action DMs the member (if possible), records a numbered case, and posts it to the log channel. Moderators can't
 act on the owner, the bot, themselves, or anyone whose top role is at or above theirs.
@@ -179,6 +188,17 @@ restored.
   than the series rule itself. Editing a single occurrence detaches it from the series; editing the series updates
   its still-attached future occurrences (re-timing or cancelling ones a schedule change no longer matches); ending
   a series cancels its signed-up future occurrences and deletes the signup-less ones, keeping past occurrences.
+- Clicking "Interested" on the Discord event reports the full interested-user list to the site (one-way: the API
+  can't mark a Discord user interested on the bot's behalf), debounced ~5s per event; `EventDetail.discord_interest`
+  shows the total count plus the names/avatars of interested users who also have a site account (others stay
+  anonymous since event pages are public).
+- `/eventsync forum [channel]` (Manage Server) points upcoming events at a forum channel: one thread per guild
+  event, named after the event and tagged by kind (`Raid`/`Dungeon`/`Leveling`/`PvP`/`Social`/`Other`; the bot
+  creates missing tags, needs **Manage Channels**). The starter post is edited in place as the event changes;
+  cancelling posts a notice and archives+locks the thread, completing just archives+locks it, and deleting the
+  guild event on the site posts a removal notice and archives+locks it too. Sign-ups, status changes, and
+  withdrawals get a short forum comment ("✅ **Coffee** is going — Oakenshield · Warrior · Tank"); needs **Send
+  Messages in Threads** and **Create Posts**.
 
 ### Live status
 The homepage "In the Discord" band shows live counts, never names: how many people are in each public voice/stage

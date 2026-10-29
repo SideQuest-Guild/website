@@ -12,11 +12,17 @@ import json
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import delete, select, update
 
 from sidequest_api.domain.event_series.materializer import materialize_all
 from sidequest_api.domain.events.services import EventsService
-from sidequest_common.models import DiscordEventTombstone, EventSeries, GuildEvent
+from sidequest_common.models import (
+    DiscordEventTombstone,
+    EventDiscordInterest,
+    EventSeries,
+    EventSignupActivity,
+    GuildEvent,
+)
 from sidequest_common.schemas import (
     EVENT_KIND_LABELS,
     ROLE_KINDS,
@@ -29,11 +35,14 @@ from sidequest_common.schemas import (
     EventCounts,
     EventKind,
     PushAction,
+    SignupActivity,
 )
 
 FOOTER_HEADER = "── SideQuest event ──"
 MAX_DESCRIPTION_LENGTH = 1000
 DEFAULT_DURATION = timedelta(hours=3)
+ACTIVITY_LIMIT = 50
+ACTIVITY_MAX_AGE = timedelta(hours=24)
 _SIGN_UP_PATH = "/events/detail/?id="
 _ACTION_BY_STATUS: dict[str, PushAction] = {"scheduled": "upsert", "cancelled": "cancel", "completed": "complete"}
 _ENDED_IN_DISCORD = (DiscordEventStatus.CANCELLED, DiscordEventStatus.COMPLETED)
@@ -166,12 +175,16 @@ def _desired_state(event: GuildEvent, counts: EventCounts, web_base_url: str) ->
     return DiscordEventPush(
         event_id=event.id,
         discord_event_id=event.discord_event_id,
+        thread_id=event.discord_thread_id,
+        kind=EventKind(event.kind),
         action=action,
         name=name,
+        title=event.title,
         description=description,
         location=location,
         starts_at=event.starts_at,
         ends_at=ends_at,
+        signup_url=f"{web_base_url}{_SIGN_UP_PATH}{event.id}",
         push_hash=push_hash,
     )
 
@@ -202,7 +215,7 @@ class EventSyncService(EventsService):
     """
 
     async def list_pending(self, web_base_url: str) -> DiscordSyncPending:
-        """Every event whose desired Discord state is out of date, plus the tombstoned (deleted) event ids."""
+        """Every event whose desired Discord state is out of date, plus tombstoned event ids and unposted activity."""
         session = self.repository.session
         await materialize_all(session)
         now = datetime.now(UTC)
@@ -221,7 +234,53 @@ class EventSyncService(EventsService):
                 continue
             pushes.append(push)
         tombstone_ids = list((await session.execute(select(DiscordEventTombstone.discord_event_id))).scalars().all())
-        return DiscordSyncPending(pushes=pushes, deletions=tombstone_ids)
+        await self._drop_stale_unthreaded_activity(now)
+        activity = await self._pending_activity()
+        return DiscordSyncPending(pushes=pushes, deletions=tombstone_ids, activity=activity)
+
+    async def _drop_stale_unthreaded_activity(self, now: datetime) -> None:
+        """Delete unposted activity rows older than 24h for events with no Discord thread; they'd never post."""
+        session = self.repository.session
+        cutoff = now - ACTIVITY_MAX_AGE
+        threadless_event_ids = select(GuildEvent.id).where(GuildEvent.discord_thread_id.is_(None))
+        await session.execute(
+            delete(EventSignupActivity).where(
+                EventSignupActivity.posted_at.is_(None),
+                EventSignupActivity.created_at < cutoff,
+                EventSignupActivity.event_id.in_(threadless_event_ids),
+            )
+        )
+        await session.commit()
+
+    async def _pending_activity(self) -> list[SignupActivity]:
+        """Unposted activity for events with a Discord thread, oldest first, capped."""
+        session = self.repository.session
+        statement = (
+            select(EventSignupActivity, GuildEvent.discord_thread_id)
+            .join(GuildEvent, EventSignupActivity.event_id == GuildEvent.id)
+            .where(EventSignupActivity.posted_at.is_(None), GuildEvent.discord_thread_id.is_not(None))
+            .order_by(EventSignupActivity.created_at.asc())
+            .limit(ACTIVITY_LIMIT)
+        )
+        rows = (await session.execute(statement)).all()
+        return [
+            SignupActivity(
+                id=activity.id,
+                thread_id=thread_id,
+                display_name=activity.display_name,
+                action=activity.action,
+                detail=activity.detail,
+            )
+            for activity, thread_id in rows
+        ]
+
+    async def ack_activity(self, ids: list[UUID]) -> None:
+        """Mark these sign-up activity rows posted so they aren't sent again."""
+        session = self.repository.session
+        await session.execute(
+            update(EventSignupActivity).where(EventSignupActivity.id.in_(ids)).values(posted_at=datetime.now(UTC))
+        )
+        await session.commit()
 
     async def ack(self, event_id: UUID, data: DiscordPushAck) -> None:
         """Record that the bot applied ``data.push_hash``, linking/unlinking per ``data.event``.
@@ -241,7 +300,19 @@ class EventSyncService(EventsService):
         else:
             event.discord_event_id = None
             event.discord_seen_hash = None
+        if data.thread_id is not None:
+            event.discord_thread_id = data.thread_id
         await self.update(event, auto_commit=True)
+
+    async def report_interest(self, discord_event_id: int, user_ids: list[int]) -> None:
+        """Replace the interested-user set for the guild event linked to ``discord_event_id``. No-op if unlinked."""
+        event = await self.get_one_or_none(discord_event_id=discord_event_id)
+        if event is None:
+            return
+        session = self.repository.session
+        await session.execute(delete(EventDiscordInterest).where(EventDiscordInterest.event_id == event.id))
+        session.add_all([EventDiscordInterest(event_id=event.id, discord_id=user_id) for user_id in user_ids])
+        await session.commit()
 
     async def apply_event_state(self, state: DiscordEventState) -> None:
         """Apply one Discord-reported event state: find/adopt/create, then sync fields unless it's our echo."""

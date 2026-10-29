@@ -4,7 +4,14 @@ from uuid import UUID
 
 from sqlalchemy import delete, select
 
-from sidequest_common.models import DiscordEventTombstone, EventSignup, GuildEvent, Member
+from sidequest_common.models import (
+    DiscordEventTombstone,
+    EventDiscordInterest,
+    EventSignup,
+    EventSignupActivity,
+    GuildEvent,
+    Member,
+)
 from tests.conftest import GUILD_ID
 
 if TYPE_CHECKING:
@@ -27,6 +34,7 @@ async def _seed_event(
     status: str = "scheduled",
     notes: str | None = None,
     discord_event_id: int | None = None,
+    discord_thread_id: int | None = None,
     discord_pushed_hash: str | None = None,
     discord_seen_hash: str | None = None,
 ) -> GuildEvent:
@@ -41,6 +49,7 @@ async def _seed_event(
             status=status,
             notes=notes,
             discord_event_id=discord_event_id,
+            discord_thread_id=discord_thread_id,
             discord_pushed_hash=discord_pushed_hash,
             discord_seen_hash=discord_seen_hash,
         )
@@ -341,3 +350,105 @@ async def test_footer_has_going_line_for_social_event(
     assert "Social" in push["description"]
     assert "Going: 0" in push["description"]
     assert "Signed:" not in push["description"]
+
+
+async def test_push_includes_kind_title_signup_url_and_thread_id(
+    client: AsyncTestClient, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    event = await _seed_event(db_sessionmaker, title="Icecrown Citadel", kind="raid", discord_thread_id=777_001)
+    push = await _push_for(client, event.id)
+    assert push["kind"] == "raid"
+    assert push["title"] == "Icecrown Citadel"
+    assert push["thread_id"] == 777_001
+    assert push["signup_url"] == f"http://localhost:8000/events/detail/?id={event.id}"
+
+
+async def test_ack_with_thread_id_stores_discord_thread_id(
+    client: AsyncTestClient, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    event = await _seed_event(db_sessionmaker, title="Sunwell Plateau")
+    push = await _push_for(client, event.id)
+    discord_event = _event_from_push(push, 555_020)
+    response = await client.post(
+        f"{SYNC_PATH}/{event.id}/ack",
+        json={"push_hash": push["push_hash"], "event": discord_event, "thread_id": 888_002},
+    )
+    assert response.status_code == 204
+    async with db_sessionmaker() as session:
+        stored = await session.get(GuildEvent, event.id)
+        assert stored is not None
+        assert stored.discord_thread_id == 888_002
+
+
+async def test_interest_put_replaces_full_set(
+    client: AsyncTestClient, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    event = await _seed_event(db_sessionmaker, title="Trial of the Crusader", discord_event_id=555_021)
+    first = await client.put(f"{SYNC_PATH}/interest/555021", json={"user_ids": [111, 222]})
+    assert first.status_code == 204
+    async with db_sessionmaker() as session:
+        rows = (
+            (
+                await session.execute(
+                    select(EventDiscordInterest.discord_id).where(EventDiscordInterest.event_id == event.id)
+                )
+            )
+            .scalars()
+            .all()
+        )
+        assert set(rows) == {111, 222}
+    second = await client.put(f"{SYNC_PATH}/interest/555021", json={"user_ids": [333]})
+    assert second.status_code == 204
+    async with db_sessionmaker() as session:
+        rows = (
+            (
+                await session.execute(
+                    select(EventDiscordInterest.discord_id).where(EventDiscordInterest.event_id == event.id)
+                )
+            )
+            .scalars()
+            .all()
+        )
+        assert set(rows) == {333}
+
+
+async def test_interest_put_unknown_discord_event_is_noop(client: AsyncTestClient) -> None:
+    response = await client.put(f"{SYNC_PATH}/interest/9999999", json={"user_ids": [1, 2]})
+    assert response.status_code == 204
+
+
+async def test_pending_includes_activity_only_for_threaded_events(
+    client: AsyncTestClient, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    threaded = await _seed_event(db_sessionmaker, title="Ulduar", discord_thread_id=777_010)
+    threadless = await _seed_event(db_sessionmaker, title="Halls of Lightning")
+    async with db_sessionmaker() as session:
+        session.add(EventSignupActivity(event_id=threaded.id, display_name="Coffee", action="going", detail=None))
+        session.add(EventSignupActivity(event_id=threadless.id, display_name="Wren", action="going", detail=None))
+        await session.commit()
+    pending = (await client.get(f"{SYNC_PATH}/")).json()
+    display_names = {row["display_name"] for row in pending["activity"]}
+    assert display_names == {"Coffee"}
+    assert pending["activity"][0]["thread_id"] == 777_010
+
+
+async def test_activity_ack_sets_posted_at_and_excludes_from_pending(
+    client: AsyncTestClient, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    event = await _seed_event(db_sessionmaker, title="Trial of the Grand Crusader", discord_thread_id=777_011)
+    async with db_sessionmaker() as session:
+        activity = EventSignupActivity(event_id=event.id, display_name="Kay", action="maybe", detail=None)
+        session.add(activity)
+        await session.commit()
+        await session.refresh(activity)
+        activity_id = activity.id
+    pending_before = (await client.get(f"{SYNC_PATH}/")).json()
+    assert len(pending_before["activity"]) == 1
+    ack_response = await client.post(f"{SYNC_PATH}/activity/ack", json={"ids": [str(activity_id)]})
+    assert ack_response.status_code == 204
+    pending_after = (await client.get(f"{SYNC_PATH}/")).json()
+    assert pending_after["activity"] == []
+    async with db_sessionmaker() as session:
+        stored = await session.get(EventSignupActivity, activity_id)
+        assert stored is not None
+        assert stored.posted_at is not None

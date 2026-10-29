@@ -8,14 +8,23 @@ from advanced_alchemy.repository import SQLAlchemyAsyncRepository
 from advanced_alchemy.service import SQLAlchemyAsyncRepositoryService
 from litestar.exceptions import HTTPException, NotFoundException, ValidationException
 from litestar.status_codes import HTTP_409_CONFLICT
-from sqlalchemy import func, or_, select
+from sqlalchemy import delete, func, or_, select
 
 from sidequest_api.domain.event_series.materializer import materialize_all
 from sidequest_api.lib.discord import avatar_url
-from sidequest_common.models import DiscordEventTombstone, EventSeries, EventSignup, GuildEvent, Member
+from sidequest_common.models import (
+    DiscordEventTombstone,
+    EventDiscordInterest,
+    EventSeries,
+    EventSignup,
+    EventSignupActivity,
+    GuildEvent,
+    Member,
+)
 from sidequest_common.schemas import (
     ROLE_KINDS,
     ChartUpdate,
+    DiscordInterest,
     EventCounts,
     EventCreate,
     EventDetail,
@@ -23,6 +32,7 @@ from sidequest_common.schemas import (
     EventSummary,
     EventUpdate,
     Signup,
+    SignupMember,
     SignupUpsert,
 )
 
@@ -78,7 +88,21 @@ def _to_signup_schema(signup: EventSignup, member: Member) -> Signup:
     )
 
 
-def _counts_from_rows(rows: list[tuple[str | None, str, int]]) -> EventCounts:
+_ROLE_KIND_VALUES = {kind.value for kind in ROLE_KINDS}
+_ROLE_LABELS = {"tank": "Tank", "healer": "Healer", "dps": "DPS"}
+_ACTIVITY_ACTION_BY_STATUS = {"signed": "going", "tentative": "maybe", "absent": "not_going"}
+
+
+def _activity_detail(
+    event: GuildEvent, *, character: str | None, wow_class: str | None, role: str | None
+) -> str | None:
+    """The short "Character · Class · Role" line for role-kind events with a complete sign-up, else ``None``."""
+    if event.kind not in _ROLE_KIND_VALUES or character is None or wow_class is None or role is None:
+        return None
+    return f"{character} · {wow_class.capitalize()} · {_ROLE_LABELS.get(role, role.capitalize())}"
+
+
+def _counts_from_rows(rows: list[tuple[str | None, str, int]], interested: int) -> EventCounts:
     """``rows`` are ``(role, status, count)`` for one event. tank/healer/dps/signed only count ``signed``."""
     tank = healer = dps = signed = tentative = absent = 0
     for role, status, count in rows:
@@ -94,7 +118,9 @@ def _counts_from_rows(rows: list[tuple[str | None, str, int]]) -> EventCounts:
                 healer += count
             elif role == "dps":
                 dps += count
-    return EventCounts(tank=tank, healer=healer, dps=dps, signed=signed, tentative=tentative, absent=absent)
+    return EventCounts(
+        tank=tank, healer=healer, dps=dps, signed=signed, tentative=tentative, absent=absent, interested=interested
+    )
 
 
 class EventsRepository(SQLAlchemyAsyncRepository[GuildEvent]):
@@ -152,8 +178,15 @@ class EventsService(SQLAlchemyAsyncRepositoryService[GuildEvent]):
             if own is not None:
                 my_signup = _to_signup_schema(*own)
         counts = (await self._counts_for([event_id]))[event_id]
+        discord_interest = await self._discord_interest_for(event_id)
         return EventDetail.model_validate(
-            {**_event_summary_fields(event), "counts": counts, "signups": signups, "my_signup": my_signup}
+            {
+                **_event_summary_fields(event),
+                "counts": counts,
+                "signups": signups,
+                "my_signup": my_signup,
+                "discord_interest": discord_interest,
+            }
         )
 
     async def get_event_or_404(self, event_id: UUID) -> GuildEvent:
@@ -201,12 +234,16 @@ class EventsService(SQLAlchemyAsyncRepositoryService[GuildEvent]):
         Deleting a series occurrence skips its date, so the series doesn't recreate it.
         """
         event = await self.get_event_or_404(event_id)
+        session = self.repository.session
         if event.discord_event_id is not None:
-            self.repository.session.add(DiscordEventTombstone(discord_event_id=event.discord_event_id))
+            session.add(DiscordEventTombstone(discord_event_id=event.discord_event_id))
         if event.series_id is not None and event.occurrence_date is not None:
-            series = await self.repository.session.get(EventSeries, event.series_id)
+            series = await session.get(EventSeries, event.series_id)
             if series is not None and event.occurrence_date.isoformat() not in series.skipped_dates:
                 series.skipped_dates = [*series.skipped_dates, event.occurrence_date.isoformat()]
+        # SQLite's test engine doesn't enforce FK cascades, so delete children explicitly.
+        await session.execute(delete(EventDiscordInterest).where(EventDiscordInterest.event_id == event_id))
+        await session.execute(delete(EventSignupActivity).where(EventSignupActivity.event_id == event_id))
         await self.delete(event_id, auto_commit=True)
 
     async def _counts_for(self, event_ids: list[UUID]) -> dict[UUID, EventCounts]:
@@ -221,7 +258,46 @@ class EventsService(SQLAlchemyAsyncRepositoryService[GuildEvent]):
         rows_by_event: dict[UUID, list[tuple[str | None, str, int]]] = {event_id: [] for event_id in event_ids}
         for event_id, role, status, count in (await session.execute(statement)).all():
             rows_by_event[event_id].append((role, status, count))
-        return {event_id: _counts_from_rows(rows) for event_id, rows in rows_by_event.items()}
+        interested_by_event = await self._interested_counts_for(event_ids)
+        return {
+            event_id: _counts_from_rows(rows, interested_by_event.get(event_id, 0))
+            for event_id, rows in rows_by_event.items()
+        }
+
+    async def _interested_counts_for(self, event_ids: list[UUID]) -> dict[UUID, int]:
+        session = self.repository.session
+        statement = (
+            select(EventDiscordInterest.event_id, func.count())
+            .where(EventDiscordInterest.event_id.in_(event_ids))
+            .group_by(EventDiscordInterest.event_id)
+        )
+        return dict((await session.execute(statement)).all())
+
+    async def _discord_interest_for(self, event_id: UUID) -> DiscordInterest:
+        """Every Discord-interested user, and the subset with a site account (members-only names/avatars)."""
+        session = self.repository.session
+        count = (
+            await session.execute(
+                select(func.count()).select_from(EventDiscordInterest).where(EventDiscordInterest.event_id == event_id)
+            )
+        ).scalar_one()
+        statement = (
+            select(Member)
+            .join(EventDiscordInterest, EventDiscordInterest.discord_id == Member.discord_id)
+            .where(EventDiscordInterest.event_id == event_id)
+        )
+        members = sorted(
+            (await session.execute(statement)).scalars().all(), key=lambda member: member.display_name.casefold()
+        )
+        return DiscordInterest(
+            count=count,
+            members=[
+                SignupMember(
+                    display_name=member.display_name, avatar_url=avatar_url(member.discord_id, member.avatar_hash)
+                )
+                for member in members
+            ],
+        )
 
 
 class EventSignupsRepository(SQLAlchemyAsyncRepository[EventSignup]):
@@ -239,6 +315,8 @@ class EventSignupsService(SQLAlchemyAsyncRepositoryService[EventSignup]):
         """Create or replace the member's signup for ``event_id``. 409 if the event isn't scheduled.
 
         400 if the event's kind is ``raid``/``dungeon`` and ``character``/``class``/``role`` aren't all present.
+        Writes an ``EventSignupActivity`` row when the sign-up is created or its status changes; comment/character
+        edits that leave the status unchanged write nothing.
         """
         session = self.repository.session
         event = await session.get(GuildEvent, event_id)
@@ -254,6 +332,7 @@ class EventSignupsService(SQLAlchemyAsyncRepositoryService[EventSignup]):
             msg = "character, class, and role are required for this event's kind"
             raise ValidationException(msg)
         existing = await self.get_one_or_none(event_id=event_id, member_id=member.id)
+        previous_status = existing.status if existing is not None else None
         fields = {
             "character": data.character,
             "wow_class": data.wow_class.value if data.wow_class is not None else None,
@@ -273,13 +352,29 @@ class EventSignupsService(SQLAlchemyAsyncRepositoryService[EventSignup]):
             for field, value in fields.items():
                 setattr(existing, field, value)
             signup = await self.update(existing, auto_commit=True)
+        if previous_status != fields["status"]:
+            session.add(
+                EventSignupActivity(
+                    event_id=event_id,
+                    display_name=member.display_name,
+                    action=_ACTIVITY_ACTION_BY_STATUS[fields["status"]],
+                    detail=_activity_detail(
+                        event, character=fields["character"], wow_class=fields["wow_class"], role=fields["role"]
+                    ),
+                )
+            )
+            await session.commit()
         return _to_signup_schema(signup, member)
 
     async def delete_for_member(self, event_id: UUID, member: Member) -> None:
-        """Remove the member's signup for ``event_id``, if any."""
+        """Remove the member's signup for ``event_id``, if any, logging a "withdrew" activity row."""
         existing = await self.get_one_or_none(event_id=event_id, member_id=member.id)
-        if existing is not None:
-            await self.delete(existing.id, auto_commit=True)
+        if existing is None:
+            return
+        session = self.repository.session
+        await self.delete(existing.id, auto_commit=True)
+        session.add(EventSignupActivity(event_id=event_id, display_name=member.display_name, action="withdrew"))
+        await session.commit()
 
     async def update_chart(self, event_id: UUID, signup_id: UUID, data: ChartUpdate) -> Signup:
         """Place a signup on the raid chart (group 1-8) or the bench. 409 if the event isn't a raid."""

@@ -106,11 +106,13 @@ import Page from "../../layouts/Page.astro";
 
   function eventRow(event: EventSummary): string {
     const when = dateFormat.format(new Date(event.starts_at));
-    const counts = ROLE_KINDS.includes(event.kind)
+    const signupCounts = ROLE_KINDS.includes(event.kind)
       ? `${event.counts.tank}T · ${event.counts.healer}H · ${event.counts.dps}D${
           event.counts.tentative > 0 ? ` · ${event.counts.tentative} tentative` : ""
         }`
       : `${event.counts.signed} going${event.counts.tentative > 0 ? ` · ${event.counts.tentative} maybe` : ""}`;
+    const counts =
+      event.counts.interested > 0 ? `${signupCounts} · ${event.counts.interested} interested on Discord` : signupCounts;
     const statusSuffix = event.status === "scheduled" ? "" : ` (${escapeHtml(event.status)})`;
     const seriesText = event.series ? weekdayPhrase(event.series.weekdays, event.series.interval_weeks) : "";
     const locationAndWhen = [event.location, when, seriesText].filter(Boolean).join(" · ");

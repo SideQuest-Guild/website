@@ -28,6 +28,13 @@ import Page from "../../../layouts/Page.astro";
       <div class="roster-grid cols-2" id="roster-extra"></div>
     </section>
 
+    <section aria-labelledby="h-interest" id="interest-section" hidden>
+      <span class="caps section-label" id="h-interest">
+        Interested on Discord
+      </span>
+      <div class="roster-grid" id="interest-grid"></div>
+    </section>
+
     <section aria-labelledby="h-chart" id="chart-section">
       <span class="caps section-label" id="h-chart">
         Raid chart
@@ -118,6 +125,8 @@ import Page from "../../../layouts/Page.astro";
   const rosterGrid = requireElement("roster-grid");
   const statusHeading = requireElement("h-status-lists");
   const rosterExtra = requireElement("roster-extra");
+  const interestSection = requireElement("interest-section");
+  const interestGrid = requireElement("interest-grid");
   const chartSection = requireElement("chart-section");
   const chartGrid = requireElement("chart-grid");
   const signupSection = requireElement("signup-section");
@@ -200,6 +209,19 @@ import Page from "../../../layouts/Page.astro";
           <ul>${rosterList(absent, "None", false)}</ul>
         </div>`;
     }
+  }
+
+  function renderInterest(detail: EventDetail): void {
+    const { count, members } = detail.discord_interest;
+    interestSection.hidden = count === 0;
+    const names = members.map((m) => `<li>${escapeHtml(m.display_name)}</li>`).join("");
+    const others = count - members.length;
+    const more = others > 0 ? `<li class="aside">${members.length > 0 ? "+ " : ""}${others} on Discord only</li>` : "";
+    interestGrid.innerHTML = `
+      <div class="roster-col">
+        <h3 class="caps">Interested (${count})</h3>
+        <ul>${names}${more}</ul>
+      </div>`;
   }
 
   function chartCell(label: string, members: Signup[], isOfficer: boolean, isBench: boolean): string {
@@ -344,6 +366,7 @@ import Page from "../../../layouts/Page.astro";
       .join(" · ");
     notesEl.textContent = event.notes ?? "";
     renderRoster(event);
+    renderInterest(event);
     renderChart(event);
     renderSignupForm(event);
   }

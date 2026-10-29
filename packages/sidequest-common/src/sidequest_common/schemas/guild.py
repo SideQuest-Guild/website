@@ -20,6 +20,7 @@ class GuildConfigSchema(BaseModel):
     battlenet_role_id: int | None = None
     gate_role_id: int | None = None
     roster_role_id: int | None = None
+    events_forum_channel_id: int | None = None
 
     leveling_enabled: bool
     level_up_channel_id: int | None
@@ -57,6 +58,7 @@ class GuildConfigUpdate(BaseModel):
     battlenet_role_id: int | None = None
     gate_role_id: int | None = None
     roster_role_id: int | None = None
+    events_forum_channel_id: int | None = None
 
     leveling_enabled: bool | None = None
     level_up_channel_id: int | None = None

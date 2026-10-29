@@ -2,19 +2,23 @@
 
 from sidequest_common.schemas.addons import AddonCreate, AddonSchema, AddonUpdate
 from sidequest_common.schemas.discord_events import (
+    ActivityAck,
     DiscordEventPush,
     DiscordEventReconcile,
     DiscordEventState,
     DiscordEventStatus,
+    DiscordInterestReport,
     DiscordPushAck,
     DiscordSyncPending,
     PushAction,
+    SignupActivity,
 )
 from sidequest_common.schemas.discord_live import DiscordLive, DiscordLiveReport, VoiceChannelCount
 from sidequest_common.schemas.events import (
     EVENT_KIND_LABELS,
     ROLE_KINDS,
     ChartUpdate,
+    DiscordInterest,
     EventCounts,
     EventCreate,
     EventDetail,
@@ -59,6 +63,7 @@ from sidequest_common.schemas.role_menus import (
 __all__ = (
     "EVENT_KIND_LABELS",
     "ROLE_KINDS",
+    "ActivityAck",
     "AddonCreate",
     "AddonSchema",
     "AddonUpdate",
@@ -68,6 +73,8 @@ __all__ = (
     "DiscordEventReconcile",
     "DiscordEventState",
     "DiscordEventStatus",
+    "DiscordInterest",
+    "DiscordInterestReport",
     "DiscordLive",
     "DiscordLiveReport",
     "DiscordPushAck",
@@ -106,6 +113,7 @@ __all__ = (
     "SeriesRule",
     "SetXPRequest",
     "Signup",
+    "SignupActivity",
     "SignupMember",
     "SignupRole",
     "SignupStatus",

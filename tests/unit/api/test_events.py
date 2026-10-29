@@ -2,7 +2,9 @@ from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
 from uuid import UUID
 
-from sidequest_common.models import GuildEvent
+from sqlalchemy import select
+
+from sidequest_common.models import EventDiscordInterest, EventSignupActivity, GuildEvent
 from tests.unit.api.conftest import OFFICER_ROLE_ID, login_as
 
 if TYPE_CHECKING:
@@ -109,7 +111,7 @@ async def test_counts_only_count_signed_signups(
 
     response = await member_client.get(f"/api/events/{event_id}")
     counts = response.json()["counts"]
-    assert counts == {"tank": 1, "healer": 0, "dps": 0, "signed": 1, "tentative": 1, "absent": 1}
+    assert counts == {"tank": 1, "healer": 0, "dps": 0, "signed": 1, "tentative": 1, "absent": 1, "interested": 0}
 
 
 async def test_upcoming_and_past_split(
@@ -302,3 +304,94 @@ async def test_update_event_rejects_new_starts_at_after_stored_ends_at(
         f"/api/events/{event_id}", json={"starts_at": (starts_at + timedelta(hours=4)).isoformat()}
     )
     assert response.status_code == 400
+
+
+async def _activity_rows(db_sessionmaker: async_sessionmaker[AsyncSession], event_id: str) -> list[EventSignupActivity]:
+    async with db_sessionmaker() as session:
+        rows = (
+            (await session.execute(select(EventSignupActivity).where(EventSignupActivity.event_id == UUID(event_id))))
+            .scalars()
+            .all()
+        )
+        return sorted(rows, key=lambda row: row.created_at)
+
+
+async def test_new_signup_writes_going_activity(
+    member_client: AsyncTestClient, discord_state: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    event_id = await _seed_event(db_sessionmaker)
+    await login_as(member_client, discord_state, discord_id=3001, roles=[])
+    response = await member_client.put(f"/api/events/{event_id}/signup", json=_signup_body(status="signed"))
+    assert response.status_code == 200
+    rows = await _activity_rows(db_sessionmaker, event_id)
+    assert len(rows) == 1
+    assert rows[0].action == "going"
+    assert rows[0].detail == "Thrall · Warrior · DPS"
+
+
+async def test_status_change_writes_new_activity_row(
+    member_client: AsyncTestClient, discord_state: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    event_id = await _seed_event(db_sessionmaker)
+    await login_as(member_client, discord_state, discord_id=3002, roles=[])
+    await member_client.put(f"/api/events/{event_id}/signup", json=_signup_body(status="signed"))
+    await member_client.put(f"/api/events/{event_id}/signup", json=_signup_body(status="tentative"))
+    rows = await _activity_rows(db_sessionmaker, event_id)
+    assert [row.action for row in rows] == ["going", "maybe"]
+
+
+async def test_comment_only_edit_writes_no_activity(
+    member_client: AsyncTestClient, discord_state: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    event_id = await _seed_event(db_sessionmaker)
+    await login_as(member_client, discord_state, discord_id=3003, roles=[])
+    await member_client.put(f"/api/events/{event_id}/signup", json=_signup_body(status="signed"))
+    body = _signup_body(status="signed")
+    body["comment"] = "bring flasks"
+    await member_client.put(f"/api/events/{event_id}/signup", json=body)
+    rows = await _activity_rows(db_sessionmaker, event_id)
+    assert len(rows) == 1
+
+
+async def test_withdraw_writes_withdrew_activity(
+    member_client: AsyncTestClient, discord_state: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    event_id = await _seed_event(db_sessionmaker)
+    await login_as(member_client, discord_state, discord_id=3004, roles=[])
+    await member_client.put(f"/api/events/{event_id}/signup", json=_signup_body(status="signed"))
+    response = await member_client.delete(f"/api/events/{event_id}/signup")
+    assert response.status_code == 204
+    rows = await _activity_rows(db_sessionmaker, event_id)
+    assert [row.action for row in rows] == ["going", "withdrew"]
+    assert rows[-1].detail is None
+
+
+async def test_discord_interest_counts_everyone_but_names_only_site_members(
+    member_client: AsyncTestClient, discord_state: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    event_id = await _seed_event(db_sessionmaker)
+    await login_as(member_client, discord_state, discord_id=4001, username="coffee", roles=[])
+    async with db_sessionmaker() as session:
+        session.add_all(
+            [
+                EventDiscordInterest(event_id=UUID(event_id), discord_id=4001),
+                EventDiscordInterest(event_id=UUID(event_id), discord_id=9999999),
+            ]
+        )
+        await session.commit()
+    detail = await member_client.get(f"/api/events/{event_id}")
+    discord_interest = detail.json()["discord_interest"]
+    assert discord_interest["count"] == 2
+    assert [m["display_name"] for m in discord_interest["members"]] == ["coffee"]
+
+
+async def test_event_summary_counts_include_interested(
+    member_client: AsyncTestClient, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    event_id = await _seed_event(db_sessionmaker)
+    async with db_sessionmaker() as session:
+        session.add(EventDiscordInterest(event_id=UUID(event_id), discord_id=5001))
+        await session.commit()
+    response = await member_client.get("/api/events", params={"when": "upcoming"})
+    summary = next(event for event in response.json() if event["id"] == event_id)
+    assert summary["counts"]["interested"] == 1

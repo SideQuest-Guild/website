@@ -89,6 +89,8 @@ export type EventCounts = {
   signed: number;
   tentative: number;
   absent: number;
+  /** People who clicked Interested on the event in Discord. */
+  interested: number;
 };
 
 export type EventSummary = {
@@ -123,7 +125,14 @@ export type Signup = {
   updated_at: string;
 };
 
-export type EventDetail = EventSummary & { signups: Signup[]; my_signup: Signup | null };
+/** Discord "Interested" clicks: `members` lists only people who have signed in on the site. */
+export type DiscordInterest = { count: number; members: SignupMember[] };
+
+export type EventDetail = EventSummary & {
+  signups: Signup[];
+  my_signup: Signup | null;
+  discord_interest: DiscordInterest;
+};
 
 export type Addon = {
   id: string;

@@ -76,7 +76,11 @@ class WowClass(StrEnum):
 
 
 class EventCounts(BaseModel):
-    """Headcounts for an event. ``tank``/``healer``/``dps``/``signed`` only count ``signed`` signups."""
+    """Headcounts for an event. ``tank``/``healer``/``dps``/``signed`` only count ``signed`` signups.
+
+    ``interested`` is every Discord user who clicked "Interested" on the linked Discord event, regardless of
+    whether they have a site account.
+    """
 
     tank: int
     healer: int
@@ -84,6 +88,7 @@ class EventCounts(BaseModel):
     signed: int
     tentative: int
     absent: int
+    interested: int
 
 
 class SeriesRef(BaseModel):
@@ -129,6 +134,13 @@ class SignupMember(BaseModel):
     avatar_url: str | None
 
 
+class DiscordInterest(BaseModel):
+    """Discord "Interested" clicks on an event's linked Discord event. Names are never shown for non-site accounts."""
+
+    count: int
+    members: list[SignupMember]
+
+
 class Signup(BaseModel):
     """One member's signup for an event, including the officer-assigned raid chart slot."""
 
@@ -151,6 +163,7 @@ class EventDetail(EventSummary):
 
     signups: list[Signup]
     my_signup: Signup | None
+    discord_interest: DiscordInterest
 
 
 class EventCreate(BaseModel):

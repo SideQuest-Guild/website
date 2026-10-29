@@ -12,6 +12,8 @@ from uuid import UUID  # pydantic needs it at runtime
 
 from pydantic import BaseModel, Field
 
+from sidequest_common.schemas.events import EventKind
+
 
 class DiscordEventStatus(StrEnum):
     """A Discord scheduled event's status, named the way Discord's ``EventStatus`` is."""
@@ -46,13 +48,27 @@ class DiscordEventPush(BaseModel):
 
     event_id: UUID
     discord_event_id: int | None
+    thread_id: int | None = Field(default=None, description="The event's forum thread, if one has been created.")
+    kind: EventKind
     action: PushAction
     name: str = Field(max_length=100)
+    title: str = Field(description="Full, untruncated title (``name`` is Discord's 100-char-limited version).")
     description: str = Field(max_length=1000)
     location: str = Field(max_length=100, description="Used for external events; voice/stage events keep theirs.")
     starts_at: datetime
     ends_at: datetime = Field(description="Discord requires an end for external events.")
+    signup_url: str
     push_hash: str
+
+
+class SignupActivity(BaseModel):
+    """One unposted sign-up activity row, queued to post as a forum comment on ``thread_id``."""
+
+    id: UUID
+    thread_id: int
+    display_name: str
+    action: str
+    detail: str | None = None
 
 
 class DiscordSyncPending(BaseModel):
@@ -60,17 +76,21 @@ class DiscordSyncPending(BaseModel):
 
     pushes: list[DiscordEventPush]
     deletions: list[int] = Field(description="Discord event ids whose guild event was deleted on the site.")
+    activity: list[SignupActivity] = Field(
+        default_factory=list, description="Unposted sign-up activity for events with a Discord thread, oldest first."
+    )
 
 
 class DiscordPushAck(BaseModel):
     """``POST /api/guilds/{guild_id}/event-sync/{event_id}/ack``: the bot applied ``push_hash``.
 
     ``event`` is what Discord returned, or ``None`` when no Discord event is linked any more (ended, deleted, or the
-    push was skipped because the start time had passed).
+    push was skipped because the start time had passed). ``thread_id`` is the event's forum thread, if any.
     """
 
     push_hash: str
     event: DiscordEventState | None
+    thread_id: int | None = None
 
 
 class DiscordEventReconcile(BaseModel):
@@ -81,3 +101,19 @@ class DiscordEventReconcile(BaseModel):
     """
 
     events: list[DiscordEventState]
+
+
+class DiscordInterestReport(BaseModel):
+    """``PUT /api/guilds/{guild_id}/event-sync/interest/{discord_event_id}``: the full interested-user set now.
+
+    Replaces the previously reported set for the guild event linked to ``discord_event_id``; a no-op (204) if no
+    guild event is linked to it.
+    """
+
+    user_ids: list[int]
+
+
+class ActivityAck(BaseModel):
+    """``POST /api/guilds/{guild_id}/event-sync/activity/ack``: the bot posted these sign-up activity rows."""
+
+    ids: list[UUID]

@@ -91,6 +91,7 @@ class GuildEvent(UUIDAuditBase):
     status: Mapped[str] = mapped_column(String(20), default="scheduled")
     notes: Mapped[str | None] = mapped_column(Text, default=None)
     discord_event_id: Mapped[int | None] = mapped_column(BigInteger, unique=True, default=None)
+    discord_thread_id: Mapped[int | None] = mapped_column(BigInteger, unique=True, default=None)
     discord_pushed_hash: Mapped[str | None] = mapped_column(String(64), default=None)
     discord_seen_hash: Mapped[str | None] = mapped_column(String(64), default=None)
     series_id: Mapped[UUID | None] = mapped_column(
@@ -109,6 +110,45 @@ class DiscordEventTombstone(UUIDAuditBase):
     __table_args__ = {"comment": "Discord scheduled events still to delete after their guild event was deleted."}
 
     discord_event_id: Mapped[int] = mapped_column(BigInteger, unique=True)
+
+
+SIGNUP_ACTIVITY_ACTIONS = ("going", "maybe", "not_going", "withdrew")
+
+
+class EventDiscordInterest(UUIDAuditBase):
+    """One Discord user who clicked "Interested" on a guild event's linked Discord scheduled event.
+
+    Discord -> site only: the API can't mark a Discord user interested on the site's behalf. Replaced wholesale per
+    event whenever the bot reports the current interested-user list.
+    """
+
+    __tablename__ = "event_discord_interest"
+    __table_args__ = (
+        UniqueConstraint("event_id", "discord_id", name="uq_event_discord_interest_event_discord"),
+        {"comment": "Discord users interested in a guild event's linked Discord scheduled event."},
+    )
+
+    event_id: Mapped[UUID] = mapped_column(ForeignKey("guild_event.id", ondelete="CASCADE"), index=True)
+    discord_id: Mapped[int] = mapped_column(BigInteger)
+
+
+class EventSignupActivity(UUIDAuditBase):
+    """One sign-up status change, queued to post as a comment on the event's Discord forum thread.
+
+    ``action`` is one of ``SIGNUP_ACTIVITY_ACTIONS``: ``going``/``maybe``/``not_going`` mirror a signup's
+    ``status``, and ``withdrew`` marks a deleted signup. ``detail`` is the short "Character · Class · Role" line
+    for role-kind events, else ``None``. ``posted_at`` is set once the bot acks it; rows for events with no
+    Discord thread stay unposted (and are dropped by the API if older than 24h) rather than posted.
+    """
+
+    __tablename__ = "event_signup_activity"
+    __table_args__ = {"comment": "Sign-up activity queued to post as forum comments on an event's Discord thread."}
+
+    event_id: Mapped[UUID] = mapped_column(ForeignKey("guild_event.id", ondelete="CASCADE"), index=True)
+    display_name: Mapped[str] = mapped_column(Text)
+    action: Mapped[str] = mapped_column(String(10))
+    detail: Mapped[str | None] = mapped_column(String(200), default=None)
+    posted_at: Mapped[datetime | None] = mapped_column(DateTimeUTC(timezone=True), default=None)
 
 
 class EventSignup(UUIDAuditBase):

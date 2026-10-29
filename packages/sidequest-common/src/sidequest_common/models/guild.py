@@ -29,6 +29,9 @@ class GuildConfig(UUIDAuditBase):
     gate_role_id: Mapped[int | None] = mapped_column(BigInteger, default=None)
     roster_role_id: Mapped[int | None] = mapped_column(BigInteger, default=None)
 
+    # Events
+    events_forum_channel_id: Mapped[int | None] = mapped_column(BigInteger, default=None)
+
     # Leveling
     leveling_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
     level_up_channel_id: Mapped[int | None] = mapped_column(BigInteger, default=None)

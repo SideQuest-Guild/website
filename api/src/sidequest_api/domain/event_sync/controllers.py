@@ -6,14 +6,21 @@ treats 404 as "this guild isn't the site guild" and stops syncing it for the pro
 
 from uuid import UUID
 
-from litestar import Controller, delete, get, post
+from litestar import Controller, delete, get, post, put
 from litestar.di import NamedDependency, Provide
 from litestar.exceptions import NotFoundException
 from litestar.params import FromPath, JSONBody
 
 from sidequest_api.domain.event_sync.dependencies import provide_event_sync_service
 from sidequest_api.domain.event_sync.services import EventSyncService
-from sidequest_common.schemas import DiscordEventReconcile, DiscordEventState, DiscordPushAck, DiscordSyncPending
+from sidequest_common.schemas import (
+    ActivityAck,
+    DiscordEventReconcile,
+    DiscordEventState,
+    DiscordInterestReport,
+    DiscordPushAck,
+    DiscordSyncPending,
+)
 from sidequest_common.settings import WebSettings
 
 
@@ -89,6 +96,31 @@ class EventSyncController(Controller):
         """The bot deleted this event in Discord; drop the tombstone."""
         _require_site_guild(guild_id, web_settings)
         await event_sync_service.delete_tombstone(event_id)
+
+    @put("/interest/{discord_event_id:int}", operation_id="ReportEventInterest", status_code=204)
+    async def report_interest(
+        self,
+        guild_id: FromPath[int],
+        discord_event_id: FromPath[int],
+        data: JSONBody[DiscordInterestReport],
+        event_sync_service: NamedDependency[EventSyncService],
+        web_settings: NamedDependency[WebSettings],
+    ) -> None:
+        """Replace the interested-user set for the guild event linked to ``discord_event_id``; no-op if unlinked."""
+        _require_site_guild(guild_id, web_settings)
+        await event_sync_service.report_interest(discord_event_id, data.user_ids)
+
+    @post("/activity/ack", operation_id="AckEventActivity", status_code=204)
+    async def ack_activity(
+        self,
+        guild_id: FromPath[int],
+        data: JSONBody[ActivityAck],
+        event_sync_service: NamedDependency[EventSyncService],
+        web_settings: NamedDependency[WebSettings],
+    ) -> None:
+        """The bot posted these sign-up activity rows in their event's forum thread."""
+        _require_site_guild(guild_id, web_settings)
+        await event_sync_service.ack_activity(data.ids)
 
     @post("/reconcile", operation_id="ReconcileEventSync", status_code=204)
     async def reconcile(
