@@ -1,6 +1,13 @@
 {
   "errors": [
     {
+      "column": 15,
+      "path": "bot/src/sidequest_bot/plugins/guest_welcome.py",
+      "name": "bad-override",
+      "concise_description": "Class member `GuestWelcomeButton.callback` overrides parent class `DynamicItem` in an inconsistent manner",
+      "severity": "error"
+    },
+    {
       "column": 33,
       "path": "bot/src/sidequest_bot/plugins/logging.py",
       "name": "bad-argument-type",
