@@ -5,7 +5,15 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy import select
 
-from sidequest_common.models import EventSignup, EventSignupActivity, GuildEvent, Member, OfficerAudit
+from sidequest_common.models import (
+    EventSignup,
+    EventSignupActivity,
+    GuildEvent,
+    Member,
+    MemberLevel,
+    ModCase,
+    OfficerAudit,
+)
 from tests.unit.api.conftest import link_battlenet, login_as
 
 if TYPE_CHECKING:
@@ -168,3 +176,46 @@ async def test_delete_account_nulls_officer_audit_actor_but_keeps_actor_name(
         )
         assert audit.actor_member_id is None
         assert audit.actor_name == "Captain Officer"
+
+
+async def test_delete_account_removes_member_level_rows_in_every_guild_but_keeps_other_members_xp_and_mod_cases(
+    member_client: AsyncTestClient, discord_state: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    await login_as(member_client, discord_state, discord_id=9008, username="xp-haver", roles=[])
+
+    async with db_sessionmaker() as session:
+        session.add_all(
+            [
+                MemberLevel(guild_id=1564671275316543508, user_id=9008, xp=500, level=5, message_count=50),
+                MemberLevel(guild_id=424242, user_id=9008, xp=10, level=1, message_count=1),
+                MemberLevel(guild_id=1564671275316543508, user_id=9009, xp=999, level=9, message_count=99),
+                ModCase(
+                    guild_id=1564671275316543508,
+                    case_number=1,
+                    action="warn",
+                    user_id=9008,
+                    moderator_id=9009,
+                    reason="Spamming",
+                ),
+            ]
+        )
+        await session.commit()
+
+    assert (await member_client.delete("/api/me")).status_code == 204
+
+    async with db_sessionmaker() as session:
+        deleted_user_rows = (
+            (await session.execute(select(MemberLevel).where(MemberLevel.user_id == 9008))).scalars().all()
+        )
+        assert deleted_user_rows == []
+
+        other_user_rows = (
+            (await session.execute(select(MemberLevel).where(MemberLevel.user_id == 9009))).scalars().all()
+        )
+        assert len(other_user_rows) == 1
+        assert other_user_rows[0].xp == 999
+
+        mod_cases = (await session.execute(select(ModCase))).scalars().all()
+        assert len(mod_cases) == 1
+        assert mod_cases[0].user_id == 9008
+        assert mod_cases[0].reason == "Spamming"

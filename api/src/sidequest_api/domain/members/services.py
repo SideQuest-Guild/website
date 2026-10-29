@@ -6,10 +6,12 @@ from typing import Any
 from advanced_alchemy.repository import SQLAlchemyAsyncRepository
 from advanced_alchemy.service import SQLAlchemyAsyncRepositoryService
 from litestar.exceptions import NotFoundException
-from sqlalchemy import delete, update
+from sqlalchemy import delete, select, update
 
 from sidequest_api.lib.battlenet import BattleNetOAuthError
-from sidequest_common.models import EventSignup, EventSignupActivity, Member, OfficerAudit
+from sidequest_common.models import EventSignup, EventSignupActivity, Member, MemberLevel, OfficerAudit
+
+SIGNUP_NOTICE_LIMIT = 25
 
 
 class MembersRepository(SQLAlchemyAsyncRepository[Member]):
@@ -78,12 +80,14 @@ class MembersService(SQLAlchemyAsyncRepositoryService[Member]):
 
         Deletes event signups explicitly rather than relying on the database's ``ON DELETE CASCADE`` alone, so
         this holds regardless of whether the engine enforces foreign keys (e.g. SQLite in tests). Also deletes
-        the member's sign-up activity (the GM console's sign-up log) and nulls any officer-audit rows they
-        authored, keeping each row's ``actor_name`` snapshot.
+        the member's sign-up activity (the GM console's sign-up log), the member's chat-XP totals in every guild
+        (``MemberLevel``, keyed by Discord ID with no FK), and nulls any officer-audit rows they authored, keeping
+        each row's ``actor_name`` snapshot. Moderation records (``ModCase``) are kept.
         """
         session = self.repository.session
         await session.execute(delete(EventSignup).where(EventSignup.member_id == member.id))
         await session.execute(delete(EventSignupActivity).where(EventSignupActivity.discord_id == member.discord_id))
+        await session.execute(delete(MemberLevel).where(MemberLevel.user_id == member.discord_id))
         await session.execute(
             update(OfficerAudit).where(OfficerAudit.actor_member_id == member.id).values(actor_member_id=None)
         )
@@ -108,3 +112,47 @@ class MembersService(SQLAlchemyAsyncRepositoryService[Member]):
         """Clear ``member``'s roster confirmation."""
         member.roster_confirmed_at = None
         return await self.update(member, auto_commit=True)
+
+    async def list_unnoticed(self, limit: int = SIGNUP_NOTICE_LIMIT) -> list[Member]:
+        """Signed-in members with no signup notice posted yet, oldest first, capped at ``limit``."""
+        statement = (
+            select(Member).where(Member.officer_notice_posted_at.is_(None)).order_by(Member.created_at).limit(limit)
+        )
+        return list((await self.repository.session.execute(statement)).scalars())
+
+    async def list_unresolved_confirmations(self, limit: int = SIGNUP_NOTICE_LIMIT) -> list[Member]:
+        """Members whose posted notice message is stale: confirmed since (e.g. on the site) but not yet resolved."""
+        statement = (
+            select(Member)
+            .where(
+                Member.officer_notice_posted_at.is_not(None),
+                Member.officer_notice_message_id.is_not(None),
+                Member.roster_confirmed_at.is_not(None),
+                Member.officer_notice_resolved_at.is_(None),
+            )
+            .order_by(Member.roster_confirmed_at)
+            .limit(limit)
+        )
+        return list((await self.repository.session.execute(statement)).scalars())
+
+    async def ack_notice(self, member: Member, *, channel_id: int, message_id: int) -> Member:
+        """Record that the signup notice for ``member`` now lives at ``channel_id``/``message_id``.
+
+        Idempotent and reusable for both the initial post and later edits: ``officer_notice_posted_at`` is set
+        once, and ``officer_notice_resolved_at`` is (re)set whenever the member is currently roster-confirmed,
+        since the caller is telling us the message now reflects that.
+        """
+        member.officer_notice_channel_id = channel_id
+        member.officer_notice_message_id = message_id
+        if member.officer_notice_posted_at is None:
+            member.officer_notice_posted_at = datetime.now(UTC)
+        member.officer_notice_resolved_at = datetime.now(UTC) if member.roster_confirmed_at is not None else None
+        return await self.update(member, auto_commit=True)
+
+    async def get_by_discord_id_or_404(self, discord_id: int) -> Member:
+        """The member with this Discord id. Raises ``NotFoundException`` if they've never signed in."""
+        member = await self.get_one_or_none(discord_id=discord_id)
+        if member is None:
+            msg = f"No member with discord_id {discord_id}"
+            raise NotFoundException(msg)
+        return member

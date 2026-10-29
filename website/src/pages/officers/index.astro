@@ -1449,8 +1449,21 @@ import "../../styles/room-officers.css";
     }
   }
 
+  function parseHash(): { tab: string; memberId: number | null } {
+    const raw = location.hash.slice(1);
+    const [tab, query] = raw.split("?");
+    let memberId: number | null = null;
+    if (query) {
+      const value = new URLSearchParams(query).get("member");
+      if (value && /^\d+$/.test(value)) {
+        memberId = Number(value);
+      }
+    }
+    return { tab: tab ?? "", memberId };
+  }
+
   function initialTabName(): string {
-    const requested = location.hash.slice(1);
+    const { tab: requested } = parseHash();
     if ((VALID_TABS as readonly string[]).includes(requested) && (!GM_TABS.has(requested) || isGm)) {
       return requested;
     }
@@ -1481,16 +1494,23 @@ import "../../styles/room-officers.css";
     resetAddonForm();
     const tabsEl = requireElement("officers-body").querySelector<HTMLElement>('[role="tablist"]')!;
     tablist = setupTablist(tabsEl, (tab) => showPanel(tab.id.slice(4)));
-    const startName = initialTabName();
-    tablist.select(requireElement<HTMLButtonElement>(`tab-${startName}`));
+    const startMemberId = parseHash().memberId;
+    const initialName = initialTabName();
+    tablist.select(requireElement<HTMLButtonElement>(`tab-${initialName}`));
+    if (initialName === "members" && startMemberId !== null) {
+      selectMember(startMemberId);
+    }
     window.addEventListener("hashchange", () => {
-      const name = location.hash.slice(1);
+      const { tab: name, memberId } = parseHash();
       if (!(VALID_TABS as readonly string[]).includes(name) || (GM_TABS.has(name) && !isGm)) {
         return;
       }
       const tab = document.getElementById(`tab-${name}`) as HTMLButtonElement | null;
       if (tab && !tab.hidden && tablist) {
         tablist.select(tab);
+      }
+      if (name === "members" && memberId !== null) {
+        selectMember(memberId);
       }
     });
     await Promise.all([loadEvents(), loadSeries(), loadAddons()]);

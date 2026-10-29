@@ -21,6 +21,12 @@ class Member(BigIntAuditBase):
 
     ``battlenet_id``/``battletag`` are set when the member links Battle.net (one Battle.net account per member, so
     one Blizzard account can't vouch for several Discord accounts); officers compare the BattleTag to the roster.
+
+    ``officer_notice_posted_at`` is when the bot posted the new-signup notice embed for this member in the
+    configured signup-notice channel (``null`` until posted; existing members are backfilled non-null at migration
+    so prod isn't flooded). ``officer_notice_channel_id``/``officer_notice_message_id`` locate that message so it
+    can be edited later. ``officer_notice_resolved_at`` is set once the posted message accurately reflects the
+    member's current roster status (approved via the embed's button, or edited after a site confirmation).
     """
 
     __tablename__ = "member"
@@ -38,6 +44,10 @@ class Member(BigIntAuditBase):
     battletag: Mapped[str | None] = mapped_column(Text, default=None)
     battlenet_linked_at: Mapped[datetime | None] = mapped_column(DateTimeUTC(timezone=True), default=None)
     roster_confirmed_at: Mapped[datetime | None] = mapped_column(DateTimeUTC(timezone=True), default=None)
+    officer_notice_posted_at: Mapped[datetime | None] = mapped_column(DateTimeUTC(timezone=True), default=None)
+    officer_notice_resolved_at: Mapped[datetime | None] = mapped_column(DateTimeUTC(timezone=True), default=None)
+    officer_notice_channel_id: Mapped[int | None] = mapped_column(BigInteger, default=None)
+    officer_notice_message_id: Mapped[int | None] = mapped_column(BigInteger, default=None)
 
     @property
     def display_name(self) -> str:

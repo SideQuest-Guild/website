@@ -33,6 +33,8 @@ flowchart LR
 | `/api/guilds/{guild_id}/roles` (PUT) | `X-API-Key` | Bot reports the guild's full current role set (names, colors, positions); `@everyone` excluded (404s for any guild other than the site guild) |
 | `/api/guilds/{guild_id}/member-links` (GET) | `X-API-Key` | Bot reads every signed-in member's Discord id and Battle.net-link status for role syncing (404s for any guild other than the site guild) |
 | `/api/guilds/{guild_id}/member-profiles` (PUT) | `X-API-Key` | Bot pushes linked members' current Discord username/global name/nick/avatar/roles (full sweep plus debounced pushes on profile/role/membership changes), and reports departed linked members; only updates existing members, never creates them (404s for any guild other than the site guild) |
+| `/api/guilds/{guild_id}/signup-notices` (GET), `/signup-notices/{member_id}/ack` (POST) | `X-API-Key` | New-signup officer notice outbox: members with no notice posted yet, and posted notices whose message is stale (confirmed since, e.g. on the site); the bot acks a message's channel/message id once it accurately reflects the member's state (404s for any guild other than the site guild) |
+| `/api/guilds/{guild_id}/members/by-discord/{discord_id}/roster-confirmation` (PUT, DELETE) | `X-API-Key` | Same as the GM console's roster-confirmation route, but the actor is identified by Discord id (body `{actor_discord_id, actor_name}`) for the bot's signup-notice Approve button; 403 unless that Discord id has a `Member` row holding a `WEB_GM_ROLE_IDS` role (404s for any guild other than the site guild) |
 | `/api/discord/live` (GET) | none | Website reads the site guild's live counts; empty counts (not 404) if the bot hasn't reported recently |
 | `/auth/discord/login`, `/auth/discord/callback`, `/auth/logout` | none | Discord OAuth sign-in (session cookie `sq_session`) |
 | `/auth/battlenet/link`, `/auth/battlenet/callback`, `/auth/battlenet/unlink` | signed in | Link a Battle.net account (BattleTag) to the member |
@@ -213,7 +215,8 @@ restored.
 
 ### Live status
 The bot reports live counts, never names: how many people are in each public voice/stage channel, plus the guild's
-approximate online/member counts (the homepage "In the Discord" label shows the online count). Every 60 seconds the bot refreshes
+approximate online/member counts. The homepage "In the Discord" line shows the online count and, for each voice channel
+with someone in it, a lit hearth with one ember per person (`website/src/scripts/discord-live.ts`). Every 60 seconds the bot refreshes
 `approximate_presence_count`/`approximate_member_count` (`fetch_guild(..., with_counts=True)`, keeping the last
 known values if that fetch fails) and pushes a full report; voice/stage channel changes also push immediately,
 debounced ~5 seconds per guild so a burst of joins/leaves coalesces into one push (mute/deafen toggles don't count
@@ -237,6 +240,21 @@ configured roles are ever touched, and a role that's missing or unsafe to grant 
 (`bot/src/sidequest_bot/plugins/link_roles.py`).
 
 - `/linkroles site | battlenet | gate | roster` (Manage Server)
+
+### Signup notices
+Every 60 seconds, for each guild with a signup-notice channel configured, the bot posts a gold embed in that channel
+for every member who signed in for the first time since the last check (`GET /api/guilds/{guild_id}/signup-notices`):
+their name, avatar, BattleTag if linked, and a "Guest until a Quest Master approves" status. The embed carries an
+**Approve** button (a persistent component surviving restarts, like `role_menus`) and a **More info** link button to
+the member's detail on the Officers page's Members tab (`/officers/#members?member={id}`). Approve re-checks the
+clicker holds a `WEB_GM_ROLE_IDS` role, then confirms the member on the roster through the same route the GM console
+uses — just with the clicker identified by Discord id instead of a session — and edits the message in place to show
+who approved it. If a member is instead confirmed on the site before anyone clicks Approve, the next poll edits that
+member's message to say so instead of leaving it stuck on "Guest". The bot acks every post and edit
+(`POST /api/guilds/{guild_id}/signup-notices/{member_id}/ack`) so nothing is posted or re-posted twice
+(`bot/src/sidequest_bot/plugins/signup_notices.py`).
+
+- `/signups channel` (Manage Server)
 
 ### Member profile sync
 Member rows (username, global name, nick, avatar, roles, guild membership) stay current with Discord continuously,

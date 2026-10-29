@@ -15,6 +15,13 @@
       "severity": "error"
     },
     {
+      "column": 15,
+      "path": "bot/src/sidequest_bot/plugins/signup_notices.py",
+      "name": "bad-override",
+      "concise_description": "Class member `SignupApproveButton.callback` overrides parent class `DynamicItem` in an inconsistent manner",
+      "severity": "error"
+    },
+    {
       "column": 57,
       "path": "packages/sidequest-common/src/sidequest_common/settings.py",
       "name": "bad-argument-type",
@@ -30,6 +37,13 @@
     },
     {
       "column": 62,
+      "path": "packages/sidequest-common/src/sidequest_common/settings.py",
+      "name": "bad-argument-type",
+      "concise_description": "Argument `str` is not assignable to parameter `extra` with type `Literal['allow', 'forbid', 'ignore'] | None` in function `pydantic_settings.main.SettingsConfigDict.__init__`",
+      "severity": "error"
+    },
+    {
+      "column": 58,
       "path": "packages/sidequest-common/src/sidequest_common/settings.py",
       "name": "bad-argument-type",
       "concise_description": "Argument `str` is not assignable to parameter `extra` with type `Literal['allow', 'forbid', 'ignore'] | None` in function `pydantic_settings.main.SettingsConfigDict.__init__`",

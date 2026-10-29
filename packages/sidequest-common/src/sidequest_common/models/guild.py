@@ -53,3 +53,6 @@ class GuildConfig(UUIDAuditBase):
     automod_timeout_seconds: Mapped[int] = mapped_column(Integer, default=300)
     automod_exempt_role_ids: Mapped[list[int]] = mapped_column(JsonB, default=list)
     automod_exempt_channel_ids: Mapped[list[int]] = mapped_column(JsonB, default=list)
+
+    # Signup notices
+    signup_notice_channel_id: Mapped[int | None] = mapped_column(BigInteger, default=None)

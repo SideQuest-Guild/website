@@ -74,6 +74,13 @@ from sidequest_common.schemas.role_menus import (
     RoleMenuSchema,
     RoleMenuUpdate,
 )
+from sidequest_common.schemas.signup_notices import (
+    ConfirmByDiscordRequest,
+    SignupNoticeAck,
+    SignupNoticeCandidate,
+    SignupNoticeResolution,
+    SignupNoticesPage,
+)
 
 __all__ = (
     "ADDON_ORIGIN_LABELS",
@@ -87,6 +94,7 @@ __all__ = (
     "AddonUpdate",
     "CaseAction",
     "ChartUpdate",
+    "ConfirmByDiscordRequest",
     "DiscordEventPush",
     "DiscordEventReconcile",
     "DiscordEventState",
@@ -146,6 +154,10 @@ __all__ = (
     "Signup",
     "SignupActivity",
     "SignupMember",
+    "SignupNoticeAck",
+    "SignupNoticeCandidate",
+    "SignupNoticeResolution",
+    "SignupNoticesPage",
     "SignupRole",
     "SignupStatus",
     "SignupUpsert",

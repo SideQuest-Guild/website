@@ -42,6 +42,8 @@ class GuildConfigSchema(BaseModel):
     automod_exempt_role_ids: list[int]
     automod_exempt_channel_ids: list[int]
 
+    signup_notice_channel_id: int | None = None
+
 
 class GuildConfigUpdate(BaseModel):
     """Partial update. Only fields present in the request body change (``exclude_unset``).
@@ -79,6 +81,8 @@ class GuildConfigUpdate(BaseModel):
     automod_timeout_seconds: int | None = Field(default=None, ge=0, le=2_419_200)
     automod_exempt_role_ids: list[int] | None = None
     automod_exempt_channel_ids: list[int] | None = None
+
+    signup_notice_channel_id: int | None = None
 
     @model_validator(mode="after")
     def _xp_range(self) -> GuildConfigUpdate:
