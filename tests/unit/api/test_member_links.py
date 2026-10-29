@@ -1,3 +1,4 @@
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 from sidequest_common.models import Member
@@ -43,6 +44,26 @@ async def test_list_includes_signed_in_members_with_correct_battlenet_linked(
     assert response.status_code == 200
     links = {link["discord_id"]: link["battlenet_linked"] for link in response.json()}
     assert links == {111: False, 222: True}
+
+
+async def test_list_reports_who_is_confirmed_on_the_roster(
+    client: AsyncTestClient, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    """The bot grants the roster role from this flag; without it, approved members never get into the guild."""
+    async with db_sessionmaker() as session:
+        session.add_all(
+            [
+                Member(discord_id=111, username="guest", is_guild_member=True),
+                Member(
+                    discord_id=222, username="approved", is_guild_member=True, roster_confirmed_at=datetime.now(UTC)
+                ),
+            ]
+        )
+        await session.commit()
+
+    response = await client.get(LINKS_PATH)
+    assert response.status_code == 200
+    assert {link["discord_id"]: link["roster_confirmed"] for link in response.json()} == {111: False, 222: True}
 
 
 async def test_list_empty_when_no_members_signed_in(client: AsyncTestClient) -> None:

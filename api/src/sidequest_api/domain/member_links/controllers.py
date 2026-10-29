@@ -36,9 +36,13 @@ class MemberLinksController(Controller):
         member_links_service: NamedDependency[MemberLinksService],
         web_settings: NamedDependency[WebSettings],
     ) -> list[MemberLink]:
-        """Every signed-in member's Discord id and whether they've linked Battle.net."""
+        """Every signed-in member's Discord id, whether they've linked Battle.net, and whether a GM confirmed them."""
         _require_site_guild(guild_id, web_settings)
         return [
-            MemberLink(discord_id=member.discord_id, battlenet_linked=member.battlenet_id is not None)
+            MemberLink(
+                discord_id=member.discord_id,
+                battlenet_linked=member.battlenet_id is not None,
+                roster_confirmed=member.roster_confirmed_at is not None,
+            )
             for member in await member_links_service.list_links()
         ]
