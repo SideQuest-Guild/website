@@ -113,7 +113,7 @@ import "../../styles/room-account.css";
 </Room>
 
 <script>
-  import { apiFetch, requireElement, statusMessage, type Me } from "../../scripts/api";
+  import { apiFetch, fetchMe, requireElement, statusMessage, type Me } from "../../scripts/api";
 
   const ERROR_MESSAGES: Record<string, string> = {
     state: "That sign-in took too long or was opened twice. Try again.",
@@ -178,10 +178,10 @@ import "../../styles/room-account.css";
     return me.is_officer ? "Officer" : "Member";
   }
 
-  async function render(): Promise<void> {
+  async function render({ fresh = false }: { fresh?: boolean } = {}): Promise<void> {
     let me: Me | null = null;
     try {
-      me = await apiFetch<Me>("/api/me");
+      me = await fetchMe({ fresh });
     } catch {
       me = null;
     }
@@ -233,7 +233,7 @@ import "../../styles/room-account.css";
       await apiFetch("/auth/battlenet/unlink", { method: "POST" });
       statusEl.dataset.tone = "";
       statusEl.textContent = "Battle.net unlinked.";
-      await render();
+      await render({ fresh: true });
     } catch (err) {
       statusEl.dataset.tone = "error";
       statusEl.textContent = statusMessage(err);
@@ -245,7 +245,7 @@ import "../../styles/room-account.css";
   deleteAccountBtn.addEventListener("click", async () => {
     if (
       !confirm(
-        "Delete your SideQuest account? Your profile and every event sign-up are erased right away. This can't be undone.",
+        "Delete your SideQuest account? Your profile and every event sign-up are erased right away, and you're stripped of every Discord role in the SideQuest server and put back behind #sign-the-ledger. This can't be undone.",
       )
     ) {
       return;
@@ -254,7 +254,8 @@ import "../../styles/room-account.css";
     try {
       await apiFetch("/api/me", { method: "DELETE" });
       statusEl.dataset.tone = "";
-      statusEl.textContent = "Your account and sign-ups are deleted. Signing in again starts a fresh account.";
+      statusEl.textContent =
+        "Your account and sign-ups are deleted, and your Discord roles are on their way out too. Signing in again starts a fresh account.";
       show(signedOut);
     } catch (err) {
       statusEl.dataset.tone = "error";

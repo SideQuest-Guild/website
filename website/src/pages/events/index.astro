@@ -1,6 +1,9 @@
 ---
 import Room from "../../layouts/Room.astro";
 import warRoom from "../../../assets/rooms/war-room.webp";
+import { EVENT_KIND_LABELS } from "../../scripts/api";
+
+const eventKinds = Object.keys(EVENT_KIND_LABELS);
 ---
 
 <Room
@@ -12,6 +15,21 @@ import warRoom from "../../../assets/rooms/war-room.webp";
   artPosition="50% 55%"
   current="events"
 >
+  <!-- Ask for both lists with the HTML, not after the page script loads; the URLs match loadEvents() below. -->
+  <script is:inline slot="head" define:vars={{ eventKinds }}>
+    const kind = new URLSearchParams(location.search).get("kind");
+    const suffix = kind && eventKinds.includes(kind) ? `&kind=${kind}` : "";
+    for (const when of ["upcoming", "past"]) {
+      const link = document.createElement("link");
+      Object.assign(link, {
+        rel: "preload",
+        as: "fetch",
+        href: `/api/events?when=${when}${suffix}`,
+        crossOrigin: "anonymous",
+      });
+      document.head.append(link);
+    }
+  </script>
   <section class="chamber" aria-labelledby="h-upcoming">
     <h2 class="chamber-title" id="h-upcoming">
       Upcoming

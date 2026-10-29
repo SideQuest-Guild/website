@@ -315,6 +315,7 @@ import "../../styles/room-officers.css";
     ApiError,
     apiFetch,
     capitalize,
+    fetchMe,
     escapeHtml,
     requireElement,
     statusMessage,
@@ -1474,7 +1475,7 @@ import "../../styles/room-officers.css";
   async function init(): Promise<void> {
     let me: Me | null = null;
     try {
-      me = await apiFetch<Me>("/api/me");
+      me = await fetchMe();
     } catch (err) {
       if (err instanceof ApiError && err.status === 0) {
         statusEl.textContent = statusMessage(err);

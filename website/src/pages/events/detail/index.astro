@@ -13,6 +13,15 @@ import "../../../styles/room-event.css";
   current="events"
   longTitle
 >
+  <!-- Ask for the event with the HTML, not after the page script loads; the URL matches refresh() below. -->
+  <script is:inline slot="head">
+    const eventId = new URLSearchParams(location.search).get("id");
+    if (eventId) {
+      const link = document.createElement("link");
+      Object.assign(link, { rel: "preload", as: "fetch", href: `/api/events/${eventId}`, crossOrigin: "anonymous" });
+      document.head.append(link);
+    }
+  </script>
   <p class="event-meta shade" id="event-summary" slot="title"></p>
 
   <p class="status" id="event-status" role="status" aria-live="polite"></p>
@@ -111,6 +120,7 @@ import "../../../styles/room-event.css";
 <script>
   import {
     apiFetch,
+    fetchMe,
     capitalize,
     escapeHtml,
     requireElement,
@@ -368,7 +378,7 @@ import "../../../styles/room-event.css";
       return;
     }
     const [meResult, eventResult] = await Promise.allSettled([
-      apiFetch<Me>("/api/me"),
+      fetchMe(),
       apiFetch<EventDetail>(`/api/events/${eventId}`),
     ]);
     me = meResult.status === "fulfilled" ? meResult.value : null;

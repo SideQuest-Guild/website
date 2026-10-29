@@ -1,5 +1,5 @@
 ---
-import { Image } from "astro:assets";
+import Art from "../components/Art.astro";
 import JoinPlaque from "../components/JoinPlaque.astro";
 import SiteFooter from "../components/SiteFooter.astro";
 import Site from "../layouts/Site.astro";
@@ -8,7 +8,7 @@ import joinArt from "../../assets/plates/join-art.png";
 
 <Site title="Off the map · SideQuest" description="This page isn't on the SideQuest map.">
   <main id="top" tabindex="-1" class="join lost">
-    <Image
+    <Art
       class="join-art"
       src={joinArt}
       widths={[1200, 2172]}

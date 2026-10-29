@@ -34,6 +34,20 @@ const ogImage = await getImage({
   quality: 78,
 });
 const ogImageUrl = new URL(ogImage.src, origin).toString();
+const speculationRules = {
+  prerender: [
+    {
+      where: {
+        and: [
+          { href_matches: "/*" },
+          { not: { href_matches: ["/api/*", "/auth/*", "/schema/*", "/health/*"] } },
+          { not: { selector_matches: "[download], [target=_blank]" } },
+        ],
+      },
+      eagerness: "moderate",
+    },
+  ],
+};
 ---
 
 <!doctype html>
@@ -61,7 +75,13 @@ const ogImageUrl = new URL(ogImage.src, origin).toString();
     <link rel="apple-touch-icon" href={touchIcon.src} />
     <link rel="preload" as="font" type="font/woff2" href={displayFont} crossorigin />
     <link rel="preload" as="font" type="font/woff2" href={bodyFont} crossorigin />
+    <!-- Every page asks /api/me (the Officers link, and the member pages); start it with the HTML instead of after
+         the scripts load. crossorigin="anonymous" matches apiFetch's same-origin credentials, so the fetch reuses it. -->
+    <link rel="preload" as="fetch" href="/api/me" crossorigin="anonymous" />
     <slot name="head" />
+    <!-- Chromium browsers prerender a page when a link to it is hovered or pressed, so walking between rooms is
+         instant; others ignore this. Never for the API, sign-in/out or docs. -->
+    <script type="speculationrules" is:inline set:html={JSON.stringify(speculationRules)} />
     <!-- Lets CSS collapse the mobile menu only when the script that opens it will run, and shows the Officers
          link before first paint for a browser that was an officer last visit (site-chrome.ts re-checks /api/me). -->
     <script is:inline>

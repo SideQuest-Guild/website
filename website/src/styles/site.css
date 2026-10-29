@@ -106,6 +106,13 @@ img {
 .skip:focus {
   top: 16px;
 }
+/* <Art> wraps each plate in a <picture> that lays out as if it were just its <img>; the <source>s never render. */
+.art-pic {
+  display: contents;
+}
+.art-pic source {
+  display: none;
+}
 .sr-only {
   position: absolute;
   width: 1px;

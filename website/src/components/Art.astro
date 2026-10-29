@@ -1,0 +1,12 @@
+---
+// A painted plate as AVIF with a WebP fallback (the <img> itself is WebP, never PNG), at each encoder's default
+// quality (AVIF 50, WebP 80): the AVIF is about half the bytes for the same look. The <picture> is
+// `display: contents` (site.css `.art-pic`), so every existing layout and animation rule for the <img> (its class,
+// its grid or absolute placement) still applies.
+import type { ComponentProps } from "astro/types";
+import { Picture } from "astro:assets";
+
+type Props = ComponentProps<typeof Picture>;
+---
+
+<Picture {...Astro.props} formats={["avif", "webp"]} fallbackFormat="webp" pictureAttributes={{ class: "art-pic" }} />

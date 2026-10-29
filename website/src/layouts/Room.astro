@@ -50,6 +50,9 @@ if (!placeholder) {
 ---
 
 <Site title={title} description={description}>
+  <Fragment slot="head">
+    <slot name="head" />
+  </Fragment>
   <div class="room">
     <header class="room-head">
       <picture class="room-art-pic">

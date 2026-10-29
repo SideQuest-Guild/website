@@ -326,6 +326,19 @@ export async function apiFetch<T = unknown>(path: string, init?: RequestInit): P
   return data as T;
 }
 
+let sharedMe: Promise<Me> | null = null;
+
+/**
+ * ``GET /api/me``, asked once per page load: the nav's Officers link and the page's own script share the answer
+ * (and the head's preload of it). Pass ``fresh`` after something changed the account.
+ */
+export function fetchMe({ fresh = false }: { fresh?: boolean } = {}): Promise<Me> {
+  if (fresh || sharedMe === null) {
+    sharedMe = apiFetch<Me>("/api/me");
+  }
+  return sharedMe;
+}
+
 /** Plain-language copy for the error states the member hub can hit. */
 export function statusMessage(err: unknown): string {
   if (err instanceof ApiError) {

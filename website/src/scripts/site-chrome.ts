@@ -1,6 +1,6 @@
 // Shared page chrome on every page: the narrow-screen Menu disclosure, the back-to-top control, and the
 // officer-only Officers nav link.
-import { ApiError, apiFetch, type Me } from "./api";
+import { ApiError, fetchMe } from "./api";
 
 const MOBILE_QUERY = window.matchMedia("(max-width: 900px)");
 
@@ -68,7 +68,7 @@ const OFFICER_FLAG = "sq-officer";
 async function syncOfficerNav(): Promise<void> {
   let officer: boolean;
   try {
-    officer = (await apiFetch<Me>("/api/me")).is_officer;
+    officer = (await fetchMe()).is_officer;
   } catch (err) {
     if (err instanceof ApiError && err.status === 0) {
       return;

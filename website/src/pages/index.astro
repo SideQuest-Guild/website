@@ -1,5 +1,6 @@
 ---
 import { getImage, Image } from "astro:assets";
+import Art from "../components/Art.astro";
 import JoinPlaque from "../components/JoinPlaque.astro";
 import SiteFooter from "../components/SiteFooter.astro";
 import { DISCORD_INVITE, LAUNCH } from "../config";
@@ -71,6 +72,9 @@ const panels = [
       imagesizes="100vw"
       media={mobileQuery}
     />
+    <!-- The Discord band and the Raids gate ask these as soon as their scripts run; start them with the HTML. -->
+    <link rel="preload" as="fetch" href="/api/discord/live" crossorigin="anonymous" />
+    <link rel="preload" as="fetch" href="/api/events?when=upcoming&kind=raid" crossorigin="anonymous" />
   </Fragment>
 
   <header class="site-header">
@@ -153,7 +157,7 @@ const panels = [
         scheduled nights, real progression.
       </p>
 
-      <Image
+      <Art
         class="r emblem fit mist"
         style="--d:.35s"
         src={emblem}
@@ -207,7 +211,7 @@ const panels = [
         {panels.map((panel) => (
           <article class="panel rise">
             <div class="panel-art">
-              <Image src={panel.art} widths={[600, 900, 1200]} sizes="(max-width: 900px) 100vw, 31vw" alt={panel.alt} />
+              <Art src={panel.art} widths={[600, 900, 1200]} sizes="(max-width: 900px) 100vw, 31vw" alt={panel.alt} />
             </div>
             <h3>{panel.title}</h3>
             <span class="rule-c" aria-hidden="true" />
@@ -219,7 +223,7 @@ const panels = [
 
     <section id="raids" class="band wrap" aria-labelledby="h-raids" hidden>
       <figure class="band-art rise">
-        <Image
+        <Art
           src={raidsArt}
           widths={[600, 1024]}
           sizes="(max-width: 900px) 100vw, 40vw"
@@ -271,7 +275,7 @@ const panels = [
 
     <section id="addons" class="band mirror wrap" aria-labelledby="h-addons">
       <figure class="band-art rise">
-        <Image
+        <Art
           src={addonsArt}
           widths={[600, 1024]}
           sizes="(max-width: 900px) 100vw, 40vw"
@@ -305,7 +309,7 @@ const panels = [
     </section>
 
     <section id="join" class="join" aria-labelledby="h-join">
-      <Image
+      <Art
         class="join-art"
         src={joinArt}
         widths={[1200, 2172]}
