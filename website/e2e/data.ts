@@ -10,10 +10,26 @@ import type {
   DiscordLive,
   DiscordOnline,
   EarnedBadge,
+  EpgpCharacter,
+  EpgpImportResult,
+  EpgpLootItem,
+  EpgpMemberNote,
+  EpgpProgressionInstance,
+  EpgpRecruit,
+  EpgpRosterMember,
+  EpgpRules,
+  EpgpStandingRow,
+  EpgpSyncToken,
   EventDetail,
   EventSummary,
   GmMember,
   GmMemberDetail,
+  GuildAnnouncement,
+  GuildBankRow,
+  GuildCrafterProfession,
+  GuildCrafterResult,
+  GuildNewsItem,
+  GuildRoster,
   HeroLeaderboard,
   HeroProfile,
   HeroRow,
@@ -349,3 +365,380 @@ export function heroProfile(row: HeroRow): HeroProfile {
     badges: [badge("first_steps", "First Steps", "Attended their first guild event.", "👣", 60)],
   };
 }
+
+// ——— EPGP loot system fixtures ———
+export const EPGP_RULES: EpgpRules = {
+  ep: { boss_kill: 10, progress: 10, on_time: 5, full_night: 5 },
+  gp: {
+    INVTYPE_HEAD: 100,
+    INVTYPE_CHEST: 100,
+    INVTYPE_LEGS: 100,
+    INVTYPE_SHOULDER: 75,
+    INVTYPE_HAND: 75,
+    INVTYPE_WAIST: 75,
+    INVTYPE_FEET: 75,
+    INVTYPE_NECK: 55,
+    INVTYPE_WRIST: 55,
+    INVTYPE_CLOAK: 55,
+    INVTYPE_FINGER: 55,
+    INVTYPE_TRINKET: 125,
+    INVTYPE_WEAPON: 150,
+    INVTYPE_2HWEAPON: 200,
+    INVTYPE_RANGED: 50,
+  },
+  chase_multiplier: 1.5,
+  legendary_gp: 300,
+  os_percent: 10,
+  base_gp: 100,
+  min_gp: 100,
+  decay_percent: 15,
+  trial_days: 14,
+};
+
+export const EPGP_STANDINGS: EpgpStandingRow[] = [
+  {
+    member_id: 4,
+    name: "Quest Guide",
+    main: "Guideline-Whitemane",
+    class: "PALADIN",
+    characters: ["Guideline-Whitemane"],
+    ep: 185.2,
+    gp: 320.5,
+    pr: 0.578,
+    trial: false,
+  },
+  {
+    member_id: 7,
+    name: "Wanderer",
+    main: "Wanderer-Whitemane",
+    class: "HUNTER",
+    characters: ["Wanderer-Whitemane", "Wanderalt-Whitemane"],
+    ep: 120.0,
+    gp: 150.0,
+    pr: 0.8,
+    trial: false,
+  },
+  {
+    member_id: 9,
+    name: "Freshface",
+    main: "Freshface-Whitemane",
+    class: "ROGUE",
+    characters: ["Freshface-Whitemane"],
+    ep: 25.0,
+    gp: 100.0,
+    pr: 0.25,
+    trial: true,
+  },
+  {
+    member_id: null,
+    name: "Strayalt-Whitemane",
+    main: null,
+    class: "MAGE",
+    characters: ["Strayalt-Whitemane"],
+    ep: 10.0,
+    gp: 100.0,
+    pr: 0.1,
+    trial: false,
+  },
+];
+
+export const EPGP_LOOT: EpgpLootItem[] = [
+  {
+    id: "loot-1",
+    at: inDays(-3),
+    item_id: 30896,
+    item_name: "Glory of the Defender",
+    quality: 4,
+    character: "Guideline-Whitemane",
+    member_id: 4,
+    member_name: "Quest Guide",
+    response: "ms",
+    gp: 100,
+    instance_name: "Hyjal Summit",
+    encounter_name: "Rage Winterchill",
+    voided: false,
+  },
+  {
+    id: "loot-2",
+    at: inDays(-3),
+    item_id: 29179,
+    item_name: "Cloak of Autumn's Child",
+    quality: 3,
+    character: "Wanderer-Whitemane",
+    member_id: 7,
+    member_name: "Wanderer",
+    response: "os",
+    gp: 5,
+    instance_name: "Hyjal Summit",
+    encounter_name: "Rage Winterchill",
+    voided: false,
+  },
+  {
+    id: "loot-3",
+    at: inDays(-10),
+    item_id: 29176,
+    item_name: "Signet of Unshakable Faith",
+    quality: 2,
+    character: "Freshface-Whitemane",
+    member_id: 9,
+    member_name: "Freshface",
+    response: "de",
+    gp: 0,
+    instance_name: "Hyjal Summit",
+    encounter_name: "Anetheron",
+    voided: true,
+  },
+];
+
+export const EPGP_PROGRESSION: EpgpProgressionInstance[] = [
+  {
+    instance_id: 534,
+    name: "Hyjal Summit",
+    size: 20,
+    encounters: [
+      {
+        encounter_id: 620,
+        name: "Rage Winterchill",
+        first_kill_at: inDays(-10),
+        kills: 2,
+        wipes: 3,
+        last_attempt_at: inDays(-3),
+      },
+      {
+        encounter_id: 652,
+        name: "Anetheron",
+        first_kill_at: null,
+        kills: 0,
+        wipes: 5,
+        last_attempt_at: inDays(-3),
+      },
+    ],
+  },
+];
+
+export const EPGP_CHARACTERS: EpgpCharacter[] = [
+  {
+    id: "char-1",
+    name: "Wanderer",
+    realm: "Whitemane",
+    class: "HUNTER",
+    member_id: 7,
+    member_name: "Wanderer",
+    is_main: true,
+    source: "claim",
+    last_seen_at: inDays(-3),
+  },
+  {
+    id: "char-2",
+    name: "Strayalt",
+    realm: "Whitemane",
+    class: "MAGE",
+    member_id: null,
+    member_name: null,
+    is_main: false,
+    source: "import",
+    last_seen_at: inDays(-3),
+  },
+];
+
+export const EPGP_ROSTER: EpgpRosterMember[] = [
+  { member_id: 4, name: "Quest Guide", raid_status: "raider", trial_started_at: null },
+  { member_id: 7, name: "Wanderer", raid_status: "raider", trial_started_at: null },
+  { member_id: 9, name: "Freshface", raid_status: "trial", trial_started_at: inDays(-5) },
+];
+
+export const EPGP_SYNC_TOKENS: EpgpSyncToken[] = [
+  { id: "token-1", name: "Guide's laptop", created_at: inDays(-20), last_used_at: inDays(-2) },
+];
+
+export function epgpImportResult(): EpgpImportResult {
+  return {
+    recorder: "Guideline-Whitemane",
+    sessions: { new: 1, updated: 0 },
+    encounters: { new: 2, updated: 0 },
+    loot: { new: 2, updated: 0, voided: 0 },
+    awards: { new: 6, updated: 0, voided: 0 },
+    unlinked_characters: ["Strayalt-Whitemane"],
+    attendance: { event_id: EVENTS[0]!.id, marked: 18 },
+    conflicts: [],
+  };
+}
+
+// ——— Guild app v2 fixtures ———
+export const GUILD_ROSTER: GuildRoster = {
+  taken_at: inDays(0, 10),
+  members: [
+    {
+      member_id: 4,
+      name: "Quest Guide",
+      rank: "Officer",
+      raid_status: "raider",
+      main: "Guideline-Whitemane",
+      characters: [
+        {
+          name: "Guideline",
+          class: "PALADIN",
+          level: 60,
+          zone: "Ironforge",
+          last_seen_at: inDays(0, 9),
+          is_main: true,
+        },
+        {
+          name: "Guidealt",
+          class: "ROGUE",
+          level: 40,
+          zone: "Stormwind City",
+          last_seen_at: inDays(-2),
+          is_main: false,
+        },
+      ],
+    },
+    {
+      member_id: 7,
+      name: "Wanderer",
+      rank: "Member",
+      raid_status: "raider",
+      main: "Wanderer-Whitemane",
+      characters: [
+        {
+          name: "Wanderer",
+          class: "HUNTER",
+          level: 60,
+          zone: "Hyjal Summit",
+          last_seen_at: inDays(0, 10),
+          is_main: true,
+        },
+        { name: "Wanderalt", class: "MAGE", level: 22, zone: "Darnassus", last_seen_at: inDays(-5), is_main: false },
+      ],
+    },
+    {
+      member_id: 9,
+      name: "Freshface",
+      rank: "New Arrival",
+      raid_status: "trial",
+      main: "Freshface-Whitemane",
+      characters: [
+        { name: "Freshface", class: "ROGUE", level: 58, zone: "Orgrimmar", last_seen_at: inDays(-1), is_main: true },
+      ],
+    },
+  ],
+  unlinked: [{ name: "Driftwood", class: "WARLOCK", level: 35, rank: "Member", last_seen_at: inDays(-3) }],
+};
+
+const CRAFTER_RESULTS: GuildCrafterResult[] = [
+  {
+    recipe_id: 2662,
+    recipe_name: "Copper Chain Pants",
+    item_id: 2852,
+    crafters: [
+      {
+        character: "Guideline-Whitemane",
+        member_id: 4,
+        member_name: "Quest Guide",
+        profession: "Blacksmithing",
+        skill: 150,
+      },
+    ],
+  },
+  {
+    recipe_id: 3372,
+    recipe_name: "Flask of the Titans",
+    item_id: 13510,
+    crafters: [
+      { character: "Wanderalt-Whitemane", member_id: 7, member_name: "Wanderer", profession: "Alchemy", skill: 275 },
+    ],
+  },
+];
+
+const CRAFTER_PROFESSIONS: GuildCrafterProfession[] = [
+  { profession: "Blacksmithing", crafters: 1 },
+  { profession: "Alchemy", crafters: 1 },
+];
+
+export const GUILD_CRAFTERS = { results: CRAFTER_RESULTS, professions: CRAFTER_PROFESSIONS };
+
+export const GUILD_NEWS: GuildNewsItem[] = [
+  {
+    id: "n-1",
+    at: inDays(-1),
+    kind: "boss_kill",
+    text: "Rage Winterchill defeated (Hyjal Summit)",
+    character: "Guideline-Whitemane",
+    item_id: null,
+    quality: null,
+  },
+  {
+    id: "n-2",
+    at: inDays(-2),
+    kind: "announcement",
+    text: "Flasks for Friday please",
+    character: null,
+    item_id: null,
+    quality: null,
+  },
+];
+
+export const GUILD_BANK: GuildBankRow[] = [
+  {
+    id: "bank-1",
+    at: inDays(-1),
+    character: "Guideline-Whitemane",
+    member_name: "Quest Guide",
+    kind: "deposit",
+    item_id: 2589,
+    item_name: "Linen Cloth",
+    count: 20,
+    money: 0,
+    tab: 1,
+  },
+  {
+    id: "bank-2",
+    at: inDays(-3),
+    character: "Wanderer-Whitemane",
+    member_name: "Wanderer",
+    kind: "withdraw_money",
+    item_id: null,
+    item_name: null,
+    count: null,
+    money: 50000,
+    tab: null,
+  },
+];
+
+export const GUILD_ANNOUNCEMENTS: GuildAnnouncement[] = [
+  {
+    id: "ann-1",
+    text: "Flasks for Friday please",
+    author: "Quest Guide",
+    at: inDays(-2),
+    source: "game",
+    posted_at: inDays(-2),
+  },
+];
+
+export const EPGP_RECRUITS: EpgpRecruit[] = [
+  {
+    id: "recruit-1",
+    character: "Hopeful-Whitemane",
+    class: "MAGE",
+    status: "trial",
+    note: "Found in LFG, geared well",
+    member_id: null,
+    checklist: { talked: true, gear_check: true, first_raid: false, vouched: false },
+    votes: [{ officer: "Quest Guide", vote: "yes", at: inDays(-4) }],
+    at: inDays(-5),
+  },
+];
+
+export const EPGP_MEMBER_NOTES: Record<number, EpgpMemberNote[]> = {
+  7: [
+    {
+      id: "note-1",
+      character: "Wanderer",
+      note: "Prefers healing",
+      officer: "Quest Guide",
+      at: inDays(-6),
+      voided: false,
+    },
+  ],
+};

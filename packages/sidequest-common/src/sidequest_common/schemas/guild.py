@@ -52,6 +52,8 @@ class GuildConfigSchema(BaseModel):
     badge_channel_id: int | None = None
     badge_role_ids: dict[str, int] = Field(default_factory=dict)
 
+    announcement_channel_id: int | None = None
+
 
 class GuildConfigUpdate(BaseModel):
     """Partial update. Only fields present in the request body change (``exclude_unset``).
@@ -99,6 +101,8 @@ class GuildConfigUpdate(BaseModel):
 
     badge_channel_id: int | None = None
     badge_role_ids: dict[str, int] | None = None
+
+    announcement_channel_id: int | None = None
 
     @model_validator(mode="after")
     def _xp_range(self) -> GuildConfigUpdate:

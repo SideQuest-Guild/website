@@ -449,6 +449,314 @@ export const CLASSES: CharClass[] = [
 
 export const ROLES: Role[] = ["tank", "healer", "dps"];
 
+/** Lowercases a WoW class token as the addon reports it (e.g. `"WARRIOR"`) to match `CharClass` and the
+ * `cls-*` color classes; `null`/empty stays `null` ("no class yet"). */
+export function normalizeClass(cls: string | null | undefined): CharClass | null {
+  return cls ? (cls.toLowerCase() as CharClass) : null;
+}
+
+/** Display label for a class token in any casing, e.g. the addon's `"WARRIOR"` or the site's own `"warrior"`;
+ * used wherever a character's class may be unknown (`null`): the ledger, the officer console's character links. */
+export function classLabel(cls: string | null | undefined): string {
+  const normalized = normalizeClass(cls);
+  return normalized ? capitalize(normalized) : "No class yet";
+}
+
+// ——— EPGP loot system: GET/POST /api/epgp/*, GET/POST/DELETE /api/me/characters. Mirrors the shapes in the
+// addon ↔ site contract (local://addon-contract.md): the site owns the numbers, the addon only records facts.
+
+/** The site's current loot rules, served on `GET /api/epgp/standings` and embedded in the `SQI1:` import string. */
+export type EpgpRules = {
+  ep: { boss_kill: number; progress: number; on_time: number; full_night: number };
+  /** Keyed by `INVTYPE_*` (e.g. `"INVTYPE_HEAD"`). */
+  gp: Record<string, number>;
+  chase_multiplier: number;
+  legendary_gp: number;
+  os_percent: number;
+  base_gp: number;
+  min_gp: number;
+  decay_percent: number;
+  trial_days: number;
+};
+
+/** One row of `GET /api/epgp/standings`; `member_id: null` means an imported character nobody has linked yet. */
+export type EpgpStandingRow = {
+  member_id: number | null;
+  name: string;
+  main: string | null;
+  /** As the addon reports it (e.g. `"WARRIOR"`); lowercase before using a `cls-*` color class. */
+  class: string | null;
+  characters: string[];
+  ep: number;
+  gp: number;
+  pr: number;
+  trial: boolean;
+};
+
+export type EpgpStandings = { generated_at: string; rules: EpgpRules; rows: EpgpStandingRow[] };
+
+export type EpgpLedgerKind = "ep" | "gp";
+export type EpgpLedgerReason = "boss_kill" | "progress" | "on_time" | "full_night" | "standby" | "loot" | "adjust";
+
+/** One row of `GET /api/epgp/ledger`, newest first. `decayed` is `amount` after weekly decay is applied on read. */
+export type EpgpLedgerEntry = {
+  id: string;
+  at: string;
+  kind: EpgpLedgerKind;
+  amount: number;
+  decayed: number;
+  reason: EpgpLedgerReason;
+  note: string | null;
+  character: string | null;
+  member_id: number | null;
+  member_name: string | null;
+  officer: string | null;
+  item_name: string | null;
+  voided: boolean;
+};
+
+export type EpgpLedgerPage = { entries: EpgpLedgerEntry[] };
+
+export type EpgpLootResponseKind = "ms" | "os" | "alt" | "council" | "de" | "bank";
+
+/** One row of `GET /api/epgp/loot`, newest first. */
+export type EpgpLootItem = {
+  id: string;
+  at: string;
+  item_id: number;
+  item_name: string;
+  /** 0-4, the game's item-quality scale (matches `--q-*` CSS vars from 1 up; 0 is poor and unused here). */
+  quality: number;
+  character: string;
+  member_id: number | null;
+  member_name: string | null;
+  response: EpgpLootResponseKind;
+  gp: number;
+  instance_name: string | null;
+  encounter_name: string | null;
+  voided: boolean;
+};
+
+export type EpgpLootPage = { items: EpgpLootItem[] };
+
+/** One encounter's attempt history on `GET /api/epgp/progression`. */
+export type EpgpProgressionEncounter = {
+  encounter_id: number;
+  name: string;
+  first_kill_at: string | null;
+  kills: number;
+  wipes: number;
+  last_attempt_at: string | null;
+};
+
+export type EpgpProgressionInstance = {
+  instance_id: number;
+  name: string;
+  size: number;
+  encounters: EpgpProgressionEncounter[];
+};
+
+export type EpgpProgression = { instances: EpgpProgressionInstance[] };
+
+/** `POST /api/epgp/imports` response: what an `SQX1:` export string changed on the ledger. */
+export type EpgpImportResult = {
+  recorder: string;
+  sessions: { new: number; updated: number };
+  encounters: { new: number; updated: number };
+  loot: { new: number; updated: number; voided: number };
+  awards: { new: number; updated: number; voided: number };
+  unlinked_characters: string[];
+  attendance: { event_id: string | null; marked: number };
+  /** Session ids skipped because they overlapped another recorder's session for the same instance. */
+  conflicts: string[];
+};
+
+/** `GET /api/epgp/game-import`: the `SQI1:` string an officer pastes into `/sq import`. */
+export type EpgpGameImport = { payload: string; generated_at: string };
+
+export type EpgpAdjustmentCreate = { member_id: number; kind: EpgpLedgerKind; amount: number; reason: string };
+
+export type EpgpCharacterSource = "claim" | "officer" | "signup" | "import";
+
+/** A character linked (or not yet linked) to a member; same shape on `GET /api/epgp/characters` and
+ * `GET/POST /api/me/characters`. */
+export type EpgpCharacter = {
+  id: string;
+  name: string;
+  realm: string;
+  class: string | null;
+  member_id: number | null;
+  member_name: string | null;
+  is_main: boolean;
+  source: EpgpCharacterSource;
+  last_seen_at: string | null;
+};
+
+export type EpgpCharacters = { characters: EpgpCharacter[] };
+
+export type EpgpRosterStatus = "trial" | "raider" | null;
+
+/** One row of `GET /api/epgp/roster`: every guild member, with their raid status for bid order and GP charges. */
+export type EpgpRosterMember = {
+  member_id: number;
+  name: string;
+  raid_status: EpgpRosterStatus;
+  trial_started_at: string | null;
+};
+
+export type EpgpRoster = { members: EpgpRosterMember[] };
+
+/** `GET /api/epgp/sync-tokens` row; the token itself is only ever sent once, on creation. */
+export type EpgpSyncToken = { id: string; name: string; created_at: string; last_used_at: string | null };
+
+export type EpgpSyncTokens = { tokens: EpgpSyncToken[] };
+
+export type EpgpSyncTokenCreated = { id: string; name: string; token: string };
+
+// ——— Guild app v2: the addon as the guild's all-round app (local://addon-contract-v2.md). ———
+
+/** One linked character on a `GuildRosterMember` row. */
+export type GuildRosterCharacter = {
+  name: string;
+  class: string | null;
+  level: number | null;
+  zone: string | null;
+  last_seen_at: string | null;
+  is_main: boolean;
+};
+
+/** One member row of `GET /api/guild/roster`. */
+export type GuildRosterMember = {
+  member_id: number;
+  name: string;
+  rank: string | null;
+  raid_status: EpgpRosterStatus;
+  main: string | null;
+  characters: GuildRosterCharacter[];
+};
+
+/** A character seen in the guild roster snapshot with no linked member. */
+export type GuildRosterUnlinked = {
+  name: string;
+  class: string | null;
+  level: number | null;
+  rank: string | null;
+  last_seen_at: string | null;
+};
+
+/** `GET /api/guild/roster` (member). */
+export type GuildRoster = { taken_at: string; members: GuildRosterMember[]; unlinked: GuildRosterUnlinked[] };
+
+/** One crafter on a `GET /api/guild/crafters` recipe result, or the `crafters` count on a profession summary. */
+export type GuildCrafter = {
+  character: string;
+  member_id: number | null;
+  member_name: string | null;
+  profession: string;
+  skill: number;
+};
+
+/** One recipe match of `GET /api/guild/crafters`. */
+export type GuildCrafterResult = {
+  recipe_id: number;
+  recipe_name: string;
+  item_id: number | null;
+  crafters: GuildCrafter[];
+};
+
+/** One profession summary of `GET /api/guild/crafters`. */
+export type GuildCrafterProfession = { profession: string; crafters: number };
+
+/** `GET /api/guild/crafters?q=&profession=` (member). */
+export type GuildCrafters = { results: GuildCrafterResult[]; professions: GuildCrafterProfession[] };
+
+export type GuildNewsKind = "boss_kill" | "first_kill" | "loot" | "level" | "joined" | "announcement" | "badge";
+
+/** One row of `GET /api/guild/news`, newest first; mirrors the import string's `news` shape. */
+export type GuildNewsItem = {
+  id: string;
+  at: string;
+  kind: GuildNewsKind;
+  text: string;
+  character: string | null;
+  item_id: number | null;
+  quality: number | null;
+};
+
+export type GuildNews = { items: GuildNewsItem[] };
+
+export type GuildBankKind = "deposit" | "withdraw" | "move" | "repair" | "buy_tab" | "deposit_money" | "withdraw_money";
+
+/** One row of `GET /api/guild/bank`, newest first. */
+export type GuildBankRow = {
+  id: string;
+  at: string;
+  character: string;
+  member_name: string | null;
+  kind: GuildBankKind;
+  item_id: number | null;
+  item_name: string | null;
+  count: number | null;
+  money: number;
+  tab: number | null;
+};
+
+export type GuildBank = { rows: GuildBankRow[]; totals: { deposits_30d: number; withdrawals_30d: number } };
+
+/** One row of `GET /api/guild/announcements`, newest first (last 20). */
+export type GuildAnnouncement = {
+  id: string;
+  text: string;
+  author: string;
+  at: string;
+  source: "game" | "site";
+  posted_at: string | null;
+};
+
+export type GuildAnnouncements = { items: GuildAnnouncement[] };
+
+export type GuildAnnouncementCreate = { text: string; discord: boolean };
+
+export type EpgpRecruitStatus = "applicant" | "trial" | "accepted" | "declined";
+
+/** An officer's talked/gear_check/first_raid/vouched checklist on a recruit. */
+export type EpgpRecruitChecklist = { talked: boolean; gear_check: boolean; first_raid: boolean; vouched: boolean };
+
+export type EpgpRecruitVoteValue = "yes" | "no" | "wait";
+
+export type EpgpRecruitVote = { officer: string; vote: EpgpRecruitVoteValue; at: string };
+
+/** One row of `GET /api/epgp/recruits` (officer-only). */
+export type EpgpRecruit = {
+  id: string;
+  character: string;
+  class: string | null;
+  status: EpgpRecruitStatus;
+  note: string | null;
+  member_id: number | null;
+  checklist: EpgpRecruitChecklist;
+  votes: EpgpRecruitVote[];
+  at: string;
+};
+
+export type EpgpRecruits = { recruits: EpgpRecruit[] };
+
+export type EpgpRecruitUpdate = { status?: EpgpRecruitStatus; note?: string; checklist?: EpgpRecruitChecklist };
+
+export type EpgpRecruitVoteCreate = { vote: EpgpRecruitVoteValue };
+
+/** One row of `GET /api/epgp/member-notes?member_id=` (officer-only). */
+export type EpgpMemberNote = {
+  id: string;
+  character: string;
+  note: string;
+  officer: string;
+  at: string;
+  voided: boolean;
+};
+
+export type EpgpMemberNotes = { notes: EpgpMemberNote[] };
+
 /** Raised for any non-2xx/204 response; `status` 0 means the request never reached the network. */
 export class ApiError extends Error {
   status: number;

@@ -8,8 +8,12 @@ import type {
   Addon,
   AttendanceMark,
   AwayRange,
+  EpgpAdjustmentCreate,
+  EpgpCharacter,
+  EpgpRecruit,
   EventDetail,
   EventSummary,
+  GuildAnnouncement,
   HeroRow,
   Me,
   Recruiting,
@@ -19,14 +23,29 @@ import {
   ATTENDANCE_EVENTS,
   ATTENDANCE_REPORT,
   ATTENDANCE_TRENDS,
+  EPGP_CHARACTERS,
+  EPGP_LOOT,
+  EPGP_MEMBER_NOTES,
+  EPGP_PROGRESSION,
+  EPGP_RECRUITS,
+  EPGP_ROSTER,
+  EPGP_RULES,
+  EPGP_STANDINGS,
+  EPGP_SYNC_TOKENS,
   EVENTS,
   GM_MEMBERS,
+  GUILD_ANNOUNCEMENTS,
+  GUILD_BANK,
+  GUILD_CRAFTERS,
+  GUILD_NEWS,
+  GUILD_ROSTER,
   HEROES,
   LIVE,
   ONLINE,
   RECRUITING,
   SIGNUPS,
   attendanceDetail,
+  epgpImportResult,
   eventDetail,
   gmMemberDetail,
   heroLeaderboard,
@@ -67,6 +86,16 @@ export const test = base.extend<{ site: Site }>({
     // A per-test copy: the raid chart's PATCH handler mutates this, and a shared SIGNUPS array would leak those
     // group/bench changes into the next test.
     const signups = SIGNUPS.map((s) => Object.assign({}, s));
+    // Per-test copies, mutated by the officer sync console and the account page's character CRUD.
+    const epgpCharacters = EPGP_CHARACTERS.map((c) => Object.assign({}, c));
+    const epgpRoster = EPGP_ROSTER.map((m) => Object.assign({}, m));
+    const epgpSyncTokens = EPGP_SYNC_TOKENS.map((t) => Object.assign({}, t));
+    const epgpRecruits = EPGP_RECRUITS.map((r) =>
+      Object.assign({}, r, { checklist: { ...r.checklist }, votes: [...r.votes] }),
+    );
+    let guildAnnouncements = GUILD_ANNOUNCEMENTS.map((a) => Object.assign({}, a));
+    let myCharacters: EpgpCharacter[] = [];
+    let nextCharacterId = 100;
     const unmocked: string[] = [];
     const errors: string[] = [];
 
@@ -236,6 +265,237 @@ export const test = base.extend<{ site: Site }>({
         }
         const row = HEROES.find((h: HeroRow) => h.member_id === Number(heroMatch[1]));
         return row ? json(route, heroProfile(row)) : json(route, { detail: "No such member" }, 404);
+      }
+      if (path === "/api/epgp/standings" && method === "GET") {
+        return json(route, { generated_at: new Date().toISOString(), rules: EPGP_RULES, rows: EPGP_STANDINGS });
+      }
+      if (path === "/api/epgp/loot" && method === "GET") {
+        return json(route, { items: EPGP_LOOT });
+      }
+      if (path === "/api/epgp/progression" && method === "GET") {
+        return json(route, { instances: EPGP_PROGRESSION });
+      }
+      if (path === "/api/epgp/imports" && method === "POST") {
+        if (!me?.is_officer) {
+          return json(route, { detail: "Officers only" }, 401);
+        }
+        return json(route, epgpImportResult());
+      }
+      if (path === "/api/epgp/game-import" && method === "GET") {
+        if (!me?.is_officer) {
+          return json(route, { detail: "Officers only" }, 401);
+        }
+        return json(route, { payload: "SQI1:bW9jay1pbXBvcnQtc3RyaW5n", generated_at: new Date().toISOString() });
+      }
+      if (path === "/api/epgp/adjustments" && method === "POST") {
+        if (!me?.is_officer) {
+          return json(route, { detail: "Officers only" }, 401);
+        }
+        const body = JSON.parse(request.postData() ?? "{}") as EpgpAdjustmentCreate;
+        return json(route, {
+          id: `adjust-${Date.now()}`,
+          at: new Date().toISOString(),
+          kind: body.kind,
+          amount: body.amount,
+          decayed: body.amount,
+          reason: "adjust",
+          note: body.reason,
+          character: null,
+          member_id: body.member_id,
+          member_name: epgpRoster.find((m) => m.member_id === body.member_id)?.name ?? null,
+          officer: me.display_name,
+          item_name: null,
+          voided: false,
+        });
+      }
+      if (path === "/api/epgp/characters" && method === "GET") {
+        if (!me?.is_officer) {
+          return json(route, { detail: "Officers only" }, 401);
+        }
+        return json(route, { characters: epgpCharacters });
+      }
+      const epgpCharacterMatch = /^\/api\/epgp\/characters\/([^/]+)$/.exec(path);
+      if (epgpCharacterMatch && method === "PUT") {
+        if (!me?.is_officer) {
+          return json(route, { detail: "Officers only" }, 401);
+        }
+        const target = epgpCharacters.find((c) => c.id === epgpCharacterMatch[1]);
+        if (!target) {
+          return json(route, { detail: "No such character" }, 404);
+        }
+        const body = JSON.parse(request.postData() ?? "{}") as { member_id: number | null; is_main: boolean };
+        target.member_id = body.member_id;
+        target.member_name = epgpRoster.find((m) => m.member_id === body.member_id)?.name ?? null;
+        target.is_main = body.is_main;
+        return json(route, target);
+      }
+      if (path === "/api/epgp/roster" && method === "GET") {
+        if (!me?.is_officer) {
+          return json(route, { detail: "Officers only" }, 401);
+        }
+        return json(route, { members: epgpRoster });
+      }
+      const epgpRosterMatch = /^\/api\/epgp\/roster\/(\d+)$/.exec(path);
+      if (epgpRosterMatch && method === "PUT") {
+        if (!me?.is_officer) {
+          return json(route, { detail: "Officers only" }, 401);
+        }
+        const target = epgpRoster.find((m) => m.member_id === Number(epgpRosterMatch[1]));
+        if (!target) {
+          return json(route, { detail: "No such member" }, 404);
+        }
+        const body = JSON.parse(request.postData() ?? "{}") as { raid_status: "trial" | "raider" | null };
+        target.raid_status = body.raid_status;
+        target.trial_started_at = body.raid_status === "trial" ? new Date().toISOString() : null;
+        return json(route, target);
+      }
+      if (path === "/api/epgp/sync-tokens" && method === "GET") {
+        if (!me?.is_officer) {
+          return json(route, { detail: "Officers only" }, 401);
+        }
+        return json(route, { tokens: epgpSyncTokens });
+      }
+      if (path === "/api/epgp/sync-tokens" && method === "POST") {
+        if (!me?.is_officer) {
+          return json(route, { detail: "Officers only" }, 401);
+        }
+        const body = JSON.parse(request.postData() ?? "{}") as { name: string };
+        const id = `token-${epgpSyncTokens.length + 1}`;
+        epgpSyncTokens.push({ id, name: body.name, created_at: new Date().toISOString(), last_used_at: null });
+        return json(route, { id, name: body.name, token: `sqs_${"x".repeat(40)}` }, 201);
+      }
+      const epgpTokenDeleteMatch = /^\/api\/epgp\/sync-tokens\/([^/]+)$/.exec(path);
+      if (epgpTokenDeleteMatch && method === "DELETE") {
+        if (!me?.is_officer) {
+          return json(route, { detail: "Officers only" }, 401);
+        }
+        const index = epgpSyncTokens.findIndex((t) => t.id === epgpTokenDeleteMatch[1]);
+        if (index === -1) {
+          return json(route, { detail: "No such token" }, 404);
+        }
+        epgpSyncTokens.splice(index, 1);
+        return route.fulfill({ status: 204 });
+      }
+      if (path === "/api/guild/roster" && method === "GET") {
+        if (!me?.is_guild_member) {
+          return json(route, { detail: "Not signed in" }, 401);
+        }
+        return json(route, GUILD_ROSTER);
+      }
+      if (path === "/api/guild/crafters" && method === "GET") {
+        if (!me?.is_guild_member) {
+          return json(route, { detail: "Not signed in" }, 401);
+        }
+        return json(route, GUILD_CRAFTERS);
+      }
+      if (path === "/api/guild/news" && method === "GET") {
+        return json(route, { items: GUILD_NEWS });
+      }
+      if (path === "/api/guild/bank" && method === "GET") {
+        if (!me?.is_guild_member) {
+          return json(route, { detail: "Not signed in" }, 401);
+        }
+        return json(route, { rows: GUILD_BANK, totals: { deposits_30d: 4, withdrawals_30d: 1 } });
+      }
+      if (path === "/api/guild/announcements" && method === "GET") {
+        return json(route, { items: guildAnnouncements });
+      }
+      if (path === "/api/guild/announcements" && method === "POST") {
+        if (!me?.is_officer) {
+          return json(route, { detail: "Officers only" }, 401);
+        }
+        const body = JSON.parse(request.postData() ?? "{}") as { text: string; discord: boolean };
+        const created: GuildAnnouncement = {
+          id: `ann-${guildAnnouncements.length + 1}`,
+          text: body.text,
+          author: me.display_name,
+          at: new Date().toISOString(),
+          source: "site",
+          posted_at: body.discord ? null : null,
+        };
+        guildAnnouncements = [created, ...guildAnnouncements];
+        return json(route, created, 201);
+      }
+      if (path === "/api/epgp/recruits" && method === "GET") {
+        if (!me?.is_officer) {
+          return json(route, { detail: "Officers only" }, 401);
+        }
+        return json(route, { recruits: epgpRecruits });
+      }
+      const recruitMatch = /^\/api\/epgp\/recruits\/([^/]+)$/.exec(path);
+      if (recruitMatch && method === "PUT") {
+        if (!me?.is_officer) {
+          return json(route, { detail: "Officers only" }, 401);
+        }
+        const target = epgpRecruits.find((r) => r.id === recruitMatch[1]);
+        if (!target) {
+          return json(route, { detail: "No such recruit" }, 404);
+        }
+        const body = JSON.parse(request.postData() ?? "{}") as Partial<EpgpRecruit>;
+        Object.assign(target, body);
+        return json(route, target);
+      }
+      const recruitVoteMatch = /^\/api\/epgp\/recruits\/([^/]+)\/votes$/.exec(path);
+      if (recruitVoteMatch && method === "POST") {
+        if (!me?.is_officer) {
+          return json(route, { detail: "Officers only" }, 401);
+        }
+        const target = epgpRecruits.find((r) => r.id === recruitVoteMatch[1]);
+        if (!target) {
+          return json(route, { detail: "No such recruit" }, 404);
+        }
+        const body = JSON.parse(request.postData() ?? "{}") as { vote: "yes" | "no" | "wait" };
+        target.votes = [
+          ...target.votes.filter((v) => v.officer !== me?.display_name),
+          { officer: me.display_name, vote: body.vote, at: new Date().toISOString() },
+        ];
+        return json(route, target);
+      }
+      if (path === "/api/epgp/member-notes" && method === "GET") {
+        if (!me?.is_officer) {
+          return json(route, { detail: "Officers only" }, 401);
+        }
+        const memberId = Number(url.searchParams.get("member_id"));
+        return json(route, { notes: EPGP_MEMBER_NOTES[memberId] ?? [] });
+      }
+      if (path === "/api/me/characters" && method === "GET") {
+        if (!me) {
+          return json(route, { detail: "Not signed in" }, 401);
+        }
+        return json(route, { characters: myCharacters });
+      }
+      if (path === "/api/me/characters" && method === "POST") {
+        if (!me) {
+          return json(route, { detail: "Not signed in" }, 401);
+        }
+        const body = JSON.parse(request.postData() ?? "{}") as { name: string; realm?: string; class?: string };
+        if (epgpCharacters.some((c) => c.name.toLowerCase() === body.name.toLowerCase() && c.member_id !== me?.id)) {
+          return json(route, { detail: "Another member already has that character." }, 409);
+        }
+        const created: EpgpCharacter = {
+          id: `char-me-${nextCharacterId++}`,
+          name: body.name,
+          realm: body.realm ?? "Whitemane",
+          class: body.class ?? null,
+          member_id: me.id,
+          member_name: me.display_name,
+          is_main: myCharacters.length === 0,
+          source: "claim",
+          last_seen_at: null,
+        };
+        myCharacters = [...myCharacters, created];
+        return json(route, created, 201);
+      }
+      const myCharacterDeleteMatch = /^\/api\/me\/characters\/([^/]+)$/.exec(path);
+      if (myCharacterDeleteMatch && method === "DELETE") {
+        if (!me) {
+          return json(route, { detail: "Not signed in" }, 401);
+        }
+        if (!myCharacters.some((c) => c.id === myCharacterDeleteMatch[1])) {
+          return json(route, { detail: "No such character" }, 404);
+        }
+        myCharacters = myCharacters.filter((c) => c.id !== myCharacterDeleteMatch[1]);
+        return route.fulfill({ status: 204 });
       }
     });
     // Sign-in leaves the site (the real server redirects to Discord): a stub shows the browser really loaded it.

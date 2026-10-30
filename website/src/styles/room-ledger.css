@@ -1,0 +1,220 @@
+/* The Great Hall: the public EPGP ledger — standings, the current loot rules, recent loot and progression. */
+
+/* ——— Standings table: scrolls inside its own frame rather than the whole page, like the attendance report ——— */
+.ledger-table-wrap {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  overflow-x: auto;
+  margin-top: clamp(18px, 1.8vw, 24px);
+}
+.ledger-table {
+  width: 100%;
+  min-width: 460px;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.ledger-table th,
+.ledger-table td {
+  padding: 10px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--stone-2);
+  vertical-align: middle;
+}
+.ledger-table th {
+  font-family: var(--display);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--mist-2);
+}
+.ledger-table td {
+  color: var(--ink);
+}
+.ledger-table td.num {
+  font-variant-numeric: tabular-nums lining-nums;
+  text-align: right;
+}
+.ledger-table td.pr {
+  color: var(--gold);
+}
+.ledger-table tr.is-you {
+  background: linear-gradient(90deg, rgba(46, 74, 133, 0.42), rgba(46, 74, 133, 0.08));
+}
+.ledger-name {
+  font-family: var(--serif);
+}
+.ledger-name a {
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: var(--gold-2);
+  text-underline-offset: 3px;
+  transition: color 0.3s;
+}
+.ledger-name a:hover,
+.ledger-name a:focus-visible {
+  color: var(--gold);
+}
+.trial-tag {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 8px;
+  border: 1px solid var(--gold-2);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+.ledger-empty {
+  text-align: center;
+  color: var(--mist-2);
+}
+.ledger-table .ledger-empty {
+  padding: 24px 12px;
+}
+
+/* ——— Rules: EP / GP-by-slot side by side on wide screens, plus a wide strip of general numbers ——— */
+.rules-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: clamp(24px, 2.4vw, 40px);
+  margin-top: clamp(14px, 1.6vw, 20px);
+}
+@media (max-width: 760px) {
+  .rules-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.rules-list {
+  display: grid;
+  gap: 2px;
+  margin-top: 10px;
+}
+.rules-list > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 2px;
+  border-bottom: 1px solid var(--stone-2);
+}
+.rules-list dt {
+  color: var(--mist);
+}
+.rules-list dd {
+  margin: 0;
+  color: var(--gold);
+  font-variant-numeric: tabular-nums lining-nums;
+  white-space: nowrap;
+}
+.rules-list-wide {
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 0 24px;
+  margin-top: clamp(24px, 2.4vw, 36px);
+}
+
+/* ——— Recent loot: a compact list of rows, item-quality colored ——— */
+.loot-list {
+  display: grid;
+  gap: 10px;
+  margin-top: clamp(18px, 1.8vw, 24px);
+}
+.loot-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1.6fr) auto;
+  align-items: center;
+  gap: 8px 18px;
+  padding: 10px 14px;
+  border: 1px solid var(--stone-2);
+  background: rgba(10, 16, 29, 0.4);
+}
+.loot-row.is-voided {
+  opacity: 0.45;
+  text-decoration: line-through;
+}
+.loot-item {
+  font-family: var(--serif);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.loot-item.q-common {
+  color: var(--q-common);
+}
+.loot-item.q-uncommon {
+  color: var(--q-uncommon);
+}
+.loot-item.q-rare {
+  color: var(--q-rare);
+}
+.loot-item.q-epic {
+  color: var(--q-epic);
+}
+.loot-winner {
+  color: var(--ink);
+}
+.loot-meta {
+  color: var(--mist-2);
+  font-size: 13px;
+}
+.loot-when {
+  color: var(--mist-2);
+  font-size: 12px;
+  text-align: right;
+  white-space: nowrap;
+}
+@media (max-width: 680px) {
+  .loot-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "item when"
+      "winner winner"
+      "meta meta";
+    row-gap: 4px;
+  }
+  .loot-item {
+    grid-area: item;
+  }
+  .loot-when {
+    grid-area: when;
+  }
+  .loot-winner {
+    grid-area: winner;
+  }
+  .loot-meta {
+    grid-area: meta;
+  }
+}
+
+/* ——— Progression: one sub-chamber per instance, a flat list of encounter rows ——— */
+.chamber-sub + .chamber-sub {
+  margin-top: clamp(32px, 3vw, 48px);
+}
+.progression-size {
+  font-size: 13px;
+  color: var(--mist-2);
+  text-transform: none;
+  letter-spacing: normal;
+}
+.progression-list {
+  display: grid;
+  gap: 2px;
+  margin-top: 10px;
+}
+.progression-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 16px;
+  padding: 8px 2px;
+  border-bottom: 1px solid var(--stone-2);
+}
+.progression-row.is-open .progression-meta {
+  color: var(--gold);
+}
+.progression-name {
+  font-family: var(--serif);
+  color: var(--ink);
+}
+.progression-meta {
+  color: var(--mist-2);
+  font-size: 13px;
+}

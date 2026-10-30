@@ -26,6 +26,8 @@ const STALE_FIRST = [
   { page: /^\/events\/detail\/$/, data: /^\/api\/events\/[^/]+$/ },
   { page: /^\/raids\/$/, data: /^\/api\/events$/ },
   { page: /^\/addons\/$/, data: /^\/api\/addons$/ },
+  { page: /^\/ledger\/$/, data: /^\/api\/epgp\/(standings|loot|progression)$/ },
+  { page: /^\/guild\/$/, data: /^\/api\/guild\/(roster|news)$/ },
 ];
 
 // Bumped by every change (sign-up, sign-out, edit): a refresh that started before it must not store the old answer.

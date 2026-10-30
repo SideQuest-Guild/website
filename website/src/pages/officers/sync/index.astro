@@ -1,0 +1,853 @@
+---
+import Room from "../../../layouts/Room.astro";
+import roundTable from "../../../../assets/rooms/round-table.webp";
+import "../../../styles/room-officers-sync.css";
+---
+
+<Room
+  title="Sync · Officers · SideQuest"
+  description="Import raid nights from the SideQuest addon, link characters to members, manage the raid roster and sync tokens, and push manual EP/GP adjustments."
+  heading="SYNC"
+  lede="Bring the addon's raid record to the site, and push the ledger and rules back into the game."
+  art={roundTable}
+  current="officers"
+>
+  <p class="status" id="sync-status" role="status" aria-live="polite"></p>
+
+  <div id="sync-gate" hidden>
+    <p class="chamber-intro">
+      This page is for SideQuest officers. Sign in with Discord on the <a href="/account/">account page</a> if you hold
+      an officer role.
+    </p>
+  </div>
+
+  <div id="sync-body" hidden>
+    <div class="chamber-pair">
+      <form id="import-form" class="chamber form">
+        <h2 class="chamber-title">Import a raid night</h2>
+        <p class="aside">
+          Paste the <code>SQX1:</code> export string from <code>/sq export</code>, or pick the SavedVariables file (
+          <code>WTF/Account/&lt;account&gt;/SavedVariables/SideQuest.lua</code>) and its last export is read for you.
+        </p>
+        <div class="field">
+          <label for="import-file">SavedVariables file</label>
+          <input id="import-file" type="file" accept=".lua,text/plain" />
+        </div>
+        <div class="field">
+          <label for="import-payload">Export string</label>
+          <textarea id="import-payload" rows="6" placeholder="SQX1:..."></textarea>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn" id="import-submit">
+            Import
+          </button>
+        </div>
+        <p class="status" id="import-status" role="status" aria-live="polite"></p>
+        <div id="import-result" class="import-result" hidden></div>
+      </form>
+      <div class="chamber">
+        <h2 class="chamber-title">Game import string</h2>
+        <p class="aside">
+          Copy this and paste it into <code>/sq import</code> in game to push standings, the loot rules and the upcoming
+          schedule to the addon.
+        </p>
+        <div class="form-actions">
+          <button type="button" class="btn" id="game-import-copy">
+            Copy game import string
+          </button>
+        </div>
+        <p class="status" id="game-import-status" role="status" aria-live="polite"></p>
+      </div>
+    </div>
+
+    <div class="chamber-pair">
+      <div class="chamber">
+        <h2 class="chamber-title">Characters</h2>
+        <p class="aside">Link each character to the member who plays it, and mark one per member as their main.</p>
+        <ul class="item-list sync-list" id="characters-list" aria-label="Characters"></ul>
+      </div>
+      <div class="chamber">
+        <h2 class="chamber-title">Raid roster</h2>
+        <p class="aside">Trials bid behind raiders for their first 14 days.</p>
+        <ul class="item-list sync-list" id="roster-list" aria-label="Raid roster"></ul>
+      </div>
+    </div>
+
+    <div class="chamber-pair">
+      <div class="chamber">
+        <h2 class="chamber-title">Sync tokens</h2>
+        <p class="aside">
+          For the <code>sidequest-sync</code> uploader. Create a token below, then run:
+        </p>
+        <pre class="code-block">uvx --from git+https://github.com/JacobCoffee/sidequest-addon#subdirectory=uploader sidequest-sync login</pre>
+        <form id="token-form" class="form-row">
+          <div class="field">
+            <label for="token-name">Name</label>
+            <input id="token-name" maxlength="80" placeholder="e.g. my laptop" required />
+          </div>
+          <button type="submit" class="btn-quiet" id="token-create">
+            Create token
+          </button>
+        </form>
+        <p class="status" id="token-status" role="status" aria-live="polite"></p>
+        <div id="token-reveal" class="token-reveal" hidden></div>
+        <ul class="item-list sync-list" id="token-list" aria-label="Sync tokens"></ul>
+      </div>
+
+      <form id="adjust-form" class="chamber form">
+        <h2 class="chamber-title">Manual adjustment</h2>
+        <p class="aside">
+          Direct EP/GP changes, e.g. correcting a missed award. Shows on the member's ledger with reason "adjust".
+        </p>
+        <div class="form-row">
+          <div class="field">
+            <label for="adj-member">Member</label>
+            <select id="adj-member" required></select>
+          </div>
+          <div class="field">
+            <label for="adj-kind">Kind</label>
+            <select id="adj-kind">
+              <option value="ep">EP</option>
+              <option value="gp">GP</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="adj-amount">Amount</label>
+            <input id="adj-amount" type="number" step="1" min="-1000" max="1000" required />
+          </div>
+        </div>
+        <div class="field">
+          <label for="adj-reason">Reason</label>
+          <input id="adj-reason" maxlength="200" required />
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn" id="adj-submit">
+            Apply adjustment
+          </button>
+        </div>
+        <p class="status" id="adjust-status" role="status" aria-live="polite"></p>
+      </form>
+    </div>
+
+    <div class="chamber">
+      <h2 class="chamber-title">Recruits</h2>
+      <p class="aside">
+        Applicants and trials the addon has recorded, with each officer's vote. Votes and checklist items come in from
+        the game too; changes here sync back on the next export.
+      </p>
+      <ul class="item-list sync-list" id="recruits-list" aria-label="Recruits"></ul>
+    </div>
+
+    <div class="chamber">
+      <h2 class="chamber-title">Member notes</h2>
+      <p class="aside">
+        Officer-only notes recorded in game and synced here on the next import; the site doesn't write new ones.
+      </p>
+      <div class="field">
+        <label for="notes-member">Member</label>
+        <select id="notes-member"></select>
+      </div>
+      <ul class="item-list sync-list" id="member-notes-list" aria-label="Notes for this member"></ul>
+    </div>
+
+    <div class="chamber-pair">
+      <form id="announcement-form" class="chamber form">
+        <h2 class="chamber-title">Announcement</h2>
+        <p class="aside">Posts to every member's in-game news feed. Shows up here and on the Guild page.</p>
+        <div class="field">
+          <label for="announcement-text">Text</label>
+          <textarea id="announcement-text" rows="4" maxlength="500" required></textarea>
+        </div>
+        <label class="announcement-discord-toggle">
+          <input type="checkbox" id="announcement-discord" />
+          Also post to Discord
+        </label>
+        <div class="form-actions">
+          <button type="submit" class="btn" id="announcement-submit">
+            Post announcement
+          </button>
+        </div>
+        <p class="status" id="announcement-status" role="status" aria-live="polite"></p>
+      </form>
+      <div class="chamber">
+        <h2 class="chamber-title">Recent announcements</h2>
+        <ul class="item-list sync-list" id="announcements-list" aria-label="Recent announcements"></ul>
+      </div>
+    </div>
+  </div>
+
+  <noscript>
+    <p class="aside">Enable JavaScript to use the sync console.</p>
+  </noscript>
+</Room>
+
+<script>
+  import {
+    ApiError,
+    apiFetch,
+    classLabel,
+    escapeHtml,
+    fetchMe,
+    normalizeClass,
+    requireElement,
+    statusMessage,
+    type EpgpAdjustmentCreate,
+    type EpgpCharacter,
+    type EpgpCharacters,
+    type EpgpGameImport,
+    type EpgpImportResult,
+    type EpgpMemberNote,
+    type EpgpMemberNotes,
+    type EpgpRecruit,
+    type EpgpRecruitChecklist,
+    type EpgpRecruits,
+    type EpgpRoster,
+    type EpgpRosterMember,
+    type EpgpRosterStatus,
+    type EpgpSyncToken,
+    type EpgpSyncTokenCreated,
+    type EpgpSyncTokens,
+    type GuildAnnouncement,
+    type GuildAnnouncements,
+    type Me,
+  } from "../../../scripts/api";
+  import { onPage } from "../../../scripts/page";
+
+  const SQX_PATTERN = /SQX1:[A-Za-z0-9+/=]+/;
+
+  function charClassSpan(cls: string | null): string {
+    const normalized = normalizeClass(cls);
+    return `<span class="${normalized ? `cls-${normalized}` : ""}">${escapeHtml(classLabel(cls))}</span>`;
+  }
+
+  function memberOptions(members: EpgpRosterMember[], selected: number | null): string {
+    const unlinked = `<option value="" ${selected === null ? "selected" : ""}>Unlinked</option>`;
+    const options = members
+      .map(
+        (m) =>
+          `<option value="${m.member_id}" ${m.member_id === selected ? "selected" : ""}>${escapeHtml(m.name)}</option>`,
+      )
+      .join("");
+    return unlinked + options;
+  }
+
+  function characterRow(character: EpgpCharacter, members: EpgpRosterMember[]): string {
+    return `
+      <li class="sync-row" data-character-id="${character.id}">
+        <span class="sync-row-main">
+          <span class="item-title">${escapeHtml(`${character.name}-${character.realm}`)}</span>
+          <span class="item-meta">${charClassSpan(character.class)} \u00b7 ${escapeHtml(character.source)}</span>
+        </span>
+        <label class="sync-main-toggle">
+          <input type="checkbox" data-char-main ${character.is_main ? "checked" : ""} />
+          Main
+        </label>
+        <select data-char-member aria-label="Member for ${escapeHtml(character.name)}">
+          ${memberOptions(members, character.member_id)}
+        </select>
+      </li>`;
+  }
+
+  function rosterStatusOptions(status: EpgpRosterStatus): string {
+    return `
+      <option value="" ${status === null ? "selected" : ""}>None</option>
+      <option value="raider" ${status === "raider" ? "selected" : ""}>Raider</option>
+      <option value="trial" ${status === "trial" ? "selected" : ""}>Trial</option>`;
+  }
+
+  function rosterRow(member: EpgpRosterMember): string {
+    const trialNote =
+      member.raid_status === "trial" && member.trial_started_at
+        ? `<span class="item-meta">Trial since ${new Date(member.trial_started_at).toLocaleDateString()}</span>`
+        : "";
+    return `
+      <li class="sync-row" data-member-id="${member.member_id}">
+        <span class="sync-row-main">
+          <span class="item-title">${escapeHtml(member.name)}</span>
+          ${trialNote}
+        </span>
+        <select data-roster-status aria-label="Raid status for ${escapeHtml(member.name)}">
+          ${rosterStatusOptions(member.raid_status)}
+        </select>
+      </li>`;
+  }
+
+  function tokenRow(token: EpgpSyncToken): string {
+    const lastUsed = token.last_used_at
+      ? `Last used ${new Date(token.last_used_at).toLocaleDateString()}`
+      : "Never used";
+    return `
+      <li class="sync-row" data-token-id="${token.id}">
+        <span class="sync-row-main">
+          <span class="item-title">${escapeHtml(token.name)}</span>
+          <span class="item-meta">Created ${new Date(token.created_at).toLocaleDateString()} \u00b7 ${lastUsed}</span>
+        </span>
+        <button type="button" class="btn-quiet btn-small btn-danger" data-revoke-token="${token.id}">
+          Revoke
+        </button>
+      </li>`;
+  }
+
+  const RECRUIT_CHECKLIST: [keyof EpgpRecruitChecklist, string][] = [
+    ["talked", "Talked"],
+    ["gear_check", "Gear check"],
+    ["first_raid", "First raid"],
+    ["vouched", "Vouched"],
+  ];
+
+  function voteSummary(recruit: EpgpRecruit): string {
+    return recruit.votes.length > 0 ? recruit.votes.map((v) => `${v.officer}: ${v.vote}`).join(", ") : "No votes yet";
+  }
+
+  function recruitRow(r: EpgpRecruit): string {
+    const checklist = RECRUIT_CHECKLIST.map(
+      ([key, label]) => `
+        <label class="recruit-checklist-item">
+          <input type="checkbox" data-recruit-checklist="${key}" ${r.checklist[key] ? "checked" : ""} />
+          ${label}
+        </label>`,
+    ).join("");
+    return `
+      <li class="sync-row recruit-row-sync" data-recruit-id="${r.id}">
+        <span class="sync-row-main">
+          <span class="item-title">${charClassSpan(r.class)} ${escapeHtml(r.character)}</span>
+          <span class="item-meta">${r.note ? escapeHtml(r.note) : "No note"}</span>
+          <span class="item-meta">${escapeHtml(voteSummary(r))}</span>
+          <span class="recruit-checklist">${checklist}</span>
+        </span>
+        <span class="recruit-actions">
+          <select data-recruit-status aria-label="Status for ${escapeHtml(r.character)}">
+            <option value="applicant" ${r.status === "applicant" ? "selected" : ""}>Applicant</option>
+            <option value="trial" ${r.status === "trial" ? "selected" : ""}>Trial</option>
+            <option value="accepted" ${r.status === "accepted" ? "selected" : ""}>Accepted</option>
+            <option value="declined" ${r.status === "declined" ? "selected" : ""}>Declined</option>
+          </select>
+          <span class="recruit-vote-buttons">
+            <button type="button" class="btn-quiet btn-small" data-recruit-vote="yes">Yes</button>
+            <button type="button" class="btn-quiet btn-small" data-recruit-vote="no">No</button>
+            <button type="button" class="btn-quiet btn-small" data-recruit-vote="wait">Wait</button>
+          </span>
+        </span>
+      </li>`;
+  }
+
+  function memberNoteRow(n: EpgpMemberNote): string {
+    return `
+      <li class="sync-row" data-note-id="${n.id}">
+        <span class="sync-row-main">
+          <span class="item-title">${escapeHtml(n.note)}</span>
+          <span class="item-meta">${escapeHtml(n.character)} \u00b7 ${escapeHtml(n.officer)} \u00b7 ${new Date(n.at).toLocaleDateString()}</span>
+        </span>
+      </li>`;
+  }
+
+  function announcementRow(a: GuildAnnouncement): string {
+    const posted = a.posted_at
+      ? `Posted ${new Date(a.posted_at).toLocaleString()}`
+      : a.source === "game"
+        ? "Queued for Discord"
+        : "Not sent to Discord";
+    return `
+      <li class="sync-row" data-announcement-id="${a.id}">
+        <span class="sync-row-main">
+          <span class="item-title">${escapeHtml(a.text)}</span>
+          <span class="item-meta">${escapeHtml(a.author)} \u00b7 ${new Date(a.at).toLocaleString()} \u00b7 ${escapeHtml(posted)}</span>
+        </span>
+      </li>`;
+  }
+
+  onPage("#sync-body", (signal) => {
+    const statusEl = requireElement("sync-status");
+    const gateEl = requireElement("sync-gate");
+    const bodyEl = requireElement("sync-body");
+
+    const importForm = requireElement<HTMLFormElement>("import-form");
+    const importFileEl = requireElement<HTMLInputElement>("import-file");
+    const importPayloadEl = requireElement<HTMLTextAreaElement>("import-payload");
+    const importStatusEl = requireElement("import-status");
+    const importResultEl = requireElement("import-result");
+
+    const gameImportCopyBtn = requireElement<HTMLButtonElement>("game-import-copy");
+    const gameImportStatusEl = requireElement("game-import-status");
+
+    const charactersListEl = requireElement("characters-list");
+    const rosterListEl = requireElement("roster-list");
+
+    const tokenForm = requireElement<HTMLFormElement>("token-form");
+    const tokenNameEl = requireElement<HTMLInputElement>("token-name");
+    const tokenStatusEl = requireElement("token-status");
+    const tokenRevealEl = requireElement("token-reveal");
+    const tokenListEl = requireElement("token-list");
+
+    const adjustForm = requireElement<HTMLFormElement>("adjust-form");
+    const adjMemberEl = requireElement<HTMLSelectElement>("adj-member");
+    const adjKindEl = requireElement<HTMLSelectElement>("adj-kind");
+    const adjAmountEl = requireElement<HTMLInputElement>("adj-amount");
+    const adjReasonEl = requireElement<HTMLInputElement>("adj-reason");
+    const adjustStatusEl = requireElement("adjust-status");
+
+    const recruitsListEl = requireElement("recruits-list");
+
+    const notesMemberEl = requireElement<HTMLSelectElement>("notes-member");
+    const memberNotesListEl = requireElement("member-notes-list");
+
+    const announcementForm = requireElement<HTMLFormElement>("announcement-form");
+    const announcementTextEl = requireElement<HTMLTextAreaElement>("announcement-text");
+    const announcementDiscordEl = requireElement<HTMLInputElement>("announcement-discord");
+    const announcementStatusEl = requireElement("announcement-status");
+    const announcementsListEl = requireElement("announcements-list");
+
+    let rosterMembers: EpgpRosterMember[] = [];
+    let recruits: EpgpRecruit[] = [];
+
+    function renderImportResult(result: EpgpImportResult): void {
+      const lines = [
+        `Sessions: ${result.sessions.new} new, ${result.sessions.updated} updated`,
+        `Encounters: ${result.encounters.new} new, ${result.encounters.updated} updated`,
+        `Loot: ${result.loot.new} new, ${result.loot.updated} updated, ${result.loot.voided} voided`,
+        `Awards: ${result.awards.new} new, ${result.awards.updated} updated, ${result.awards.voided} voided`,
+        `Attendance: ${result.attendance.marked} marked${result.attendance.event_id ? "" : " (no linked event)"}`,
+      ];
+      const conflicts =
+        result.conflicts.length > 0
+          ? `<p class="aside" data-tone="error">Skipped overlapping sessions (recorded by another officer that night): ${result.conflicts.map(escapeHtml).join(", ")}</p>`
+          : "";
+      const unlinked =
+        result.unlinked_characters.length > 0
+          ? `<p class="aside">Unlinked characters: ${result.unlinked_characters.map(escapeHtml).join(", ")}. Link them below.</p>`
+          : "";
+      importResultEl.innerHTML = `
+        <p>Imported from ${escapeHtml(result.recorder)}.</p>
+        <ul class="import-result-list">${lines.map((line) => `<li>${escapeHtml(line)}</li>`).join("")}</ul>
+        ${conflicts}
+        ${unlinked}`;
+      importResultEl.hidden = false;
+    }
+
+    async function loadCharacters(): Promise<void> {
+      try {
+        const data = await apiFetch<EpgpCharacters>("/api/epgp/characters", { signal });
+        charactersListEl.innerHTML =
+          data.characters.length > 0
+            ? data.characters.map((c) => characterRow(c, rosterMembers)).join("")
+            : `<li class="ledger-empty">No characters yet. They show up once an officer imports a raid night.</li>`;
+      } catch (err) {
+        charactersListEl.innerHTML = `<li class="ledger-empty">${escapeHtml(statusMessage(err))}</li>`;
+      }
+    }
+
+    async function loadRoster(): Promise<void> {
+      try {
+        const data = await apiFetch<EpgpRoster>("/api/epgp/roster", { signal });
+        rosterMembers = data.members;
+        rosterListEl.innerHTML =
+          rosterMembers.length > 0
+            ? rosterMembers.map(rosterRow).join("")
+            : `<li class="ledger-empty">No guild members yet.</li>`;
+        adjMemberEl.innerHTML = rosterMembers
+          .map((m) => `<option value="${m.member_id}">${escapeHtml(m.name)}</option>`)
+          .join("");
+        notesMemberEl.innerHTML = rosterMembers
+          .map((m) => `<option value="${m.member_id}">${escapeHtml(m.name)}</option>`)
+          .join("");
+        await Promise.all([loadCharacters(), loadMemberNotes()]);
+      } catch (err) {
+        rosterListEl.innerHTML = `<li class="ledger-empty">${escapeHtml(statusMessage(err))}</li>`;
+      }
+    }
+
+    async function loadTokens(): Promise<void> {
+      try {
+        const data = await apiFetch<EpgpSyncTokens>("/api/epgp/sync-tokens", { signal });
+        tokenListEl.innerHTML =
+          data.tokens.length > 0
+            ? data.tokens.map(tokenRow).join("")
+            : `<li class="ledger-empty">No sync tokens yet.</li>`;
+      } catch (err) {
+        tokenListEl.innerHTML = `<li class="ledger-empty">${escapeHtml(statusMessage(err))}</li>`;
+      }
+    }
+
+    async function loadMemberNotes(): Promise<void> {
+      const memberId = notesMemberEl.value;
+      if (!memberId) {
+        memberNotesListEl.innerHTML = `<li class="ledger-empty">No guild members yet.</li>`;
+        return;
+      }
+      try {
+        const data = await apiFetch<EpgpMemberNotes>(`/api/epgp/member-notes?member_id=${memberId}`, { signal });
+        const live = data.notes.filter((n) => !n.voided);
+        memberNotesListEl.innerHTML =
+          live.length > 0
+            ? live.map(memberNoteRow).join("")
+            : `<li class="ledger-empty">No notes for this member yet.</li>`;
+      } catch (err) {
+        memberNotesListEl.innerHTML = `<li class="ledger-empty">${escapeHtml(statusMessage(err))}</li>`;
+      }
+    }
+
+    notesMemberEl.addEventListener("change", () => void loadMemberNotes(), { signal });
+
+    function renderRecruits(): void {
+      recruitsListEl.innerHTML =
+        recruits.length > 0 ? recruits.map(recruitRow).join("") : `<li class="ledger-empty">No recruits yet.</li>`;
+    }
+
+    async function loadRecruits(): Promise<void> {
+      try {
+        const data = await apiFetch<EpgpRecruits>("/api/epgp/recruits", { signal });
+        recruits = data.recruits;
+        renderRecruits();
+      } catch (err) {
+        recruitsListEl.innerHTML = `<li class="ledger-empty">${escapeHtml(statusMessage(err))}</li>`;
+      }
+    }
+
+    recruitsListEl.addEventListener(
+      "change",
+      async (event) => {
+        const target = event.target as HTMLElement;
+        const row = target.closest<HTMLLIElement>("[data-recruit-id]");
+        if (!row?.dataset.recruitId) {
+          return;
+        }
+        const id = row.dataset.recruitId;
+        try {
+          if (target.matches("[data-recruit-status]")) {
+            const select = target as HTMLSelectElement;
+            const updated = await apiFetch<EpgpRecruit>(`/api/epgp/recruits/${id}`, {
+              method: "PUT",
+              body: JSON.stringify({ status: select.value }),
+            });
+            recruits = recruits.map((r) => (r.id === id ? updated : r));
+            statusEl.dataset.tone = "";
+            statusEl.textContent = "Recruit updated.";
+            renderRecruits();
+          } else if (target.matches("[data-recruit-checklist]")) {
+            const checkbox = target as HTMLInputElement;
+            const recruit = recruits.find((r) => r.id === id);
+            if (!recruit) {
+              return;
+            }
+            const key = checkbox.dataset.recruitChecklist as keyof EpgpRecruitChecklist;
+            const checklist = { ...recruit.checklist, [key]: checkbox.checked };
+            const updated = await apiFetch<EpgpRecruit>(`/api/epgp/recruits/${id}`, {
+              method: "PUT",
+              body: JSON.stringify({ checklist }),
+            });
+            recruits = recruits.map((r) => (r.id === id ? updated : r));
+            renderRecruits();
+          }
+        } catch (err) {
+          statusEl.dataset.tone = "error";
+          statusEl.textContent = statusMessage(err);
+        }
+      },
+      { signal },
+    );
+
+    recruitsListEl.addEventListener(
+      "click",
+      async (event) => {
+        const btn = (event.target as HTMLElement).closest<HTMLButtonElement>("[data-recruit-vote]");
+        const row = btn?.closest<HTMLLIElement>("[data-recruit-id]");
+        if (!btn?.dataset.recruitVote || !row?.dataset.recruitId) {
+          return;
+        }
+        const id = row.dataset.recruitId;
+        btn.disabled = true;
+        try {
+          const updated = await apiFetch<EpgpRecruit>(`/api/epgp/recruits/${id}/votes`, {
+            method: "POST",
+            body: JSON.stringify({ vote: btn.dataset.recruitVote }),
+          });
+          recruits = recruits.map((r) => (r.id === id ? updated : r));
+          statusEl.dataset.tone = "";
+          statusEl.textContent = "Vote recorded.";
+          renderRecruits();
+        } catch (err) {
+          statusEl.dataset.tone = "error";
+          statusEl.textContent = statusMessage(err);
+          btn.disabled = false;
+        }
+      },
+      { signal },
+    );
+
+    async function loadAnnouncements(): Promise<void> {
+      try {
+        const data = await apiFetch<GuildAnnouncements>("/api/guild/announcements", { signal });
+        announcementsListEl.innerHTML =
+          data.items.length > 0
+            ? data.items.map(announcementRow).join("")
+            : `<li class="ledger-empty">No announcements yet.</li>`;
+      } catch (err) {
+        announcementsListEl.innerHTML = `<li class="ledger-empty">${escapeHtml(statusMessage(err))}</li>`;
+      }
+    }
+
+    announcementForm.addEventListener(
+      "submit",
+      async (event) => {
+        event.preventDefault();
+        const submitBtn = requireElement<HTMLButtonElement>("announcement-submit");
+        const text = announcementTextEl.value.trim();
+        if (text.length === 0 || text.length > 500) {
+          announcementStatusEl.dataset.tone = "error";
+          announcementStatusEl.textContent = "Announcement must be 1–500 characters.";
+          return;
+        }
+        submitBtn.disabled = true;
+        try {
+          await apiFetch("/api/guild/announcements", {
+            method: "POST",
+            body: JSON.stringify({ text, discord: announcementDiscordEl.checked }),
+          });
+          announcementStatusEl.dataset.tone = "";
+          announcementStatusEl.textContent = "Posted.";
+          announcementForm.reset();
+          await loadAnnouncements();
+        } catch (err) {
+          announcementStatusEl.dataset.tone = "error";
+          announcementStatusEl.textContent = statusMessage(err);
+        } finally {
+          submitBtn.disabled = false;
+        }
+      },
+      { signal },
+    );
+
+    importFileEl.addEventListener(
+      "change",
+      async () => {
+        const file = importFileEl.files?.[0];
+        if (!file) {
+          return;
+        }
+        const text = await file.text();
+        const match = SQX_PATTERN.exec(text);
+        if (!match) {
+          importStatusEl.dataset.tone = "error";
+          importStatusEl.textContent = "That file has no SQX1: export string in it.";
+          return;
+        }
+        importPayloadEl.value = match[0];
+        importStatusEl.dataset.tone = "";
+        importStatusEl.textContent = "Export string read from file.";
+      },
+      { signal },
+    );
+
+    importForm.addEventListener(
+      "submit",
+      async (event) => {
+        event.preventDefault();
+        const submitBtn = requireElement<HTMLButtonElement>("import-submit");
+        submitBtn.disabled = true;
+        importResultEl.hidden = true;
+        try {
+          const result = await apiFetch<EpgpImportResult>("/api/epgp/imports", {
+            method: "POST",
+            body: JSON.stringify({ payload: importPayloadEl.value.trim() }),
+          });
+          importStatusEl.dataset.tone = "";
+          importStatusEl.textContent = "Imported.";
+          renderImportResult(result);
+          importForm.reset();
+          importResultEl.hidden = false;
+          await Promise.all([loadRoster(), loadTokens()]);
+        } catch (err) {
+          importStatusEl.dataset.tone = "error";
+          importStatusEl.textContent = statusMessage(err);
+        } finally {
+          submitBtn.disabled = false;
+        }
+      },
+      { signal },
+    );
+
+    gameImportCopyBtn.addEventListener(
+      "click",
+      async () => {
+        gameImportCopyBtn.disabled = true;
+        try {
+          const data = await apiFetch<EpgpGameImport>("/api/epgp/game-import");
+          await navigator.clipboard.writeText(data.payload);
+          gameImportStatusEl.dataset.tone = "";
+          gameImportStatusEl.textContent = "Copied. Paste it into /sq import in game.";
+        } catch (err) {
+          gameImportStatusEl.dataset.tone = "error";
+          gameImportStatusEl.textContent = statusMessage(err);
+        } finally {
+          gameImportCopyBtn.disabled = false;
+        }
+      },
+      { signal },
+    );
+
+    charactersListEl.addEventListener(
+      "change",
+      async (event) => {
+        const row = (event.target as HTMLElement).closest<HTMLLIElement>("[data-character-id]");
+        if (!row) {
+          return;
+        }
+        const id = row.dataset.characterId!;
+        const memberSelect = row.querySelector<HTMLSelectElement>("[data-char-member]")!;
+        const mainCheckbox = row.querySelector<HTMLInputElement>("[data-char-main]")!;
+        try {
+          await apiFetch(`/api/epgp/characters/${id}`, {
+            method: "PUT",
+            body: JSON.stringify({
+              member_id: memberSelect.value ? Number(memberSelect.value) : null,
+              is_main: mainCheckbox.checked,
+            }),
+          });
+          statusEl.dataset.tone = "";
+          statusEl.textContent = "Character updated.";
+          await loadCharacters();
+        } catch (err) {
+          statusEl.dataset.tone = "error";
+          statusEl.textContent = statusMessage(err);
+        }
+      },
+      { signal },
+    );
+
+    rosterListEl.addEventListener(
+      "change",
+      async (event) => {
+        const row = (event.target as HTMLElement).closest<HTMLLIElement>("[data-member-id]");
+        if (!row) {
+          return;
+        }
+        const memberId = row.dataset.memberId!;
+        const statusSelect = row.querySelector<HTMLSelectElement>("[data-roster-status]")!;
+        try {
+          await apiFetch(`/api/epgp/roster/${memberId}`, {
+            method: "PUT",
+            body: JSON.stringify({ raid_status: statusSelect.value || null }),
+          });
+          statusEl.dataset.tone = "";
+          statusEl.textContent = "Roster updated.";
+          await loadRoster();
+        } catch (err) {
+          statusEl.dataset.tone = "error";
+          statusEl.textContent = statusMessage(err);
+        }
+      },
+      { signal },
+    );
+
+    tokenForm.addEventListener(
+      "submit",
+      async (event) => {
+        event.preventDefault();
+        const createBtn = requireElement<HTMLButtonElement>("token-create");
+        createBtn.disabled = true;
+        try {
+          const created = await apiFetch<EpgpSyncTokenCreated>("/api/epgp/sync-tokens", {
+            method: "POST",
+            body: JSON.stringify({ name: tokenNameEl.value.trim() }),
+          });
+          tokenStatusEl.dataset.tone = "";
+          tokenStatusEl.textContent = "Token created.";
+          tokenRevealEl.innerHTML = `
+            <p class="aside">This token is shown once. Paste it when <code>sidequest-sync login</code> asks for it.</p>
+            <div class="token-reveal-row">
+              <input type="text" readonly value="${escapeHtml(created.token)}" aria-label="New sync token" />
+              <button type="button" class="btn-quiet btn-small" id="token-copy-btn">Copy</button>
+            </div>`;
+          tokenRevealEl.hidden = false;
+          requireElement<HTMLButtonElement>("token-copy-btn").addEventListener(
+            "click",
+            async () => {
+              await navigator.clipboard.writeText(created.token);
+              tokenStatusEl.textContent = "Token copied.";
+            },
+            { signal },
+          );
+          tokenForm.reset();
+          await loadTokens();
+        } catch (err) {
+          tokenStatusEl.dataset.tone = "error";
+          tokenStatusEl.textContent = statusMessage(err);
+        } finally {
+          createBtn.disabled = false;
+        }
+      },
+      { signal },
+    );
+
+    tokenListEl.addEventListener(
+      "click",
+      async (event) => {
+        const button = (event.target as HTMLElement).closest<HTMLButtonElement>("[data-revoke-token]");
+        if (!button?.dataset.revokeToken) {
+          return;
+        }
+        if (!confirm("Revoke this sync token? Anything using it stops working right away.")) {
+          return;
+        }
+        button.disabled = true;
+        try {
+          await apiFetch(`/api/epgp/sync-tokens/${button.dataset.revokeToken}`, { method: "DELETE" });
+          await loadTokens();
+        } catch (err) {
+          tokenStatusEl.dataset.tone = "error";
+          tokenStatusEl.textContent = statusMessage(err);
+          button.disabled = false;
+        }
+      },
+      { signal },
+    );
+
+    adjustForm.addEventListener(
+      "submit",
+      async (event) => {
+        event.preventDefault();
+        const submitBtn = requireElement<HTMLButtonElement>("adj-submit");
+        submitBtn.disabled = true;
+        const body: EpgpAdjustmentCreate = {
+          member_id: Number(adjMemberEl.value),
+          kind: adjKindEl.value as EpgpAdjustmentCreate["kind"],
+          amount: Number(adjAmountEl.value),
+          reason: adjReasonEl.value.trim(),
+        };
+        try {
+          await apiFetch("/api/epgp/adjustments", { method: "POST", body: JSON.stringify(body) });
+          adjustStatusEl.dataset.tone = "";
+          adjustStatusEl.textContent = "Adjustment applied.";
+          adjustForm.reset();
+        } catch (err) {
+          adjustStatusEl.dataset.tone = "error";
+          adjustStatusEl.textContent = statusMessage(err);
+        } finally {
+          submitBtn.disabled = false;
+        }
+      },
+      { signal },
+    );
+
+    async function init(): Promise<void> {
+      let me: Me | null = null;
+      try {
+        me = await fetchMe();
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 0) {
+          statusEl.textContent = statusMessage(err);
+        }
+        me = null;
+      }
+      if (!me || !me.is_officer) {
+        gateEl.hidden = false;
+        return;
+      }
+      bodyEl.hidden = false;
+      await loadRoster();
+      await Promise.all([loadTokens(), loadRecruits(), loadAnnouncements()]);
+    }
+
+    void init();
+  });
+</script>

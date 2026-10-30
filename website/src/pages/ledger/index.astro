@@ -1,0 +1,301 @@
+---
+import Room from "../../layouts/Room.astro";
+import greatHall from "../../../assets/rooms/great-hall.webp";
+import "../../styles/room-ledger.css";
+---
+
+<Room
+  title="Ledger · SideQuest"
+  description="SideQuest's EPGP loot ledger: EP/GP standings, the current loot rules, recent loot and raid progression."
+  heading="LEDGER"
+  lede="Who's earned what, the rules that set the price, and how far the guild has gotten."
+  art={greatHall}
+  current="ledger"
+>
+  <p class="status" id="ledger-status" role="status" aria-live="polite"></p>
+
+  <section class="chamber" aria-labelledby="h-standings">
+    <h2 class="chamber-title" id="h-standings">
+      Standings
+    </h2>
+    <p class="aside">
+      EP, GP and Priority Ratio (PR = EP &divide; GP), sorted by PR. GP never falls below 100, and both EP and GP decay
+      15% at each weekly reset — the numbers below already account for that.
+    </p>
+    <div class="ledger-table-wrap">
+      <table class="ledger-table" id="standings-table">
+        <thead>
+          <tr>
+            <th scope="col">Name</th>
+            <th scope="col">Class</th>
+            <th scope="col">EP</th>
+            <th scope="col">GP</th>
+            <th scope="col">PR</th>
+          </tr>
+        </thead>
+        <tbody id="standings-rows"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="chamber" aria-labelledby="h-rules">
+    <h2 class="chamber-title" id="h-rules">
+      Loot rules
+    </h2>
+    <div id="rules-body"></div>
+  </section>
+
+  <section class="chamber" aria-labelledby="h-loot">
+    <h2 class="chamber-title" id="h-loot">
+      Recent loot
+    </h2>
+    <ul class="loot-list" id="loot-list" aria-label="Recent loot"></ul>
+  </section>
+
+  <section class="chamber" aria-labelledby="h-progression">
+    <h2 class="chamber-title" id="h-progression">
+      Progression
+    </h2>
+    <div id="progression-body"></div>
+  </section>
+
+  <noscript>
+    <p class="aside">Enable JavaScript to see the ledger.</p>
+  </noscript>
+</Room>
+
+<script>
+  import {
+    apiFetch,
+    fetchMe,
+    onFreshData,
+    escapeHtml,
+    requireElement,
+    statusMessage,
+    capitalize,
+    classLabel,
+    normalizeClass,
+    type EpgpLootItem,
+    type EpgpProgressionInstance,
+    type EpgpRules,
+    type EpgpStandingRow,
+    type EpgpStandings,
+    type EpgpLootPage,
+    type EpgpProgression,
+    type Me,
+  } from "../../scripts/api";
+  import { onPage } from "../../scripts/page";
+
+  const RESPONSE_LABELS: Record<string, string> = {
+    ms: "Main spec",
+    os: "Off spec",
+    alt: "Alt fill",
+    council: "Council",
+    de: "Disenchanted",
+    bank: "Banked",
+  };
+
+  const QUALITY_NAMES: Record<number, string> = { 1: "common", 2: "uncommon", 3: "rare", 4: "epic" };
+
+  // Readable labels for the INVTYPE_* keys the rules' GP table is keyed by; anything not listed falls back to a
+  // title-cased version of the key with the INVTYPE_ prefix stripped.
+  const INVTYPE_LABELS: Record<string, string> = {
+    INVTYPE_HEAD: "Head",
+    INVTYPE_CHEST: "Chest",
+    INVTYPE_ROBE: "Robe",
+    INVTYPE_LEGS: "Legs",
+    INVTYPE_SHOULDER: "Shoulder",
+    INVTYPE_HAND: "Hands",
+    INVTYPE_WAIST: "Waist",
+    INVTYPE_FEET: "Feet",
+    INVTYPE_NECK: "Neck",
+    INVTYPE_WRIST: "Wrist",
+    INVTYPE_CLOAK: "Cloak",
+    INVTYPE_FINGER: "Ring",
+    INVTYPE_HOLDABLE: "Off-hand",
+    INVTYPE_SHIELD: "Shield",
+    INVTYPE_TRINKET: "Trinket",
+    INVTYPE_WEAPON: "One-hand weapon",
+    INVTYPE_WEAPONMAINHAND: "Main-hand weapon",
+    INVTYPE_WEAPONOFFHAND: "Off-hand weapon",
+    INVTYPE_2HWEAPON: "Two-hand weapon",
+    INVTYPE_RANGED: "Ranged",
+    INVTYPE_RANGEDRIGHT: "Ranged",
+    INVTYPE_THROWN: "Thrown",
+    INVTYPE_RELIC: "Relic",
+  };
+
+  function invTypeLabel(key: string): string {
+    return (
+      INVTYPE_LABELS[key] ??
+      key
+        .replace(/^INVTYPE_/, "")
+        .toLowerCase()
+        .split(/[\s_]+/)
+        .map(capitalize)
+        .join(" ")
+    );
+  }
+
+  function standingsRow(row: EpgpStandingRow, meId: number | null): string {
+    const you = row.member_id !== null && row.member_id === meId;
+    const name = escapeHtml(row.main ?? row.name);
+    const trial = row.trial ? `<span class="trial-tag">Trial</span>` : "";
+    const clsClass = normalizeClass(row.class);
+    return `
+      <tr class="${you ? "is-you" : ""}">
+        <td>
+          <span class="ledger-name">${row.member_id !== null ? `<a href="/heroes/member/?id=${row.member_id}">${name}</a>` : name}</span>
+          ${trial}
+        </td>
+        <td class="${clsClass ? `cls-${clsClass}` : ""}">${escapeHtml(classLabel(row.class))}</td>
+        <td class="num">${row.ep.toFixed(1)}</td>
+        <td class="num">${row.gp.toFixed(1)}</td>
+        <td class="num pr">${row.pr.toFixed(3)}</td>
+      </tr>`;
+  }
+
+  function renderStandings(rows: EpgpStandingRow[], meId: number | null): void {
+    const tbody = requireElement("standings-rows");
+    tbody.innerHTML =
+      rows.length > 0
+        ? rows.map((row) => standingsRow(row, meId)).join("")
+        : `<tr><td colspan="5" class="ledger-empty">No raids recorded yet. Standings show up once an officer syncs a raid night.</td></tr>`;
+  }
+
+  function renderRules(rules: EpgpRules): void {
+    const body = requireElement("rules-body");
+    const epRows = [
+      ["Boss kill", rules.ep.boss_kill],
+      ["Progress (wiping on a new boss)", rules.ep.progress],
+      ["On time", rules.ep.on_time],
+      ["Full night", rules.ep.full_night],
+    ] as const;
+    const gpEntries = Object.entries(rules.gp)
+      .filter(([, value]) => value > 0)
+      .toSorted((a, b) => a[1] - b[1] || invTypeLabel(a[0]).localeCompare(invTypeLabel(b[0])));
+    body.innerHTML = `
+      <div class="rules-grid">
+        <div>
+          <h3 class="sub-title">EP</h3>
+          <dl class="rules-list">
+            ${epRows.map(([label, value]) => `<div><dt>${escapeHtml(label)}</dt><dd>${value}</dd></div>`).join("")}
+          </dl>
+        </div>
+        <div>
+          <h3 class="sub-title">GP by slot</h3>
+          <dl class="rules-list">
+            ${gpEntries.map(([key, value]) => `<div><dt>${escapeHtml(invTypeLabel(key))}</dt><dd>${value}</dd></div>`).join("")}
+          </dl>
+        </div>
+      </div>
+      <dl class="rules-list rules-list-wide">
+        <div><dt>Base / minimum GP</dt><dd>${rules.base_gp} / ${rules.min_gp}</dd></div>
+        <div><dt>Off-spec pays</dt><dd>${rules.os_percent}%</dd></div>
+        <div><dt>Chase item multiplier</dt><dd>&times;${rules.chase_multiplier}</dd></div>
+        <div><dt>Legendary piece</dt><dd>${rules.legendary_gp} GP</dd></div>
+        <div><dt>Weekly decay</dt><dd>${rules.decay_percent}% of EP and GP</dd></div>
+        <div><dt>Trial window</dt><dd>${rules.trial_days} days</dd></div>
+      </dl>`;
+  }
+
+  function lootRow(item: EpgpLootItem): string {
+    const quality = QUALITY_NAMES[item.quality] ?? "common";
+    const where = [item.instance_name, item.encounter_name].filter(Boolean).join(" \u2013 ");
+    const winner = escapeHtml(item.member_name ?? item.character);
+    return `
+      <li class="loot-row${item.voided ? " is-voided" : ""}">
+        <span class="loot-item q-${quality}">${escapeHtml(item.item_name)}</span>
+        <span class="loot-winner">${winner}</span>
+        <span class="loot-meta">${escapeHtml(RESPONSE_LABELS[item.response] ?? item.response)} \u00b7 ${item.gp} GP${where ? ` \u00b7 ${escapeHtml(where)}` : ""}</span>
+        <span class="loot-when">${new Date(item.at).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</span>
+      </li>`;
+  }
+
+  function renderLoot(items: EpgpLootItem[]): void {
+    const list = requireElement("loot-list");
+    const live = items.filter((item) => !item.voided);
+    list.innerHTML =
+      live.length > 0
+        ? live.map(lootRow).join("")
+        : `<li class="ledger-empty">No raids recorded yet. Loot shows up here once an officer syncs a raid night.</li>`;
+  }
+
+  function progressionCard(instance: EpgpProgressionInstance): string {
+    const encounters = instance.encounters
+      .map((enc) => {
+        const kill = enc.first_kill_at
+          ? `First kill ${new Date(enc.first_kill_at).toLocaleDateString(undefined, { month: "short", day: "numeric" })}`
+          : "Not killed yet";
+        return `
+          <li class="progression-row${enc.first_kill_at ? "" : " is-open"}">
+            <span class="progression-name">${escapeHtml(enc.name)}</span>
+            <span class="progression-meta">${escapeHtml(kill)} \u00b7 ${enc.kills} kills \u00b7 ${enc.wipes} wipes</span>
+          </li>`;
+      })
+      .join("");
+    return `
+      <div class="chamber-sub">
+        <h3 class="sub-title">${escapeHtml(instance.name)} <span class="progression-size">(${instance.size})</span></h3>
+        <ul class="progression-list">${encounters}</ul>
+      </div>`;
+  }
+
+  function renderProgression(instances: EpgpProgressionInstance[]): void {
+    const body = requireElement("progression-body");
+    body.innerHTML =
+      instances.length > 0
+        ? instances.map(progressionCard).join("")
+        : `<p class="ledger-empty">No raids recorded yet. Progression shows up here once an officer syncs a raid night.</p>`;
+  }
+
+  onPage("#ledger-status", (signal) => {
+    const statusEl = requireElement("ledger-status");
+    let meId: number | null = null;
+
+    async function loadStandings(): Promise<void> {
+      try {
+        const data = await apiFetch<EpgpStandings>("/api/epgp/standings", { signal });
+        renderRules(data.rules);
+        renderStandings(data.rows, meId);
+      } catch (err) {
+        statusEl.textContent = statusMessage(err);
+      }
+    }
+
+    async function loadLoot(): Promise<void> {
+      try {
+        const data = await apiFetch<EpgpLootPage>("/api/epgp/loot", { signal });
+        renderLoot(data.items);
+      } catch (err) {
+        statusEl.textContent = statusMessage(err);
+      }
+    }
+
+    async function loadProgression(): Promise<void> {
+      try {
+        const data = await apiFetch<EpgpProgression>("/api/epgp/progression", { signal });
+        renderProgression(data.instances);
+      } catch (err) {
+        statusEl.textContent = statusMessage(err);
+      }
+    }
+
+    onFreshData("/api/epgp/standings", () => void loadStandings());
+    onFreshData("/api/epgp/loot", () => void loadLoot());
+    onFreshData("/api/epgp/progression", () => void loadProgression());
+
+    async function init(): Promise<void> {
+      let me: Me | null = null;
+      try {
+        me = await fetchMe();
+      } catch {
+        me = null;
+      }
+      meId = me?.id ?? null;
+      await Promise.all([loadStandings(), loadLoot(), loadProgression()]);
+    }
+
+    void init();
+  });
+</script>

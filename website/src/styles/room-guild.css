@@ -1,0 +1,261 @@
+/* The Guild Hall room: roster, crafters, bank and news for every signed-in member, tabbed like the officer
+   console. Rows reuse citadel.css's chamber/tabs/field primitives; the shapes unique to this room — the roster's
+   main/alt grouping, the crafter whisper rows, the bank ledger rows and the news feed — live here. */
+
+.guild-filters {
+  margin-top: 18px;
+}
+.guild-filters .field {
+  margin-top: 0;
+}
+/* ——— Shared with other rooms' pages, which don't share a stylesheet with this one ——— */
+.trial-tag {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 8px;
+  border: 1px solid var(--gold-2);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+.ledger-empty {
+  text-align: center;
+  color: var(--mist-2);
+}
+
+/* ——— Roster: one row per member, mains and alts nested under it ——— */
+.guild-roster-list {
+  display: grid;
+  gap: 0;
+  margin: 18px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.guild-roster-list > li + li {
+  border-top: 1px solid var(--stone-2);
+}
+.guild-member {
+  padding: 16px 4px;
+}
+.guild-member-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 12px;
+}
+.guild-member-name {
+  font-family: var(--display);
+  font-size: 18px;
+  letter-spacing: 0.05em;
+  color: inherit;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+a.guild-member-name:hover,
+a.guild-member-name:focus-visible {
+  text-decoration: underline;
+  text-decoration-color: var(--gold-2);
+  text-underline-offset: 3px;
+}
+.guild-member-rank {
+  margin-left: auto;
+  font-size: 13px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--mist-2);
+}
+.guild-member-unlinked .guild-member-name {
+  color: var(--mist);
+  font-style: italic;
+}
+.guild-char-list {
+  display: grid;
+  gap: 4px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.guild-char-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  padding-left: 14px;
+  font-size: 14px;
+}
+.guild-char-row.is-main {
+  font-weight: 500;
+}
+.guild-char-name {
+  display: inline-flex;
+  gap: 6px;
+  color: var(--ink);
+}
+.guild-main-tag {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+.guild-char-meta {
+  color: var(--mist-2);
+}
+
+/* ——— Crafters: a recipe heading, then whisperable crafter rows ——— */
+.guild-crafter-list {
+  display: grid;
+  gap: clamp(20px, 2vw, 28px);
+  margin: 18px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.guild-crafter-recipe {
+  padding-bottom: 4px;
+}
+.guild-crafter-rows {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.guild-crafter-rows > li + li {
+  border-top: 1px solid var(--stone-2);
+}
+.guild-crafter-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: "name btn" "meta btn";
+  align-items: center;
+  gap: 2px 14px;
+  padding: 10px 2px;
+}
+.guild-crafter-name {
+  grid-area: name;
+  font-family: var(--display);
+  font-size: 15px;
+  letter-spacing: 0.04em;
+  overflow-wrap: anywhere;
+}
+.guild-crafter-meta {
+  grid-area: meta;
+  font-size: 13px;
+  color: var(--mist-2);
+}
+.guild-crafter-row .btn-quiet {
+  grid-area: btn;
+}
+
+/* ——— Bank: totals, then a dense ledger of rows ——— */
+.guild-bank-totals {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
+  margin: 0 0 24px;
+  padding: 16px 0;
+  border-top: 1px solid var(--stone-2);
+  border-bottom: 1px solid var(--stone-2);
+}
+.guild-bank-totals dt {
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--mist-2);
+}
+.guild-bank-totals dd {
+  margin: 4px 0 0;
+  font-family: var(--serif);
+  font-size: 22px;
+  color: var(--gold);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+.guild-bank-list {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.guild-bank-list > li + li {
+  border-top: 1px solid var(--stone-2);
+}
+.guild-bank-row {
+  display: grid;
+  grid-template-columns: minmax(120px, auto) minmax(0, 1fr) minmax(0, auto) auto;
+  align-items: baseline;
+  gap: 4px 14px;
+  padding: 12px 4px;
+  font-size: 14px;
+}
+.guild-bank-kind {
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}
+.guild-bank-detail {
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.guild-bank-who {
+  color: var(--mist-2);
+}
+.guild-bank-when {
+  text-align: right;
+  color: var(--mist-2);
+  white-space: nowrap;
+}
+
+/* ——— News: a quiet feed, one line per item ——— */
+.guild-news-list {
+  display: grid;
+  gap: 0;
+  margin: 18px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.guild-news-list > li + li {
+  border-top: 1px solid var(--stone-2);
+}
+.guild-news-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 4px 14px;
+  padding: 12px 4px;
+}
+.guild-news-kind {
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gold-2);
+}
+.guild-news-text {
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.guild-news-when {
+  text-align: right;
+  font-size: 13px;
+  color: var(--mist-2);
+  white-space: nowrap;
+}
+
+/* ——— Narrow screens ——— */
+@media (max-width: 560px) {
+  .guild-bank-row,
+  .guild-news-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .guild-bank-when,
+  .guild-news-when {
+    text-align: left;
+  }
+  .guild-crafter-row {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "name" "meta" "btn";
+  }
+  .guild-crafter-row .btn-quiet {
+    justify-self: start;
+    margin-top: 6px;
+  }
+}

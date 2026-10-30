@@ -4,7 +4,7 @@ import { DISCORD_INVITE } from "../config";
 import guildLogo from "../../assets/brand/sidequest-logo.png";
 
 interface Props {
-  current?: "events" | "heroes" | "addons" | "officers" | "account" | "raids";
+  current?: "events" | "heroes" | "ledger" | "addons" | "officers" | "account" | "raids" | "guild";
 }
 
 const { current } = Astro.props;
@@ -34,6 +34,16 @@ const { current } = Astro.props;
       <li>
         <a href="/heroes/" aria-current={current === "heroes" ? "page" : undefined}>
           Heroes
+        </a>
+      </li>
+      <li>
+        <a href="/guild/" aria-current={current === "guild" ? "page" : undefined}>
+          Guild
+        </a>
+      </li>
+      <li>
+        <a href="/ledger/" aria-current={current === "ledger" ? "page" : undefined}>
+          Ledger
         </a>
       </li>
       <li>

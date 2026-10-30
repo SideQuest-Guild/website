@@ -50,6 +50,10 @@ class Member(BigIntAuditBase):
     officer_notice_message_id: Mapped[int | None] = mapped_column(BigInteger, default=None)
     calendar_token: Mapped[str | None] = mapped_column(Text, unique=True, default=None)
     """Secret token for the member's private calendar feed (``GET /api/calendar/{token}.ics``); generated lazily."""
+    raid_status: Mapped[str | None] = mapped_column(Text, default=None)
+    """EPGP roster status (``"trial"``/``"raider"``, or ``null`` for not-yet-rostered); set by an officer."""
+    trial_started_at: Mapped[datetime | None] = mapped_column(DateTimeUTC(timezone=True), default=None)
+    """When ``raid_status`` was last set to ``"trial"``; the EPGP bid order treats a trial as a trial for 14 days."""
 
     @property
     def display_name(self) -> str:

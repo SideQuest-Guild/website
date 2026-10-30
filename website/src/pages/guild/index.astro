@@ -1,0 +1,570 @@
+---
+import Room from "../../layouts/Room.astro";
+import greatHall from "../../../assets/rooms/great-hall.webp";
+import "../../styles/room-guild.css";
+---
+
+<Room
+  title="Guild · SideQuest"
+  description="The guild hall: SideQuest's roster, crafters directory, bank log and news feed."
+  heading="GUILD"
+  lede="Who's in the guild, who can craft what, what's moved through the bank, and what's happened lately."
+  art={greatHall}
+  artPosition="50% 35%"
+  current="guild"
+>
+  <p class="status" id="guild-status" role="status" aria-live="polite"></p>
+
+  <div id="guild-gate" hidden>
+    <section class="chamber" aria-labelledby="h-guild-gate">
+      <h2 class="chamber-title" id="h-guild-gate">
+        The Guild Hall
+      </h2>
+      <p class="chamber-intro" id="guild-gate-message"></p>
+    </section>
+  </div>
+
+  <div id="guild-body" hidden>
+    <div class="tabs" role="tablist" aria-label="Guild hall">
+      <button type="button" role="tab" id="tab-roster" aria-controls="panel-roster" aria-selected="true" tabindex="0">
+        Roster
+      </button>
+      <button
+        type="button"
+        role="tab"
+        id="tab-crafters"
+        aria-controls="panel-crafters"
+        aria-selected="false"
+        tabindex="-1"
+      >
+        Crafters
+      </button>
+      <button type="button" role="tab" id="tab-bank" aria-controls="panel-bank" aria-selected="false" tabindex="-1">
+        Bank
+      </button>
+      <button type="button" role="tab" id="tab-news" aria-controls="panel-news" aria-selected="false" tabindex="-1">
+        News
+      </button>
+    </div>
+
+    <section id="panel-roster" role="tabpanel" aria-labelledby="tab-roster" tabindex="0">
+      <div class="chamber">
+        <h2 class="chamber-title">Roster</h2>
+        <p class="aside" id="roster-updated"></p>
+        <div class="form-row guild-filters">
+          <div class="field">
+            <label for="roster-search">Search</label>
+            <input id="roster-search" type="search" placeholder="Name or character" />
+          </div>
+          <div class="field">
+            <label for="roster-class">Class</label>
+            <select id="roster-class">
+              <option value="">Any class</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="roster-status">Status</label>
+            <select id="roster-status">
+              <option value="">Any status</option>
+              <option value="raider">Raider</option>
+              <option value="trial">Trial</option>
+              <option value="none">No raid status</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="roster-rank">Rank</label>
+            <select id="roster-rank">
+              <option value="">Any rank</option>
+            </select>
+          </div>
+        </div>
+        <p class="count" id="roster-count"></p>
+        <ul class="guild-roster-list" id="roster-list" aria-label="Guild roster"></ul>
+      </div>
+    </section>
+
+    <section id="panel-crafters" role="tabpanel" aria-labelledby="tab-crafters" tabindex="0" hidden>
+      <div class="chamber">
+        <h2 class="chamber-title">Crafters</h2>
+        <p class="aside">
+          Search a recipe or profession to find who can make it, then copy a whisper line straight to the chat box.
+        </p>
+        <div class="form-row guild-filters">
+          <div class="field">
+            <label for="crafter-query">Recipe or profession</label>
+            <input id="crafter-query" type="search" placeholder="e.g. Flask of Titans, Blacksmithing" />
+          </div>
+          <div class="field">
+            <label for="crafter-profession">Profession</label>
+            <select id="crafter-profession">
+              <option value="">Any profession</option>
+            </select>
+          </div>
+        </div>
+        <ul class="guild-crafter-list" id="crafter-results" aria-label="Crafters found"></ul>
+      </div>
+    </section>
+
+    <section id="panel-bank" role="tabpanel" aria-labelledby="tab-bank" tabindex="0" hidden>
+      <div class="chamber">
+        <h2 class="chamber-title">Guild bank</h2>
+        <dl class="guild-bank-totals" id="bank-totals"></dl>
+        <ul class="guild-bank-list" id="bank-list" aria-label="Bank log"></ul>
+      </div>
+    </section>
+
+    <section id="panel-news" role="tabpanel" aria-labelledby="tab-news" tabindex="0" hidden>
+      <div class="chamber">
+        <h2 class="chamber-title">News</h2>
+        <ul class="guild-news-list" id="news-list" aria-label="Guild news"></ul>
+      </div>
+    </section>
+  </div>
+
+  <noscript>
+    <p class="aside">Enable JavaScript to see the guild hall.</p>
+  </noscript>
+</Room>
+
+<script>
+  import {
+    apiFetch,
+    ApiError,
+    capitalize,
+    classLabel,
+    escapeHtml,
+    fetchMe,
+    normalizeClass,
+    onFreshData,
+    requireElement,
+    statusMessage,
+    CLASSES,
+    type GuildBank,
+    type GuildBankKind,
+    type GuildBankRow,
+    type GuildCrafterResult,
+    type GuildCrafters,
+    type GuildNews,
+    type GuildNewsItem,
+    type GuildRoster,
+    type GuildRosterMember,
+    type GuildRosterUnlinked,
+    type Me,
+  } from "../../scripts/api";
+  import { onPage } from "../../scripts/page";
+
+  const BANK_KIND_LABELS: Record<GuildBankKind, string> = {
+    deposit: "Deposited",
+    withdraw: "Withdrew",
+    move: "Moved",
+    repair: "Repair",
+    buy_tab: "Bought a tab",
+    deposit_money: "Deposited gold",
+    withdraw_money: "Withdrew gold",
+  };
+
+  const NEWS_KIND_LABELS: Record<GuildNewsItem["kind"], string> = {
+    boss_kill: "Boss kill",
+    first_kill: "First kill",
+    loot: "Loot",
+    level: "Level up",
+    joined: "Joined",
+    announcement: "Announcement",
+    badge: "Badge earned",
+  };
+
+  function classSpan(cls: string | null): string {
+    const normalized = normalizeClass(cls);
+    return `<span class="${normalized ? `cls-${normalized}` : ""}">${escapeHtml(classLabel(cls))}</span>`;
+  }
+
+  function copperToGold(copper: number): string {
+    const sign = copper < 0 ? "-" : "";
+    const abs = Math.abs(copper);
+    const gold = Math.floor(abs / 10000);
+    const silver = Math.floor((abs % 10000) / 100);
+    const bronze = abs % 100;
+    return `${sign}${gold}g ${silver}s ${bronze}c`;
+  }
+
+  function parseHash(): { tab: string } {
+    return { tab: location.hash.slice(1) };
+  }
+
+  // Roving-tabindex tablist, matching the officer console's pattern (no GM-only tabs here).
+  function setupTablist(container: HTMLElement, onActivate: (tab: HTMLButtonElement) => void) {
+    const allTabs = (): HTMLButtonElement[] =>
+      Array.from(container.querySelectorAll<HTMLButtonElement>('[role="tab"]'));
+    function select(tab: HTMLButtonElement, { focus = false }: { focus?: boolean } = {}): void {
+      for (const t of allTabs()) {
+        const selected = t === tab;
+        t.setAttribute("aria-selected", String(selected));
+        t.tabIndex = selected ? 0 : -1;
+      }
+      if (focus) {
+        tab.focus();
+      }
+      onActivate(tab);
+    }
+    for (const tab of allTabs()) {
+      tab.addEventListener("click", () => select(tab));
+      tab.addEventListener("keydown", (ev) => {
+        const visible = allTabs();
+        const i = visible.indexOf(tab);
+        let next = -1;
+        if (ev.key === "ArrowRight") {
+          next = (i + 1) % visible.length;
+        } else if (ev.key === "ArrowLeft") {
+          next = (i - 1 + visible.length) % visible.length;
+        } else if (ev.key === "Home") {
+          next = 0;
+        } else if (ev.key === "End") {
+          next = visible.length - 1;
+        } else {
+          return;
+        }
+        ev.preventDefault();
+        select(visible[next]!, { focus: true });
+      });
+    }
+    return { select };
+  }
+
+  function memberMainClass(m: GuildRosterMember): string | null {
+    return m.characters.find((c) => c.is_main)?.class ?? m.characters[0]?.class ?? null;
+  }
+
+  function charRow(c: GuildRosterMember["characters"][number]): string {
+    const parts = [
+      c.level !== null ? `Level ${c.level}` : null,
+      c.zone,
+      c.last_seen_at ? `Last seen ${new Date(c.last_seen_at).toLocaleDateString()}` : null,
+    ].filter(Boolean);
+    return `
+        <li class="guild-char-row${c.is_main ? " is-main" : ""}">
+          <span class="guild-char-name">${classSpan(c.class)} ${escapeHtml(c.name)}${c.is_main ? ` <span class="guild-main-tag">Main</span>` : ""}</span>
+          <span class="guild-char-meta">${escapeHtml(parts.join(" \u00b7 "))}</span>
+        </li>`;
+  }
+
+  function memberRow(m: GuildRosterMember): string {
+    const mainCls = memberMainClass(m);
+    const statusTag =
+      m.raid_status === "trial" ? `<span class="trial-tag">Trial</span>` : m.raid_status === "raider" ? "" : "";
+    const alts = m.characters
+      .filter((c) => !c.is_main)
+      .toSorted((a, b) => a.name.localeCompare(b.name))
+      .map(charRow)
+      .join("");
+    const mains = m.characters
+      .filter((c) => c.is_main)
+      .map(charRow)
+      .join("");
+    return `
+        <li class="guild-member" data-member-id="${m.member_id}">
+          <div class="guild-member-head">
+            <a class="guild-member-name ${mainCls ? `cls-${normalizeClass(mainCls)}` : ""}" href="/heroes/member/?id=${m.member_id}">
+              ${escapeHtml(m.name)}
+            </a>
+            ${statusTag}
+            <span class="guild-member-rank">${escapeHtml(m.rank ?? "Member")}</span>
+          </div>
+          <ul class="guild-char-list">${mains}${alts}</ul>
+        </li>`;
+  }
+
+  function unlinkedRow(u: GuildRosterUnlinked): string {
+    const parts = [
+      u.rank,
+      u.level !== null ? `Level ${u.level}` : null,
+      u.last_seen_at ? `Last seen ${new Date(u.last_seen_at).toLocaleDateString()}` : null,
+    ].filter(Boolean);
+    return `
+        <li class="guild-member guild-member-unlinked">
+          <div class="guild-member-head">
+            <span class="guild-member-name">${classSpan(u.class)} ${escapeHtml(u.name)}</span>
+            <span class="guild-member-rank">Unlinked</span>
+          </div>
+          <p class="guild-char-meta">${escapeHtml(parts.join(" \u00b7 "))}</p>
+        </li>`;
+  }
+  function crafterRow(result: GuildCrafterResult): string {
+    const crafters = result.crafters
+      .map(
+        (c) => `
+          <li class="guild-crafter-row">
+            <span class="guild-crafter-name">${escapeHtml(c.member_name ?? c.character)}</span>
+            <span class="guild-crafter-meta">${escapeHtml(c.profession)} \u00b7 skill ${c.skill}</span>
+            <button type="button" class="btn-quiet btn-small" data-copy-whisper="${escapeHtml(c.character.split("-")[0] ?? c.character)}">
+              Copy /w
+            </button>
+          </li>`,
+      )
+      .join("");
+    return `
+        <li class="guild-crafter-recipe">
+          <h3 class="sub-title">${escapeHtml(result.recipe_name)}</h3>
+          <ul class="guild-crafter-rows">${crafters}</ul>
+        </li>`;
+  }
+  function bankRow(row: GuildBankRow): string {
+    const amount =
+      row.kind === "deposit_money" || row.kind === "withdraw_money"
+        ? copperToGold(row.money)
+        : row.item_name
+          ? `${row.count ?? 1}\u00d7 ${escapeHtml(row.item_name)}`
+          : "";
+    const who = row.member_name ?? row.character;
+    return `
+        <li class="guild-bank-row">
+          <span class="guild-bank-kind">${escapeHtml(BANK_KIND_LABELS[row.kind])}</span>
+          <span class="guild-bank-detail">${amount}${row.tab !== null ? ` \u00b7 Tab ${row.tab}` : ""}</span>
+          <span class="guild-bank-who">${escapeHtml(who)}</span>
+          <span class="guild-bank-when">${new Date(row.at).toLocaleDateString()}</span>
+        </li>`;
+  }
+  function newsRow(item: GuildNewsItem): string {
+    return `
+        <li class="guild-news-row">
+          <span class="guild-news-kind">${escapeHtml(NEWS_KIND_LABELS[item.kind])}</span>
+          <span class="guild-news-text">${escapeHtml(item.text)}</span>
+          <span class="guild-news-when">${new Date(item.at).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</span>
+        </li>`;
+  }
+  onPage("#guild-body", (signal) => {
+    const statusEl = requireElement("guild-status");
+    const gateEl = requireElement("guild-gate");
+    const gateMessage = requireElement("guild-gate-message");
+    const bodyEl = requireElement("guild-body");
+
+    // ——— Roster ———
+    const rosterUpdatedEl = requireElement("roster-updated");
+    const rosterSearchEl = requireElement<HTMLInputElement>("roster-search");
+    const rosterClassEl = requireElement<HTMLSelectElement>("roster-class");
+    const rosterStatusEl = requireElement<HTMLSelectElement>("roster-status");
+    const rosterRankEl = requireElement<HTMLSelectElement>("roster-rank");
+    const rosterCountEl = requireElement("roster-count");
+    const rosterListEl = requireElement("roster-list");
+
+    rosterClassEl.innerHTML += CLASSES.map((c) => `<option value="${c}">${capitalize(c)}</option>`).join("");
+
+    let roster: GuildRoster | null = null;
+
+    function renderRoster(): void {
+      if (!roster) {
+        return;
+      }
+      const q = rosterSearchEl.value.trim().toLowerCase();
+      const cls = rosterClassEl.value;
+      const statusFilter = rosterStatusEl.value;
+      const rank = rosterRankEl.value;
+      const members = roster.members.filter((m) => {
+        if (q && !m.name.toLowerCase().includes(q) && !m.characters.some((c) => c.name.toLowerCase().includes(q))) {
+          return false;
+        }
+        if (cls && !m.characters.some((c) => normalizeClass(c.class) === cls)) {
+          return false;
+        }
+        if (statusFilter === "none" ? m.raid_status !== null : statusFilter && m.raid_status !== statusFilter) {
+          return false;
+        }
+        if (rank && m.rank !== rank) {
+          return false;
+        }
+        return true;
+      });
+      const unlinked =
+        !q && !cls && !statusFilter && !rank
+          ? roster.unlinked
+          : roster.unlinked.filter(
+              (u) => (q ? u.name.toLowerCase().includes(q) : true) && (cls ? normalizeClass(u.class) === cls : true),
+            );
+      rosterCountEl.textContent = `${members.length} member${members.length === 1 ? "" : "s"}${unlinked.length > 0 ? `, ${unlinked.length} unlinked character${unlinked.length === 1 ? "" : "s"}` : ""}`;
+      rosterListEl.innerHTML =
+        members.length > 0 || unlinked.length > 0
+          ? members.map(memberRow).join("") + unlinked.map(unlinkedRow).join("")
+          : `<li class="ledger-empty">No one matches those filters.</li>`;
+    }
+
+    async function loadRoster(): Promise<void> {
+      try {
+        roster = await apiFetch<GuildRoster>("/api/guild/roster", { signal });
+        rosterUpdatedEl.textContent = `Last updated ${new Date(roster.taken_at).toLocaleString()}.`;
+        const ranks = [...new Set(roster.members.map((m) => m.rank).filter((r): r is string => r !== null))].toSorted();
+        rosterRankEl.innerHTML =
+          `<option value="">Any rank</option>` +
+          ranks.map((r) => `<option value="${escapeHtml(r)}">${escapeHtml(r)}</option>`).join("");
+        renderRoster();
+      } catch (err) {
+        rosterListEl.innerHTML = `<li class="ledger-empty">${escapeHtml(statusMessage(err))}</li>`;
+      }
+    }
+
+    for (const el of [rosterSearchEl, rosterClassEl, rosterStatusEl, rosterRankEl]) {
+      el.addEventListener("input", renderRoster, { signal });
+    }
+
+    // ——— Crafters ———
+    const crafterQueryEl = requireElement<HTMLInputElement>("crafter-query");
+    const crafterProfessionEl = requireElement<HTMLSelectElement>("crafter-profession");
+    const crafterResultsEl = requireElement("crafter-results");
+    let crafterDebounce: ReturnType<typeof setTimeout> | undefined;
+
+    async function loadCrafters(): Promise<void> {
+      const q = crafterQueryEl.value.trim();
+      const profession = crafterProfessionEl.value;
+      if (q.length === 0 && profession.length === 0) {
+        crafterResultsEl.innerHTML = `<li class="ledger-empty">Search a recipe or pick a profession to find a crafter.</li>`;
+        return;
+      }
+      crafterResultsEl.innerHTML = `<li class="ledger-empty">Searching\u2026</li>`;
+      try {
+        const params = new URLSearchParams();
+        if (q) {
+          params.set("q", q);
+        }
+        if (profession) {
+          params.set("profession", profession);
+        }
+        const data = await apiFetch<GuildCrafters>(`/api/guild/crafters?${params}`, { signal });
+        if (crafterProfessionEl.options.length <= 1) {
+          crafterProfessionEl.innerHTML += data.professions
+            .map(
+              (p) => `<option value="${escapeHtml(p.profession)}">${escapeHtml(p.profession)} (${p.crafters})</option>`,
+            )
+            .join("");
+        }
+        crafterResultsEl.innerHTML =
+          data.results.length > 0
+            ? data.results.map(crafterRow).join("")
+            : `<li class="ledger-empty">No crafters found for that search.</li>`;
+      } catch (err) {
+        crafterResultsEl.innerHTML = `<li class="ledger-empty">${escapeHtml(statusMessage(err))}</li>`;
+      }
+    }
+
+    crafterQueryEl.addEventListener(
+      "input",
+      () => {
+        clearTimeout(crafterDebounce);
+        crafterDebounce = setTimeout(() => void loadCrafters(), 250);
+      },
+      { signal },
+    );
+    crafterProfessionEl.addEventListener("change", () => void loadCrafters(), { signal });
+    crafterResultsEl.addEventListener(
+      "click",
+      async (event) => {
+        const btn = (event.target as HTMLElement).closest<HTMLButtonElement>("[data-copy-whisper]");
+        if (!btn?.dataset.copyWhisper) {
+          return;
+        }
+        await navigator.clipboard.writeText(`/w ${btn.dataset.copyWhisper} `);
+        const original = btn.textContent;
+        btn.textContent = "Copied";
+        setTimeout(() => {
+          btn.textContent = original;
+        }, 1200);
+      },
+      { signal },
+    );
+
+    // ——— Bank ———
+    const bankTotalsEl = requireElement("bank-totals");
+    const bankListEl = requireElement("bank-list");
+
+    let bankLoaded = false;
+
+    async function loadBank(): Promise<void> {
+      try {
+        const data = await apiFetch<GuildBank>("/api/guild/bank", { signal });
+        bankTotalsEl.innerHTML = `
+          <div><dt>Deposits, last 30 days</dt><dd>${data.totals.deposits_30d}</dd></div>
+          <div><dt>Withdrawals, last 30 days</dt><dd>${data.totals.withdrawals_30d}</dd></div>`;
+        bankListEl.innerHTML =
+          data.rows.length > 0
+            ? data.rows.map(bankRow).join("")
+            : `<li class="ledger-empty">No bank activity recorded yet.</li>`;
+      } catch (err) {
+        bankListEl.innerHTML = `<li class="ledger-empty">${escapeHtml(statusMessage(err))}</li>`;
+      }
+    }
+
+    // ——— News ———
+    const newsListEl = requireElement("news-list");
+
+    async function loadNews(): Promise<void> {
+      try {
+        const data = await apiFetch<GuildNews>("/api/guild/news?limit=60", { signal });
+        newsListEl.innerHTML =
+          data.items.length > 0 ? data.items.map(newsRow).join("") : `<li class="ledger-empty">No news yet.</li>`;
+      } catch (err) {
+        newsListEl.innerHTML = `<li class="ledger-empty">${escapeHtml(statusMessage(err))}</li>`;
+      }
+    }
+
+    onFreshData("/api/guild/roster", () => void loadRoster());
+    onFreshData("/api/guild/news", () => void loadNews());
+
+    // ——— Tabs & gate ———
+    const VALID_TABS = new Set(["roster", "crafters", "bank", "news"]);
+
+    function showPanel(name: string): void {
+      document.querySelectorAll<HTMLElement>('[role="tabpanel"]').forEach((panel) => {
+        panel.hidden = panel.id !== `panel-${name}`;
+      });
+      if (location.hash.slice(1) !== name) {
+        history.replaceState(null, "", `#${name}`);
+      }
+      if (name === "bank" && !bankLoaded) {
+        bankLoaded = true;
+        void loadBank();
+      }
+    }
+
+    function initialTabName(): string {
+      const { tab: requested } = parseHash();
+      return VALID_TABS.has(requested) ? requested : "roster";
+    }
+
+    async function init(): Promise<void> {
+      let me: Me | null = null;
+      try {
+        me = await fetchMe();
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 0) {
+          statusEl.textContent = statusMessage(err);
+        }
+        me = null;
+      }
+      if (!me || !me.is_guild_member) {
+        gateEl.hidden = false;
+        const next = encodeURIComponent(location.pathname + location.search);
+        gateMessage.innerHTML = `The guild hall is for members only. <a href="/auth/discord/login?next=${next}">Sign in with Discord</a> to see the roster, crafters, bank log and news.`;
+        statusEl.textContent = "";
+        return;
+      }
+      bodyEl.hidden = false;
+      const tabsEl = bodyEl.querySelector<HTMLElement>('[role="tablist"]')!;
+      const tablist = setupTablist(tabsEl, (tab) => showPanel(tab.id.slice(4)));
+      tablist.select(requireElement<HTMLButtonElement>(`tab-${initialTabName()}`));
+      window.addEventListener(
+        "hashchange",
+        () => {
+          const { tab: name } = parseHash();
+          if (!VALID_TABS.has(name)) {
+            return;
+          }
+          const tab = document.getElementById(`tab-${name}`) as HTMLButtonElement | null;
+          if (tab) {
+            tablist.select(tab);
+          }
+        },
+        { signal },
+      );
+      await Promise.all([loadRoster(), loadNews()]);
+    }
+
+    void init();
+  });
+</script>

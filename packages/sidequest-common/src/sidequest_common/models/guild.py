@@ -69,3 +69,7 @@ class GuildConfig(UUIDAuditBase):
     badge_channel_id: Mapped[int | None] = mapped_column(BigInteger, default=None)
     badge_role_ids: Mapped[dict[str, int]] = mapped_column(JsonB, default=dict)
     """Discord role id per badge id, created and kept by the bot's badges plugin."""
+
+    # Guild hub announcements (v2)
+    announcement_channel_id: Mapped[int | None] = mapped_column(BigInteger, default=None)
+    """Where the bot posts pending ``GuildAnnouncement`` rows queued for Discord; officers set it."""

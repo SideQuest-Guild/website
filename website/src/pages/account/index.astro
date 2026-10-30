@@ -140,6 +140,33 @@ import "../../styles/room-account.css";
       </form>
     </section>
 
+    <section class="chamber" aria-labelledby="characters-title">
+      <h2 class="chamber-title" id="characters-title">
+        Your Characters
+      </h2>
+      <p>Link your characters so officers can match the SideQuest addon's raid record to your EP/GP balance.</p>
+      <ul class="char-list" id="char-list"></ul>
+      <form id="char-form" class="char-form">
+        <label>
+          Name
+          <input type="text" id="char-name" maxlength="24" required />
+        </label>
+        <label>
+          Realm
+          <input type="text" id="char-realm" maxlength="40" placeholder="Whitemane" />
+        </label>
+        <label>
+          Class (optional)
+          <select id="char-class">
+            <option value="">Unknown</option>
+          </select>
+        </label>
+        <button type="submit" class="btn-quiet">
+          Add
+        </button>
+      </form>
+    </section>
+
     <section class="chamber danger-zone" aria-labelledby="account-data-title">
       <h2 class="chamber-title" id="account-data-title">
         Danger Zone
@@ -185,12 +212,17 @@ import "../../styles/room-account.css";
 <script>
   import {
     apiFetch,
+    classLabel,
+    CLASSES,
     escapeHtml,
     fetchMe,
+    normalizeClass,
     requireElement,
     statusMessage,
     type AwayRange,
     type CalendarLink,
+    type EpgpCharacter,
+    type EpgpCharacters,
     type Me,
   } from "../../scripts/api";
   import { onPage } from "../../scripts/page";
@@ -264,6 +296,11 @@ import "../../styles/room-account.css";
     const awayStartInput = requireElement<HTMLInputElement>("away-start");
     const awayEndInput = requireElement<HTMLInputElement>("away-end");
     const awayNoteInput = requireElement<HTMLInputElement>("away-note");
+    const charList = requireElement("char-list");
+    const charForm = requireElement<HTMLFormElement>("char-form");
+    const charNameInput = requireElement<HTMLInputElement>("char-name");
+    const charRealmInput = requireElement<HTMLInputElement>("char-realm");
+    const charClassSelect = requireElement<HTMLSelectElement>("char-class");
 
     function show(target: HTMLElement): void {
       for (const el of [signedOut, notMember, signedIn]) {
@@ -329,6 +366,43 @@ import "../../styles/room-account.css";
       }
     }
 
+    for (const cls of CLASSES) {
+      charClassSelect.insertAdjacentHTML("beforeend", `<option value="${cls}">${classLabel(cls)}</option>`);
+    }
+
+    function renderCharacterList(characters: EpgpCharacter[]): void {
+      if (characters.length === 0) {
+        charList.innerHTML = '<li class="away-empty">No characters linked yet.</li>';
+        return;
+      }
+      charList.innerHTML = characters
+        .map((character) => {
+          const normalized = normalizeClass(character.class);
+          return `
+            <li class="char-item" data-id="${character.id}">
+              <span class="char-name ${normalized ? `cls-${normalized}` : ""}">
+                ${escapeHtml(`${character.name}-${character.realm}`)}
+              </span>
+              <span class="char-meta">
+                ${escapeHtml(classLabel(character.class))}${character.is_main ? " \u00b7 Main" : ""}
+              </span>
+              <button type="button" class="btn-quiet char-delete-btn" data-id="${character.id}" aria-label="Remove">
+                Remove
+              </button>
+            </li>`;
+        })
+        .join("");
+    }
+
+    async function renderCharacters(): Promise<void> {
+      try {
+        const data = await apiFetch<EpgpCharacters>("/api/me/characters");
+        renderCharacterList(data.characters);
+      } catch {
+        charList.innerHTML = '<li class="away-empty">Couldn\u2019t load your characters.</li>';
+      }
+    }
+
     async function render({ fresh = false }: { fresh?: boolean } = {}): Promise<void> {
       let me: Me | null = null;
       try {
@@ -365,6 +439,7 @@ import "../../styles/room-account.css";
       show(signedIn);
       await renderCalendar();
       await renderAway();
+      await renderCharacters();
     }
 
     signOutBtn.addEventListener("click", async () => {
@@ -496,6 +571,52 @@ import "../../styles/room-account.css";
       try {
         await apiFetch(`/api/me/away/${button.dataset.id}`, { method: "DELETE" });
         await renderAway();
+      } catch (err) {
+        statusEl.dataset.tone = "error";
+        statusEl.textContent = statusMessage(err);
+        button.disabled = false;
+      }
+    });
+
+    charForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const submitBtn = charForm.querySelector<HTMLButtonElement>('button[type="submit"]');
+      if (submitBtn) {
+        submitBtn.disabled = true;
+      }
+      try {
+        await apiFetch("/api/me/characters", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: charNameInput.value.trim(),
+            realm: charRealmInput.value.trim() || undefined,
+            class: charClassSelect.value || undefined,
+          }),
+        });
+        charForm.reset();
+        statusEl.dataset.tone = "";
+        statusEl.textContent = "Character added.";
+        await renderCharacters();
+      } catch (err) {
+        statusEl.dataset.tone = "error";
+        statusEl.textContent = statusMessage(err);
+      } finally {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+        }
+      }
+    });
+
+    charList.addEventListener("click", async (event) => {
+      const button = (event.target as HTMLElement).closest<HTMLButtonElement>(".char-delete-btn");
+      if (!button?.dataset.id) {
+        return;
+      }
+      button.disabled = true;
+      try {
+        await apiFetch(`/api/me/characters/${button.dataset.id}`, { method: "DELETE" });
+        await renderCharacters();
       } catch (err) {
         statusEl.dataset.tone = "error";
         statusEl.textContent = statusMessage(err);

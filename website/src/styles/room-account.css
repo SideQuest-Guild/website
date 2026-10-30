@@ -198,6 +198,74 @@
   flex: none;
 }
 
+/* ——— Your characters: same tidy-list-plus-row-form shape as Away ——— */
+.char-list {
+  margin: 0 0 clamp(20px, 2vw, 28px);
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--stone-2);
+}
+.char-item {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--stone-2);
+}
+.char-name {
+  font-family: var(--serif);
+  color: var(--ink);
+}
+.char-meta {
+  font-size: var(--body);
+  color: var(--mist-2);
+}
+.char-item .char-delete-btn {
+  margin-left: auto;
+}
+.char-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px 16px;
+}
+.char-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-weight: 500;
+  font-size: var(--caps);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--mist);
+}
+.char-form input,
+.char-form select {
+  min-height: 46px;
+  padding: 10px 12px;
+  background: rgba(4, 8, 16, 0.62);
+  border: 1px solid var(--stone);
+  border-radius: 0;
+  font: inherit;
+  font-size: var(--body);
+  color: var(--ink);
+  color-scheme: dark;
+}
+.char-form input:hover,
+.char-form select:hover {
+  border-color: rgba(168, 132, 73, 0.6);
+}
+.char-form input:focus-visible,
+.char-form select:focus-visible {
+  outline: none;
+  border-color: var(--gold);
+  background: rgba(4, 8, 16, 0.8);
+}
+.char-form button[type="submit"] {
+  flex: none;
+}
+
 @media (max-width: 560px) {
   .sheet {
     gap: 16px;
@@ -230,6 +298,18 @@
   }
   .away-note-label {
     flex: none;
+  }
+  .char-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+  .char-item .char-delete-btn {
+    margin-left: 0;
+  }
+  .char-form {
+    flex-direction: column;
+    align-items: stretch;
   }
 }
 

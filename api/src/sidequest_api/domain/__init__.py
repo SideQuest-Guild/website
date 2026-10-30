@@ -15,10 +15,17 @@ from sidequest_api.domain.cases.controllers import CasesController
 from sidequest_api.domain.discord_live.controllers import DiscordLiveController, DiscordLivePublicController
 from sidequest_api.domain.discord_online.controllers import DiscordOnlineController
 from sidequest_api.domain.discord_signups.controllers import DiscordSignupsController
+from sidequest_api.domain.epgp.controllers import EpgpController, MyCharactersController
 from sidequest_api.domain.event_series.controllers import EventSeriesController
 from sidequest_api.domain.event_sync.controllers import EventSyncController
 from sidequest_api.domain.events.controllers import EventsController
 from sidequest_api.domain.gm.controllers import GmController
+from sidequest_api.domain.guild_hub.controllers import (
+    EpgpMemberNotesController,
+    EpgpRecruitsController,
+    GuildAnnouncementsBotController,
+    GuildHubController,
+)
 from sidequest_api.domain.guild_roles.controllers import GuildRolesController
 from sidequest_api.domain.guilds.controllers import GuildConfigController
 from sidequest_api.domain.heroes.controllers import HeroesController
@@ -52,6 +59,7 @@ guild_controllers = [
     AwayNowController,
     AttendanceVoiceController,
     BadgesController,
+    GuildAnnouncementsBotController,
 ]
 
 public_routes = [
@@ -71,4 +79,9 @@ public_routes = [
     AwayController,
     AttendanceController,
     HeroesController,
+    EpgpController,
+    MyCharactersController,
+    GuildHubController,
+    EpgpRecruitsController,
+    EpgpMemberNotesController,
 ]
