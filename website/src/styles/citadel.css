@@ -98,7 +98,11 @@ textarea {
   inset: 25% 0 0;
   background: radial-gradient(58% 64% at 50% 74%, rgba(7, 11, 20, 0.82), rgba(7, 11, 20, 0) 74%);
 }
+/* view-transition-name makes both the nav and the title their own stacking contexts; the title comes later, so
+   without a z-index it paints over the Raids/Guild panel. Phones already lift the nav the same way (site.css). */
 .room-head .site-nav {
+  position: relative;
+  z-index: 1;
   border-bottom: 0;
   text-shadow:
     0 1px 3px rgba(4, 8, 16, 0.9),
