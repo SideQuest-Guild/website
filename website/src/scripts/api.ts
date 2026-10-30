@@ -374,7 +374,8 @@ export type HeroSeasonStats = { ep: number; raids_attended: number; events_atten
 
 /** One `GET /api/heroes` leaderboard row. */
 export type HeroRow = {
-  rank: number;
+  /** Position by EP this season; `null` for members listed with no EP yet. */
+  rank: number | null;
   member_id: number;
   discord_id: string;
   display_name: string;

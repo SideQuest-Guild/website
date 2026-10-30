@@ -50,7 +50,8 @@ class HeroSeasonStats(BaseModel):
 class HeroRow(BaseModel):
     """One leaderboard row."""
 
-    rank: int
+    rank: int | None
+    """Position by EP this season, ``None`` for members listed with no EP yet."""
     member_id: int
     discord_id: str
     display_name: str

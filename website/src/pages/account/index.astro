@@ -140,19 +140,37 @@ import "../../styles/room-account.css";
       </form>
     </section>
 
-    <section class="chamber" aria-labelledby="account-data-title">
+    <section class="chamber danger-zone" aria-labelledby="account-data-title">
       <h2 class="chamber-title" id="account-data-title">
-        Your Data
+        Danger Zone
       </h2>
-      <p>
+      <p class="chamber-intro">
         Deleting your account erases your SideQuest profile, every event sign-up, and your Discord chat XP right away,
-        and signs you out. Moderation records in the Discord stay; ask an officer about those.
-        <a href="/privacy/">Privacy</a> has the full list.
+        and signs you out. <strong>It also removes you from the guild on Discord:</strong> the bot takes away your roles
+        and puts you back behind #sign-the-ledger, so the guild channels disappear until you sign in again and a Quest
+        Master confirms you. Moderation records in the Discord stay; ask an officer about those.{" "}
+        <a href="/privacy/#deleting">Privacy</a> has the full list.
       </p>
-      <div class="form-actions">
-        <button type="button" class="btn-quiet btn-danger" id="delete-account-btn">
+      <div class="form-actions danger-actions">
+        <button type="button" class="btn-quiet btn-doom" id="delete-account-btn" aria-controls="delete-confirm">
           Delete my account
         </button>
+      </div>
+      <div class="danger-confirm" id="delete-confirm" role="group" aria-labelledby="delete-confirm-title" hidden>
+        <p class="danger-confirm-title" id="delete-confirm-title">
+          Delete everything? This can't be undone.
+        </p>
+        <p class="danger-confirm-body">
+          Your profile, sign-ups and chat XP are erased, and you lose your Discord roles and guild channels.
+        </p>
+        <div class="form-actions danger-actions">
+          <button type="button" class="btn-quiet" id="delete-account-cancel">
+            Keep my account
+          </button>
+          <button type="button" class="btn btn-doom btn-doom-solid" id="delete-account-confirm">
+            Yes, delete my account
+          </button>
+        </div>
       </div>
     </section>
   </div>
@@ -233,6 +251,9 @@ import "../../styles/room-account.css";
     const bnetLink = requireElement<HTMLAnchorElement>("bnet-link");
     const bnetUnlinkBtn = requireElement<HTMLButtonElement>("bnet-unlink-btn");
     const deleteAccountBtn = requireElement<HTMLButtonElement>("delete-account-btn");
+    const deleteConfirm = requireElement("delete-confirm");
+    const deleteCancelBtn = requireElement<HTMLButtonElement>("delete-account-cancel");
+    const deleteConfirmBtn = requireElement<HTMLButtonElement>("delete-account-confirm");
     const calendarUrlInput = requireElement<HTMLInputElement>("calendar-url");
     const calendarCopyBtn = requireElement<HTMLButtonElement>("calendar-copy-btn");
     const calendarGoogleLink = requireElement<HTMLAnchorElement>("calendar-google");
@@ -374,26 +395,37 @@ import "../../styles/room-account.css";
       }
     });
 
-    deleteAccountBtn.addEventListener("click", async () => {
-      if (
-        !confirm(
-          "Delete your SideQuest account? Your profile and every event sign-up are erased right away, and you're stripped of every Discord role in the SideQuest server and put back behind #sign-the-ledger. This can't be undone.",
-        )
-      ) {
-        return;
+    function askToDelete(asking: boolean): void {
+      deleteConfirm.hidden = !asking;
+      deleteAccountBtn.hidden = asking;
+      deleteAccountBtn.setAttribute("aria-expanded", String(asking));
+      // The safe choice gets focus, so a stray Enter keeps the account.
+      (asking ? deleteCancelBtn : deleteAccountBtn).focus();
+    }
+
+    deleteAccountBtn.addEventListener("click", () => askToDelete(true));
+    deleteCancelBtn.addEventListener("click", () => askToDelete(false));
+    deleteConfirm.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") {
+        askToDelete(false);
       }
-      deleteAccountBtn.disabled = true;
+    });
+
+    deleteConfirmBtn.addEventListener("click", async () => {
+      deleteConfirmBtn.disabled = true;
+      deleteCancelBtn.disabled = true;
       try {
         await apiFetch("/api/me", { method: "DELETE" });
         statusEl.dataset.tone = "";
         statusEl.textContent =
-          "Your account and sign-ups are deleted, and your Discord roles are on their way out too. Signing in again starts a fresh account.";
+          "Your account and sign-ups are deleted, and the bot is taking away your Discord roles. Signing in again starts a fresh account.";
         show(signedOut);
       } catch (err) {
         statusEl.dataset.tone = "error";
         statusEl.textContent = statusMessage(err);
       } finally {
-        deleteAccountBtn.disabled = false;
+        deleteConfirmBtn.disabled = false;
+        deleteCancelBtn.disabled = false;
       }
     });
 

@@ -53,6 +53,10 @@
   font-size: 14px;
   color: var(--mist);
 }
+.hero-rank.hero-rank-none {
+  border-style: dashed;
+  color: var(--mist-2);
+}
 .hero-rank.rank-gold {
   border-color: #d8ab5c;
   color: #d8ab5c;

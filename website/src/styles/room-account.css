@@ -232,3 +232,79 @@
     flex: none;
   }
 }
+
+/* ——— Danger Zone: deleting the account. A blood-red chamber, not the site's amber --error, because this one
+   really can't be undone. ——— */
+.chamber.danger-zone {
+  --blood: #c2414a;
+  --blood-2: #7d1f27;
+  --blood-text: #f0a6a6;
+  border-color: var(--blood-2);
+  background:
+    radial-gradient(120% 90% at 50% 0%, rgba(125, 31, 39, 0.32), transparent 70%),
+    linear-gradient(180deg, rgba(38, 14, 20, 0.94), rgba(14, 8, 12, 0.96));
+}
+.chamber.danger-zone::before {
+  border-color: rgba(194, 65, 74, 0.42);
+}
+.chamber.danger-zone::after {
+  filter: hue-rotate(-38deg) saturate(1.6);
+}
+.danger-zone .chamber-title {
+  background:
+    linear-gradient(var(--blood), var(--blood)) top / 100% 1px no-repeat,
+    linear-gradient(var(--blood), var(--blood)) bottom / 100% 1px no-repeat,
+    linear-gradient(180deg, #9a2a33, var(--blood-2) 55%, #4d1218);
+}
+.danger-zone .chamber-intro strong {
+  color: var(--blood-text);
+  font-weight: 600;
+}
+.danger-zone a {
+  color: var(--blood-text);
+}
+.danger-actions {
+  justify-content: center;
+}
+.danger-zone .btn-doom {
+  border-color: var(--blood);
+  color: var(--blood-text);
+}
+.danger-zone .btn-doom:hover,
+.danger-zone .btn-doom:focus-visible {
+  border-color: #e0646c;
+  color: #ffd2d2;
+  background: rgba(125, 31, 39, 0.45);
+}
+.danger-zone .btn-doom-solid {
+  border-color: #e0646c;
+  background: linear-gradient(180deg, #b3343d, var(--blood-2) 60%, #561419);
+  color: #fff3f3;
+}
+.danger-zone .btn-doom-solid:hover,
+.danger-zone .btn-doom-solid:focus-visible {
+  color: #fff;
+  filter: brightness(1.18);
+}
+.danger-confirm {
+  margin: clamp(20px, 2vw, 28px) auto 0;
+  max-width: 40em;
+  padding: clamp(18px, 2vw, 26px) clamp(16px, 2.4vw, 32px);
+  border: 1px solid var(--blood);
+  background: rgba(125, 31, 39, 0.22);
+  text-align: center;
+}
+.danger-confirm-title {
+  margin: 0;
+  font-family: var(--display);
+  font-size: clamp(17px, 1.3vw, 21px);
+  letter-spacing: 0.06em;
+  color: #ffd2d2;
+}
+.danger-confirm-body {
+  margin: 10px 0 0;
+  color: var(--blood-text);
+}
+.danger-confirm .danger-actions {
+  margin-top: clamp(16px, 1.6vw, 22px);
+}

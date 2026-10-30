@@ -74,14 +74,36 @@ async def test_leaderboard_orders_by_ep_descending(client, db_sessionmaker) -> N
     assert body["rows"][1]["ep"] == 10
 
 
-async def test_leaderboard_excludes_members_with_zero_ep(client, db_sessionmaker) -> None:
+async def test_leaderboard_lists_the_roster_and_badge_holders_unranked_before_they_earn_ep(
+    client, db_sessionmaker
+) -> None:
     async with db_sessionmaker() as session:
-        session.add(Member(discord_id=5101, username="bystander", is_guild_member=True))
+        earner = Member(discord_id=5100, username="earner", is_guild_member=True)
+        founder = Member(
+            discord_id=5101, username="founder", is_guild_member=True, roster_confirmed_at=datetime.now(UTC)
+        )
+        guest = Member(discord_id=5102, username="guest", is_guild_member=True)
+        badged = Member(discord_id=5103, username="badged", is_guild_member=True)
+        departed = Member(
+            discord_id=5104, username="departed", is_guild_member=False, roster_confirmed_at=datetime.now(UTC)
+        )
+        session.add_all([earner, founder, guest, badged, departed])
+        await session.flush()
+        raid = _event(kind="raid")
+        session.add(raid)
+        session.add(MemberBadge(member_id=badged.id, badge_id="chatterbox", earned_at=datetime.now(UTC)))
+        await session.flush()
+        session.add(_signed(raid, earner))
         await session.commit()
 
     response = await client.get("/api/heroes", params={"season": "all"})
     assert response.status_code == 200
-    assert response.json()["rows"] == []
+    rows = response.json()["rows"]
+    assert [(row["display_name"], row["rank"]) for row in rows] == [
+        ("earner", 1),
+        ("badged", None),
+        ("founder", None),
+    ]
 
 
 async def test_leaderboard_month_window_excludes_events_outside_this_month(client, db_sessionmaker) -> None:

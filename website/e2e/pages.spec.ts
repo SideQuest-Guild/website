@@ -198,6 +198,32 @@ test.describe("account", () => {
     await expect(urlInput).toHaveValue(/\/api\/calendar\/mock-calendar-token-\d+\.ics$/);
   });
 
+  test("deleting the account asks first, and keeping it sends nothing", async ({ page, site }) => {
+    site.signIn(MEMBER);
+    const deletes: string[] = [];
+    page.on("request", (request) => {
+      if (request.method() === "DELETE" && new URL(request.url()).pathname === "/api/me") {
+        deletes.push(request.url());
+      }
+    });
+    await page.goto("/account/");
+    const confirm = page.locator("#delete-confirm");
+    await expect(page.locator(".danger-zone")).toContainText("removes you from the guild on Discord");
+
+    await page.locator("#delete-account-btn").click();
+    await expect(confirm).toBeVisible();
+    await expect(page.locator("#delete-account-cancel")).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(confirm).toBeHidden();
+    await expect(page.locator("#delete-account-btn")).toBeFocused();
+    expect(deletes).toHaveLength(0);
+
+    await page.locator("#delete-account-btn").click();
+    await page.locator("#delete-account-confirm").click();
+    await expect(page.locator("#account-signed-out")).toBeVisible();
+    expect(deletes).toHaveLength(1);
+  });
+
   test("adding and removing an away range calls the API and updates the list", async ({ page, site }) => {
     site.signIn(MEMBER);
     await page.goto("/account/");
@@ -270,6 +296,23 @@ test.describe("hall of heroes", () => {
     await page.locator('#sort-tabs button[data-sort="raids_attended"]').click();
     await expect(page.locator('#sort-tabs button[data-sort="raids_attended"]')).toHaveAttribute("aria-pressed", "true");
     await expect(rows.first()).toContainText(GM.display_name);
+  });
+
+  test("before anyone earns EP, the roster is listed unranked", async ({ page, site }) => {
+    site.signIn(MEMBER);
+    const fresh = HEROES.map((row) => ({ ...row, rank: null, ep: 0, raids_attended: 0, events_attended: 0 }));
+    await page.route("**/api/heroes?*", (route) =>
+      route.fulfill({ json: { season_id: "all", season_name: "All Time", rows: fresh } }),
+    );
+    await page.goto("/heroes/");
+    const rows = page.locator(".hero-row");
+    await expect(rows).toHaveCount(HEROES.length);
+    await expect(page.locator(".hero-empty")).toContainText("No one has earned EP");
+    await expect(rows.locator(".hero-rank-none")).toHaveCount(HEROES.length);
+
+    await page.locator('#sort-tabs button[data-sort="chat_level"]').click();
+    await expect(page.locator(".hero-empty")).toHaveCount(0);
+    await expect(rows.first().locator(".hero-rank")).toHaveText("1");
   });
 
   test("a hero's profile shows badges and recent events", async ({ page, site }) => {

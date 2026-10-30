@@ -38,7 +38,7 @@ flowchart LR
 | `/api/guilds/{guild_id}/events/{event_id}/signups/by-discord/{discord_id}` (GET, PUT) | `X-API-Key` | Bot reads/writes a member's event signup by Discord id, for the Discord Going/Maybe/Can't buttons (reuses the same upsert as the site's own sign-up form); 404 for a `discord_id` with no site account or any `guild_id` other than the site guild, 409 if the event isn't scheduled |
 | `/api/guilds/{guild_id}/attendance/voice` (PUT) | `X-API-Key` | Bot reports cumulative per-event voice minutes for every member it's tracked in the guild's voice channels while an event runs (idempotent replace, not increment; 404s for any guild other than the site guild) |
 | `/api/discord/live` (GET) | none | Website reads the site guild's live counts; empty counts (not 404) if the bot hasn't reported recently |
-| `/api/heroes` (GET) | signed in or `X-API-Key` | Hall of Heroes leaderboard for `?season=<id\|all\|month>`, highest EP first |
+| `/api/heroes` (GET) | signed in or `X-API-Key` | Hall of Heroes leaderboard for `?season=<id\|all\|month>`: everyone confirmed on the roster and still in the server, anyone holding a badge, and anyone with EP that season; highest EP first, `rank` null for those with no EP yet |
 | `/api/heroes/{member_id}` (GET) | signed in or `X-API-Key` | One member's Hall of Heroes profile: season/all-time stats, rank, chat level/XP, recent events, earned badges |
 | `/api/discord/online` (GET) | signed-in guild member | Trims Discord's public server widget (`https://discord.com/api/guilds/{id}/widget.json`) to `presence_count` plus each member's name/status/avatar/activity, cached in-process ~60s; `ok: false` with an empty list if the widget fetch fails or times out (3s) rather than a 500. Never edge-cached (varies by session). |
 | `/auth/discord/login`, `/auth/discord/callback`, `/auth/logout` | none | Discord OAuth sign-in (session cookie `sq_session`) |
@@ -317,7 +317,9 @@ appear in the roster.
 ### Hall of Heroes
 `/heroes/` is a members-only, raider.io-style leaderboard (`GET /api/heroes?season=<id|all|month>`, 401 signed
 out) with rank, EP, raids/events attended, chat level and badge icons, sortable client-side by EP/raids/level and
-switchable between a season, the last calendar month, and all time. `/heroes/member/?id=<member_id>` is one
+switchable between a season, the last calendar month, and all time. It lists the whole confirmed roster, badge
+holders and anyone with EP, so it isn't empty before the first event; the rank follows the chosen sort, ties share a
+rank, and anyone at zero is listed without one. `/heroes/member/?id=<member_id>` is one
 member's profile (`GET /api/heroes/{member_id}`, 401/404): season and all-time stats, a chat-level XP bar, earned
 badges (name, description, earned date — see "Hall of Heroes badges" above) and recent events. Seasons are one
 code constant, `SEASONS` in `packages/sidequest-common/src/sidequest_common/schemas/heroes.py` (mirrored for the

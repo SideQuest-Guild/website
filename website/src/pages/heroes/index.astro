@@ -83,7 +83,17 @@ import "../../styles/room-heroes.css";
 
   type SortKey = "ep" | "raids_attended" | "chat_level";
 
-  function rankBadge(rank: number): string {
+  const NOTHING_YET: Record<SortKey, string> = {
+    ep: "No one has earned EP this season yet. Sign up for an event to be the first on the board.",
+    raids_attended: "No one has attended a raid this season yet.",
+    chat_level: "No one has a chat level yet. Talk in the Discord to earn one.",
+  };
+
+  /** Ranks only members with something to rank by; the rest are listed unranked. */
+  function rankBadge(rank: number | null): string {
+    if (rank === null) {
+      return `<span class="hero-rank hero-rank-none" aria-label="Unranked">–</span>`;
+    }
     const tier = rank === 1 ? " rank-gold" : rank === 2 ? " rank-silver" : rank === 3 ? " rank-bronze" : "";
     return `<span class="hero-rank${tier}">${rank}</span>`;
   }
@@ -111,12 +121,12 @@ import "../../styles/room-heroes.css";
     return `<span class="hero-avatar hero-avatar-empty" aria-hidden="true">${initial}</span>`;
   }
 
-  function heroRow(row: HeroRow): string {
+  function heroRow(row: HeroRow, rank: number | null): string {
     const className = row.wow_class ? capitalize(row.wow_class) : "No class yet";
     const nameClass = `hero-display-name${row.wow_class ? ` cls-${row.wow_class}` : ""}`;
     return `
     <a class="hero-row" href="/heroes/member/?id=${row.member_id}">
-      ${rankBadge(row.rank)}
+      ${rankBadge(rank)}
       ${avatarMarkup(row)}
       <span class="hero-name">
         <span class="${nameClass}">${escapeHtml(row.display_name)}</span>
@@ -164,10 +174,14 @@ import "../../styles/room-heroes.css";
 
     function renderRows(): void {
       const sorted = rows.toSorted((a, b) => b[sortKey] - a[sortKey]);
-      boardEl.innerHTML =
-        sorted.length > 0
-          ? sorted.map(heroRow).join("")
-          : `<p class="hero-empty aside">No one has earned EP this season yet. Sign up for an event to be the first on the board.</p>`;
+      // Ties share a rank (1, 1, 3); anyone at zero is listed but unranked.
+      const ranked = sorted.map((row) =>
+        heroRow(row, row[sortKey] > 0 ? 1 + sorted.filter((other) => other[sortKey] > row[sortKey]).length : null),
+      );
+      const note = sorted.some((row) => row[sortKey] > 0)
+        ? ""
+        : `<p class="hero-empty aside">${NOTHING_YET[sortKey]}</p>`;
+      boardEl.innerHTML = note + ranked.join("");
     }
 
     async function loadLeaderboard(): Promise<void> {

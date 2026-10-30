@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING
 from zoneinfo import ZoneInfo
 
 from litestar.exceptions import NotFoundException
-from sqlalchemy import case, func, select
+from sqlalchemy import and_, case, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession  # noqa: TC002
 
 from sidequest_api.lib.attendance import attended_condition
@@ -229,27 +229,46 @@ class HeroesService:
     # --- Public reads -----------------------------------------------------------------------------------------
 
     async def get_leaderboard(self, season: str, *, now: datetime | None = None) -> HeroLeaderboard:
-        """Highest EP first for the given season (an id, ``"all"``, or ``"month"``); only members with any EP."""
+        """Everyone on the roster, holding a badge or with EP in the season (an id, ``"all"``, or ``"month"``).
+
+        Highest EP first, then raids, then name. Only members with EP this season get a ``rank``.
+        """
         reference = now or datetime.now(UTC)
         since, until, season_id, season_name = _season_window(season, reference)
         stats = await self._season_stats(since=since, until=until, now=reference)
-        member_ids = [member_id for member_id, stat in stats.items() if stat.ep > 0]
-        if not member_ids:
+        listed = select(Member).where(
+            or_(
+                Member.id.in_([member_id for member_id, stat in stats.items() if stat.ep > 0]),
+                and_(Member.is_guild_member.is_(True), Member.roster_confirmed_at.is_not(None)),
+                Member.id.in_(select(MemberBadge.member_id)),
+            )
+        )
+        members = list((await self._session.execute(listed)).scalars())
+        if not members:
             return HeroLeaderboard(season_id=season_id, season_name=season_name, rows=[])
-        members = list((await self._session.execute(select(Member).where(Member.id.in_(member_ids)))).scalars())
+        member_ids = [member.id for member in members]
         members_by_id = {member.id: member for member in members}
         classes = await self._classes_for(members)
         levels = await self._levels_by_member(members)
         badge_ids = await self._badge_ids_by_member(member_ids)
-        ordered = sorted(member_ids, key=lambda mid: (-stats[mid].ep, -stats[mid].raids_attended, mid))
+        zero_stats = HeroSeasonStats(ep=0, raids_attended=0, events_attended=0, attendance_rate=0.0)
+        ordered = sorted(
+            member_ids,
+            key=lambda mid: (
+                -stats.get(mid, zero_stats).ep,
+                -stats.get(mid, zero_stats).raids_attended,
+                members_by_id[mid].display_name.casefold(),
+                mid,
+            ),
+        )
         rows = []
-        for rank, member_id in enumerate(ordered, start=1):
+        for position, member_id in enumerate(ordered, start=1):
             member = members_by_id[member_id]
-            stat = stats[member_id]
+            stat = stats.get(member_id, zero_stats)
             level = levels.get(member_id)
             rows.append(
                 HeroRow(
-                    rank=rank,
+                    rank=position if stat.ep > 0 else None,
                     member_id=member_id,
                     discord_id=str(member.discord_id),
                     display_name=member.display_name,
