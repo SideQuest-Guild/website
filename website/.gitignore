@@ -1,4 +1,5 @@
-node_modules/
+# No trailing slash: also ignores a node_modules symlink, such as one pointing a worktree at another's packages.
+node_modules
 .astro/
 # litestar-vite dev-server handoff file (host/port/paths), regenerated on every `make dev`.
 .litestar.json
