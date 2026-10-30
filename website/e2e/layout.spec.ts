@@ -13,6 +13,7 @@ const PAGES = [
   { name: "heroes", path: "/heroes/" },
   { name: "hero", path: `/heroes/member/?id=${HEROES[0]?.member_id}` },
   { name: "addons", path: "/addons/" },
+  { name: "companion", path: "/companion/" },
   { name: "raids", path: "/raids/" },
   { name: "ledger", path: "/ledger/" },
   { name: "guild", path: "/guild/" },

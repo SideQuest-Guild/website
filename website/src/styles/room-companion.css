@@ -1,0 +1,56 @@
+/* The Armory room, Companion's download page: a plain grid of build cards, not item tooltips — these are tools,
+   not loot, so no epic-quality border. The visitor's own platform (best-guess from the UA string) gets a Guild
+   Gold, Deep edge instead of stone. */
+
+.platform-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: clamp(16px, 1.8vw, 24px);
+  margin: 18px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.platform-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 18px 20px;
+  background: rgba(4, 8, 16, 0.5);
+  border: 1px solid var(--stone);
+  transition: border-color 0.3s;
+}
+.platform-card.is-your-platform {
+  border-color: var(--gold-2);
+}
+.platform-name {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: clamp(16px, 1.05vw, 19px);
+  letter-spacing: 0.04em;
+  color: var(--ink);
+}
+.platform-arch {
+  display: block;
+  margin-top: 2px;
+  font-size: var(--caps);
+  letter-spacing: 0.04em;
+  color: var(--mist-2);
+}
+.platform-meta {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  color: var(--mist-2);
+}
+.platform-card .form-actions {
+  margin-top: auto;
+  padding-top: 6px;
+}
+
+@media (max-width: 560px) {
+  .platform-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
