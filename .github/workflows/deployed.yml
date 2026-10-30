@@ -35,7 +35,7 @@ jobs:
             --data '{"purge_everything":true}'
 
   e2e:
-    name: End-to-end against sidequest-guild.com (${{ matrix.project }})
+    name: End-to-end against sidequest-guild.com (${{ matrix.project }} ${{ matrix.shard }}/2)
     needs: purge
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -43,6 +43,7 @@ jobs:
       fail-fast: false
       matrix:
         project: [desktop, iphone, android, small-phone]
+        shard: [1, 2]
     defaults:
       run:
         working-directory: website
@@ -66,13 +67,13 @@ jobs:
         run: npx playwright install --with-deps ${{ (matrix.project == 'iphone' || matrix.project == 'small-phone') && 'webkit' || 'chromium' }}
 
       - name: Playwright
-        run: npm run e2e -- --project=${{ matrix.project }} --workers=100%
+        run: npm run e2e -- --project=${{ matrix.project }} --shard=${{ matrix.shard }}/2
 
       - name: Upload report and screenshots
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: playwright-report-live-${{ matrix.project }}
+          name: playwright-report-live-${{ matrix.project }}-${{ matrix.shard }}
           path: |
             website/playwright-report
             website/test-results
