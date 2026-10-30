@@ -3,6 +3,7 @@ import { getImage, Image } from "astro:assets";
 import Art from "../components/Art.astro";
 import JoinPlaque from "../components/JoinPlaque.astro";
 import SiteFooter from "../components/SiteFooter.astro";
+import SiteNav from "../components/SiteNav.astro";
 import { ADDON_SOURCE_URL, CURSEFORGE_URL, DISCORD_GUILD_URL, DISCORD_INVITE, LAUNCH } from "../config";
 import Site from "../layouts/Site.astro";
 
@@ -12,7 +13,6 @@ import emblem from "../../assets/plates/emblem.png";
 import heroArtMobile from "../../assets/plates/hero-art-mobile.png";
 import heroArt from "../../assets/plates/hero-art.png";
 import joinArt from "../../assets/plates/join-art.png";
-import guildLogo from "../../assets/brand/sidequest-logo.png";
 import panelJourney from "../../assets/plates/panel-journey.png";
 import panelProgression from "../../assets/plates/panel-progression.png";
 import panelRaid from "../../assets/plates/panel-raid.png";
@@ -79,52 +79,7 @@ const panels = [
     <link rel="preload" as="fetch" href="/api/recruiting" crossorigin="anonymous" />
   </Fragment>
 
-  <header class="site-header">
-    <a class="r nav-crest" href="/#top" aria-label="SideQuest home">
-      <Image class="fit" src={guildLogo} width={160} alt="" loading="eager" />
-    </a>
-    <a class="r nav-wordmark center shade" href="/#top">
-      SIDEQUEST
-    </a>
-    <nav aria-label="Main">
-      <button
-        class="nav-toggle shade"
-        type="button"
-        aria-expanded="false"
-        aria-controls="hero-nav-list"
-        data-nav-toggle
-      >
-        <span class="nav-toggle-bars" aria-hidden="true"></span>
-        <span data-nav-label>Menu</span>
-      </button>
-      <ul class="r nav-links shade" id="hero-nav-list">
-        <li>
-          <a href="#how-we-play">How we play</a>
-        </li>
-        <li>
-          <a href="/events/">Events</a>
-        </li>
-        <li id="hero-raid-nav" hidden>
-          <a href="/raids/">Raids</a>
-        </li>
-        <li>
-          <a href="/heroes/">Heroes</a>
-        </li>
-        <li>
-          <a href="#addons">Addons</a>
-        </li>
-        <li data-officer-nav>
-          <a href="/officers/">Officers</a>
-        </li>
-        <li>
-          <a href={DISCORD_INVITE}>Discord</a>
-        </li>
-        <li>
-          <a href="/account/">Account</a>
-        </li>
-      </ul>
-    </nav>
-  </header>
+  <SiteNav hero />
 
   <main id="top" tabindex="-1">
     <div class="frame">

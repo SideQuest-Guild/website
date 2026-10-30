@@ -166,3 +166,47 @@ test.describe("wide desktop officers console", () => {
     });
   }
 });
+
+// The nav's own moments, each pinned to the width the brief asked for: the Raids panel open at desktop width,
+// and the phone Menu sheet open at the smallest phone width.
+test.describe("nav panel and sheet", () => {
+  // Like the page checks above: the homepage painting's slow zoom would otherwise read as content past the edge.
+  test.use({ reducedMotion: "reduce" });
+  test("the Raids panel fits the screen at 1440", async ({ page, site }, testInfo) => {
+    test.skip(testInfo.project.name !== "desktop", "a desktop width");
+    await page.setViewportSize({ width: 1440, height: 900 });
+    site.signIn(GM);
+    await page.goto("/");
+    await page.waitForLoadState("networkidle");
+
+    await page.getByRole("button", { name: "Raids", exact: true }).click();
+    await expect(page.locator("[data-nav-panel]")).toBeVisible();
+
+    const layout = await offScreen(page);
+    expect(layout.scrollWidth, "page scrolls sideways").toBeLessThanOrEqual(layout.width);
+    expect(layout.offenders, "content past the screen edge").toEqual([]);
+
+    const shot = testInfo.outputPath("page.png");
+    await page.screenshot({ path: shot, scale: "css" });
+    await testInfo.attach("nav panel open (1440)", { path: shot, contentType: "image/png" });
+  });
+
+  test("the Menu sheet fits the screen at 320", async ({ page, site }, testInfo) => {
+    test.skip(testInfo.project.name !== "small-phone", "the smallest phone width");
+    site.signIn(GM);
+    await page.goto("/");
+    await page.waitForLoadState("networkidle");
+
+    await page.locator("[data-nav-toggle]").first().click();
+    const sheet = page.locator("[data-nav-sheet]");
+    await expect(sheet).toBeVisible();
+
+    const layout = await offScreen(page);
+    expect(layout.scrollWidth, "page scrolls sideways").toBeLessThanOrEqual(layout.width);
+    expect(layout.offenders, "content past the screen edge").toEqual([]);
+
+    const shot = testInfo.outputPath("page.png");
+    await page.screenshot({ path: shot, scale: "css" });
+    await testInfo.attach("nav sheet open (320)", { path: shot, contentType: "image/png" });
+  });
+});

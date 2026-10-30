@@ -631,7 +631,7 @@ test.describe("API reference", () => {
     await expect(sidebarNav.getByRole("link", { name: "Me", exact: true })).toBeVisible();
     await expect(sidebarNav.getByRole("link", { name: "Bot", exact: true })).toBeVisible();
 
-    const header = await page.locator(".api-reference-room .page-header").boundingBox();
+    const header = await page.locator(".api-reference-room .site-nav").boundingBox();
     const sidebar = await page.locator(".t-doc__sidebar").boundingBox();
     expect(sidebar?.y ?? -1, "sidebar sits below the header").toBeGreaterThanOrEqual(
       (header?.y ?? 0) + (header?.height ?? 0) - 1,
@@ -646,7 +646,7 @@ test.describe("API reference", () => {
     // The header stays in view while reading further down, so the sidebar's offset never points at empty space.
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
     await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
-    const scrolledHeader = await page.locator(".api-reference-room .page-header").boundingBox();
+    const scrolledHeader = await page.locator(".api-reference-room .site-nav").boundingBox();
     expect(scrolledHeader?.y, "header stays at the top after scrolling").toBe(0);
   });
 });

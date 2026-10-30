@@ -1,5 +1,6 @@
-// Reveals the homepage's RAIDS band, hero-nav link and footer link only once a raid is actually
-// scheduled. Any fetch failure, or no scheduled raids, leaves all three hidden as the markup has them.
+// Reveals the homepage's RAIDS band and footer link only once a raid is actually scheduled. Any fetch failure, or
+// no scheduled raids, leaves both hidden as the markup has them. (The nav's own Raids group always links to
+// /raids/, /ledger/ and /events/?kind=raid regardless of whether one is currently scheduled.)
 import { apiFetch, escapeHtml, onFreshData, type EventSummary } from "./api";
 import { onPage } from "./page";
 import { seriesRefText } from "./series";
@@ -7,12 +8,11 @@ import { seriesRefText } from "./series";
 const RAIDS_PATH = "/api/events?when=upcoming&kind=raid";
 
 onPage("#raids", () => {
-  const heroLink = document.getElementById("hero-raid-nav");
   const footerLink = document.getElementById("footer-raid-nav");
   const band = document.getElementById("raids");
   const nextDate = document.getElementById("raid-next-date");
 
-  if (heroLink && footerLink && band && nextDate) {
+  if (footerLink && band && nextDate) {
     const dateFormat = new Intl.DateTimeFormat(undefined, {
       weekday: "short",
       month: "short",
@@ -31,7 +31,6 @@ onPage("#raids", () => {
       apiFetch<EventSummary[]>(RAIDS_PATH)
         .then((raids) => {
           const next = raids[0];
-          heroLink.hidden = !next;
           footerLink.hidden = !next;
           band.hidden = !next;
           if (!next) {

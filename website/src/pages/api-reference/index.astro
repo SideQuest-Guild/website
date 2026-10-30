@@ -1,9 +1,9 @@
 ---
 // The API reference. Every other inner page opens with a full-bleed painting (src/layouts/Room.astro); a
 // technical reference is read, not looked at, and visitors come back to it over and over, so it skips the
-// painting and uses the site's own compact header (PageHeader, the same one Room nests under its art) straight
-// away, sticky on this page only, so the reference below is never more than a scroll away from the header.
-import PageHeader from "../../components/PageHeader.astro";
+// painting and uses the site's own compact nav (SiteNav, the same one Room nests under its art) straight
+// away, sticky on this page only, so the reference below is never more than a scroll away from the nav.
+import SiteNav from "../../components/SiteNav.astro";
 import SiteFooter from "../../components/SiteFooter.astro";
 import Site from "../../layouts/Site.astro";
 ---
@@ -14,7 +14,7 @@ import Site from "../../layouts/Site.astro";
   ground={false}
 >
   <div class="room api-reference-room">
-    <PageHeader />
+    <SiteNav />
     <main id="top" tabindex="-1" class="room-body wrap api-reference-body">
       <div class="heading">
         <span class="rule" aria-hidden="true"></span>
@@ -46,10 +46,10 @@ import Site from "../../layouts/Site.astro";
 </script>
 
 <style>
-  /* This page is long and read in place, so its header stays put instead of scrolling away with the room (every
-     other room's header is painted over its art and scrolls with it). `.page-header` is PageHeader's markup, outside
+  /* This page is long and read in place, so its nav stays put instead of scrolling away with the room (every
+     other room's nav is painted over its art and scrolls with it). `.site-nav` is SiteNav's markup, outside
      this page's scoped styles, hence :global; the .api-reference-room parent keeps it to this page. */
-  .api-reference-room :global(.page-header) {
+  .api-reference-room :global(.site-nav) {
     position: sticky;
     top: 0;
     z-index: 20;

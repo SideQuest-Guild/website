@@ -98,7 +98,7 @@ textarea {
   inset: 25% 0 0;
   background: radial-gradient(58% 64% at 50% 74%, rgba(7, 11, 20, 0.82), rgba(7, 11, 20, 0) 74%);
 }
-.room-head .page-header {
+.room-head .site-nav {
   border-bottom: 0;
   text-shadow:
     0 1px 3px rgba(4, 8, 16, 0.9),
@@ -755,7 +755,7 @@ textarea {
   .room-head {
     min-height: clamp(340px, 92vw, 520px);
   }
-  .room-head .page-header {
+  .room-head .site-nav {
     background: linear-gradient(to bottom, rgba(6, 10, 18, 0.82), rgba(6, 10, 18, 0.35));
   }
   .room-title .heading h1 {

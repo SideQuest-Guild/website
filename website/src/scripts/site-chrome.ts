@@ -1,55 +1,7 @@
-// Shared page chrome on every page: the narrow-screen Menu disclosure, the back-to-top control, the officer-only
-// Officers nav link, and (once per visit) the service worker, link warm-up and full loads for sign-in links.
-import { ApiError, fetchMe } from "./api";
+// Shared page chrome on every page: the SideQuest nav (scripts/nav.ts), the back-to-top control, and (once per
+// visit) the service worker, link warm-up and full loads for sign-in links.
+import { setupNav } from "./nav";
 import { onPage } from "./page";
-
-const MOBILE_QUERY = window.matchMedia("(max-width: 900px)");
-
-function setupMenu(toggle: HTMLButtonElement, signal: AbortSignal): void {
-  const listId = toggle.getAttribute("aria-controls");
-  const list = listId ? document.getElementById(listId) : null;
-  const label = toggle.querySelector<HTMLElement>("[data-nav-label]");
-  if (!list) {
-    return;
-  }
-
-  const setOpen = (open: boolean): void => {
-    toggle.setAttribute("aria-expanded", String(open));
-    list.classList.toggle("open", open);
-    if (label) {
-      label.textContent = open ? "Close" : "Menu";
-    }
-  };
-
-  toggle.addEventListener("click", () => setOpen(toggle.getAttribute("aria-expanded") !== "true"));
-  // Following a link (including same-page anchors) closes the menu.
-  list.addEventListener("click", (event) => {
-    if (event.target instanceof Element && event.target.closest("a")) {
-      setOpen(false);
-    }
-  });
-  document.addEventListener(
-    "keydown",
-    (event) => {
-      if (event.key === "Escape" && toggle.getAttribute("aria-expanded") === "true") {
-        setOpen(false);
-        toggle.focus();
-      }
-    },
-    { signal },
-  );
-  document.addEventListener(
-    "click",
-    (event) => {
-      const target = event.target;
-      if (target instanceof Node && !toggle.contains(target) && !list.contains(target)) {
-        setOpen(false);
-      }
-    },
-    { signal },
-  );
-  MOBILE_QUERY.addEventListener("change", () => setOpen(false), { signal });
-}
 
 function setupToTop(link: HTMLElement, signal: AbortSignal): void {
   let ticking = false;
@@ -68,32 +20,6 @@ function setupToTop(link: HTMLElement, signal: AbortSignal): void {
     { passive: true, signal },
   );
   update();
-}
-
-const OFFICER_FLAG = "sq-officer";
-
-/** Shows the Officers link to signed-in officers only. The head script already applied last visit's answer to
- * avoid a reflow; this confirms it. A network failure keeps that answer; any HTTP answer replaces it. */
-async function syncOfficerNav(): Promise<void> {
-  let officer: boolean;
-  try {
-    officer = (await fetchMe()).is_officer;
-  } catch (err) {
-    if (err instanceof ApiError && err.status === 0) {
-      return;
-    }
-    officer = false;
-  }
-  document.documentElement.classList.toggle("officer", officer);
-  try {
-    if (officer) {
-      localStorage.setItem(OFFICER_FLAG, "1");
-    } else {
-      localStorage.removeItem(OFFICER_FLAG);
-    }
-  } catch {
-    // Storage blocked: the link still follows /api/me, it just appears after the check.
-  }
 }
 
 /** Starts loading the painting of a page the visitor is about to open (hover, focus or touch), so it's on the
@@ -202,15 +128,10 @@ function setupFullLoadLinks(): void {
 }
 
 onPage("body", (signal) => {
-  for (const toggle of document.querySelectorAll<HTMLButtonElement>("[data-nav-toggle]")) {
-    setupMenu(toggle, signal);
-  }
+  setupNav(signal);
   const toTop = document.querySelector<HTMLElement>("[data-to-top]");
   if (toTop) {
     setupToTop(toTop, signal);
-  }
-  if (document.querySelector("[data-officer-nav]")) {
-    void syncOfficerNav();
   }
 });
 setupFullLoadLinks();

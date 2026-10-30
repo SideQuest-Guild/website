@@ -1,0 +1,295 @@
+---
+// The site's one nav: brand, Events, a Raids group, a Guild group, Addons, the Discord link and the account
+// chip. Homepage and every inner page render the same markup here (`hero` only changes how it's painted over
+// the art vs. sitting in a plain bar); `nav.ts` drives the group panel, the account menu and the phone sheet.
+import { Image } from "astro:assets";
+import { DISCORD_INVITE } from "../config";
+import guildLogo from "../../assets/brand/sidequest-logo.png";
+
+interface Props {
+  current?: "events" | "raids" | "ledger" | "heroes" | "guild" | "rules" | "addons" | "officers" | "account";
+  /** The homepage's hero nav, painted over the art instead of sitting in a plain bar. */
+  hero?: boolean;
+}
+
+const { current, hero = false } = Astro.props;
+const raidsCurrent = current === "raids" || current === "ledger";
+const guildCurrent = current === "guild" || current === "heroes" || current === "rules";
+const accountCurrent = current === "account" || current === "officers";
+
+type NavEntry = { href: string; icon: string; name: string; desc: string; members?: boolean };
+
+const raidEntries: NavEntry[] = [
+  {
+    href: "/raids/",
+    icon: "i-nav-raids",
+    name: "How raid nights work",
+    desc: "Signups, SQL loot, soft reserve, attendance and Renown.",
+  },
+  { href: "/ledger/", icon: "i-nav-ledger", name: "Loot ledger", desc: "SQL points, loot and boss kills." },
+  {
+    href: "/events/?kind=raid",
+    icon: "i-nav-calendar",
+    name: "Upcoming raids",
+    desc: "This season's scheduled raid nights.",
+  },
+];
+
+const guildEntries: NavEntry[] = [
+  {
+    href: "/heroes/",
+    icon: "i-nav-heroes",
+    name: "Hall of Heroes",
+    desc: "The Renown leaderboard and badges members earn.",
+    members: true,
+  },
+  {
+    href: "/guild/",
+    icon: "i-nav-roster",
+    name: "Roster and crafters",
+    desc: "The roster, crafters directory, bank log and news.",
+    members: true,
+  },
+  { href: "/#how-we-play", icon: "i-nav-play", name: "How we play", desc: "The journey and the raid, our own way." },
+  {
+    href: "/rules/",
+    icon: "i-nav-rules",
+    name: "Guild rules",
+    desc: "Be kind, 18 and over, and Blizzard's and Discord's rules.",
+  },
+];
+
+const groups: { id: "raids" | "guild"; label: string; width: number; entries: NavEntry[] }[] = [
+  { id: "raids", label: "Raids", width: 320, entries: raidEntries },
+  { id: "guild", label: "Guild", width: 356, entries: guildEntries },
+];
+---
+
+<header class:list={["site-nav", { "site-nav--hero": hero }]} data-nav>
+  <a class="nav-brand" href="/#top" aria-label="SideQuest home">
+    <Image class="nav-brand-crest" src={guildLogo} width={160} alt="" loading="eager" />
+    <span class:list={["nav-brand-word", { shade: hero }]}>SIDEQUEST</span>
+  </a>
+
+  <nav class="nav-bar" aria-label="Main" data-nav-bar>
+    <ul class:list={["nav-items", { shade: hero }]}>
+      <li>
+        <a class="nav-link" data-nav-roving href="/events/" aria-current={current === "events" ? "page" : undefined}>
+          Events
+        </a>
+      </li>
+      {groups.map((group) => (
+        <li class="nav-item-group">
+          <button
+            type="button"
+            class="nav-trigger"
+            data-nav-roving
+            data-nav-trigger={group.id}
+            aria-expanded="false"
+            aria-controls="nav-panel"
+            aria-current={(group.id === "raids" ? raidsCurrent : guildCurrent) ? "page" : undefined}
+          >
+            {group.label}
+          </button>
+        </li>
+      ))}
+      <li>
+        <a class="nav-link" data-nav-roving href="/addons/" aria-current={current === "addons" ? "page" : undefined}>
+          Addons
+        </a>
+      </li>
+    </ul>
+
+    <div class="nav-panel" id="nav-panel" role="group" data-nav-panel hidden>
+      <span class="nav-panel-notch" aria-hidden="true"></span>
+      <div class="nav-panel-inner" data-nav-panel-inner>
+        {groups.map((group) => (
+          <div class="nav-panel-pane" data-pane={group.id} data-w={group.width}>
+            {group.entries.map((entry) => (
+              <a class="nav-entry" href={entry.href}>
+                <svg class="nav-entry-ico ico" aria-hidden="true">
+                  <use href={`#${entry.icon}`} />
+                </svg>
+                <span class="nav-entry-body">
+                  <span class="nav-entry-name">
+                    {entry.name}
+                    {entry.members && (
+                      <span class="nav-entry-flag" data-members-flag>
+                        Members
+                      </span>
+                    )}
+                  </span>
+                  <span class="nav-entry-desc">{entry.desc}</span>
+                </span>
+              </a>
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
+  </nav>
+
+  <div class="nav-aside">
+    <a
+      class="nav-discord"
+      href={DISCORD_INVITE}
+      aria-label="Discord (opens the SideQuest server)"
+      data-astro-reload
+      target="_blank"
+      rel="noreferrer"
+    >
+      <svg class="ico" aria-hidden="true">
+        <use href="#i-discord" />
+      </svg>
+    </a>
+
+    <div class="nav-account" data-nav-account>
+      <a
+        class="nav-account-chip"
+        href="/account/"
+        data-account-signed-out
+        aria-current={accountCurrent ? "page" : undefined}
+      >
+        Sign in
+      </a>
+      <button
+        type="button"
+        class="nav-account-chip"
+        data-account-signed-in
+        hidden
+        aria-haspopup="true"
+        aria-expanded="false"
+        aria-controls="nav-account-menu"
+        aria-current={accountCurrent ? "page" : undefined}
+      >
+        <span class="nav-account-avatar" data-account-avatar aria-hidden="true"></span>
+        <span class="nav-account-name" data-account-name></span>
+      </button>
+      <div class="nav-account-menu" id="nav-account-menu" data-account-menu hidden>
+        <a href="/account/" aria-current={current === "account" ? "page" : undefined}>
+          Your account
+        </a>
+        <a href="/officers/" data-officer-nav hidden aria-current={current === "officers" ? "page" : undefined}>
+          Officers
+        </a>
+        <button type="button" data-sign-out>
+          Sign out
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <button type="button" class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="nav-sheet">
+    <span class="nav-toggle-bars" aria-hidden="true"></span>
+    <span data-nav-label>Menu</span>
+  </button>
+
+  <!-- Pre-paints the account chip from last visit's cached /api/me (cleared on sign-out, see scripts/nav.ts) so a
+       signed-in member never sees "Sign in" flash before their avatar; nav.ts reconciles with a fresh /api/me
+       right after. Reruns on every ClientRouter swap since the nav itself is swapped content. -->
+  <script is:inline data-astro-rerun>
+    (function () {
+      try {
+        const raw = localStorage.getItem("sq-me");
+        if (!raw) return;
+        const me = JSON.parse(raw);
+        const nav = document.querySelector("[data-nav]");
+        if (!nav || !me || typeof me.display_name !== "string") return;
+        document.documentElement.classList.add("member");
+        for (const el of nav.querySelectorAll("[data-account-signed-out]")) {
+          el.hidden = true;
+        }
+        for (const el of document.querySelectorAll("[data-account-signed-in]")) {
+          el.hidden = false;
+          const name = el.querySelector("[data-account-name]");
+          if (name) name.textContent = me.display_name;
+          const avatar = el.querySelector("[data-account-avatar]");
+          if (avatar) {
+            avatar.textContent = "";
+            if (me.avatar_url) {
+              const img = document.createElement("img");
+              img.src = me.avatar_url;
+              img.alt = "";
+              img.width = 28;
+              img.height = 28;
+              avatar.append(img);
+            } else {
+              avatar.textContent = (me.display_name.trim().charAt(0) || "?").toUpperCase();
+            }
+          }
+        }
+      } catch {
+        // Storage blocked or malformed: the chip just shows "Sign in" until nav.ts's own fetchMe lands.
+      }
+    })();
+  </script>
+</header>
+
+<div class="nav-sheet" id="nav-sheet" data-nav-sheet hidden>
+  <div class="nav-sheet-head">
+    <span class="nav-sheet-title">Menu</span>
+    <button type="button" class="nav-sheet-close" data-nav-sheet-close aria-label="Close menu">
+      <span class="nav-toggle-bars is-x" aria-hidden="true"></span>
+    </button>
+  </div>
+  <div class="nav-sheet-body">
+    <div class="nav-sheet-account">
+      <a class="nav-sheet-account-row" href="/account/" data-account-signed-out>
+        Sign in
+      </a>
+      <div class="nav-sheet-account-row nav-sheet-account-signed-in" data-account-signed-in hidden>
+        <span class="nav-account-avatar" data-account-avatar aria-hidden="true"></span>
+        <span class="nav-account-name" data-account-name></span>
+      </div>
+      <a class="nav-sheet-link" data-account-signed-in hidden href="/account/">
+        Your account
+      </a>
+      <a class="nav-sheet-link" data-officer-nav hidden href="/officers/">
+        Officers
+      </a>
+      <button type="button" class="nav-sheet-link nav-sheet-signout" data-account-signed-in hidden data-sign-out>
+        Sign out
+      </button>
+    </div>
+
+    <nav class="nav-sheet-groups" aria-label="Mobile">
+      <a
+        class="nav-sheet-link nav-sheet-plain"
+        href="/events/"
+        aria-current={current === "events" ? "page" : undefined}
+      >
+        Events
+      </a>
+      {groups.map((group) => (
+        <section class="nav-sheet-group">
+          <h2 class="nav-sheet-group-title">{group.label}</h2>
+          {group.entries.map((entry) => (
+            <a class="nav-entry nav-sheet-entry" href={entry.href}>
+              <svg class="nav-entry-ico ico" aria-hidden="true">
+                <use href={`#${entry.icon}`} />
+              </svg>
+              <span class="nav-entry-body">
+                <span class="nav-entry-name">
+                  {entry.name}
+                  {entry.members && (
+                    <span class="nav-entry-flag" data-members-flag>
+                      Members
+                    </span>
+                  )}
+                </span>
+                <span class="nav-entry-desc">{entry.desc}</span>
+              </span>
+            </a>
+          ))}
+        </section>
+      ))}
+      <a
+        class="nav-sheet-link nav-sheet-plain"
+        href="/addons/"
+        aria-current={current === "addons" ? "page" : undefined}
+      >
+        Addons
+      </a>
+    </nav>
+  </div>
+</div>

@@ -27,7 +27,7 @@ const OPTIONS = {
 onPage("#api-reference-mount", (signal) => {
   const mount = document.querySelector<HTMLElement>("#api-reference-mount");
   const fallback = document.querySelector<HTMLElement>("#api-reference-fallback");
-  const header = document.querySelector<HTMLElement>(".api-reference-room .page-header");
+  const header = document.querySelector<HTMLElement>(".api-reference-room .site-nav");
   if (!mount) {
     return;
   }
