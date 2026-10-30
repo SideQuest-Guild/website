@@ -18,7 +18,8 @@ A WoW: Forever guild's site and API. One uv workspace, one Docker image, two Cab
 - `make install`, `make db-up`, `make migrate`, `make api` (site + API on http://localhost:8000; `:4321` is another
   project). `make dev` for hot reload. Local Postgres is on host port **55432**.
 - `make fmt`, then `make ci`. Commit and push only when `make ci` exits 0 (gate on the exit code, e.g.
-  `make ci && git commit …`). Conventional commit subjects in plain language.
+  `make ci && git commit …`). Commit subjects are Conventional Commits in plain words; they become the changelog, so
+  say what changed for guild members.
 - Commits are SSH-signed via 1Password. If signing fails, ask the user to unlock it; never disable signing.
 - Other agents and the user work in this tree at the same time: never `git stash`, `checkout`, `reset`, or commit
   files you didn't change.
@@ -26,6 +27,24 @@ A WoW: Forever guild's site and API. One uv workspace, one Docker image, two Cab
   iPhone WebKit, Android and a 320px phone; read the screenshots in `website/test-results/` for anything visual. A new
   page goes in `PAGES` in `e2e/layout.spec.ts`; a new API call needs a handler in `e2e/fixtures.ts` (unhandled calls
   fail the test).
+
+## Releases
+Each release adds a section to the changelog on the docs site and on GitHub. Without a tag, every change sits under
+"Unreleased".
+- Cut one after a batch of `feat` or `fix` commits is live in prod and checked, and at least at the end of any day
+  that shipped one.
+- Version `v0.MINOR.PATCH`: any `feat` since the last tag bumps MINOR (`v0.1.0` to `v0.2.0`); only fixes bump PATCH.
+
+```sh
+git cliff --tag v0.2.0 -o CHANGELOG.md
+git add CHANGELOG.md && git commit -m "docs: changelog for v0.2.0"
+git tag -s v0.2.0 -m "Website v0.2.0"
+git push origin main v0.2.0
+gh workflow run build.yml -R SideQuest-Guild/docs   # show it on the docs site now, not at tomorrow's build
+```
+
+The tag starts `.github/workflows/release.yml`, which publishes the GitHub release. The tag itself deploys nothing.
+`v*` tags can't be moved or deleted; fix a bad release with a new version.
 
 ## Rules that bite
 - **Rolling deploys:** old and new API pods run side by side. New schema fields get defaults; new migrations revise
