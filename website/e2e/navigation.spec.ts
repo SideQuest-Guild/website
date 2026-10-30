@@ -60,6 +60,9 @@ async function navToAccount(page: Page, name: string): Promise<void> {
 }
 
 test("every destination is reachable from the bar", async ({ page, site }) => {
+  // Thirteen page changes in one test: on a loaded CI runner each costs 3-4s (the phone sheet's open animation plus
+  // the page's view transition), which runs past the default 30s budget around the ninth.
+  test.slow();
   site.signIn(OFFICER);
   await page.goto("/");
   await page.evaluate(() => Object.assign(window, { e2eDocument: true }));
