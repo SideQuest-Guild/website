@@ -1,7 +1,7 @@
 """add epgp device authorizations
 
 Revision ID: 311868fc4271
-Revises: c4f1a9b3d7e2
+Revises: d8e2b5f1a6c3
 Create Date: 2026-10-30 11:48:56.968826
 
 """
@@ -56,7 +56,7 @@ sa.OneTimeCode = OneTimeCode
 
 # revision identifiers, used by Alembic.
 revision = "311868fc4271"
-down_revision = "c4f1a9b3d7e2"
+down_revision = "d8e2b5f1a6c3"
 branch_labels = None
 depends_on = None
 
