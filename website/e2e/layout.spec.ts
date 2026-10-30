@@ -100,7 +100,8 @@ for (const state of ["signed out", "signed in"] as const) {
           ["page.png", true],
         ] as const) {
           const shot = testInfo.outputPath(file);
-          await page.screenshot({ path: shot, fullPage });
+          // CSS-pixel scale: a long page on a 3x phone would otherwise pass WebKit's 32767px screenshot limit.
+          await page.screenshot({ path: shot, fullPage, scale: "css" });
           await testInfo.attach(`${name} (${state}) ${fullPage ? "page" : "screen"}`, {
             path: shot,
             contentType: "image/png",
@@ -157,7 +158,7 @@ test.describe("wide desktop officers console", () => {
       }
 
       const shot = testInfo.outputPath("page.png");
-      await page.screenshot({ path: shot, fullPage: true });
+      await page.screenshot({ path: shot, fullPage: true, scale: "css" });
       await testInfo.attach(`officers #${tab}${empty ? " empty" : ""}`, { path: shot, contentType: "image/png" });
     });
   }
