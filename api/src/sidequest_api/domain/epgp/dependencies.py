@@ -1,4 +1,7 @@
-"""DI providers for the EPGP domain, including the import endpoint's officer-session-or-sync-token guard."""
+"""DI providers for the EPGP domain.
+
+Includes the shared officer-session-or-sync-token guard used by the addon import and game-import routes.
+"""
 
 from __future__ import annotations
 
@@ -33,9 +36,10 @@ async def provide_import_actor(
     db_session: NamedDependency[AsyncSession],
     web_settings: NamedDependency[WebSettings],
 ) -> Member:
-    """The import endpoint's guard: an officer session, or a valid ``Bearer`` sync token.
+    """The shared guard: an officer session, or a valid ``Bearer`` sync token.
 
-    401 if neither is present/valid, 403 if a valid token's member lost officer access.
+    Used by both ``POST /api/epgp/imports`` and ``GET /api/epgp/game-import``. 401 if neither is present/valid,
+    403 if a valid token's member lost officer access.
     """
     auth_header = request.headers.get(AUTH_HEADER, "")
     if auth_header.startswith(BEARER_PREFIX):

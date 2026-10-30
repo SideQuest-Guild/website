@@ -120,6 +120,32 @@ async def test_feed_titles_signup_and_url(
     assert f"UID:{event_id}@sidequest-guild.com" in unfolded
 
 
+async def test_feed_carries_sidequest_kind_and_signup_properties(
+    member_client: AsyncTestClient, discord_state: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    await login_as(member_client, discord_state, discord_id=5009)
+    await _seed_event(db_sessionmaker, 5009, kind="raid")
+    token = (await member_client.get("/api/me/calendar")).json()["token"]
+    body = (await member_client.get(f"/api/calendar/{token}.ics")).text
+    unfolded = body.replace("\r\n ", "")
+
+    assert "X-SIDEQUEST-KIND:raid" in unfolded
+    assert "X-SIDEQUEST-SIGNUP:signed" in unfolded
+
+
+async def test_feed_omits_signup_property_without_a_signup(
+    member_client: AsyncTestClient, discord_state: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    await login_as(member_client, discord_state, discord_id=5010)
+    await _seed_event(db_sessionmaker, 5010, kind="dungeon", signup=False)
+    token = (await member_client.get("/api/me/calendar")).json()["token"]
+    body = (await member_client.get(f"/api/calendar/{token}.ics")).text
+    unfolded = body.replace("\r\n ", "")
+
+    assert "X-SIDEQUEST-KIND:dungeon" in unfolded
+    assert "X-SIDEQUEST-SIGNUP" not in unfolded
+
+
 async def test_cancelled_event_gets_status_cancelled(
     member_client: AsyncTestClient, discord_state: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
 ) -> None:

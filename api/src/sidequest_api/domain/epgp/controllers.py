@@ -101,10 +101,13 @@ class EpgpController(Controller):
 
     @get("/game-import", operation_id="GetEpgpGameImport")
     async def get_game_import(
-        self, current_officer: NamedDependency[Member], epgp_service: NamedDependency[EpgpService]
+        self, import_actor: NamedDependency[Member], epgp_service: NamedDependency[EpgpService]
     ) -> EpgpGameImport:
-        """The ``SQI1:`` string for ``/sq import`` (officer). 401/403 non-officer."""
-        del current_officer
+        """The ``SQI1:`` string for ``/sq import`` (officer session, or a valid Bearer sync token).
+
+        401 missing/invalid/revoked auth, 403 a valid token's member lost officer access.
+        """
+        del import_actor
         return await epgp_service.build_game_import()
 
     @post("/adjustments", operation_id="CreateEpgpAdjustment", status_code=201)

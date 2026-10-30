@@ -82,7 +82,10 @@ def _vevent(event: GuildEvent, signup: EventSignup | None, *, base_url: str, now
         f"SUMMARY:{_escape(summary)}",
         f"DESCRIPTION:{_escape(chr(10).join(description_parts))}",
         f"URL:{event_url}",
+        f"X-SIDEQUEST-KIND:{_escape(event.kind)}",
     ]
+    if signup is not None:
+        lines.append(f"X-SIDEQUEST-SIGNUP:{_escape(signup.status)}")
     if event.location:
         lines.append(f"LOCATION:{_escape(event.location)}")
     if event.status == "cancelled":

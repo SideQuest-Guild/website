@@ -97,9 +97,10 @@ the same thing, themed to match.
   (new events, sign-ups, who should hold which role) and reports what happened in Discord (button clicks, voice
   channels, name and role changes). A change on either side reaches the other within about a minute.
 - **The addon** records raid nights in game. An officer sends one to the site from `/officers/sync/` by pasting a
-  `SQX1:` string, uploading the addon's save file, or running `sidequest-sync`. The site sends points back as an
-  `SQI1:` string for `/sq import`. Both formats are in `packages/sidequest-common/src/sidequest_common/schemas/`
-  (`epgp.py` and `guild_hub.py`).
+  `SQX1:` string, uploading the addon's save file, running `sidequest-sync`, or running
+  [SideQuest Companion](https://github.com/SideQuest-Guild/companion), a tray app that uploads on its own and stages
+  the import back. The site sends points back as an `SQI1:` string for `/sq import`. Both formats are in
+  `packages/sidequest-common/src/sidequest_common/schemas/` (`epgp.py` and `guild_hub.py`).
 - **The bot pins `sidequest-common` to a commit of this repo.** If you change a schema the bot uses, keep the old
   fields working until the bot moves to the new commit.
 

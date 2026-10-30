@@ -180,15 +180,18 @@ class EpgpLedgerEntry(UUIDAuditBase):
 
 
 class EpgpSyncToken(UUIDAuditBase):
-    """A long-lived bearer token for the ``sidequest-sync`` uploader, scoped to one member.
+    """A long-lived bearer token for the ``sidequest-sync`` uploader or SideQuest Companion, scoped to one member.
 
     ``token_hash`` is the sha256 hex digest of the token (format ``sqs_`` + 40 url-safe chars); the plaintext is
-    shown to the officer once, at creation, and never stored. The import endpoint accepts the token only while its
-    member still holds an officer role, checked at request time (not cached on the row).
+    shown to the officer once, at creation, and never stored. ``POST /api/epgp/imports`` and
+    ``GET /api/epgp/game-import`` both accept the token only while its member still holds an officer role, checked
+    at request time (not cached on the row).
     """
 
     __tablename__ = "epgp_sync_token"
-    __table_args__ = {"comment": "Bearer tokens for the sidequest-sync uploader, one per officer-named token."}
+    __table_args__ = {
+        "comment": "Bearer tokens for the sidequest-sync uploader and Companion, one per officer-named token."
+    }
 
     member_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("member.id", ondelete="CASCADE"), index=True)
     name: Mapped[str] = mapped_column(Text)

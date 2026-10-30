@@ -12,6 +12,7 @@ from sqlalchemy import func, select
 from sidequest_api.domain.epgp.services import decayed_amount, resets_since
 from sidequest_common.models import (
     EpgpLedgerEntry,
+    EpgpSyncToken,
     EventSignup,
     GuildEvent,
     Member,
@@ -498,6 +499,60 @@ async def test_game_import_string_decodes_back_to_contract_shape(
     assert "events" in decoded
     for key in ("members", "news", "sheets", "crafters", "recipe_names"):
         assert key in decoded
+
+
+async def test_sync_token_authorizes_game_import(
+    member_client: AsyncTestClient, discord_state: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    await _login_officer(member_client, discord_state, discord_id=6602)
+    created = await member_client.post("/api/epgp/sync-tokens", json={"name": "Raid PC"})
+    token = created.json()["token"]
+
+    response = await member_client.get("/api/epgp/game-import", headers={"Authorization": f"Bearer {token}"})
+    assert response.status_code == 200, response.text
+    assert response.json()["payload"].startswith("SQI1:")
+
+    async with db_sessionmaker() as session:
+        row = (
+            await session.execute(select(EpgpSyncToken).where(EpgpSyncToken.id == created.json()["id"]))
+        ).scalar_one()
+        assert row.last_used_at is not None
+
+
+async def test_revoked_sync_token_is_401_for_game_import(member_client: AsyncTestClient, discord_state: dict) -> None:
+    await _login_officer(member_client, discord_state, discord_id=6603)
+    created = await member_client.post("/api/epgp/sync-tokens", json={"name": "Revoke me"})
+    token = created.json()["token"]
+    token_id = created.json()["id"]
+
+    revoke = await member_client.delete(f"/api/epgp/sync-tokens/{token_id}")
+    assert revoke.status_code == 204
+
+    response = await member_client.get("/api/epgp/game-import", headers={"Authorization": f"Bearer {token}"})
+    assert response.status_code == 401
+
+
+async def test_unknown_sync_token_is_401_for_game_import(member_client: AsyncTestClient) -> None:
+    response = await member_client.get(
+        "/api/epgp/game-import", headers={"Authorization": "Bearer sqs_not-a-real-token"}
+    )
+    assert response.status_code == 401
+
+
+async def test_sync_token_holder_no_longer_officer_is_403_for_game_import(
+    member_client: AsyncTestClient, discord_state: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    await _login_officer(member_client, discord_state, discord_id=6604)
+    created = await member_client.post("/api/epgp/sync-tokens", json={"name": "Demote me"})
+    token = created.json()["token"]
+
+    async with db_sessionmaker() as session:
+        member = (await session.execute(select(Member).where(Member.discord_id == 6604))).scalar_one()
+        member.roles = []
+        await session.commit()
+
+    response = await member_client.get("/api/epgp/game-import", headers={"Authorization": f"Bearer {token}"})
+    assert response.status_code == 403
 
 
 # --- real addon fixture: Lua drops nil keys, so this exercises absent (not null) optional fields ------------------

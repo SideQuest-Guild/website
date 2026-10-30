@@ -77,7 +77,9 @@ import "../../../styles/room-officers-sync.css";
       <div class="chamber">
         <h2 class="chamber-title">Sync tokens</h2>
         <p class="aside">
-          For the <code>sidequest-sync</code> uploader. Create a token below, then run:
+          <a href="https://github.com/SideQuest-Guild/companion/releases">SideQuest Companion</a> sits in your system
+          tray on Windows, macOS or Linux, uploads new raid nights on its own and stages the game import for your next
+          login. Create a token below and give it to Companion, or run the <code>sidequest-sync</code> uploader instead:
         </p>
         <pre class="code-block">uvx --from git+https://github.com/sidequest-guild/addon#subdirectory=uploader sidequest-sync login</pre>
         <form id="token-form" class="form-row token-form">
@@ -753,7 +755,7 @@ import "../../../styles/room-officers-sync.css";
           tokenStatusEl.dataset.tone = "";
           tokenStatusEl.textContent = "Token created.";
           tokenRevealEl.innerHTML = `
-            <p class="aside">This token is shown once. Paste it when <code>sidequest-sync login</code> asks for it.</p>
+            <p class="aside">This token is shown once. Paste it into Companion's settings, or when <code>sidequest-sync login</code> asks for it.</p>
             <div class="token-reveal-row">
               <input type="text" readonly value="${escapeHtml(created.token)}" aria-label="New sync token" />
               <button type="button" class="btn-quiet btn-small" id="token-copy-btn">Copy</button>
