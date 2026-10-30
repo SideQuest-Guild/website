@@ -1,11 +1,10 @@
-# SideQuest Guild workspace: one Litestar backend (api/) for the Discord bot (bot/), the website (website/), and addons.
-# Bot -> API over HTTP (X-API-Key); API -> PostgreSQL via advanced-alchemy.
+# SideQuest Guild workspace: one Litestar backend (api/) for the website (website/) and addons.
+# The Discord bot lives in SideQuest-Guild/bot and talks to the API over HTTP (X-API-Key).
 
 [tool.uv.workspace]
 members = [
     "packages/sidequest-common",
     "api",
-    "bot",
 ]
 
 [dependency-groups]
@@ -54,14 +53,14 @@ filterwarnings = [
 log_level = "WARNING"
 
 [tool.coverage.run]
-source = ["sidequest_common", "sidequest_api", "sidequest_bot"]
+source = ["sidequest_common", "sidequest_api"]
 omit = ["*/migrations/*"]
 branch = true
 
 [tool.pyrefly]
-project-includes = ["packages/sidequest-common/src", "api/src", "bot/src", "tests"]
-project-excludes = ["website/**", "tests/unit/bot/**", "api/src/sidequest_api/lib/migrations/**"]
-search-path = ["packages/sidequest-common/src", "api/src", "bot/src"]
+project-includes = ["packages/sidequest-common/src", "api/src", "tests"]
+project-excludes = ["website/**", "api/src/sidequest_api/lib/migrations/**"]
+search-path = ["packages/sidequest-common/src", "api/src"]
 python-version = "3.15.0"
 python-interpreter-path = ".venv/bin/python3"
 baseline = "pyrefly-baseline.json"
@@ -69,7 +68,7 @@ baseline = "pyrefly-baseline.json"
 [tool.ruff]
 line-length = 120
 target-version = "py315"
-src = ["packages/sidequest-common/src", "api/src", "bot/src", "tests"]
+src = ["packages/sidequest-common/src", "api/src", "tests"]
 extend-exclude = ["website"]
 
 [tool.ruff.lint]
@@ -97,7 +96,7 @@ convention = "google"
 max-complexity = 12
 
 [tool.ruff.lint.isort]
-known-first-party = ["sidequest_common", "sidequest_api", "sidequest_bot", "tests"]
+known-first-party = ["sidequest_common", "sidequest_api", "tests"]
 
 [tool.ruff.lint.flake8-type-checking]
 runtime-evaluated-base-classes = [

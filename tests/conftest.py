@@ -1,4 +1,4 @@
-"""Shared fixtures: the real API on a per-test SQLite file, and the bot's API client wired to it in-process."""
+"""Shared fixtures: the real API on a per-test SQLite file, authenticated with the API key clients send."""
 
 from typing import TYPE_CHECKING
 
@@ -9,7 +9,6 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 import sidequest_common.models  # noqa: F401  # register tables on UUIDAuditBase.metadata
 from sidequest_api.app import create_app
-from sidequest_bot.api_client import API_KEY_HEADER, SideQuestAPI
 from sidequest_common.settings import APISettings, DatabaseSettings, WebSettings
 
 if TYPE_CHECKING:
@@ -51,11 +50,5 @@ def api_app(database_url: str) -> Litestar:
 async def client(api_app: Litestar) -> AsyncIterator[AsyncTestClient[Litestar]]:
     """HTTP client for the API, already authenticated."""
     async with AsyncTestClient(app=api_app) as test_client:
-        test_client.headers[API_KEY_HEADER] = TEST_API_KEY
+        test_client.headers["X-API-Key"] = TEST_API_KEY
         yield test_client
-
-
-@pytest.fixture
-async def api(client: AsyncTestClient[Litestar]) -> SideQuestAPI:
-    """The bot's API client, talking to the in-process API."""
-    return SideQuestAPI(str(client.base_url), TEST_API_KEY, client=client)

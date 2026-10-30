@@ -4,10 +4,11 @@ from uuid import UUID
 
 from sqlalchemy import select
 
-from sidequest_bot.api_client import API_KEY_HEADER
 from sidequest_common.models import EventDiscordInterest, EventSignupActivity, GuildEvent
 from tests.conftest import TEST_API_KEY
 from tests.unit.api.conftest import OFFICER_ROLE_ID, login_as
+
+API_KEY_HEADER = "X-API-Key"
 
 if TYPE_CHECKING:
     from litestar.testing import AsyncTestClient

@@ -15,7 +15,7 @@ RUN npm ci
 COPY website/ ./
 RUN npm run build
 
-# --- Stage 2: Python runtime (api + bot share this image) -------------------------------------
+# --- Stage 2: Python runtime -------------------------------------------------------------------
 FROM python:3.15-slim AS runtime
 
 # uv installs/syncs the workspace; copied from the official distroless uv image, not installed via curl|sh.
@@ -36,7 +36,6 @@ WORKDIR /app
 COPY pyproject.toml uv.lock .python-version ./
 COPY packages/sidequest-common packages/sidequest-common
 COPY api api
-COPY bot bot
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --locked --no-dev --all-packages
 
@@ -56,5 +55,4 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD python -c "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health').status == 200 else 1)"
 
-# Default: the API. The bot runs from the same image with `docker run ... sidequest-bot`.
 CMD ["sidequest-api"]

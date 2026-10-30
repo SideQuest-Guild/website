@@ -1,13 +1,14 @@
 # SideQuest Guild
 
-Everything for the SideQuest guild in one repo: the guild website, the Discord bot ("Game Master"), and a single
-Litestar backend that serves both (and addons later). Structure follows [byte](https://github.com/JacobCoffee/byte):
-a uv workspace where the backend owns the data and the bot talks to it over HTTP.
+The guild website and a single Litestar backend that serves it (and addons later). The Discord bot
+("Game Master") lives in a separate repo, [SideQuest-Guild/bot](https://github.com/SideQuest-Guild/bot), and talks
+to this backend over HTTP. Structure follows [byte](https://github.com/JacobCoffee/byte): a uv workspace where the
+backend owns the data.
 
 ```mermaid
 flowchart LR
     Browser -->|"/ (static site)"| API
-    Discord <-->|gateway + REST| Bot["bot/<br/>discord.py plugins"]
+    Discord <-->|gateway + REST| Bot["SideQuest-Guild/bot<br/>discord.py plugins"]
     Bot -->|"/api/guilds/... + X-API-Key"| API["api/<br/>Litestar backend"]
     Website["website/<br/>Astro → dist/"] -.->|built output| API
     API --> DB[(PostgreSQL)]
@@ -17,10 +18,9 @@ flowchart LR
 | Path | What lives there |
 |---|---|
 | `api/` | The Litestar backend: `domain/{guilds,levels,cases,role_menus,events,event_series,event_sync,system}`, migrations in `lib/migrations`, website serving in `lib/website.py` |
-| `bot/` | Discord bot: `bot.py`, `api_client.py` (the only way the bot reaches the backend), `plugins/*` (auto-loaded), `lib/` |
 | `website/` | Guild website (Astro, static build). Its built `website/dist/` is served by the backend at `/` |
-| `packages/sidequest-common` | ORM models, pydantic schemas (the API contract), leveling curve, message templates, settings |
-| `tests/` | API tests run the real app on a per-test SQLite DB; bot tests cover the pure logic behind each plugin |
+| `packages/sidequest-common` | ORM models, pydantic schemas (the API contract shared with the bot repo), leveling curve, message templates, settings |
+| `tests/` | API tests run the real app on a per-test SQLite DB |
 
 ### Routes
 
@@ -148,62 +148,13 @@ The website's Discord buttons read one constant, `DISCORD_INVITE` in `website/sr
 Admin command groups are hidden from members without the listed permission (server admins can re-scope them under
 Server Settings → Integrations). Every config change is stored by the API and applies immediately.
 
-### Leveling
-Every message earns 15–25 XP, at most once per 60 s per member, on MEE6's curve (`5n² + 50n + 100` XP from level
-`n` to `n+1`). Level-ups post `GG {mention}, you just advanced to level {level}!` in the same channel unless a
-level-up channel is set. Milestone roles (`Lv 5 · Wayfarer` … `Lv 50 · Legend`) are granted automatically; they're
-cosmetic and sit below the rank roles, so rank colors and member-list groups stay in charge.
-
-- `/rank [member]`, `/leaderboard [page]`
-- `/levels reward set|remove|list` · `/levels set-xp` (Manage Server)
-- `/levels config enabled | level-up-channel | level-up-message | xp-range | cooldown | stacking | no-xp-channel-add/remove | no-xp-role-add/remove`
-
-### Logging (`#guild-log`)
-Message edits/deletes (with the original text), bulk deletes (with a transcript file), joins (new accounts flagged),
-leaves, nickname/role/timeout changes, bans/kicks/unbans by humans (with moderator and reason), channel and role
-changes, and voice joins/leaves/moves. The bot's own moderation actions are logged as cases instead.
-
-- `/logging channel <channel|none>`, `/logging status` (Manage Server)
-
-### Welcome
-New members get the auto-role (**New Arrival**) and a welcome message in `#general`. If membership screening is on,
-both wait until the member accepts the rules. Placeholders: `{mention}` `{user}` `{guild}` `{member_count}`.
-
-- `/welcome channel | message | autorole | test | status` (Manage Server)
-
-### Role menus
-Button panels for self-assignable roles. Buttons keep working across bot restarts. `max_roles` limits picks per menu.
-
-- `/rolemenu create | add | remove | edit | delete | list | refresh` (Manage Roles)
-
-### Class halls
-A forum post named `<role name> Hall` (e.g. `Warrior Hall` for `@Warrior`) belongs to that role. Gaining the role
-adds the member to the post, so it shows in their channel list; losing the role takes them out. Anyone who can see
-the forum can still browse and follow any hall. No config: the bot pairs roles and posts by name, indexes halls at
-startup and every 6 hours (adding role holders it missed while offline, never removing anyone), and picks up new
-hall posts as they're created. Needs Manage Threads to reopen archived halls. In SideQuest, `#choose-your-class` is
-a role menu for the nine class roles and `#class-halls` holds their halls.
-
-### Moderation
-Each action DMs the member (if possible), records a numbered case, and posts it to the log channel. Moderators can't
-act on the owner, the bot, themselves, or anyone whose top role is at or above theirs.
-
-- `/warn`, `/timeout <duration like 10m, 1h30m, 2d>`, `/untimeout` (Timeout Members)
-- `/kick` (Kick Members) · `/ban [delete_message_days]`, `/unban <user id>` (Ban Members)
-- `/cases [member]`, `/case <number>`, `/reason <number> <text>`
-
-### Automod
-Deletes invite links (on by default) and optionally all links; for mention spam (more than 5 mentions) or message
-floods (more than 5 messages in 5 s) it also times the member out for 5 minutes. Each hit is recorded as an `automod`
-case. Members with Manage Messages, exempt roles, and exempt channels are skipped.
-
-- `/automod status | toggle | mentions | spam | timeout | exempt role|channel add|remove` (Manage Server)
-
-### Status line
-The bot's activity rotates every 3 minutes: a countdown to the WoW: Forever launch (Nov 4, counted in US Central;
-"Playing World of Warcraft: Forever" afterwards), the next guild event ("Next up: Molten Core, in 3h"), and a few
-Azeroth jokes. While an event is running it stays on "Competing in {event}". Bots can't show Rich Presence art,
-buttons or timers, only this one line (`bot/src/sidequest_bot/plugins/presence.py`).
+### Discord bot
+The guild's Discord bot ([SideQuest-Guild/bot](https://github.com/SideQuest-Guild/bot)) is a separate repo that
+talks to this API only over HTTP (`X-API-Key`), pinning `sidequest-common` to a commit of this repo. It covers
+leveling (`/rank`, `/leaderboard`, `/levels …`), moderation (`/warn`, `/timeout`, `/kick`, `/ban`, `/cases`) and
+automod, the member-event log, welcome messages and the auto-role, self-assignable role menus, class halls, and
+the status line. See that repo for slash commands and bot-side behavior; routes the bot calls against this API are
+documented below next to the feature they belong to.
 
 ### Event sync
 Guild events created, edited, or cancelled on the site appear as Discord scheduled events, and events created,
@@ -289,8 +240,7 @@ Members mark date ranges they'll be away (`/account/`'s Away chamber; `GET/POST 
 `DELETE /api/me/away/{id}`; past ranges are pruned on read) so officers and raid leads know not to expect them —
 shown to signed-in members as the "Away" chip list on an event's detail page for that event's date (see Raid chart
 above). While a range is active the bot also grants a configured Discord role so it's visible outside the site,
-synced every 60 seconds against the bot-key `GET /api/guilds/{guild_id}/away-now` route
-(`bot/src/sidequest_bot/plugins/away.py`).
+synced every 60 seconds against the bot-key `GET /api/guilds/{guild_id}/away-now` route.
 
 - `/away role <role>` (Manage Server) — sets or clears the role; in production this is
   `/away role role:@Away on a Quest` (role id `1564677987859963975`).
@@ -302,8 +252,7 @@ with someone in it, a lit hearth with one ember per person (`website/src/scripts
 `approximate_presence_count`/`approximate_member_count` (`fetch_guild(..., with_counts=True)`, keeping the last
 known values if that fetch fails) and pushes a full report; voice/stage channel changes also push immediately,
 debounced ~5 seconds per guild so a burst of joins/leaves coalesces into one push (mute/deafen toggles don't count
-as a channel change). No privileged presence intent is used
-(`bot/src/sidequest_bot/plugins/live_status.py`, `PUT /api/guilds/{guild_id}/live`).
+as a channel change). No privileged presence intent is used (`PUT /api/guilds/{guild_id}/live`).
 
 ### Online now
 Signed-in guild members see an "Online now" roster in the homepage's Discord band, below the hearths: avatars,
@@ -357,7 +306,7 @@ While an event is running, the bot tracks per-event voice presence: every 60 sec
 members are in one of the guild's voice/stage channels for each event that's started and not yet past its end (or,
 with no explicit end, 3 hours after its start) and not cancelled, and pushes each member's cumulative minutes for
 that event (`PUT /api/guilds/{guild_id}/attendance/voice`, idempotent replace — not an increment — so a bot
-restart or a resent tick never double-counts) (`bot/src/sidequest_bot/plugins/attendance_voice.py`).
+restart or a resent tick never double-counts).
 
 ### EPGP loot system
 The `sidequest-sync` addon records raid facts (sessions, boss pulls, loot, EP/GP ledger entries) in game; officers
@@ -419,7 +368,7 @@ shapes; this is the behavior.
   (title "Announcement", author = the announcement's author, description = its text), and acks each one
   (`POST .../announcements/{id}/posted`) so it's never reposted; a failed ack or a Discord send failure just logs
   and leaves the announcement pending for the next poll. `/announcements channel [channel]` (Manage Server) sets or
-  clears the channel (`bot/src/sidequest_bot/plugins/announcements.py`).
+  clears the channel.
 - **Recruiting** (`GET/PUT /api/epgp/recruits`, `POST /api/epgp/recruits/{id}/votes`, officer-only): candidates with
   a status (`applicant | trial | accepted | declined`), a free-text note, a vetting checklist (talked/gear
   check/first raid/vouched), and one vote per officer (`yes | no | wait`) — upserted by id from the game, editable
@@ -458,22 +407,9 @@ The same loop also drains the Discord role-reset outbox (`GET /api/guilds/{guild
 deletes their site account keeps nothing but the gate role, stripped of every other role the bot can manage
 (skipping `@everyone`, managed/integration roles, and anything at or above the bot's own top role — Discord would
 reject those anyway) and immediately re-gated, rather than waiting for the next tick; the bot acks each reset
-(`POST .../role-resets/{reset_id}/ack`), acking immediately with no role changes if the member already left
-(`bot/src/sidequest_bot/plugins/link_roles.py`).
+(`POST .../role-resets/{reset_id}/ack`), acking immediately with no role changes if the member already left.
 
 - `/linkroles site | battlenet | gate | roster` (Manage Server)
-
-### Guest welcome
-The moment a member is granted the site link role (the gate -> guest transition, see Link roles above), the bot DMs
-them a one-time gold-embed welcome: they're in as a guest, a Quest Master will confirm them soon, and pointers to
-`#choose-your-class` and the events page. It's derived from the role grant itself, not a stored flag, so it can't
-double-send and needs no migration. A closed DM (or any other HTTP error) is only logged; it never breaks the role
-sync. Since Discord won't let the bot send an unprompted ephemeral message, the same welcome is also reachable
-on demand: `/guestwelcome post` posts a pinned "Start here" button (a persistent component surviving restarts, like
-`role_menus`/`signup_notices`) into a chosen channel (e.g. `#guest-chat`); clicking it replies ephemerally with the
-identical embed (`bot/src/sidequest_bot/plugins/guest_welcome.py`).
-
-- `/guestwelcome post <channel>` (Manage Server)
 
 ### Signup notices
 Every 60 seconds, for each guild with a signup-notice channel configured, the bot posts a gold embed in that channel
@@ -485,8 +421,7 @@ clicker holds a `WEB_GM_ROLE_IDS` role, then confirms the member on the roster t
 uses — just with the clicker identified by Discord id instead of a session — and edits the message in place to show
 who approved it. If a member is instead confirmed on the site before anyone clicks Approve, the next poll edits that
 member's message to say so instead of leaving it stuck on "Guest". The bot acks every post and edit
-(`POST /api/guilds/{guild_id}/signup-notices/{member_id}/ack`) so nothing is posted or re-posted twice
-(`bot/src/sidequest_bot/plugins/signup_notices.py`).
+(`POST /api/guilds/{guild_id}/signup-notices/{member_id}/ack`) so nothing is posted or re-posted twice.
 
 - `/signups channel` (Manage Server)
 
@@ -499,8 +434,7 @@ to its detail page on the site, and a link to its forum thread if it has one. Th
 `/api/events` list, and the only one that also returns each event's forum thread id). A week with no events posts
 nothing. The last posted week is stored on `GuildConfig.weekly_board_last_week`, so a restart or a second check
 within the same day never double-posts; because the check only ever fires on Monday, a bot that was down past
-10:00 catches up the moment it's back online that day, but never later in the week
-(`bot/src/sidequest_bot/plugins/weekly_board.py`).
+10:00 catches up the moment it's back online that day, but never later in the week.
 
 - `/weeklyboard channel <channel>` (Manage Server)
 - `/weeklyboard preview` (Manage Server) — ephemeral preview of the current week's board
@@ -514,8 +448,7 @@ nick/role/guild-avatar changes (`on_member_update`), username/global-name/avatar
 (`on_user_update`, checked against every site guild the user shares with the bot), joins (`on_member_join`), and
 departures (`on_member_remove`). Only linked members are ever pushed; the periodic sweep keeps that linked set
 current. `PUT /api/guilds/{guild_id}/member-profiles` only updates existing `Member` rows (never creates one) and
-never touches `last_login_at`, Battle.net fields, or roster confirmation
-(`bot/src/sidequest_bot/plugins/member_profiles.py`).
+never touches `last_login_at`, Battle.net fields, or roster confirmation.
 
 ### Hall of Heroes badges
 Badges are Discord roles: members earn them on `sidequest-guild.com/heroes/` and the bot grants/announces the
@@ -532,13 +465,13 @@ channel is configured, each newly earned badge posts a gold embed (`<@member>` m
 description, and a link to the Hall of Heroes) with mentions scoped to just that member, then the bot acks it
 (`POST /api/guilds/{guild_id}/badges/ack`) so it isn't announced twice. If no channel is set yet, role sync still
 runs every tick, but announcements are left un-acked so they post in full once a channel is configured instead of
-being lost for whoever earned them first (`bot/src/sidequest_bot/plugins/badges.py`).
+being lost for whoever earned them first.
 
 Role icons (the server is boost tier 2, so roles can carry an image): every rank, gate, class and badge role has one,
-generated with Codex and kept as 128px PNGs in `bot/src/sidequest_bot/assets/role_icons/` (prompts in
-`website/.impeccable/build/role-icons/`, local only). The bot gives a badge role its icon when it creates or recreates
-it, sets it once on a badge role that has none, and attaches the badge's icon to its announcement as the thumbnail.
-The other roles' icons were set once by hand from the same folder; level roles have none.
+generated with Codex (prompts in `website/.impeccable/build/role-icons/`, local only). The bot gives a badge role
+its icon when it creates or recreates it, sets it once on a badge role that has none, and attaches the badge's icon
+to its announcement as the thumbnail. The other roles' icons were set once by hand from the same folder; level
+roles have none.
 
 | Badge | Rule |
 |---|---|
@@ -555,8 +488,8 @@ The other roles' icons were set once by hand from the same folder; level roles h
 - `/badges sync` (Manage Server) — run a sync now, with an ephemeral summary
 
 ## Role safety
-Anything the bot hands out on its own (level rewards, the auto-role, role-menu buttons, link roles) goes through
-`bot/src/sidequest_bot/lib/roles.py`:
+Anything the bot hands out on its own (level rewards, the auto-role, role-menu buttons, link roles) is checked
+against two rules before every grant:
 
 - **The role itself:** it must be below the bot's role, not managed by an integration, and free of moderator/admin
   permissions. This is re-checked right before every grant, so a role that later gains permissions stops being
@@ -565,17 +498,15 @@ Anything the bot hands out on its own (level rewards, the auto-role, role-menu b
 
 ## Deploying with Docker
 Host-agnostic: a single multi-stage `Dockerfile` builds the website (Node 24) and the Python workspace (uv) into one
-slim Python 3.15 image. The image's default command runs the API (`sidequest-api`); the same image runs the bot with
-`sidequest-bot` as the container command. `docker-compose.yml` wires up Postgres, a one-shot `migrate` service
-(`litestar database upgrade`) that runs before the API starts, the `api` service (port 8000), and a `bot` service
-behind the `bot` Compose profile so it never starts without a token.
+slim Python 3.15 image. The image's default (and only) command runs the API (`sidequest-api`). `docker-compose.yml`
+wires up Postgres, a one-shot `migrate` service (`litestar database upgrade`) that runs before the API starts, and
+the `api` service (port 8000).
 
 ```bash
-cp .env.example .env            # set API_KEY, DISCORD_TOKEN, etc.
+cp .env.example .env            # set API_KEY, etc.
 make docker-build                # build the image
 make docker-up                   # postgres + migrate + api (http://localhost:8000)
 make docker-migrate              # re-run migrations on demand
-docker compose --profile bot up -d bot   # start the bot (needs DISCORD_TOKEN in .env)
 make docker-logs                 # follow logs
 make docker-down                 # stop everything (keeps the pgdata volume)
 ```
@@ -586,13 +517,12 @@ build context. CI builds the image (no push) on every PR via `docker/build-push-
 caching.
 
 ### Cabotage
-The `Procfile` defines the three processes, all from the same image:
+The `Procfile` defines the two processes, both from the same image:
 
 | Process | Command | Notes |
 |---|---|---|
 | `release` | `litestar … database upgrade --no-prompt` | Runs once per deploy, before traffic |
 | `web` | `uvicorn … --uds /var/run/cabotage/cabotage.sock` | Serves the API and the built site |
-| `worker` | `sidequest-bot` | Run **exactly one** replica: two bots would double every Discord event push |
 
 Set the health check path to **`/health/live`** (no database round-trip, fits the 2 s probe timeout). The site's
 canonical and og URLs are baked in at build time from the `SITE_URL` build arg, which defaults to

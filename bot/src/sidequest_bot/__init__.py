@@ -1,1 +1,0 @@
-"""SideQuest Guild Discord bot."""

@@ -1,17 +1,18 @@
 # SideQuest Guild
 
-A WoW: Forever guild's site and Discord bot. One uv workspace, one Docker image, three Cabotage processes
-(`Procfile`: `release` migrates, `web` serves the API and built site, `worker` runs the bot). `README.md` is the
-feature reference; keep it current.
+A WoW: Forever guild's site and API. One uv workspace, one Docker image, two Cabotage processes (`Procfile`:
+`release` migrates, `web` serves the API and built site). The Discord bot lives in a separate repo,
+[SideQuest-Guild/bot](https://github.com/SideQuest-Guild/bot), and talks to this API only over HTTP
+(`X-API-Key`). `README.md` is the feature reference; keep it current.
 
 ## Layout
 - `api/` Litestar API. `domain/<area>/` = `controllers.py` + `services.py` + `dependencies.py`. Migrations in
   `api/src/sidequest_api/lib/migrations/versions/`. `lib/website.py` serves `website/dist`.
-- `bot/` discord.py bot; one cog per file in `plugins/`. Talks to the API only through `api_client.py`.
-- `packages/sidequest-common/` models, schemas, settings shared by both.
+- `packages/sidequest-common/` models, schemas, settings shared with the bot repo (pinned there as a git
+  dependency on a commit of this repo).
 - `website/` Astro static site. `src/layouts/Room.astro` for inner pages, `src/components/Art.astro` for images,
   `service-worker/` for the worker. `DESIGN.md`/`PRODUCT.md` are local-only design references.
-- `tests/unit/{api,bot}/`.
+- `tests/unit/api/`.
 
 ## Working
 - `make install`, `make db-up`, `make migrate`, `make api` (site + API on http://localhost:8000; `:4321` is another
@@ -21,17 +22,16 @@ feature reference; keep it current.
 - Commits are SSH-signed via 1Password. If signing fails, ask the user to unlock it; never disable signing.
 - Other agents and the user work in this tree at the same time: never `git stash`, `checkout`, `reset`, or commit
   files you didn't change.
-- Never `make bot` while prod is up: it shares the prod token and its role sync would strip members' roles.
 - **Website changes need a look, not just a build.** `make web-e2e` (in `make ci`) runs every page in desktop Chrome,
   iPhone WebKit, Android and a 320px phone; read the screenshots in `website/test-results/` for anything visual. A new
   page goes in `PAGES` in `e2e/layout.spec.ts`; a new API call needs a handler in `e2e/fixtures.ts` (unhandled calls
   fail the test).
 
 ## Rules that bite
-- **Rolling deploys:** old and new web/bot run side by side. New schema fields get defaults; new migrations revise
-  the current head (check `versions/` and `main` first, the user also adds migrations).
-- Bot code catches `APIError`, never `ValidationError` (`api_client._parse` wraps bad shapes).
-- Slash command names ≤32 chars, descriptions 1-100 (a bad one crash-loops the prod bot; a test enforces it).
+- **Rolling deploys:** old and new API pods run side by side. New schema fields get defaults; new migrations revise
+  the current head (check `versions/` and `main` first, the user also adds migrations). The bot lives in
+  [SideQuest-Guild/bot](https://github.com/SideQuest-Guild/bot) and pins `sidequest-common` to a commit of this
+  repo; bump that pin after a schema/settings/template change the bot needs.
 - No function-level imports (ruff PLC0415). Pyrefly known errors live in `pyrefly-baseline.json`. Tests fail on
   warnings.
 - Signup status is `signed | tentative | absent`.

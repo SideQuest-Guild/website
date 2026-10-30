@@ -151,7 +151,7 @@ migration: ## Autogenerate a migration: make migration MSG="add thing"
 
 ##@ Run
 
-.PHONY: api bot dev run-dev
+.PHONY: api dev run-dev
 api: ## Run the API (http://localhost:8000, docs at /schema, website at / from website/dist)
 	@$(UV) run sidequest-api
 
@@ -162,16 +162,9 @@ dev: ## Run the API + Astro dev server together, proxied through http://localhos
 	$(WEB) npm run dev & \
 	wait
 
-bot: ## Run the bot (token from DISCORD_TOKEN, else macOS Keychain "discord-mcp")
-	@if [ -z "$$DISCORD_TOKEN" ] && ! grep -qE '^DISCORD_TOKEN=.+' .env 2>/dev/null; then \
-		export DISCORD_TOKEN="$$(security find-generic-password -s discord-mcp -w)"; \
-	fi; \
-	$(UV) run sidequest-bot
-
 run-dev: ## How to run everything locally
 	@echo "  make db-up && make migrate"
 	@echo "  make dev       # API + website hot reload together at http://localhost:8000"
-	@echo "  make bot       # Discord bot, in another terminal"
 	@echo ""
 	@echo "Or run the API and website separately (no proxying, two origins):"
 	@echo "  make api       # backend + built site at http://localhost:8000"
@@ -184,7 +177,7 @@ run-dev: ## How to run everything locally
 ##@ Docker
 
 .PHONY: docker-build docker-up docker-down docker-logs docker-ps docker-migrate
-docker-build: ## Build the sidequest image (migrate, api and bot share it)
+docker-build: ## Build the sidequest image (migrate and api share it)
 	@docker compose build migrate
 
 docker-up: ## Build, then start Postgres + the API in Docker (the `migrate` service runs first via depends_on)

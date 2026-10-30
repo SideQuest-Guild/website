@@ -1,6 +1,6 @@
 name: sidequest
 
-# One image for migrations, the API and the bot. `migrate` owns the build so every service runs the same build;
+# One image for migrations and the API. `migrate` owns the build so every service runs the same build;
 # `make docker-up` rebuilds it. `.env` is optional (see .env.example).
 x-app: &app
   image: sidequest:latest
@@ -58,20 +58,6 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
-
-  bot:
-    <<: *app
-    command: ["sidequest-bot"]
-    environment:
-      DB_URL: postgresql+asyncpg://sidequest:sidequest@postgres:5432/sidequest
-      API_URL: http://api:8000
-    depends_on:
-      postgres:
-        condition: service_healthy
-      api:
-        condition: service_healthy
-    profiles:
-      - bot
 
 volumes:
   pgdata:

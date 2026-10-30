@@ -6,10 +6,11 @@ from typing import TYPE_CHECKING
 from sqlalchemy import select
 
 from sidequest_api.lib.attendance import attended_condition, no_show_condition
-from sidequest_bot.api_client import API_KEY_HEADER
 from sidequest_common.models import EventSignup, EventVoicePresence, GuildEvent, Member
 from tests.conftest import GUILD_ID, TEST_API_KEY
 from tests.unit.api.conftest import GM_ROLE_ID, OFFICER_ROLE_ID, login_as
+
+API_KEY_HEADER = "X-API-Key"
 
 if TYPE_CHECKING:
     from litestar.testing import AsyncTestClient
