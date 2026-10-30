@@ -17,6 +17,7 @@ import {
   ONLINE,
 } from "./data";
 import { expect, test } from "./fixtures";
+import { DISCORD_INVITE } from "../src/config";
 
 const raid = EVENTS[0];
 
@@ -68,6 +69,12 @@ test.describe("homepage", () => {
     });
     expect(perRow).toBe(page.viewportSize()!.width > 400 ? 3 : 2);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+
+    // Every card is a link to the Discord invite, the one way to sign up.
+    const hrefs = await band
+      .locator("a.recruit-card")
+      .evaluateAll((cards) => cards.map((card) => card.getAttribute("href")));
+    expect(hrefs).toEqual(Array(12).fill(DISCORD_INVITE));
   });
 
   test("signed out, the online-now roster never shows names", async ({ page, site }) => {

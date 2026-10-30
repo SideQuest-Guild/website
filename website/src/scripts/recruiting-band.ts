@@ -1,6 +1,8 @@
 // Reveals the homepage's RECRUITING band only when officers have marked at least one role or class as wanted.
-// Any fetch failure, or nothing wanted, leaves the band hidden as the markup has it.
+// Any fetch failure, or nothing wanted, leaves the band hidden as the markup has it. Every card links to the Discord
+// invite: joining the Discord is how anyone signs up.
 import { apiFetch, escapeHtml, onFreshData, type Recruiting } from "./api";
+import { DISCORD_INVITE } from "../config";
 import { onPage } from "./page";
 
 const RECRUITING_PATH = "/api/recruiting";
@@ -23,7 +25,7 @@ function card(markEl: string, label: string, priority: string, note: string | nu
   const high = priority === "high";
   const priorityEl = high ? `<span class="recruit-card-priority">High priority</span>` : "";
   const noteEl = note ? `<span class="recruit-card-note">${escapeHtml(note)}</span>` : "";
-  return `<li class="recruit-card${high ? " is-high" : ""}">${markEl}<span class="recruit-card-name">${escapeHtml(label)}</span>${priorityEl}${noteEl}</li>`;
+  return `<li><a class="recruit-card${high ? " is-high" : ""}" href="${DISCORD_INVITE}">${markEl}<span class="recruit-card-name">${escapeHtml(label)}</span>${priorityEl}${noteEl}<span class="sr-only"> — join the Discord</span></a></li>`;
 }
 
 function group(title: string, cards: string[], gridClass = ""): string {
