@@ -7,6 +7,7 @@ from sidequest_common.models.badges import MemberBadge
 from sidequest_common.models.discord_live import DiscordLiveStatus
 from sidequest_common.models.epgp import (
     Encounter,
+    EpgpDeviceAuthorization,
     EpgpImportAudit,
     EpgpLedgerEntry,
     EpgpSyncToken,
@@ -53,6 +54,7 @@ __all__ = (
     "DiscordEventTombstone",
     "DiscordLiveStatus",
     "Encounter",
+    "EpgpDeviceAuthorization",
     "EpgpImportAudit",
     "EpgpLedgerEntry",
     "EpgpSyncToken",

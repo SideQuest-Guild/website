@@ -18,15 +18,18 @@ import string
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
 
-from litestar.exceptions import HTTPException, NotFoundException, ValidationException
-from litestar.status_codes import HTTP_409_CONFLICT
+from litestar.exceptions import HTTPException, NotFoundException, PermissionDeniedException, ValidationException
+from litestar.status_codes import HTTP_409_CONFLICT, HTTP_429_TOO_MANY_REQUESTS
 from pydantic import ValidationError
 from sqlalchemy import delete, func, or_, select
 
+from sidequest_api.lib.discord import avatar_url
+from sidequest_api.lib.member_auth import is_officer
 from sidequest_common.models import (
     CharacterProfession,
     CharacterRecipeLink,
     Encounter,
+    EpgpDeviceAuthorization,
     EpgpImportAudit,
     EpgpLedgerEntry,
     EpgpSyncToken,
@@ -60,6 +63,7 @@ from sidequest_common.schemas import (
     LEFT_GUILD_AFTER_DAYS,
     LEGENDARY_GP,
     LEVEL_MILESTONE_STEP,
+    MAX_DEVICE_NAME_LENGTH,
     MAX_IMPORT_BYTES,
     MIN_GP,
     OS_PERCENT,
@@ -70,10 +74,17 @@ from sidequest_common.schemas import (
     AwardImportCounts,
     BankImportCounts,
     CharacterSource,
+    DeviceAuthorizationPollStatus,
+    DeviceAuthorizationStatus,
     EpgpAdjustmentCreate,
     EpgpCharacter,
     EpgpCharacterList,
     EpgpCharacterUpdate,
+    EpgpDeviceAuthorizationCreate,
+    EpgpDeviceAuthorizationCreated,
+    EpgpDeviceAuthorizationPoll,
+    EpgpDeviceAuthorizationPollResult,
+    EpgpDeviceAuthorizationStatus,
     EpgpGameImport,
     EpgpImportResult,
     EpgpLedgerPage,
@@ -92,6 +103,7 @@ from sidequest_common.schemas import (
     EpgpSyncTokenCreate,
     EpgpSyncTokenCreated,
     EpgpSyncTokenList,
+    EpgpSyncTokenMe,
     EpgpSyncTokenSummary,
     EventKind,
     ExportPayload,
@@ -135,6 +147,7 @@ if TYPE_CHECKING:
 
     from sqlalchemy.ext.asyncio import AsyncSession
 
+    from sidequest_api.domain.calendar.services import CalendarService
     from sidequest_common.schemas import (
         ExportAnnouncement,
         ExportBankEntry,
@@ -154,6 +167,13 @@ _ROLE_KINDS = ("raid", "dungeon")
 _TOKEN_ALPHABET = string.ascii_letters + string.digits + "-_"
 _TOKEN_PREFIX = "sqs_"  # noqa: S105 - not a password, a public token format prefix
 _TOKEN_RANDOM_LENGTH = 40
+_DEVICE_CODE_BYTES = 32
+_USER_CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"  # no 0/O/1/I/L, unambiguous when read aloud
+_USER_CODE_LENGTH = 8
+_DEVICE_AUTH_TTL = timedelta(seconds=600)
+_DEVICE_AUTH_POLL_INTERVAL = 5
+_DEVICE_AUTH_PENDING_CAP = 500
+_DEVICE_AUTH_USER_CODE_ATTEMPTS = 50
 
 
 def _reset_boundary_on_or_before(moment: datetime) -> datetime:
@@ -1708,15 +1728,15 @@ class EpgpService:
             trial_started_at=member.trial_started_at,
         )
 
-    # --- Officer: sync tokens --------------------------------------------------------------------------------
+    # --- Guild member: sync tokens ----------------------------------------------------------------------------
 
-    async def list_sync_tokens(self, officer: Member) -> EpgpSyncTokenList:
-        """``officer``'s own non-revoked sync tokens."""
+    async def list_sync_tokens(self, member: Member) -> EpgpSyncTokenList:
+        """``member``'s own non-revoked sync tokens."""
         rows = (
             (
                 await self._session.execute(
                     select(EpgpSyncToken)
-                    .where(EpgpSyncToken.member_id == officer.id, EpgpSyncToken.revoked_at.is_(None))
+                    .where(EpgpSyncToken.member_id == member.id, EpgpSyncToken.revoked_at.is_(None))
                     .order_by(EpgpSyncToken.created_at.desc())
                 )
             )
@@ -1730,22 +1750,218 @@ class EpgpService:
             ]
         )
 
-    async def create_sync_token(self, officer: Member, data: EpgpSyncTokenCreate) -> EpgpSyncTokenCreated:
-        """Create a sync token for ``officer``; the plaintext is returned once and never stored."""
+    async def create_sync_token(self, member: Member, data: EpgpSyncTokenCreate) -> EpgpSyncTokenCreated:
+        """Create a sync token for ``member``; the plaintext is returned once and never stored."""
         token = _TOKEN_PREFIX + "".join(secrets.choice(_TOKEN_ALPHABET) for _ in range(_TOKEN_RANDOM_LENGTH))
         token_hash = hashlib.sha256(token.encode()).hexdigest()
-        row = EpgpSyncToken(member_id=officer.id, name=data.name, token_hash=token_hash)
+        row = EpgpSyncToken(member_id=member.id, name=data.name, token_hash=token_hash)
         self._session.add(row)
         await self._session.commit()
         return EpgpSyncTokenCreated(id=row.id, name=row.name, token=token)
 
-    async def revoke_sync_token(self, officer: Member, token_id: UUID) -> None:
-        """Revoke one of ``officer``'s own sync tokens. 404 unknown/not own/already revoked."""
+    async def revoke_sync_token(self, member: Member, token_id: UUID) -> None:
+        """Revoke one of ``member``'s own sync tokens. 404 unknown/not own/already revoked."""
         row = await self._session.get(EpgpSyncToken, token_id)
-        if row is None or row.member_id != officer.id or row.revoked_at is not None:
+        if row is None or row.member_id != member.id or row.revoked_at is not None:
             msg = f"No sync token {token_id}"
             raise NotFoundException(msg)
         row.revoked_at = datetime.now(UTC)
+        await self._session.commit()
+
+    async def get_sync_token_owner_profile(
+        self,
+        token_row: EpgpSyncToken,
+        *,
+        officer_role_ids: list[int],
+        calendar_service: CalendarService,
+        base_url: str,
+    ) -> EpgpSyncTokenMe:
+        """What the presenting Bearer sync token's owner can see about themselves (``GET .../sync-tokens/me``).
+
+        403 if the owner is no longer a guild member (the body reveals nothing else); updates ``last_used_at``.
+        """
+        member = await self._session.get(Member, token_row.member_id)
+        if member is None or not member.is_guild_member:
+            msg = "Not a guild member"
+            raise PermissionDeniedException(msg)
+        token_row.last_used_at = datetime.now(UTC)
+        await self._session.commit()
+        calendar_token = await calendar_service.get_or_create_token(member)
+        return EpgpSyncTokenMe(
+            display_name=member.display_name,
+            avatar_url=avatar_url(member.discord_id, member.avatar_hash),
+            is_officer=is_officer(member, officer_role_ids),
+            is_guild_member=True,
+            calendar_url=f"{base_url}/api/calendar/{calendar_token}.ics",
+            token_name=token_row.name,
+        )
+
+    async def revoke_presented_sync_token(self, token_row: EpgpSyncToken) -> None:
+        """Revoke the presenting Bearer sync token (``DELETE .../sync-tokens/me``)."""
+        token_row.revoked_at = datetime.now(UTC)
+        await self._session.commit()
+
+    # --- Public: device authorizations (browser sign-in for SideQuest Companion) -----------------------------
+
+    @staticmethod
+    def _normalize_user_code(raw: str) -> str:
+        return raw.strip().upper().replace("-", "")
+
+    @staticmethod
+    def _format_user_code(user_code: str) -> str:
+        return f"{user_code[:4]}-{user_code[4:]}"
+
+    async def _unique_device_user_code(self, *, now: datetime) -> str:
+        for _ in range(_DEVICE_AUTH_USER_CODE_ATTEMPTS):
+            candidate = "".join(secrets.choice(_USER_CODE_ALPHABET) for _ in range(_USER_CODE_LENGTH))
+            exists = (
+                await self._session.execute(
+                    select(EpgpDeviceAuthorization.id).where(
+                        EpgpDeviceAuthorization.user_code == candidate,
+                        EpgpDeviceAuthorization.expires_at > now,
+                    )
+                )
+            ).scalar_one_or_none()
+            if exists is None:
+                return candidate
+        msg = "Could not generate a unique device user code"
+        raise HTTPException(status_code=HTTP_429_TOO_MANY_REQUESTS, detail=msg)
+
+    async def create_device_authorization(
+        self, data: EpgpDeviceAuthorizationCreate, *, base_url: str
+    ) -> EpgpDeviceAuthorizationCreated:
+        """Start a browser sign-in for a device (public). Deletes expired rows; 429 past the pending cap."""
+        now = datetime.now(UTC)
+        await self._session.execute(delete(EpgpDeviceAuthorization).where(EpgpDeviceAuthorization.expires_at <= now))
+        pending = (
+            await self._session.execute(
+                select(func.count())
+                .select_from(EpgpDeviceAuthorization)
+                .where(
+                    EpgpDeviceAuthorization.expires_at > now,
+                    EpgpDeviceAuthorization.approved_at.is_(None),
+                    EpgpDeviceAuthorization.denied_at.is_(None),
+                )
+            )
+        ).scalar_one()
+        if pending >= _DEVICE_AUTH_PENDING_CAP:
+            msg = "Too many pending device sign-ins; try again shortly"
+            raise HTTPException(status_code=HTTP_429_TOO_MANY_REQUESTS, detail=msg)
+        device_code = secrets.token_urlsafe(_DEVICE_CODE_BYTES)
+        device_code_hash = hashlib.sha256(device_code.encode()).hexdigest()
+        user_code = await self._unique_device_user_code(now=now)
+        expires_at = now + _DEVICE_AUTH_TTL
+        self._session.add(
+            EpgpDeviceAuthorization(
+                device_code_hash=device_code_hash,
+                user_code=user_code,
+                device_name=data.device_name,
+                expires_at=expires_at,
+            )
+        )
+        await self._session.commit()
+        formatted_code = self._format_user_code(user_code)
+        verification_uri = f"{base_url}/companion/authorize/"
+        return EpgpDeviceAuthorizationCreated(
+            device_code=device_code,
+            user_code=formatted_code,
+            verification_uri=verification_uri,
+            verification_uri_complete=f"{verification_uri}?code={formatted_code}",
+            expires_in=int(_DEVICE_AUTH_TTL.total_seconds()),
+            interval=_DEVICE_AUTH_POLL_INTERVAL,
+        )
+
+    async def poll_device_authorization(self, data: EpgpDeviceAuthorizationPoll) -> EpgpDeviceAuthorizationPollResult:
+        """Poll a device code (public, always 200, never an oracle for unknown/consumed/expired codes)."""
+        device_code_hash = hashlib.sha256(data.device_code.encode()).hexdigest()
+        row = (
+            await self._session.execute(
+                select(EpgpDeviceAuthorization).where(EpgpDeviceAuthorization.device_code_hash == device_code_hash)
+            )
+        ).scalar_one_or_none()
+        now = datetime.now(UTC)
+        if row is None or row.consumed_at is not None or row.expires_at <= now:
+            return EpgpDeviceAuthorizationPollResult(status=DeviceAuthorizationPollStatus.EXPIRED)
+        if row.denied_at is not None:
+            return EpgpDeviceAuthorizationPollResult(status=DeviceAuthorizationPollStatus.DENIED)
+        if row.last_polled_at is not None and (now - row.last_polled_at) < timedelta(
+            seconds=_DEVICE_AUTH_POLL_INTERVAL
+        ):
+            return EpgpDeviceAuthorizationPollResult(status=DeviceAuthorizationPollStatus.SLOW_DOWN)
+        row.last_polled_at = now
+        if row.approved_at is None:
+            await self._session.commit()
+            return EpgpDeviceAuthorizationPollResult(status=DeviceAuthorizationPollStatus.PENDING)
+        approver = (
+            await self._session.get(Member, row.approved_by_member_id)
+            if row.approved_by_member_id is not None
+            else None
+        )
+        if approver is None or not approver.is_guild_member:
+            row.denied_at = now
+            await self._session.commit()
+            return EpgpDeviceAuthorizationPollResult(status=DeviceAuthorizationPollStatus.DENIED)
+        token_name = f"SideQuest Companion on {row.device_name}"[:MAX_DEVICE_NAME_LENGTH]
+        created = await self.create_sync_token(approver, EpgpSyncTokenCreate(name=token_name))
+        row.sync_token_id = created.id
+        row.consumed_at = now
+        await self._session.commit()
+        return EpgpDeviceAuthorizationPollResult(
+            status=DeviceAuthorizationPollStatus.APPROVED, token=created.token, name=token_name
+        )
+
+    async def _get_device_authorization_row(self, user_code: str) -> EpgpDeviceAuthorization:
+        normalized = self._normalize_user_code(user_code)
+        row = (
+            await self._session.execute(
+                select(EpgpDeviceAuthorization).where(EpgpDeviceAuthorization.user_code == normalized)
+            )
+        ).scalar_one_or_none()
+        if row is None:
+            msg = f"No device authorization {user_code}"
+            raise NotFoundException(msg)
+        return row
+
+    @staticmethod
+    def _device_authorization_status(row: EpgpDeviceAuthorization, *, now: datetime) -> DeviceAuthorizationStatus:
+        if row.denied_at is not None:
+            return DeviceAuthorizationStatus.DENIED
+        if row.approved_at is not None:
+            return DeviceAuthorizationStatus.APPROVED
+        if row.expires_at <= now:
+            return DeviceAuthorizationStatus.EXPIRED
+        return DeviceAuthorizationStatus.PENDING
+
+    async def get_device_authorization(self, user_code: str) -> EpgpDeviceAuthorizationStatus:
+        """A device authorization's status (any guild member). 404 unknown code."""
+        row = await self._get_device_authorization_row(user_code)
+        return EpgpDeviceAuthorizationStatus(
+            user_code=self._format_user_code(row.user_code),
+            device_name=row.device_name,
+            created_at=row.created_at,
+            expires_at=row.expires_at,
+            status=self._device_authorization_status(row, now=datetime.now(UTC)),
+        )
+
+    async def approve_device_authorization(self, approver: Member, user_code: str) -> None:
+        """Approve a pending device sign-in (any guild member). 404 unknown, 409 not pending."""
+        row = await self._get_device_authorization_row(user_code)
+        now = datetime.now(UTC)
+        if self._device_authorization_status(row, now=now) != DeviceAuthorizationStatus.PENDING:
+            msg = f"Device authorization {user_code} is not pending"
+            raise HTTPException(status_code=HTTP_409_CONFLICT, detail=msg)
+        row.approved_by_member_id = approver.id
+        row.approved_at = now
+        await self._session.commit()
+
+    async def deny_device_authorization(self, user_code: str) -> None:
+        """Deny a pending device sign-in (any guild member). 404 unknown, 409 not pending."""
+        row = await self._get_device_authorization_row(user_code)
+        now = datetime.now(UTC)
+        if self._device_authorization_status(row, now=now) != DeviceAuthorizationStatus.PENDING:
+            msg = f"Device authorization {user_code} is not pending"
+            raise HTTPException(status_code=HTTP_409_CONFLICT, detail=msg)
+        row.denied_at = now
         await self._session.commit()
 
     # --- Member: self-service characters ------------------------------------------------------------------------

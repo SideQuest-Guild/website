@@ -1,0 +1,299 @@
+---
+import Room from "../../../layouts/Room.astro";
+import ledgerChamber from "../../../../assets/rooms/ledger-chamber.webp";
+import "../../../styles/room-companion-authorize.css";
+---
+
+<Room
+  title="Authorize · Companion · SideQuest"
+  description="Sign SideQuest Companion in from your browser: check the code, then authorize it from here."
+  heading="AUTHORIZE"
+  lede="Sign SideQuest Companion in without copying a token by hand."
+  art={ledgerChamber}
+  current="account"
+>
+  <p class="status" id="authorize-status" role="status" aria-live="polite"></p>
+
+  <div id="authorize-gate" hidden>
+    <p class="chamber-intro" id="authorize-gate-message"></p>
+  </div>
+
+  <div id="authorize-body" hidden>
+    <div class="chamber" id="authorize-entry" hidden>
+      <h2 class="chamber-title">Enter the code</h2>
+      <p class="aside">Type the code SideQuest Companion is showing you.</p>
+      <form id="authorize-entry-form" class="form-row">
+        <div class="field">
+          <label for="authorize-code-input">Code</label>
+          <input
+            id="authorize-code-input"
+            name="code"
+            placeholder="ABCD-EFGH"
+            autocomplete="off"
+            autocapitalize="characters"
+            spellcheck="false"
+            required
+          />
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn">
+            Continue
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <div class="chamber" id="authorize-confirm" hidden>
+      <h2 class="chamber-title">Authorize Companion?</h2>
+      <p class="aside" id="authorize-device-name"></p>
+      <p class="authorize-code" id="authorize-code-display" aria-label="Confirmation code"></p>
+      <p class="aside">Check this matches the code in the app.</p>
+      <p class="aside" id="authorize-capabilities"></p>
+      <div class="form-actions">
+        <button type="button" class="btn" id="authorize-approve-btn">
+          Authorize
+        </button>
+        <button type="button" class="btn-quiet" id="authorize-deny-btn">
+          Cancel
+        </button>
+      </div>
+      <p class="status" id="authorize-confirm-status" role="status" aria-live="polite"></p>
+    </div>
+
+    <div class="chamber" id="authorize-result" hidden>
+      <h2 class="chamber-title" id="authorize-result-title"></h2>
+      <p class="aside" id="authorize-result-message"></p>
+      <div class="form-actions" id="authorize-result-actions" hidden>
+        <button type="button" class="btn-quiet" id="authorize-retry-btn">
+          Enter a different code
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <noscript>
+    <p class="aside">Enable JavaScript to authorize SideQuest Companion.</p>
+  </noscript>
+</Room>
+
+<script>
+  import {
+    ApiError,
+    apiFetch,
+    fetchMe,
+    requireElement,
+    statusMessage,
+    type EpgpDeviceAuthorizationStatus,
+    type Me,
+  } from "../../../scripts/api";
+  import { onPage } from "../../../scripts/page";
+
+  function normalizeCode(raw: string): string {
+    return raw.trim().toUpperCase().replaceAll("-", "");
+  }
+
+  function formatCode(normalized: string): string {
+    return normalized.length === 8 ? `${normalized.slice(0, 4)}-${normalized.slice(4)}` : normalized;
+  }
+
+  onPage("#authorize-body", (signal) => {
+    const statusEl = requireElement("authorize-status");
+    const gateEl = requireElement("authorize-gate");
+    const gateMessage = requireElement("authorize-gate-message");
+    const bodyEl = requireElement("authorize-body");
+
+    const entryEl = requireElement("authorize-entry");
+    const entryForm = requireElement<HTMLFormElement>("authorize-entry-form");
+    const entryInput = requireElement<HTMLInputElement>("authorize-code-input");
+
+    const confirmEl = requireElement("authorize-confirm");
+    const deviceNameEl = requireElement("authorize-device-name");
+    const codeDisplayEl = requireElement("authorize-code-display");
+    const capabilitiesEl = requireElement("authorize-capabilities");
+    const approveBtn = requireElement<HTMLButtonElement>("authorize-approve-btn");
+    const denyBtn = requireElement<HTMLButtonElement>("authorize-deny-btn");
+    const confirmStatusEl = requireElement("authorize-confirm-status");
+
+    const resultEl = requireElement("authorize-result");
+    const resultTitleEl = requireElement("authorize-result-title");
+    const resultMessageEl = requireElement("authorize-result-message");
+    const resultActionsEl = requireElement("authorize-result-actions");
+    const retryBtn = requireElement<HTMLButtonElement>("authorize-retry-btn");
+
+    let signedInAs: Me | null = null;
+
+    function showOnly(target: HTMLElement): void {
+      for (const el of [entryEl, confirmEl, resultEl]) {
+        el.hidden = el !== target;
+      }
+    }
+
+    function showResult(title: string, message: string, { retry = false }: { retry?: boolean } = {}): void {
+      resultTitleEl.textContent = title;
+      resultMessageEl.textContent = message;
+      resultActionsEl.hidden = !retry;
+      showOnly(resultEl);
+    }
+
+    async function checkCode(normalized: string): Promise<void> {
+      let auth: EpgpDeviceAuthorizationStatus;
+      try {
+        auth = await apiFetch<EpgpDeviceAuthorizationStatus>(`/api/epgp/device-authorizations/${normalized}`, {
+          signal,
+        });
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 404) {
+          showResult(
+            "Code not found",
+            "That code doesn't match a pending sign-in. Check it in the app, or start again from Companion.",
+            { retry: true },
+          );
+          return;
+        }
+        showResult("Something went wrong", statusMessage(err), { retry: true });
+        return;
+      }
+      if (auth.status === "approved") {
+        showResult("All set", "This sign-in was already authorized. You can go back to SideQuest Companion.");
+        return;
+      }
+      if (auth.status === "denied") {
+        showResult(
+          "Sign-in cancelled",
+          "This sign-in was denied. Go back to SideQuest Companion and sign in again if that wasn't you.",
+          { retry: true },
+        );
+        return;
+      }
+      if (auth.status === "expired") {
+        showResult(
+          "Code expired",
+          "This code already expired or was used. Go back to SideQuest Companion and sign in again for a new one.",
+          { retry: true },
+        );
+        return;
+      }
+      deviceNameEl.textContent = `SideQuest Companion wants to sign in as you, from "${auth.device_name}".`;
+      codeDisplayEl.textContent = auth.user_code;
+      capabilitiesEl.textContent = signedInAs?.is_officer
+        ? "It will be able to see your SideQuest updates and raid reminders, and upload raid nights and push EP/GP changes as you, until you revoke it on the account page."
+        : "It will be able to see your SideQuest updates and raid reminders, as you, until you revoke it on the account page.";
+      confirmStatusEl.textContent = "";
+      confirmStatusEl.dataset.tone = "";
+      approveBtn.disabled = false;
+      denyBtn.disabled = false;
+      approveBtn.dataset.userCode = normalized;
+      denyBtn.dataset.userCode = normalized;
+      showOnly(confirmEl);
+    }
+
+    entryForm.addEventListener(
+      "submit",
+      (event) => {
+        event.preventDefault();
+        const normalized = normalizeCode(entryInput.value);
+        if (normalized.length !== 8) {
+          return;
+        }
+        void checkCode(normalized);
+      },
+      { signal },
+    );
+
+    retryBtn.addEventListener(
+      "click",
+      () => {
+        entryInput.value = "";
+        showOnly(entryEl);
+        entryInput.focus();
+      },
+      { signal },
+    );
+
+    approveBtn.addEventListener(
+      "click",
+      async () => {
+        const userCode = approveBtn.dataset.userCode;
+        if (!userCode) {
+          return;
+        }
+        approveBtn.disabled = true;
+        denyBtn.disabled = true;
+        try {
+          await apiFetch(`/api/epgp/device-authorizations/${userCode}/approve`, { method: "POST" });
+          showResult("All set", "You can go back to SideQuest Companion.");
+        } catch (err) {
+          confirmStatusEl.dataset.tone = "error";
+          confirmStatusEl.textContent = statusMessage(err);
+          approveBtn.disabled = false;
+          denyBtn.disabled = false;
+        }
+      },
+      { signal },
+    );
+
+    denyBtn.addEventListener(
+      "click",
+      async () => {
+        const userCode = denyBtn.dataset.userCode;
+        if (!userCode) {
+          return;
+        }
+        approveBtn.disabled = true;
+        denyBtn.disabled = true;
+        try {
+          await apiFetch(`/api/epgp/device-authorizations/${userCode}/deny`, { method: "POST" });
+          showResult("Sign-in cancelled", "SideQuest Companion will show that the sign-in was cancelled.");
+        } catch (err) {
+          confirmStatusEl.dataset.tone = "error";
+          confirmStatusEl.textContent = statusMessage(err);
+          approveBtn.disabled = false;
+          denyBtn.disabled = false;
+        }
+      },
+      { signal },
+    );
+
+    async function init(): Promise<void> {
+      let me: Me | null = null;
+      try {
+        me = await fetchMe();
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 0) {
+          statusEl.textContent = statusMessage(err);
+        }
+        me = null;
+      }
+      signedInAs = me;
+      if (!me) {
+        gateEl.hidden = false;
+        bodyEl.hidden = true;
+        const next = encodeURIComponent(location.pathname + location.search);
+        gateMessage.innerHTML = `Sign in to authorize SideQuest Companion. <a href="/auth/discord/login?next=${next}">Sign in with Discord</a> to continue.`;
+        statusEl.textContent = "";
+        return;
+      }
+      if (!me.is_guild_member) {
+        gateEl.hidden = false;
+        bodyEl.hidden = true;
+        gateMessage.innerHTML = `Signed in as ${me.username}, but you're not in the SideQuest Discord yet. Join the guild and sign in again to authorize Companion.`;
+        statusEl.textContent = "";
+        return;
+      }
+      gateEl.hidden = true;
+      bodyEl.hidden = false;
+      statusEl.textContent = "";
+
+      const rawCode = new URLSearchParams(location.search).get("code");
+      const normalized = rawCode ? normalizeCode(rawCode) : "";
+      if (normalized.length === 8) {
+        await checkCode(normalized);
+      } else {
+        entryInput.value = rawCode ? formatCode(normalized) : "";
+        showOnly(entryEl);
+      }
+    }
+
+    void init();
+  });
+</script>

@@ -3,7 +3,7 @@
 // of each is attached to the report for a human look.
 import type { Page } from "@playwright/test";
 
-import { EVENTS, GM, HEROES } from "./data";
+import { DEVICE_AUTH_USER_CODE, EVENTS, GM, HEROES } from "./data";
 import { expect, test } from "./fixtures";
 
 const PAGES = [
@@ -21,6 +21,7 @@ const PAGES = [
   { name: "officers attendance", path: "/officers/#attendance" },
   { name: "officers mcp", path: "/officers/#mcp" },
   { name: "officers sync", path: "/officers/sync/" },
+  { name: "companion authorize", path: `/companion/authorize/?code=${DEVICE_AUTH_USER_CODE}` },
   { name: "rules", path: "/rules/" },
   { name: "privacy", path: "/privacy/" },
   { name: "terms", path: "/terms/" },

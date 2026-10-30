@@ -1,0 +1,21 @@
+/* The Ledger Chamber's device sign-in confirmation: a big, tracked code the member checks against the app. */
+
+.authorize-code {
+  margin: 0 auto;
+  max-width: 20em;
+  padding: 18px 20px;
+  border: 1px solid rgba(168, 132, 73, 0.34);
+  background: rgba(4, 8, 16, 0.62);
+  font-family: var(--serif);
+  font-size: clamp(28px, 4vw, 44px);
+  letter-spacing: 0.22em;
+  text-align: center;
+  color: var(--gold);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+#authorize-code-input {
+  text-align: center;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}

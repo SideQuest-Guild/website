@@ -1,0 +1,33 @@
+---
+// SideQuest Companion's browser sign-in moved here from the officers room, now that any guild member can
+// authorize it: /companion/authorize/. Companion builds already in the wild point their `verification_uri`
+// at this URL, so it stays alive as a redirect that carries the `?code=` query string along.
+//
+// This is a statically built page, so `Astro.url.search` is always empty at build time; the real visitor's
+// `?code=` only exists at request time, in the browser, hence the inline script rather than a build-time redirect.
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="robots" content="noindex" />
+    <title>Redirecting… · SideQuest</title>
+    <meta http-equiv="refresh" content="0; url=/companion/authorize/" />
+    <link rel="canonical" href="/companion/authorize/" />
+  </head>
+  <body>
+    <p>
+      SideQuest Companion sign-in moved.{" "}
+      <a id="authorize-redirect-link" href="/companion/authorize/">
+        Continue to Companion sign-in
+      </a>
+      .
+    </p>
+    <script>
+      const dest = `/companion/authorize/${location.search}`;
+      document.getElementById("authorize-redirect-link")?.setAttribute("href", dest);
+      location.replace(dest);
+    </script>
+  </body>
+</html>

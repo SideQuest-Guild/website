@@ -3,6 +3,7 @@
 import {
   ADDONS,
   ATTENDANCE_EVENTS,
+  DEVICE_AUTH_USER_CODE,
   EPGP_RECRUITS,
   EVENTS,
   GM,
@@ -334,6 +335,18 @@ test.describe("account", () => {
     await expect(page.locator(".char-item")).toHaveCount(0);
     await expect(page.locator("#char-list")).toContainText("No characters linked yet.");
   });
+
+  test("lists Companion sign-ins and revoking one calls the API and updates the list", async ({ page, site }) => {
+    site.signIn(MEMBER);
+    await page.goto("/account/");
+    const item = page.locator("#companion-token-list .companion-row");
+    await expect(item).toHaveCount(1);
+    await expect(item).toContainText("Guide's laptop");
+
+    page.once("dialog", (dialog) => dialog.accept());
+    await item.locator("[data-revoke-companion-token]").click();
+    await expect(page.locator("#companion-token-list")).toContainText("No Companion sign-ins yet.");
+  });
 });
 
 test.describe("officers", () => {
@@ -453,6 +466,41 @@ test.describe("officers sync", () => {
     await page.locator("#announcement-submit").click();
     await expect(page.locator("#announcement-status")).toHaveText("Posted.");
     await expect(page.locator("#announcements-list")).toContainText("Raid moved to 8pm tonight");
+  });
+});
+
+test.describe("companion authorize", () => {
+  test("signed out, it offers Discord sign-in", async ({ page, site }) => {
+    site.signIn(null);
+    await page.goto(`/companion/authorize/?code=${DEVICE_AUTH_USER_CODE}`);
+    await expect(page.locator("#authorize-gate")).toBeVisible();
+    await expect(page.locator("#authorize-body")).toBeHidden();
+    await expect(page.locator("#authorize-gate-message a")).toHaveAttribute("href", /\/auth\/discord\/login\?next=/);
+  });
+
+  test("a member (not just an officer) can authorize the companion", async ({ page, site }) => {
+    site.signIn(MEMBER);
+    await page.goto(`/companion/authorize/?code=${DEVICE_AUTH_USER_CODE}`);
+    await expect(page.locator("#authorize-gate")).toBeHidden();
+    await expect(page.locator("#authorize-confirm")).toBeVisible();
+    await expect(page.locator("#authorize-code-display")).toHaveText(DEVICE_AUTH_USER_CODE);
+    await expect(page.locator("#authorize-capabilities")).not.toContainText("upload raid nights");
+
+    await page.locator("#authorize-approve-btn").click();
+    await expect(page.locator("#authorize-result-title")).toHaveText("All set");
+  });
+
+  test("an officer sees sync mentioned in what Companion can do", async ({ page, site }) => {
+    site.signIn(OFFICER);
+    await page.goto(`/companion/authorize/?code=${DEVICE_AUTH_USER_CODE}`);
+    await expect(page.locator("#authorize-capabilities")).toContainText("upload raid nights");
+  });
+
+  test("the old officers/sync/authorize/ URL still works", async ({ page, site }) => {
+    site.signIn(MEMBER);
+    await page.goto(`/officers/sync/authorize/?code=${DEVICE_AUTH_USER_CODE}`);
+    await expect(page).toHaveURL(new RegExp(`/companion/authorize/\\?code=${DEVICE_AUTH_USER_CODE}`));
+    await expect(page.locator("#authorize-confirm")).toBeVisible();
   });
 });
 

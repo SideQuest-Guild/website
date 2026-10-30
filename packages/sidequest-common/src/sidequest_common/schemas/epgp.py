@@ -625,3 +625,101 @@ class EpgpSyncTokenCreated(BaseModel):
     id: UUID
     name: str
     token: str
+
+
+MAX_DEVICE_NAME_LENGTH = 60
+"""Cap on ``EpgpDeviceAuthorizationCreate.device_name``, trimmed; also the sync token name length it feeds into."""
+
+_LAST_CONTROL_CHAR = 0x1F
+_DEL_CHAR = 0x7F
+
+
+class DeviceAuthorizationPollStatus(StrEnum):
+    """``status`` on ``POST /api/epgp/device-authorizations/token``."""
+
+    PENDING = "pending"
+    SLOW_DOWN = "slow_down"
+    DENIED = "denied"
+    EXPIRED = "expired"
+    APPROVED = "approved"
+
+
+class DeviceAuthorizationStatus(StrEnum):
+    """``status`` on ``GET /api/epgp/device-authorizations/{user_code}``."""
+
+    PENDING = "pending"
+    APPROVED = "approved"
+    DENIED = "denied"
+    EXPIRED = "expired"
+
+
+class EpgpDeviceAuthorizationCreate(BaseModel):
+    """Body for ``POST /api/epgp/device-authorizations`` (public): the device starting a browser sign-in."""
+
+    device_name: str = Field(min_length=1, max_length=MAX_DEVICE_NAME_LENGTH)
+
+    @field_validator("device_name")
+    @classmethod
+    def _validate_device_name(cls, value: str) -> str:
+        trimmed = value.strip()
+        if not trimmed:
+            msg = "device_name must not be blank"
+            raise ValueError(msg)
+        if any(ord(char) <= _LAST_CONTROL_CHAR or ord(char) == _DEL_CHAR for char in trimmed):
+            msg = "device_name must not contain control characters"
+            raise ValueError(msg)
+        return trimmed
+
+
+class EpgpDeviceAuthorizationCreated(BaseModel):
+    """Response for ``POST /api/epgp/device-authorizations`` (public): poll ``.../token`` with ``device_code``."""
+
+    device_code: str
+    user_code: str
+    verification_uri: str
+    verification_uri_complete: str
+    expires_in: int
+    interval: int
+
+
+class EpgpDeviceAuthorizationPoll(BaseModel):
+    """Body for ``POST /api/epgp/device-authorizations/token`` (public)."""
+
+    device_code: str
+
+
+class EpgpDeviceAuthorizationPollResult(BaseModel):
+    """Response for ``POST /api/epgp/device-authorizations/token`` (public): always 200, never an oracle.
+
+    ``token``/``name`` are set only once, on the first ``"approved"`` poll; a later poll for the same device code
+    gets ``"expired"``.
+    """
+
+    status: DeviceAuthorizationPollStatus
+    token: str | None = None
+    name: str | None = None
+
+
+class EpgpDeviceAuthorizationStatus(BaseModel):
+    """Response for ``GET /api/epgp/device-authorizations/{user_code}`` (any guild member)."""
+
+    user_code: str
+    device_name: str
+    created_at: datetime
+    expires_at: datetime
+    status: DeviceAuthorizationStatus
+
+
+class EpgpSyncTokenMe(BaseModel):
+    """Response for ``GET /api/epgp/sync-tokens/me`` (Bearer only).
+
+    What the presenting token's owner can see about themselves. ``is_guild_member`` is always ``true``: a token
+    whose owner left the guild gets 403 instead.
+    """
+
+    display_name: str
+    avatar_url: str | None
+    is_officer: bool
+    is_guild_member: bool
+    calendar_url: str | None
+    token_name: str

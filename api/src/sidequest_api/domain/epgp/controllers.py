@@ -12,15 +12,22 @@ from litestar import Controller, delete, get, post, put
 from litestar.di import NamedDependency, Provide
 from litestar.params import FromPath, FromQuery, JSONBody, QueryParameter
 
-from sidequest_api.domain.epgp.dependencies import provide_epgp_service, provide_import_actor
+from sidequest_api.domain.calendar.dependencies import provide_calendar_service
+from sidequest_api.domain.calendar.services import CalendarService
+from sidequest_api.domain.epgp.dependencies import provide_epgp_service, provide_import_actor, provide_sync_token_row
 from sidequest_api.domain.epgp.services import EpgpService
 from sidequest_api.lib.member_auth import provide_optional_member
-from sidequest_common.models import Member
+from sidequest_common.models import EpgpSyncToken, Member
 from sidequest_common.schemas import (
     EpgpAdjustmentCreate,
     EpgpCharacter,
     EpgpCharacterList,
     EpgpCharacterUpdate,
+    EpgpDeviceAuthorizationCreate,
+    EpgpDeviceAuthorizationCreated,
+    EpgpDeviceAuthorizationPoll,
+    EpgpDeviceAuthorizationPollResult,
+    EpgpDeviceAuthorizationStatus,
     EpgpGameImport,
     EpgpImportBody,
     EpgpImportResult,
@@ -35,8 +42,10 @@ from sidequest_common.schemas import (
     EpgpSyncTokenCreate,
     EpgpSyncTokenCreated,
     EpgpSyncTokenList,
+    EpgpSyncTokenMe,
     MyCharacterCreate,
 )
+from sidequest_common.settings import WebSettings
 
 DEFAULT_LEDGER_LIMIT = 50
 MAX_LEDGER_LIMIT = 200
@@ -53,6 +62,8 @@ class EpgpController(Controller):
         "epgp_service": Provide(provide_epgp_service),
         "optional_member": Provide(provide_optional_member),
         "import_actor": Provide(provide_import_actor),
+        "sync_token_row": Provide(provide_sync_token_row),
+        "calendar_service": Provide(provide_calendar_service),
     }
 
     @post("/imports", operation_id="ImportEpgpPayload", status_code=200)
@@ -165,10 +176,10 @@ class EpgpController(Controller):
 
     @get("/sync-tokens", operation_id="ListEpgpSyncTokens")
     async def list_sync_tokens(
-        self, current_officer: NamedDependency[Member], epgp_service: NamedDependency[EpgpService]
+        self, current_member: NamedDependency[Member], epgp_service: NamedDependency[EpgpService]
     ) -> EpgpSyncTokenList:
-        """The signed-in officer's own non-revoked sync tokens. 401/403 non-officer."""
-        return await epgp_service.list_sync_tokens(current_officer)
+        """The signed-in member's own non-revoked sync tokens. 401/403 non-member."""
+        return await epgp_service.list_sync_tokens(current_member)
 
     @post("/sync-tokens", operation_id="CreateEpgpSyncToken", status_code=201)
     async def create_sync_token(
@@ -180,15 +191,94 @@ class EpgpController(Controller):
         """Create a sync token; the plaintext is returned once and never stored (officer). 401/403 non-officer."""
         return await epgp_service.create_sync_token(current_officer, data)
 
+    @get("/sync-tokens/me", operation_id="GetMySyncToken")
+    async def get_my_sync_token(
+        self,
+        sync_token_row: NamedDependency[EpgpSyncToken],
+        epgp_service: NamedDependency[EpgpService],
+        calendar_service: NamedDependency[CalendarService],
+        web_settings: NamedDependency[WebSettings],
+    ) -> EpgpSyncTokenMe:
+        """What the presenting Bearer sync token's owner can see about themselves (SideQuest Companion).
+
+        401 missing/invalid/revoked token, 403 the owner is no longer a guild member.
+        """
+        return await epgp_service.get_sync_token_owner_profile(
+            sync_token_row,
+            officer_role_ids=web_settings.OFFICER_ROLE_IDS,
+            calendar_service=calendar_service,
+            base_url=web_settings.BASE_URL,
+        )
+
+    @delete("/sync-tokens/me", operation_id="RevokeMySyncToken", status_code=204)
+    async def revoke_my_sync_token(
+        self, sync_token_row: NamedDependency[EpgpSyncToken], epgp_service: NamedDependency[EpgpService]
+    ) -> None:
+        """Revoke the presenting Bearer sync token. 401 missing/invalid/already-revoked token."""
+        await epgp_service.revoke_presented_sync_token(sync_token_row)
+
     @delete("/sync-tokens/{token_id:uuid}", operation_id="RevokeEpgpSyncToken", status_code=204)
     async def revoke_sync_token(
         self,
         token_id: FromPath[UUID],
-        current_officer: NamedDependency[Member],
+        current_member: NamedDependency[Member],
         epgp_service: NamedDependency[EpgpService],
     ) -> None:
-        """Revoke one of the signed-in officer's own sync tokens. 401/403 non-officer, 404 unknown/not own token."""
-        await epgp_service.revoke_sync_token(current_officer, token_id)
+        """Revoke one of the signed-in member's own sync tokens. 401/403 non-member, 404 unknown/not own token."""
+        await epgp_service.revoke_sync_token(current_member, token_id)
+
+    @post("/device-authorizations", operation_id="CreateEpgpDeviceAuthorization", status_code=201)
+    async def create_device_authorization(
+        self,
+        data: JSONBody[EpgpDeviceAuthorizationCreate],
+        epgp_service: NamedDependency[EpgpService],
+        web_settings: NamedDependency[WebSettings],
+    ) -> EpgpDeviceAuthorizationCreated:
+        """Start a browser sign-in for SideQuest Companion (public). 429 too many pending sign-ins."""
+        return await epgp_service.create_device_authorization(data, base_url=web_settings.BASE_URL)
+
+    @post("/device-authorizations/token", operation_id="PollEpgpDeviceAuthorization", status_code=200)
+    async def poll_device_authorization(
+        self, data: JSONBody[EpgpDeviceAuthorizationPoll], epgp_service: NamedDependency[EpgpService]
+    ) -> EpgpDeviceAuthorizationPollResult:
+        """Poll a device code for its sign-in status (public). Always 200, never an oracle."""
+        return await epgp_service.poll_device_authorization(data)
+
+    @get("/device-authorizations/{user_code:str}", operation_id="GetEpgpDeviceAuthorization")
+    async def get_device_authorization(
+        self,
+        user_code: FromPath[str],
+        current_member: NamedDependency[Member],
+        epgp_service: NamedDependency[EpgpService],
+    ) -> EpgpDeviceAuthorizationStatus:
+        """A pending device sign-in's status (any guild member). 401/403 non-member, 404 unknown code."""
+        del current_member
+        return await epgp_service.get_device_authorization(user_code)
+
+    @post(
+        "/device-authorizations/{user_code:str}/approve",
+        operation_id="ApproveEpgpDeviceAuthorization",
+        status_code=204,
+    )
+    async def approve_device_authorization(
+        self,
+        user_code: FromPath[str],
+        current_member: NamedDependency[Member],
+        epgp_service: NamedDependency[EpgpService],
+    ) -> None:
+        """Approve a pending device sign-in (any guild member). 401/403 non-member, 404 unknown, 409 not pending."""
+        await epgp_service.approve_device_authorization(current_member, user_code)
+
+    @post("/device-authorizations/{user_code:str}/deny", operation_id="DenyEpgpDeviceAuthorization", status_code=204)
+    async def deny_device_authorization(
+        self,
+        user_code: FromPath[str],
+        current_member: NamedDependency[Member],
+        epgp_service: NamedDependency[EpgpService],
+    ) -> None:
+        """Deny a pending device sign-in (any guild member). 401/403 non-member, 404 unknown, 409 not pending."""
+        del current_member
+        await epgp_service.deny_device_authorization(user_code)
 
 
 class MyCharactersController(Controller):

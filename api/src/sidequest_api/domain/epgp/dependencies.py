@@ -61,3 +61,22 @@ async def provide_import_actor(
     if not is_officer(optional_member, web_settings.OFFICER_ROLE_IDS):
         raise PermissionDeniedException(_NOT_AN_OFFICER_MESSAGE)
     return optional_member
+
+
+async def provide_sync_token_row(request: Request, db_session: NamedDependency[AsyncSession]) -> EpgpSyncToken:
+    """The sync token row for the presenting ``Bearer`` token (``GET``/``DELETE /api/epgp/sync-tokens/me``).
+
+    401 if the ``Authorization`` header is missing or the token is unknown/revoked. Does not check guild
+    membership; callers that need the owner's current status (``get_sync_token_owner_profile``) check it.
+    """
+    auth_header = request.headers.get(AUTH_HEADER, "")
+    if not auth_header.startswith(BEARER_PREFIX):
+        raise NotAuthorizedException(_NO_TOKEN_MESSAGE)
+    token = auth_header[len(BEARER_PREFIX) :].strip()
+    token_hash = hashlib.sha256(token.encode()).hexdigest()
+    row = (
+        await db_session.execute(select(EpgpSyncToken).where(EpgpSyncToken.token_hash == token_hash))
+    ).scalar_one_or_none()
+    if row is None or row.revoked_at is not None:
+        raise NotAuthorizedException(_NO_TOKEN_MESSAGE)
+    return row

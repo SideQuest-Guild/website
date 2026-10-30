@@ -5,12 +5,13 @@ import base64
 import json
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import func, select
 
 from sidequest_api.domain.epgp.services import decayed_amount, resets_since
 from sidequest_common.models import (
+    EpgpDeviceAuthorization,
     EpgpLedgerEntry,
     EpgpSyncToken,
     EventSignup,
@@ -465,6 +466,106 @@ async def test_sync_token_holder_no_longer_officer_is_403(
     assert response.status_code == 403
 
 
+# --- guild members manage their own sync tokens; manual creation stays officer-only ------------------------------
+
+
+async def test_create_sync_token_stays_officer_only_for_members(
+    member_client: AsyncTestClient, discord_state: dict
+) -> None:
+    await login_as(member_client, discord_state, discord_id=6410, roles=[])
+    response = await member_client.post("/api/epgp/sync-tokens", json={"name": "Not an officer"})
+    assert response.status_code == 403
+
+
+async def test_member_can_list_and_delete_own_sync_tokens(member_client: AsyncTestClient, discord_state: dict) -> None:
+    await _login_officer(member_client, discord_state, discord_id=6411)
+    created = await member_client.post("/api/epgp/sync-tokens", json={"name": "Officer-made token"})
+    assert created.status_code == 201, created.text
+    token_id = created.json()["id"]
+
+    await login_as(member_client, discord_state, discord_id=6412, roles=[])
+    listed = await member_client.get("/api/epgp/sync-tokens")
+    assert listed.status_code == 200, listed.text
+    assert listed.json() == {"tokens": []}
+
+    created_by_member = await member_client.post("/api/epgp/sync-tokens", json={"name": "Member token"})
+    assert created_by_member.status_code == 403
+
+    # a member can't see or delete another member's token
+    other_token_delete = await member_client.delete(f"/api/epgp/sync-tokens/{token_id}")
+    assert other_token_delete.status_code == 404
+
+
+# --- sync-tokens/me: a Bearer sync token's own view of itself (SideQuest Companion) ------------------------------
+
+
+async def test_sync_token_me_profile_for_officer_and_member(
+    member_client: AsyncTestClient, discord_state: dict
+) -> None:
+    await _login_officer(member_client, discord_state, discord_id=6420)
+    officer_token = (await member_client.post("/api/epgp/sync-tokens", json={"name": "Officer token"})).json()["token"]
+    officer_me = await member_client.get(
+        "/api/epgp/sync-tokens/me", headers={"Authorization": f"Bearer {officer_token}"}
+    )
+    assert officer_me.status_code == 200, officer_me.text
+    officer_body = officer_me.json()
+    assert officer_body["token_name"] == "Officer token"
+    assert officer_body["is_officer"] is True
+    assert officer_body["is_guild_member"] is True
+    assert officer_body["calendar_url"].endswith(".ics")
+
+    await login_as(member_client, discord_state, discord_id=6421, roles=[])
+    # members can't create tokens directly; approve a device sign-in instead to get one scoped to them
+    created = await _create_device_authorization(member_client, device_name="Member Device")
+    approve = await member_client.post(f"/api/epgp/device-authorizations/{created['user_code']}/approve")
+    assert approve.status_code == 204, approve.text
+    poll = await member_client.post(
+        "/api/epgp/device-authorizations/token", json={"device_code": created["device_code"]}
+    )
+    member_token = poll.json()["token"]
+
+    member_me = await member_client.get("/api/epgp/sync-tokens/me", headers={"Authorization": f"Bearer {member_token}"})
+    assert member_me.status_code == 200, member_me.text
+    member_body = member_me.json()
+    assert member_body["is_officer"] is False
+    assert member_body["is_guild_member"] is True
+
+
+async def test_sync_token_me_non_guild_member_is_403(
+    member_client: AsyncTestClient, discord_state: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    await _login_officer(member_client, discord_state, discord_id=6422)
+    token = (await member_client.post("/api/epgp/sync-tokens", json={"name": "Leaving token"})).json()["token"]
+
+    async with db_sessionmaker() as session:
+        member = (await session.execute(select(Member).where(Member.discord_id == 6422))).scalar_one()
+        member.is_guild_member = False
+        await session.commit()
+
+    response = await member_client.get("/api/epgp/sync-tokens/me", headers={"Authorization": f"Bearer {token}"})
+    assert response.status_code == 403
+
+
+async def test_sync_token_me_unknown_or_revoked_is_401(member_client: AsyncTestClient, discord_state: dict) -> None:
+    unknown = await member_client.get(
+        "/api/epgp/sync-tokens/me", headers={"Authorization": "Bearer sqs_not-a-real-token"}
+    )
+    assert unknown.status_code == 401
+
+    await _login_officer(member_client, discord_state, discord_id=6423)
+    created = await member_client.post("/api/epgp/sync-tokens", json={"name": "Revoke via DELETE me"})
+    token = created.json()["token"]
+
+    delete_me = await member_client.delete("/api/epgp/sync-tokens/me", headers={"Authorization": f"Bearer {token}"})
+    assert delete_me.status_code == 204, delete_me.text
+
+    again = await member_client.get("/api/epgp/sync-tokens/me", headers={"Authorization": f"Bearer {token}"})
+    assert again.status_code == 401
+
+    delete_again = await member_client.delete("/api/epgp/sync-tokens/me", headers={"Authorization": f"Bearer {token}"})
+    assert delete_again.status_code == 401
+
+
 # --- member character self-claim --------------------------------------------------------------------------------
 
 
@@ -579,3 +680,272 @@ async def test_real_addon_fixture_imports_successfully_and_is_idempotent(
     assert second_body["encounters"]["new"] == 0
     assert second_body["loot"]["new"] == 0
     assert second_body["awards"]["new"] == 0
+
+
+# --- device authorizations: browser sign-in for SideQuest Companion ------------------------------------------
+
+
+async def _create_device_authorization(client: AsyncTestClient, *, device_name: str = "Office PC") -> dict[str, Any]:
+    response = await client.post("/api/epgp/device-authorizations", json={"device_name": device_name})
+    assert response.status_code == 201, response.text
+    return response.json()
+
+
+async def _clear_last_polled(db_sessionmaker: async_sessionmaker[AsyncSession], user_code: str) -> None:
+    """Simulate the poll interval having passed, without a real sleep."""
+    async with db_sessionmaker() as session:
+        row = (
+            await session.execute(
+                select(EpgpDeviceAuthorization).where(EpgpDeviceAuthorization.user_code == user_code.replace("-", ""))
+            )
+        ).scalar_one()
+        row.last_polled_at = None
+        await session.commit()
+
+
+async def test_device_authorization_full_flow(
+    member_client: AsyncTestClient, discord_state: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    created = await _create_device_authorization(member_client, device_name="Office PC")
+    assert len(created["device_code"]) >= 32
+    assert len(created["user_code"]) == 9  # XXXX-XXXX
+    assert created["user_code"][4] == "-"
+    assert created["verification_uri"].endswith("/companion/authorize/")
+    assert created["verification_uri_complete"] == f"{created['verification_uri']}?code={created['user_code']}"
+    assert created["expires_in"] == 600
+    assert created["interval"] == 5
+    device_code = created["device_code"]
+    user_code = created["user_code"]
+
+    pending = await member_client.post("/api/epgp/device-authorizations/token", json={"device_code": device_code})
+    assert pending.status_code == 200
+    assert pending.json() == {"status": "pending", "token": None, "name": None}
+
+    slow = await member_client.post("/api/epgp/device-authorizations/token", json={"device_code": device_code})
+    assert slow.status_code == 200
+    assert slow.json()["status"] == "slow_down"
+
+    await _login_officer(member_client, discord_state, discord_id=6801)
+    status = await member_client.get(f"/api/epgp/device-authorizations/{user_code}")
+    assert status.status_code == 200, status.text
+    assert status.json() == {
+        "user_code": user_code,
+        "device_name": "Office PC",
+        "created_at": status.json()["created_at"],
+        "expires_at": status.json()["expires_at"],
+        "status": "pending",
+    }
+
+    approve = await member_client.post(f"/api/epgp/device-authorizations/{user_code}/approve")
+    assert approve.status_code == 204, approve.text
+
+    status_after_approve = await member_client.get(f"/api/epgp/device-authorizations/{user_code}")
+    assert status_after_approve.json()["status"] == "approved"
+
+    await _clear_last_polled(db_sessionmaker, user_code)
+    approved_poll = await member_client.post("/api/epgp/device-authorizations/token", json={"device_code": device_code})
+    assert approved_poll.status_code == 200
+    approved_body = approved_poll.json()
+    assert approved_body["status"] == "approved"
+    assert approved_body["token"].startswith("sqs_")
+    assert approved_body["name"] == "SideQuest Companion on Office PC"
+
+    import_response = await member_client.post(
+        "/api/epgp/imports",
+        json={"payload": _export_string(_base_payload())},
+        headers={"Authorization": f"Bearer {approved_body['token']}"},
+    )
+    assert import_response.status_code == 200, import_response.text
+
+    again = await member_client.post("/api/epgp/device-authorizations/token", json={"device_code": device_code})
+    assert again.status_code == 200
+    assert again.json() == {"status": "expired", "token": None, "name": None}
+
+
+async def test_device_authorization_deny(member_client: AsyncTestClient, discord_state: dict) -> None:
+    created = await _create_device_authorization(member_client, device_name="Raid Laptop")
+    device_code = created["device_code"]
+    user_code = created["user_code"]
+
+    await _login_officer(member_client, discord_state, discord_id=6802)
+    deny = await member_client.post(f"/api/epgp/device-authorizations/{user_code}/deny")
+    assert deny.status_code == 204, deny.text
+
+    status = await member_client.get(f"/api/epgp/device-authorizations/{user_code}")
+    assert status.json()["status"] == "denied"
+
+    poll = await member_client.post("/api/epgp/device-authorizations/token", json={"device_code": device_code})
+    assert poll.status_code == 200
+    assert poll.json() == {"status": "denied", "token": None, "name": None}
+
+    # already denied: approving or denying again is a conflict
+    deny_again = await member_client.post(f"/api/epgp/device-authorizations/{user_code}/deny")
+    assert deny_again.status_code == 409
+    approve_after_deny = await member_client.post(f"/api/epgp/device-authorizations/{user_code}/approve")
+    assert approve_after_deny.status_code == 409
+
+
+async def test_device_authorization_expires(
+    member_client: AsyncTestClient, discord_state: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    created = await _create_device_authorization(member_client, device_name="Stale Device")
+    device_code = created["device_code"]
+    user_code = created["user_code"]
+
+    async with db_sessionmaker() as session:
+        row = (
+            await session.execute(
+                select(EpgpDeviceAuthorization).where(EpgpDeviceAuthorization.user_code == user_code.replace("-", ""))
+            )
+        ).scalar_one()
+        row.expires_at = PAST
+        await session.commit()
+
+    poll = await member_client.post("/api/epgp/device-authorizations/token", json={"device_code": device_code})
+    assert poll.status_code == 200
+    assert poll.json() == {"status": "expired", "token": None, "name": None}
+
+    await _login_officer(member_client, discord_state, discord_id=6803)
+    status = await member_client.get(f"/api/epgp/device-authorizations/{user_code}")
+    assert status.json()["status"] == "expired"
+
+    approve = await member_client.post(f"/api/epgp/device-authorizations/{user_code}/approve")
+    assert approve.status_code == 409
+
+
+async def test_unknown_device_user_code_is_404(member_client: AsyncTestClient, discord_state: dict) -> None:
+    await _login_officer(member_client, discord_state, discord_id=6804)
+    get_response = await member_client.get("/api/epgp/device-authorizations/ZZZZ-ZZZZ")
+    assert get_response.status_code == 404
+    approve_response = await member_client.post("/api/epgp/device-authorizations/ZZZZ-ZZZZ/approve")
+    assert approve_response.status_code == 404
+
+
+async def test_unknown_device_code_poll_is_expired(member_client: AsyncTestClient) -> None:
+    poll = await member_client.post(
+        "/api/epgp/device-authorizations/token", json={"device_code": "not-a-real-device-code"}
+    )
+    assert poll.status_code == 200
+    assert poll.json() == {"status": "expired", "token": None, "name": None}
+
+
+async def test_device_authorization_member_can_view_and_approve(
+    member_client: AsyncTestClient, discord_state: dict
+) -> None:
+    """Any guild member, not just an officer, can view and approve a pending device sign-in."""
+    created = await _create_device_authorization(member_client, device_name="Someone's PC")
+    user_code = created["user_code"]
+
+    await login_as(member_client, discord_state, discord_id=6805, roles=[])
+    get_response = await member_client.get(f"/api/epgp/device-authorizations/{user_code}")
+    assert get_response.status_code == 200, get_response.text
+    approve_response = await member_client.post(f"/api/epgp/device-authorizations/{user_code}/approve")
+    assert approve_response.status_code == 204, approve_response.text
+
+
+async def test_device_authorization_non_guild_member_cannot_view_or_approve(
+    member_client: AsyncTestClient, discord_state: dict
+) -> None:
+    created = await _create_device_authorization(member_client, device_name="Outsider's PC")
+    user_code = created["user_code"]
+
+    await login_as(member_client, discord_state, discord_id=6808, is_guild_member=False)
+    get_response = await member_client.get(f"/api/epgp/device-authorizations/{user_code}")
+    assert get_response.status_code == 403
+    approve_response = await member_client.post(f"/api/epgp/device-authorizations/{user_code}/approve")
+    assert approve_response.status_code == 403
+
+
+async def test_device_authorization_approver_left_guild_before_poll_is_denied(
+    member_client: AsyncTestClient, discord_state: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    """Losing officer access alone doesn't deny a pending approval; leaving the guild entirely does."""
+    created = await _create_device_authorization(member_client, device_name="Departing Member's PC")
+    device_code = created["device_code"]
+    user_code = created["user_code"]
+
+    await _login_officer(member_client, discord_state, discord_id=6806)
+    approve = await member_client.post(f"/api/epgp/device-authorizations/{user_code}/approve")
+    assert approve.status_code == 204, approve.text
+
+    async with db_sessionmaker() as session:
+        member = (await session.execute(select(Member).where(Member.discord_id == 6806))).scalar_one()
+        member.is_guild_member = False
+        tokens_before = (await session.execute(select(func.count()).select_from(EpgpSyncToken))).scalar_one()
+        await session.commit()
+
+    await _clear_last_polled(db_sessionmaker, user_code)
+    poll = await member_client.post("/api/epgp/device-authorizations/token", json={"device_code": device_code})
+    assert poll.status_code == 200
+    assert poll.json() == {"status": "denied", "token": None, "name": None}
+
+    async with db_sessionmaker() as session:
+        tokens_after = (await session.execute(select(func.count()).select_from(EpgpSyncToken))).scalar_one()
+    assert tokens_after == tokens_before
+
+
+async def test_device_authorization_member_approval_token_is_403_on_import_and_game_import(
+    member_client: AsyncTestClient, discord_state: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    """A member (non-officer) can approve a sign-in; the minted token works for Companion but not for sync."""
+    created = await _create_device_authorization(member_client, device_name="Member's PC")
+    device_code = created["device_code"]
+    user_code = created["user_code"]
+
+    await login_as(member_client, discord_state, discord_id=6809, roles=[])
+    approve = await member_client.post(f"/api/epgp/device-authorizations/{user_code}/approve")
+    assert approve.status_code == 204, approve.text
+
+    await _clear_last_polled(db_sessionmaker, user_code)
+    poll = await member_client.post("/api/epgp/device-authorizations/token", json={"device_code": device_code})
+    assert poll.status_code == 200
+    token = poll.json()["token"]
+    assert token.startswith("sqs_")
+
+    import_response = await member_client.post(
+        "/api/epgp/imports",
+        json={"payload": _export_string(_base_payload())},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert import_response.status_code == 403
+
+    game_import_response = await member_client.get(
+        "/api/epgp/game-import", headers={"Authorization": f"Bearer {token}"}
+    )
+    assert game_import_response.status_code == 403
+
+
+async def test_device_authorization_user_code_normalizes_case_and_dash(
+    member_client: AsyncTestClient, discord_state: dict
+) -> None:
+    created = await _create_device_authorization(member_client, device_name="Case Test PC")
+    user_code = created["user_code"]
+    messy = user_code.replace("-", "").lower()
+
+    await _login_officer(member_client, discord_state, discord_id=6807)
+    status = await member_client.get(f"/api/epgp/device-authorizations/{messy}")
+    assert status.status_code == 200, status.text
+    assert status.json()["user_code"] == user_code
+
+
+async def test_device_authorization_device_name_blank_is_400(member_client: AsyncTestClient) -> None:
+    response = await member_client.post("/api/epgp/device-authorizations", json={"device_name": "   "})
+    assert response.status_code == 400
+
+
+async def test_device_authorization_device_name_control_chars_is_400(member_client: AsyncTestClient) -> None:
+    response = await member_client.post("/api/epgp/device-authorizations", json={"device_name": "bad\x00name"})
+    assert response.status_code == 400
+
+
+async def test_device_authorization_device_name_too_long_is_400(member_client: AsyncTestClient) -> None:
+    response = await member_client.post("/api/epgp/device-authorizations", json={"device_name": "x" * 61})
+    assert response.status_code == 400
+
+
+async def test_device_authorization_pending_cap_is_429(member_client: AsyncTestClient) -> None:
+    for i in range(500):
+        response = await member_client.post("/api/epgp/device-authorizations", json={"device_name": f"Device {i}"})
+        assert response.status_code == 201, response.text
+    over_cap = await member_client.post("/api/epgp/device-authorizations", json={"device_name": "One too many"})
+    assert over_cap.status_code == 429

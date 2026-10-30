@@ -200,6 +200,36 @@ class EpgpSyncToken(UUIDAuditBase):
     revoked_at: Mapped[datetime | None] = mapped_column(DateTimeUTC(timezone=True), default=None)
 
 
+class EpgpDeviceAuthorization(UUIDAuditBase):
+    """A browser sign-in for SideQuest Companion, device-flow style (``gh auth login``).
+
+    The companion gets a ``device_code``/``user_code`` pair from ``POST /api/epgp/device-authorizations``, opens
+    ``verification_uri_complete`` for the officer to approve, and polls ``POST .../token`` with ``device_code``.
+    ``device_code_hash`` is the sha256 hex digest of the device code; the plaintext is handed to the device once
+    and never stored. ``user_code`` is kept normalized (8 chars, uppercase, no dash). The approving officer is
+    re-checked for officer access on the first poll after approval, when the sync token is minted; ``consumed_at``
+    then marks the row so a later poll can't replay the token.
+    """
+
+    __tablename__ = "epgp_device_authorization"
+    __table_args__ = {"comment": "Device-flow browser sign-ins for SideQuest Companion, one per device request."}
+
+    device_code_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    user_code: Mapped[str] = mapped_column(String(8), index=True)
+    device_name: Mapped[str] = mapped_column(Text)
+    expires_at: Mapped[datetime] = mapped_column(DateTimeUTC(timezone=True), index=True)
+    last_polled_at: Mapped[datetime | None] = mapped_column(DateTimeUTC(timezone=True), default=None)
+    approved_by_member_id: Mapped[int | None] = mapped_column(
+        BigInteger, ForeignKey("member.id", ondelete="SET NULL"), default=None
+    )
+    approved_at: Mapped[datetime | None] = mapped_column(DateTimeUTC(timezone=True), default=None)
+    denied_at: Mapped[datetime | None] = mapped_column(DateTimeUTC(timezone=True), default=None)
+    consumed_at: Mapped[datetime | None] = mapped_column(DateTimeUTC(timezone=True), default=None)
+    sync_token_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("epgp_sync_token.id", ondelete="SET NULL"), default=None
+    )
+
+
 class EpgpImportAudit(UUIDAuditBase):
     """One ``POST /api/epgp/imports`` call: who ran it, which addon recorder it came from, and what changed."""
 

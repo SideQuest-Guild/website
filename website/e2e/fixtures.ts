@@ -24,6 +24,7 @@ import {
   ATTENDANCE_REPORT,
   ATTENDANCE_TRENDS,
   EPGP_CHARACTERS,
+  EPGP_DEVICE_AUTHORIZATION,
   EPGP_LOOT,
   EPGP_MEMBER_NOTES,
   EPGP_PROGRESSION,
@@ -172,6 +173,9 @@ export const test = base.extend<{ site: Site }>({
     const epgpRoster = EPGP_ROSTER.map((m) => Object.assign({}, m));
     const epgpSyncTokens = EPGP_SYNC_TOKENS.map((t) => Object.assign({}, t));
     const mcpTokens = MCP_TOKENS.map((t) => Object.assign({}, t));
+    let deviceAuth = { ...EPGP_DEVICE_AUTHORIZATION };
+    let deviceAuthPolled = false;
+    const DEVICE_CODE = "mock-device-code";
     const epgpRecruits = EPGP_RECRUITS.map((r) =>
       Object.assign({}, r, { checklist: { ...r.checklist }, votes: [...r.votes] }),
     );
@@ -432,14 +436,17 @@ export const test = base.extend<{ site: Site }>({
         return json(route, target);
       }
       if (path === "/api/epgp/sync-tokens" && method === "GET") {
-        if (!me?.is_officer) {
-          return json(route, { detail: "Officers only" }, 401);
+        if (!me) {
+          return json(route, { detail: "Not signed in" }, 401);
+        }
+        if (!me.is_guild_member) {
+          return json(route, { detail: "Not a guild member" }, 403);
         }
         return json(route, { tokens: epgpSyncTokens });
       }
       if (path === "/api/epgp/sync-tokens" && method === "POST") {
         if (!me?.is_officer) {
-          return json(route, { detail: "Officers only" }, 401);
+          return json(route, { detail: "Officers only" }, 403);
         }
         const body = JSON.parse(request.postData() ?? "{}") as { name: string };
         const id = `token-${epgpSyncTokens.length + 1}`;
@@ -448,8 +455,11 @@ export const test = base.extend<{ site: Site }>({
       }
       const epgpTokenDeleteMatch = /^\/api\/epgp\/sync-tokens\/([^/]+)$/.exec(path);
       if (epgpTokenDeleteMatch && method === "DELETE") {
-        if (!me?.is_officer) {
-          return json(route, { detail: "Officers only" }, 401);
+        if (!me) {
+          return json(route, { detail: "Not signed in" }, 401);
+        }
+        if (!me.is_guild_member) {
+          return json(route, { detail: "Not a guild member" }, 403);
         }
         const index = epgpSyncTokens.findIndex((t) => t.id === epgpTokenDeleteMatch[1]);
         if (index === -1) {
@@ -483,6 +493,76 @@ export const test = base.extend<{ site: Site }>({
           return json(route, { detail: "No such token" }, 404);
         }
         mcpTokens.splice(index, 1);
+        return route.fulfill({ status: 204 });
+      }
+      if (path === "/api/epgp/device-authorizations" && method === "POST") {
+        const body = JSON.parse(request.postData() ?? "{}") as { device_name: string };
+        deviceAuth = { ...EPGP_DEVICE_AUTHORIZATION, device_name: body.device_name, status: "pending" };
+        deviceAuthPolled = false;
+        return json(
+          route,
+          {
+            device_code: DEVICE_CODE,
+            user_code: deviceAuth.user_code,
+            verification_uri: `${origin}/companion/authorize/`,
+            verification_uri_complete: `${origin}/companion/authorize/?code=${deviceAuth.user_code}`,
+            expires_in: 600,
+            interval: 5,
+          },
+          201,
+        );
+      }
+      if (path === "/api/epgp/device-authorizations/token" && method === "POST") {
+        const body = JSON.parse(request.postData() ?? "{}") as { device_code: string };
+        if (body.device_code !== DEVICE_CODE) {
+          return json(route, { status: "expired", token: null, name: null });
+        }
+        if (deviceAuth.status === "approved" && !deviceAuthPolled) {
+          deviceAuthPolled = true;
+          return json(route, {
+            status: "approved",
+            token: `sqs_${"x".repeat(40)}`,
+            name: `SideQuest Companion on ${deviceAuth.device_name}`,
+          });
+        }
+        if (deviceAuth.status === "approved") {
+          return json(route, { status: "expired", token: null, name: null });
+        }
+        return json(route, { status: deviceAuth.status, token: null, name: null });
+      }
+      const deviceAuthStatusMatch = /^\/api\/epgp\/device-authorizations\/([^/]+)$/.exec(path);
+      if (deviceAuthStatusMatch && method === "GET") {
+        if (!me) {
+          return json(route, { detail: "Not signed in" }, 401);
+        }
+        if (!me.is_guild_member) {
+          return json(route, { detail: "Not a guild member" }, 403);
+        }
+        if (deviceAuthStatusMatch[1].replaceAll("-", "").toUpperCase() !== deviceAuth.user_code.replaceAll("-", "")) {
+          return json(route, { detail: "No such device authorization" }, 404);
+        }
+        return json(route, deviceAuth);
+      }
+      const deviceAuthApproveMatch = /^\/api\/epgp\/device-authorizations\/([^/]+)\/approve$/.exec(path);
+      if (deviceAuthApproveMatch && method === "POST") {
+        if (!me) {
+          return json(route, { detail: "Not signed in" }, 401);
+        }
+        if (!me.is_guild_member) {
+          return json(route, { detail: "Not a guild member" }, 403);
+        }
+        deviceAuth = { ...deviceAuth, status: "approved" };
+        return route.fulfill({ status: 204 });
+      }
+      const deviceAuthDenyMatch = /^\/api\/epgp\/device-authorizations\/([^/]+)\/deny$/.exec(path);
+      if (deviceAuthDenyMatch && method === "POST") {
+        if (!me) {
+          return json(route, { detail: "Not signed in" }, 401);
+        }
+        if (!me.is_guild_member) {
+          return json(route, { detail: "Not a guild member" }, 403);
+        }
+        deviceAuth = { ...deviceAuth, status: "denied" };
         return route.fulfill({ status: 204 });
       }
       if (path === "/api/guild/roster" && method === "GET") {

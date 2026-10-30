@@ -115,6 +115,19 @@ import "../../styles/room-account.css";
       </div>
     </section>
 
+    <section class="chamber" aria-labelledby="companion-title">
+      <h2 class="chamber-title" id="companion-title">
+        Companion
+      </h2>
+      <p class="aside">
+        <a href="https://github.com/SideQuest-Guild/companion/releases">SideQuest Companion</a> sits in your system tray
+        on Windows, macOS or Linux and shows your updates and raid reminders; officers can also sync the addon's raid
+        record from it. Click <strong>Sign in with Discord</strong> inside the app, then{" "}
+        <a href="/companion/authorize/">approve it there</a>. Sign-ins you've approved are listed here.
+      </p>
+      <ul class="item-list companion-list" id="companion-token-list" aria-label="Companion sign-ins"></ul>
+    </section>
+
     <section class="chamber" aria-labelledby="away-title">
       <h2 class="chamber-title" id="away-title">
         Away
@@ -223,6 +236,8 @@ import "../../styles/room-account.css";
     type CalendarLink,
     type EpgpCharacter,
     type EpgpCharacters,
+    type EpgpSyncToken,
+    type EpgpSyncTokens,
     type Me,
   } from "../../scripts/api";
   import { onPage } from "../../scripts/page";
@@ -248,6 +263,22 @@ import "../../styles/room-account.css";
     return range.start_date === range.end_date
       ? formatAwayDate(range.start_date)
       : `${formatAwayDate(range.start_date)} \u2013 ${formatAwayDate(range.end_date)}`;
+  }
+
+  function companionTokenRow(token: EpgpSyncToken): string {
+    const lastUsed = token.last_used_at
+      ? `Last used ${new Date(token.last_used_at).toLocaleDateString()}`
+      : "Never used";
+    return `
+      <li class="companion-row" data-token-id="${token.id}">
+        <span class="companion-row-main">
+          <span class="item-title">${escapeHtml(token.name)}</span>
+          <span class="item-meta">Created ${new Date(token.created_at).toLocaleDateString()} \u00b7 ${lastUsed}</span>
+        </span>
+        <button type="button" class="btn-quiet btn-small btn-danger" data-revoke-companion-token="${token.id}">
+          Revoke
+        </button>
+      </li>`;
   }
   onPage("#account-status", () => {
     const ERROR_MESSAGES: Record<string, string> = {
@@ -291,6 +322,7 @@ import "../../styles/room-account.css";
     const calendarGoogleLink = requireElement<HTMLAnchorElement>("calendar-google");
     const calendarAppleLink = requireElement<HTMLAnchorElement>("calendar-apple");
     const calendarRotateBtn = requireElement<HTMLButtonElement>("calendar-rotate-btn");
+    const companionTokenList = requireElement("companion-token-list");
     const awayList = requireElement("away-list");
     const awayForm = requireElement<HTMLFormElement>("away-form");
     const awayStartInput = requireElement<HTMLInputElement>("away-start");
@@ -335,6 +367,18 @@ import "../../styles/room-account.css";
         applyCalendarLink(link);
       } catch {
         calendarUrlInput.value = "";
+      }
+    }
+
+    async function renderCompanionTokens(): Promise<void> {
+      try {
+        const data = await apiFetch<EpgpSyncTokens>("/api/epgp/sync-tokens");
+        companionTokenList.innerHTML =
+          data.tokens.length > 0
+            ? data.tokens.map(companionTokenRow).join("")
+            : `<li class="away-empty">No Companion sign-ins yet.</li>`;
+      } catch {
+        companionTokenList.innerHTML = `<li class="away-empty">Couldn\u2019t load your Companion sign-ins.</li>`;
       }
     }
 
@@ -438,6 +482,7 @@ import "../../styles/room-account.css";
       bnetUnlinkBtn.hidden = !linked;
       show(signedIn);
       await renderCalendar();
+      await renderCompanionTokens();
       await renderAway();
       await renderCharacters();
     }
@@ -617,6 +662,25 @@ import "../../styles/room-account.css";
       try {
         await apiFetch(`/api/me/characters/${button.dataset.id}`, { method: "DELETE" });
         await renderCharacters();
+      } catch (err) {
+        statusEl.dataset.tone = "error";
+        statusEl.textContent = statusMessage(err);
+        button.disabled = false;
+      }
+    });
+
+    companionTokenList.addEventListener("click", async (event) => {
+      const button = (event.target as HTMLElement).closest<HTMLButtonElement>("[data-revoke-companion-token]");
+      if (!button?.dataset.revokeCompanionToken) {
+        return;
+      }
+      if (!confirm("Revoke this Companion sign-in? It stops working right away.")) {
+        return;
+      }
+      button.disabled = true;
+      try {
+        await apiFetch(`/api/epgp/sync-tokens/${button.dataset.revokeCompanionToken}`, { method: "DELETE" });
+        await renderCompanionTokens();
       } catch (err) {
         statusEl.dataset.tone = "error";
         statusEl.textContent = statusMessage(err);

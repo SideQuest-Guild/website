@@ -11,6 +11,7 @@ import type {
   DiscordOnline,
   EarnedBadge,
   EpgpCharacter,
+  EpgpDeviceAuthorizationStatus,
   EpgpImportResult,
   EpgpLootItem,
   EpgpMemberNote,
@@ -560,6 +561,15 @@ export const MCP_TOKENS: McpToken[] = [
   { id: "mcp-token-1", name: "Guide's laptop", created_at: inDays(-10), last_used_at: inDays(-1) },
 ];
 
+export const DEVICE_AUTH_USER_CODE = "ABCD-EFGH";
+
+export const EPGP_DEVICE_AUTHORIZATION: EpgpDeviceAuthorizationStatus = {
+  user_code: DEVICE_AUTH_USER_CODE,
+  device_name: "Office PC",
+  created_at: new Date().toISOString(),
+  expires_at: new Date(Date.now() + 600_000).toISOString(),
+  status: "pending",
+};
 export function epgpImportResult(): EpgpImportResult {
   return {
     recorder: "Guideline-Whitemane",

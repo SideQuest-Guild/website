@@ -620,6 +620,35 @@ export type McpTokens = { tokens: McpToken[] };
 
 export type McpTokenCreated = { id: string; name: string; token: string };
 
+/** `POST /api/epgp/device-authorizations` response: poll `.../token` with `device_code`. */
+export type EpgpDeviceAuthorizationCreated = {
+  device_code: string;
+  user_code: string;
+  verification_uri: string;
+  verification_uri_complete: string;
+  expires_in: number;
+  interval: number;
+};
+
+export type DeviceAuthorizationPollStatus = "pending" | "slow_down" | "denied" | "expired" | "approved";
+
+/** `POST /api/epgp/device-authorizations/token` response: always 200, never an oracle for a bad code. */
+export type EpgpDeviceAuthorizationPollResult = {
+  status: DeviceAuthorizationPollStatus;
+  token: string | null;
+  name: string | null;
+};
+
+export type DeviceAuthorizationStatus = "pending" | "approved" | "denied" | "expired";
+
+/** `GET /api/epgp/device-authorizations/{user_code}` response (officer). */
+export type EpgpDeviceAuthorizationStatus = {
+  user_code: string;
+  device_name: string;
+  created_at: string;
+  expires_at: string;
+  status: DeviceAuthorizationStatus;
+};
 // ——— Guild app v2: the addon as the guild's all-round app (local://addon-contract-v2.md). ———
 
 /** One linked character on a `GuildRosterMember` row. */
