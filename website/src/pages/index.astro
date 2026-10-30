@@ -3,7 +3,7 @@ import { getImage, Image } from "astro:assets";
 import Art from "../components/Art.astro";
 import JoinPlaque from "../components/JoinPlaque.astro";
 import SiteFooter from "../components/SiteFooter.astro";
-import { DISCORD_GUILD_URL, DISCORD_INVITE, LAUNCH } from "../config";
+import { ADDON_SOURCE_URL, CURSEFORGE_URL, DISCORD_GUILD_URL, DISCORD_INVITE, LAUNCH } from "../config";
 import Site from "../layouts/Site.astro";
 
 import addonsArt from "../../assets/plates/addons-art.png";
@@ -294,23 +294,35 @@ const panels = [
           <span class="rule flip" aria-hidden="true"></span>
         </div>
         <p class="lede">
-          The guild's own addons will download from the <a href="/addons/">addons page</a>, so everyone raids on the
-          same setup.
+          The guild has its own addon, SideQuest. It puts the roster, crafters, raid sign-ups and your loot points in
+          one window, and officers run raid nights with it.
         </p>
         <dl class="ledger">
           <div>
-            <dt class="caps">Guild addons</dt>
-            <dd class="tbd">Not yet published</dd>
+            <dt class="caps">In game</dt>
+            <dd>
+              Type <code>/sq</code> to open it.
+            </dd>
           </div>
           <div>
-            <dt class="caps">Each release</dt>
-            <dd>A download link, the version, and install notes, listed on this page.</dd>
+            <dt class="caps">Updates</dt>
+            <dd>The CurseForge app keeps it up to date.</dd>
           </div>
           <div>
-            <dt class="caps">Announcements</dt>
-            <dd>New versions are posted in the Discord when they land.</dd>
+            <dt class="caps">Other addons</dt>
+            <dd>
+              The ones the guild uses are on the <a href="/addons/">addons page</a>.
+            </dd>
           </div>
         </dl>
+        <div class="form-actions">
+          <a class="btn" href={CURSEFORGE_URL}>
+            Get it on CurseForge
+          </a>
+          <a class="btn-quiet" href={ADDON_SOURCE_URL}>
+            Source
+          </a>
+        </div>
       </div>
     </section>
 

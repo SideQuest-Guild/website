@@ -28,6 +28,14 @@ test.describe("homepage", () => {
     await expect(page.locator("#raid-next-date a")).toHaveAttribute("href", `/events/detail/?id=${raid?.id}`);
   });
 
+  test("the addons band links to CurseForge and the addon's source", async ({ page, site }) => {
+    site.signIn(null);
+    await page.goto("/");
+    const band = page.locator("#addons");
+    await expect(band.locator('a[href="https://www.curseforge.com/wow/addons/sidequest"]')).toBeVisible();
+    await expect(band.locator('a[href="https://github.com/SideQuest-Guild/addon"]')).toBeVisible();
+  });
+
   test("recruiting lays roles and classes out in even rows", async ({ page, site }) => {
     site.signIn(null);
     site.recruiting({
