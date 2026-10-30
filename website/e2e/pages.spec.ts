@@ -28,6 +28,38 @@ test.describe("homepage", () => {
     await expect(page.locator("#raid-next-date a")).toHaveAttribute("href", `/events/detail/?id=${raid?.id}`);
   });
 
+  test("recruiting lays roles and classes out in even rows", async ({ page, site }) => {
+    site.signIn(null);
+    site.recruiting({
+      roles: [
+        { role: "tank", priority: "normal", note: null },
+        { role: "healer", priority: "high", note: "Raid healers" },
+        { role: "dps", priority: "normal", note: null },
+      ],
+      classes: (["warrior", "paladin", "hunter", "rogue", "priest", "shaman", "mage", "warlock", "druid"] as const).map(
+        (cls) => ({ class: cls, priority: "normal" as const, note: null }),
+      ),
+      updated_at: new Date().toISOString(),
+    });
+    await page.goto("/");
+    const band = page.locator("#recruiting");
+    await expect(band).toBeVisible();
+    const roles = band.locator(".recruit-grid").first().locator(".recruit-card");
+    await expect(roles).toHaveCount(3);
+    await expect(band.locator(".recruit-card.is-high")).toContainText("High priority");
+    const roleTops = await roles.evaluateAll((cards) => cards.map((card) => card.getBoundingClientRect().top));
+    expect(new Set(roleTops).size).toBe(1);
+
+    const classes = band.locator(".recruit-grid-classes .recruit-card");
+    await expect(classes).toHaveCount(9);
+    const perRow = await classes.evaluateAll((cards) => {
+      const firstTop = cards[0]!.getBoundingClientRect().top;
+      return cards.filter((card) => card.getBoundingClientRect().top === firstTop).length;
+    });
+    expect(perRow).toBe(page.viewportSize()!.width > 400 ? 3 : 2);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  });
+
   test("signed out, the online-now roster never shows names", async ({ page, site }) => {
     site.signIn(null);
     await page.goto("/");
