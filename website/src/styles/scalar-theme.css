@@ -63,11 +63,12 @@
   --scalar-shadow-1: 0 1px 3px rgba(4, 8, 16, 0.5);
   --scalar-shadow-2: 0 12px 30px rgba(4, 8, 16, 0.6);
 
-  /* The sidebar matches the tinted night panel the rest of the site uses for secondary surfaces. */
+  /* The sidebar matches the tinted night panel the rest of the site uses for secondary surfaces, divided from
+     the content column by a hairline instead of sitting in its own bordered card. */
   --scalar-sidebar-background-1: var(--night-2);
   --scalar-sidebar-color-1: var(--ink);
   --scalar-sidebar-color-2: var(--mist-2);
-  --scalar-sidebar-border-color: var(--stone);
+  --scalar-sidebar-border-color: color-mix(in oklch, var(--gold), var(--stone) 75%);
   --scalar-sidebar-item-hover-color: var(--gold);
   --scalar-sidebar-item-hover-background: color-mix(in oklch, var(--royal), transparent 70%);
   --scalar-sidebar-item-active-background: color-mix(in oklch, var(--royal), transparent 55%);
@@ -75,6 +76,19 @@
   --scalar-sidebar-search-background: var(--night);
   --scalar-sidebar-search-border-color: var(--stone);
   --scalar-sidebar-search-color: var(--mist);
+}
+
+/* The sidebar's top-level x-tagGroups entries (Public, Members, Officers, ...) read like the site's other small
+   wide-tracked caps labels (`.caps` in site.css), instead of Scalar's default sentence-case sidebar item style.
+   Only the sidebar's own direct top-level items qualify (`> ul > li > [group-button] > a`): a tag nested one
+   level inside an expanded group keeps the normal sidebar item style, so the two stay visually distinct. */
+.api-reference-mount .t-doc__sidebar > ul > li > [class*="group/group-button"] > a {
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--scalar-sidebar-color-2);
 }
 
 /* Headings inside Scalar's own document read like the rest of the site's chamber sub-headings: the display

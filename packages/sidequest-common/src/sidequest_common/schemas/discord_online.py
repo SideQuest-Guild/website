@@ -1,6 +1,6 @@
 """Discord's public server widget, trimmed for signed-in members: who's online right now, by name."""
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 DiscordOnlineStatus = str
 """One of ``"online"``, ``"idle"`` or ``"dnd"``, as reported by Discord's widget."""
@@ -9,13 +9,15 @@ DiscordOnlineStatus = str
 class DiscordOnlineMember(BaseModel):
     """One member from the widget's anonymized roster."""
 
-    name: str
-    """Display name (Discord calls this ``username`` on the widget, but it's the server nick/display name)."""
+    name: str = Field(
+        description='Display name. Discord calls this "username" on the widget, but it is the server nick or '
+        "display name."
+    )
     status: DiscordOnlineStatus
-    avatar_url: str | None
-    """``cdn.discordapp.com/widget-avatars/...``; ``None`` if Discord didn't report one."""
-    activity: str | None
-    """The member's current activity/game name, if any."""
+    avatar_url: str | None = Field(
+        description="cdn.discordapp.com/widget-avatars/... URL, or None if Discord did not report one."
+    )
+    activity: str | None = Field(description="The member's current activity or game name, if any.")
 
 
 class DiscordOnline(BaseModel):
@@ -23,5 +25,4 @@ class DiscordOnline(BaseModel):
 
     presence_count: int | None
     members: list[DiscordOnlineMember]
-    ok: bool
-    """``False`` when the widget fetch failed or timed out; ``members`` is then always empty."""
+    ok: bool = Field(description="False when the widget fetch failed or timed out. members is then always empty.")

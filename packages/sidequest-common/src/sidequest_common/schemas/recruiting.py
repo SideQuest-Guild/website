@@ -44,8 +44,7 @@ class Recruiting(BaseModel):
 
     roles: list[RecruitingRoleWant]
     classes: list[RecruitingClassWant]
-    updated_at: datetime | None
-    """When an officer last saved this; ``None`` if it has never been set."""
+    updated_at: datetime | None = Field(description="When an officer last saved this. None if it has never been set.")
 
 
 class RecruitingUpdate(BaseModel):

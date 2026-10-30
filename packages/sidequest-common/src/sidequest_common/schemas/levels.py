@@ -12,8 +12,8 @@ class XPAwardResult(BaseModel):
     """
 
     awarded: bool
-    amount: int
-    xp: int
+    amount: int = Field(description="XP (experience points) awarded by this message.")
+    xp: int = Field(description="The member's new total XP (experience points).")
     level: int
     previous_level: int
     leveled_up: bool
@@ -26,11 +26,11 @@ class RankSchema(BaseModel):
 
     user_id: int
     rank: int | None
-    xp: int
+    xp: int = Field(description="The member's total XP (experience points).")
     level: int
     message_count: int
-    xp_into_level: int
-    xp_for_next_level: int
+    xp_into_level: int = Field(description="XP (experience points) earned since reaching the current level.")
+    xp_for_next_level: int = Field(description="XP (experience points) needed to reach the next level.")
 
 
 class LeaderboardEntry(BaseModel):
@@ -38,7 +38,7 @@ class LeaderboardEntry(BaseModel):
 
     rank: int
     user_id: int
-    xp: int
+    xp: int = Field(description="The member's total XP (experience points).")
     level: int
     message_count: int
 
@@ -59,7 +59,7 @@ MAX_XP = 10_000_000_000
 class SetXPRequest(BaseModel):
     """Admin override of a member's XP total (level is recomputed)."""
 
-    xp: int = Field(ge=0, le=MAX_XP)
+    xp: int = Field(ge=0, le=MAX_XP, description="The new total XP (experience points) to set.")
 
 
 class MemberLevelSchema(BaseModel):
@@ -69,7 +69,7 @@ class MemberLevelSchema(BaseModel):
 
     guild_id: int
     user_id: int
-    xp: int
+    xp: int = Field(description="The member's total XP (experience points).")
     level: int
     message_count: int
 

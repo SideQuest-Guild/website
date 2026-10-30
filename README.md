@@ -89,7 +89,8 @@ applies it.
 | `website/e2e/` | Browser tests. |
 
 With the API running, `/schema` lists every route with what it takes and returns; `/api-reference/` on the site shows
-the same thing, themed to match.
+the same thing, themed to match, with routes grouped by who calls them (public, members, officers, Game Masters, the
+addon's sync tool, MCP, and the Discord bot).
 
 ## How the pieces talk
 

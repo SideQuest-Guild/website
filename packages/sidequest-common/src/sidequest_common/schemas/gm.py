@@ -14,8 +14,7 @@ class RoleTag(BaseModel):
 
     id: str
     name: str
-    color: str | None
-    """``#rrggbb``, ``None`` when the role has no color (Discord color ``0``)."""
+    color: str | None = Field(description="#rrggbb hex color, or None when the role has no color set.")
 
 
 class GmMember(BaseModel):

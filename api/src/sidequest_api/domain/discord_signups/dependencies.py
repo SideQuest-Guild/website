@@ -6,15 +6,17 @@ path params plus two services.
 """
 
 from dataclasses import dataclass
+from typing import Annotated
 from uuid import UUID  # noqa: TC003 - a Litestar DI target, needs a real type
 
 from advanced_alchemy.extensions.litestar.providers import create_service_provider
 from litestar.di import NamedDependency  # noqa: TC002
 from litestar.exceptions import NotFoundException
-from litestar.params import FromPath  # noqa: TC002
+from litestar.params import Parameter
 from sqlalchemy import select
 
 from sidequest_api.domain.events.services import EventSignupsService
+from sidequest_api.lib.openapi import GuildIdPath  # noqa: TC001 - a Litestar DI target, needs a real type
 from sidequest_common.models import Member
 from sidequest_common.settings import WebSettings  # noqa: TC001 - a Litestar DI target, needs a real type
 
@@ -31,9 +33,9 @@ class DiscordSignupTarget:
 
 
 async def provide_discord_signup_target(
-    guild_id: FromPath[int],
-    event_id: FromPath[UUID],
-    discord_id: FromPath[int],
+    guild_id: GuildIdPath,
+    event_id: Annotated[UUID, Parameter(description="The event's ID.")],
+    discord_id: Annotated[int, Parameter(description="The member's Discord user ID.")],
     event_signups_service: NamedDependency[EventSignupsService],
     web_settings: NamedDependency[WebSettings],
 ) -> DiscordSignupTarget:

@@ -147,8 +147,10 @@ class EventSummary(BaseModel):
     starts_at: datetime
     ends_at: datetime | None
     size: int | None
-    ep: int
-    ep_override: int | None
+    ep: int = Field(description="Effort points (EP, shown as Renown on the site) that attending awards.")
+    ep_override: int | None = Field(
+        description="The officer-set EP value behind ep. None means the event's kind sets the preset."
+    )
     status: EventStatus
     notes: str | None
     counts: EventCounts | None
@@ -210,7 +212,12 @@ class EventCreate(BaseModel):
     starts_at: datetime
     ends_at: datetime | None = None
     size: int | None = Field(default=None, ge=1, le=40)
-    ep_override: int | None = Field(default=None, ge=0, le=MAX_EVENT_EP)
+    ep_override: int | None = Field(
+        default=None,
+        ge=0,
+        le=MAX_EVENT_EP,
+        description="Overrides the kind's default EP (effort points) award for this event. None uses the preset.",
+    )
     notes: str | None = Field(default=None, max_length=2000)
 
     @model_validator(mode="after")
@@ -235,7 +242,12 @@ class EventUpdate(BaseModel):
     starts_at: datetime | None = None
     ends_at: datetime | None = None
     size: int | None = Field(default=None, ge=1, le=40)
-    ep_override: int | None = Field(default=None, ge=0, le=MAX_EVENT_EP)
+    ep_override: int | None = Field(
+        default=None,
+        ge=0,
+        le=MAX_EVENT_EP,
+        description="Overrides the kind's default EP (effort points) award for this event. None uses the preset.",
+    )
     notes: str | None = Field(default=None, max_length=2000)
     status: EventStatus | None = None
 
@@ -318,8 +330,10 @@ class EventSeriesSummary(BaseModel):
     title: str
     location: str
     size: int | None
-    ep: int
-    ep_override: int | None
+    ep: int = Field(description="Effort points (EP, shown as Renown on the site) that attending awards.")
+    ep_override: int | None = Field(
+        description="The officer-set EP value behind ep. None means the event's kind sets the preset."
+    )
     notes: str | None
     rule: SeriesRule
     active: bool
@@ -333,7 +347,12 @@ class EventSeriesCreate(BaseModel):
     title: str = Field(min_length=1, max_length=200)
     location: str = Field(default="", max_length=200)
     size: int | None = Field(default=None, ge=1, le=40)
-    ep_override: int | None = Field(default=None, ge=0, le=MAX_EVENT_EP)
+    ep_override: int | None = Field(
+        default=None,
+        ge=0,
+        le=MAX_EVENT_EP,
+        description="Overrides the kind's default EP (effort points) award for occurrences. None uses the preset.",
+    )
     notes: str | None = Field(default=None, max_length=2000)
     weekdays: list[int]
     interval_weeks: int = Field(default=1)
@@ -364,7 +383,12 @@ class EventSeriesUpdate(BaseModel):
     title: str | None = Field(default=None, min_length=1, max_length=200)
     location: str | None = Field(default=None, max_length=200)
     size: int | None = Field(default=None, ge=1, le=40)
-    ep_override: int | None = Field(default=None, ge=0, le=MAX_EVENT_EP)
+    ep_override: int | None = Field(
+        default=None,
+        ge=0,
+        le=MAX_EVENT_EP,
+        description="Overrides the kind's default EP (effort points) award for occurrences. None uses the preset.",
+    )
     notes: str | None = Field(default=None, max_length=2000)
     weekdays: list[int] | None = None
     interval_weeks: int | None = None

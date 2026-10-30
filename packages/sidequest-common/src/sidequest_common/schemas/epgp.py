@@ -240,7 +240,7 @@ class ExportLoot(BaseModel):
     inv_type: str = Field(max_length=30)
     character: str = Field(max_length=MAX_NAME_LENGTH)
     response: LootResponse
-    gp: int = Field(ge=AWARD_AMOUNT_MIN, le=AWARD_AMOUNT_MAX)
+    gp: int = Field(ge=AWARD_AMOUNT_MIN, le=AWARD_AMOUNT_MAX, description="Gear points (GP) this item cost.")
     at: int
     officer: str = Field(max_length=MAX_NAME_LENGTH)
     voided: bool = False
@@ -253,7 +253,7 @@ class ExportAward(BaseModel):
     session_id: str | None = None
     kind: LedgerKind
     character: str = Field(max_length=MAX_NAME_LENGTH)
-    amount: int = Field(ge=AWARD_AMOUNT_MIN, le=AWARD_AMOUNT_MAX)
+    amount: int = Field(ge=AWARD_AMOUNT_MIN, le=AWARD_AMOUNT_MAX, description="EP or GP change, as set by kind.")
     reason: AwardReason
     note: str | None = Field(default=None, max_length=MAX_NOTE_LENGTH)
     loot_id: str | None = None
@@ -325,9 +325,9 @@ class GameImportStandingsRow(BaseModel):
     main: str | None
     wow_class: WowClass | None = Field(alias="class")
     characters: list[str]
-    ep: float
-    gp: float
-    pr: float
+    ep: float = Field(description="Effort points (EP, shown as Renown on the site).")
+    gp: float = Field(description="Gear points (GP).")
+    pr: float = Field(description="Priority: EP divided by GP.")
     trial: bool
 
 
@@ -413,8 +413,8 @@ class EpgpImportResult(BaseModel):
 class EpgpRules(BaseModel):
     """The ``rules`` object as returned by ``GET /api/epgp/standings`` (same shape as the game-import payload)."""
 
-    ep: dict[str, int]
-    gp: dict[str, int]
+    ep: dict[str, int] = Field(description="Effort points (EP) awarded per AwardReason.")
+    gp: dict[str, int] = Field(description="Gear points (GP) by Discord item inventory type at main-spec cost.")
     chase_multiplier: float
     legendary_gp: int
     os_percent: int
@@ -434,9 +434,9 @@ class EpgpStandingsRow(BaseModel):
     main: str | None
     wow_class: WowClass | None = Field(alias="class")
     characters: list[str]
-    ep: float
-    gp: float
-    pr: float
+    ep: float = Field(description="Effort points (EP, shown as Renown on the site).")
+    gp: float = Field(description="Gear points (GP).")
+    pr: float = Field(description="Priority: EP divided by GP.")
     trial: bool
 
 
@@ -454,8 +454,8 @@ class EpgpLedgerRow(BaseModel):
     id: UUID
     at: datetime
     kind: LedgerKind
-    amount: int
-    decayed: float
+    amount: int = Field(description="EP or GP change, as set by kind.")
+    decayed: float = Field(description="The amount after weekly decay has been applied, read-time only.")
     reason: str
     note: str | None
     character: str | None
@@ -484,7 +484,7 @@ class EpgpLootRow(BaseModel):
     member_id: int | None
     member_name: str | None
     response: LootResponse
-    gp: int
+    gp: int = Field(description="Gear points (GP) this item cost.")
     instance_name: str | None
     encounter_name: str | None
     voided: bool
@@ -534,7 +534,7 @@ class EpgpAdjustmentCreate(BaseModel):
 
     member_id: int
     kind: LedgerKind
-    amount: int = Field(ge=AWARD_AMOUNT_MIN, le=AWARD_AMOUNT_MAX)
+    amount: int = Field(ge=AWARD_AMOUNT_MIN, le=AWARD_AMOUNT_MAX, description="EP or GP change, as set by kind.")
     reason: str = Field(min_length=1, max_length=MAX_NOTE_LENGTH)
 
 

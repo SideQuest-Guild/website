@@ -57,6 +57,9 @@ The tag starts `.github/workflows/release.yml`, which publishes the GitHub relea
 - Anything that changes what data is kept or shown: update `website/src/pages/privacy/index.astro`.
 - A new MCP tool (`api/src/sidequest_api/domain/mcp/tools.py`) must write a `record_officer_audit` row; MCP tokens
   are bearer secrets, so never log their plaintext.
+- New routes need a `summary`, a `description`, a tag, and that tag's group (`api/src/sidequest_api/lib/
+  openapi.py`'s `TAG_GROUPS`); `tests/unit/api/test_openapi_docs.py` checks the served OpenAPI document for all
+  of this, plus a description on every component schema.
 
 ## Website
 - **No page reloads.** Astro's ClientRouter swaps pages in place and module scripts run once per visit, so every

@@ -10,10 +10,13 @@ identified by Discord id instead of a cookie session, so the API independently c
 (it never trusts the bot's own Discord-side role check alone).
 """
 
+from typing import Annotated
+
 from litestar import Controller, delete, get, post, put
 from litestar.di import NamedDependency, Provide
 from litestar.exceptions import NotFoundException, PermissionDeniedException
-from litestar.params import FromPath, JSONBody
+from litestar.openapi.datastructures import ResponseSpec
+from litestar.params import JSONBody, Parameter
 from sqlalchemy import select
 
 from sidequest_api.domain.members.services import MembersService
@@ -21,6 +24,7 @@ from sidequest_api.domain.signup_notices.dependencies import provide_members_ser
 from sidequest_api.lib.discord import avatar_url
 from sidequest_api.lib.member_auth import is_gm, is_officer
 from sidequest_api.lib.officer_audit import record_officer_audit
+from sidequest_api.lib.openapi import GuildIdPath
 from sidequest_common.models import Member, OfficerAudit
 from sidequest_common.schemas import (
     ConfirmByDiscordRequest,
@@ -96,17 +100,26 @@ class SignupNoticesController(Controller):
     """``/api/guilds/{guild_id}/signup-notices`` and ``/signup-notices/{member_id}/roster-confirmation``."""
 
     path = ""
-    tags = ["Signup Notices"]
+    tags = ["Signup notices"]
     dependencies = {"members_service": Provide(provide_members_service)}
 
-    @get("/signup-notices", operation_id="ListSignupNotices")
+    @get(
+        "/signup-notices",
+        operation_id="ListSignupNotices",
+        summary="List pending signup notices",
+        description=(
+            "Returns members needing a new signup notice posted, and posted notices whose message is now "
+            "stale. Returns 404 for any guild_id other than the SideQuest server."
+        ),
+        response_description="The pending and resolved signup notices.",
+        responses={404: ResponseSpec(None, description="This guild_id is not the SideQuest server.")},
+    )
     async def list_signup_notices(
         self,
-        guild_id: FromPath[int],
+        guild_id: GuildIdPath,
         members_service: NamedDependency[MembersService],
         web_settings: NamedDependency[WebSettings],
     ) -> SignupNoticesPage:
-        """Members needing a new notice posted, and posted notices whose message is now stale."""
         _require_site_guild(guild_id, web_settings)
         pending = await members_service.list_unnoticed()
         resolved_members = await members_service.list_unresolved_confirmations()
@@ -126,34 +139,60 @@ class SignupNoticesController(Controller):
             ],
         )
 
-    @post("/signup-notices/{member_id:int}/ack", operation_id="AckSignupNotice", status_code=204)
+    @post(
+        "/signup-notices/{member_id:int}/ack",
+        operation_id="AckSignupNotice",
+        status_code=204,
+        summary="Acknowledge a signup notice",
+        description=(
+            "Confirms the bot's posted message for a member now accurately reflects their current roster "
+            "state. Returns 404 for any guild_id other than the SideQuest server, or an unknown member."
+        ),
+        response_description="The notice was acknowledged.",
+        responses={
+            404: ResponseSpec(
+                None, description="This guild_id is not the SideQuest server, or the member has never signed in."
+            )
+        },
+    )
     async def ack_signup_notice(
         self,
-        guild_id: FromPath[int],
-        member_id: FromPath[int],
+        guild_id: GuildIdPath,
+        member_id: Annotated[int, Parameter(description="The site member's ID.")],
         data: JSONBody[SignupNoticeAck],
         members_service: NamedDependency[MembersService],
         web_settings: NamedDependency[WebSettings],
     ) -> None:
-        """The bot's message for ``member_id`` now accurately reflects their current roster state."""
         _require_site_guild(guild_id, web_settings)
         member = await members_service.get_for_officer_action(member_id)
         await members_service.ack_notice(member, channel_id=data.channel_id, message_id=data.message_id)
 
-    @put("/signup-notices/{member_id:int}/roster-confirmation", operation_id="ConfirmSignupNoticeMember")
+    @put(
+        "/signup-notices/{member_id:int}/roster-confirmation",
+        operation_id="ConfirmSignupNoticeMember",
+        summary="Confirm a signup notice's member on the roster",
+        description=(
+            "Confirms the notice's member on the in-game roster, same as the GM console's confirm route, but "
+            "identifies the actor by Discord ID for the bot's Approve button. Returns 403 unless the actor has a "
+            "signed-in Member row holding a Quest Master role. Returns 404 for any guild_id other than the "
+            "SideQuest server, or if member_id doesn't exist."
+        ),
+        response_description="The member's updated listing.",
+        responses={
+            403: ResponseSpec(None, description="The actor is not a Quest Master."),
+            404: ResponseSpec(
+                None, description="This guild_id is not the SideQuest server, or member_id doesn't exist."
+            ),
+        },
+    )
     async def confirm_from_notice(
         self,
-        guild_id: FromPath[int],
-        member_id: FromPath[int],
+        guild_id: GuildIdPath,
+        member_id: Annotated[int, Parameter(description="The site member's ID.")],
         data: JSONBody[ConfirmByDiscordRequest],
         members_service: NamedDependency[MembersService],
         web_settings: NamedDependency[WebSettings],
     ) -> MemberListing:
-        """Same as the GM console's confirm route, but the actor is a Discord id (the bot's Approve button).
-
-        403 unless ``actor_discord_id`` has a ``Member`` row holding a ``WEB_GM_ROLE_IDS`` role (the API never
-        trusts the bot's own Discord-side role check alone). 404 if ``member_id`` doesn't exist.
-        """
         _require_site_guild(guild_id, web_settings)
         member = await members_service.get_for_officer_action(member_id)
         actor = await members_service.get_one_or_none(discord_id=int(data.actor_discord_id))
@@ -173,16 +212,29 @@ class SignupNoticesController(Controller):
         "/signup-notices/{member_id:int}/roster-confirmation",
         operation_id="UnconfirmSignupNoticeMember",
         status_code=200,
+        summary="Clear a signup notice's member's roster confirmation",
+        description=(
+            "Clears the notice's member's roster confirmation, same as the GM console's unconfirm route, but "
+            "identifies the actor by Discord ID. Returns 403 unless the actor has a signed-in Member row holding a "
+            "Quest Master role. Returns 404 for any guild_id other than the SideQuest server, or if member_id "
+            "doesn't exist."
+        ),
+        response_description="The member's updated listing.",
+        responses={
+            403: ResponseSpec(None, description="The actor is not a Quest Master."),
+            404: ResponseSpec(
+                None, description="This guild_id is not the SideQuest server, or member_id doesn't exist."
+            ),
+        },
     )
     async def unconfirm_from_notice(
         self,
-        guild_id: FromPath[int],
-        member_id: FromPath[int],
+        guild_id: GuildIdPath,
+        member_id: Annotated[int, Parameter(description="The site member's ID.")],
         data: JSONBody[ConfirmByDiscordRequest],
         members_service: NamedDependency[MembersService],
         web_settings: NamedDependency[WebSettings],
     ) -> MemberListing:
-        """Same as the GM console's unconfirm route, but the actor is a Discord id. 403/404 as above."""
         _require_site_guild(guild_id, web_settings)
         member = await members_service.get_for_officer_action(member_id)
         actor = await members_service.get_one_or_none(discord_id=int(data.actor_discord_id))

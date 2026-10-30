@@ -15,7 +15,7 @@ const OPTIONS = {
   hideDarkModeToggle: true,
   forceDarkModeState: "dark" as const,
   showSidebar: true,
-  hideModels: true,
+  hideModels: false,
   defaultOpenAllTags: false,
   defaultHttpClient: { targetKey: "shell" as const, clientKey: "curl" as const },
   showDeveloperTools: "never" as const,

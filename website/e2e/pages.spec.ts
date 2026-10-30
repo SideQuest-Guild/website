@@ -685,10 +685,12 @@ test.describe("API reference", () => {
   // desktop concern, so this runs at the width used for the final 1568px review screenshot.
   test.use({ viewport: { width: 1568, height: 980 } });
 
-  test("shows operations from the OpenAPI document, themed, under the header", async ({ page, site }) => {
+  test("shows operations from the OpenAPI document, themed, full width under the header", async ({ page, site }) => {
     site.signIn(null);
     await page.goto("/api-reference/");
-    await expect(page.getByRole("heading", { level: 1, name: "API", exact: true })).toBeVisible();
+    // The on-screen title lives in Scalar's own document intro now (OpenAPI info.description); the page's own
+    // h1 is visually hidden, kept only for the title landmark and the page title.
+    await expect(page.getByRole("heading", { level: 1, name: "API reference", exact: true })).toBeAttached();
     await expect(page.locator(".t-doc__sidebar")).toBeVisible();
     await expect(page.getByRole("heading", { name: "List events" })).toBeVisible();
     const sidebarNav = page.locator(".t-doc__sidebar");
@@ -701,6 +703,11 @@ test.describe("API reference", () => {
     expect(sidebar?.y ?? -1, "sidebar sits below the header").toBeGreaterThanOrEqual(
       (header?.y ?? 0) + (header?.height ?? 0) - 1,
     );
+    // No boxed, bordered mount with page margins: the sidebar sits flush against the left edge, and Scalar's
+    // whole container spans the viewport instead of the site's centered `.wrap` measure.
+    expect(sidebar?.x ?? -1, "sidebar sits flush left").toBeLessThan(1);
+    const scalarApp = await page.locator(".scalar-app").first().boundingBox();
+    expect(scalarApp?.width ?? 0, "Scalar's container spans the viewport").toBeGreaterThanOrEqual(1568 - 1);
 
     // theme: "none" with forced dark mode and withDefaultFonts: false; nothing but this page's own font and colors.
     const body = page.locator(".scalar-app").first();
@@ -713,5 +720,18 @@ test.describe("API reference", () => {
     await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
     const scrolledHeader = await page.locator(".api-reference-room .site-nav").boundingBox();
     expect(scrolledHeader?.y, "header stays at the top after scrolling").toBe(0);
+  });
+
+  test("on a phone, the sidebar collapses under the header with no sideways scroll", async ({ page, site }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    site.signIn(null);
+    await page.goto("/api-reference/");
+    await expect(page.getByRole("heading", { name: "List events" })).toBeVisible();
+    // Scalar's own sidebar hides itself below its "lg" breakpoint; it reappears behind Scalar's mobile nav
+    // toggle, not as a second, site-drawn sidebar.
+    await expect(page.locator(".t-doc__sidebar")).toBeHidden();
+    const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
+    const clientWidth = await page.evaluate(() => document.documentElement.clientWidth);
+    expect(scrollWidth, "no horizontal scroll on a phone").toBeLessThanOrEqual(clientWidth);
   });
 });

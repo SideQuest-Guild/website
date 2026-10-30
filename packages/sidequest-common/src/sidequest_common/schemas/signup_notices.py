@@ -8,7 +8,7 @@ the bot's message now accurately reflects the member's state, for both cases.
 
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class SignupNoticeCandidate(BaseModel):
@@ -32,8 +32,10 @@ class SignupNoticeResolution(BaseModel):
     display_name: str
     channel_id: str
     message_id: str
-    confirmed_by: str | None
-    """The GM's display name as recorded in ``officer_audit`` for the confirmation, if found."""
+    confirmed_by: str | None = Field(
+        description="The Quest Guide's display name as recorded in the officer audit log for the confirmation, "
+        "if found."
+    )
 
 
 class SignupNoticesPage(BaseModel):

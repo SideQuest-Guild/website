@@ -11,7 +11,7 @@ previous season's ``ends_at`` (``None`` means "still running").
 from datetime import date, datetime  # pydantic needs them at runtime
 from uuid import UUID  # pydantic needs it at runtime
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from sidequest_common.schemas.badges import EarnedBadge
 from sidequest_common.schemas.events import EventKind, WowClass
@@ -40,25 +40,26 @@ SEASONS: tuple[Season, ...] = (
 class HeroSeasonStats(BaseModel):
     """One member's stats for one season (or all time)."""
 
-    ep: int
+    ep: int = Field(description="Renown (EP) earned in this season.")
     raids_attended: int
     events_attended: int
-    attendance_rate: float
-    """``attended / signed-up`` for completed events in range; ``0.0`` with no signed-up completed events."""
+    attendance_rate: float = Field(
+        description="Attended divided by signed-up for completed events in range. 0.0 with no signed-up "
+        "completed events."
+    )
 
 
 class HeroRow(BaseModel):
     """One leaderboard row."""
 
-    rank: int | None
-    """Position by EP this season, ``None`` for members listed with no EP yet."""
+    rank: int | None = Field(description="Position by EP this season, None for members listed with no EP yet.")
     member_id: int
     discord_id: str
     display_name: str
     avatar_url: str | None
     wow_class: WowClass | None
     chat_level: int
-    ep: int
+    ep: int = Field(description="Renown (EP) earned this season.")
     raids_attended: int
     events_attended: int
     badge_ids: list[str]
@@ -81,7 +82,7 @@ class HeroRecentEvent(BaseModel):
     kind: EventKind
     title: str
     starts_at: datetime
-    ep: int
+    ep: int = Field(description="Renown (EP) this event awarded the member.")
 
 
 class HeroProfile(BaseModel):
@@ -92,8 +93,9 @@ class HeroProfile(BaseModel):
     display_name: str
     avatar_url: str | None
     wow_class: WowClass | None
-    rank: int | None
-    """Rank within the current season's leaderboard, ``None`` if outside it (no EP this season)."""
+    rank: int | None = Field(
+        description="Rank within the current season's leaderboard, None if outside it (no EP this season)."
+    )
     chat_level: int
     chat_xp: int
     chat_xp_into_level: int

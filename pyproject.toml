@@ -110,7 +110,7 @@ runtime-evaluated-base-classes = [
 "**/__main__.py" = ["PLC0415"]  # lazy imports keep `--help`/startup errors cheap
 "api/src/sidequest_api/app.py" = ["PLC0415"]
 "api/src/sidequest_api/lib/website.py" = ["PLC0415"]  # litestar_vite only imported when dev mode actually uses it
-"api/src/sidequest_api/domain/**/controllers.py" = ["TC001", "TC002", "TC003"]  # Litestar resolves handler annotations at runtime
+"api/src/sidequest_api/domain/**/controllers.py" = ["TC001", "TC002", "TC003", "D102"]  # Litestar resolves handler annotations at runtime; operation docs live in summary=/description= kwargs, not docstrings
 "api/src/sidequest_api/lib/migrations/**" = ["ALL"]  # alembic-generated
 "tests/**" = [
     "ANN", "ARG", "D", "DTZ", "EM", "FBT", "INP", "PLC", "PLR", "PLR2004", "PT011", "S", "SLF", "TC", "TRY",

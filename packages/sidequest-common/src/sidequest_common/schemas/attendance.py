@@ -29,8 +29,9 @@ class AttendanceEventSummary(BaseModel):
     starts_at: datetime
     status: EventStatus
     attendance_taken_at: datetime | None
-    needs_attendance: bool
-    """``True`` when the event has happened, isn't cancelled, and attendance hasn't been taken yet."""
+    needs_attendance: bool = Field(
+        description="True when the event has happened, is not cancelled, and attendance has not been taken yet."
+    )
 
 
 class WalkInCandidate(BaseModel):
@@ -57,10 +58,11 @@ class AttendanceSignup(BaseModel):
     attended: bool | None
     is_walk_in: bool
     voice_minutes: int
-    suggested_attended: bool
-    """The Came/No-show checkbox's pre-tick before an officer touches it: the stored ``attended`` once attendance
-    has been taken, else ``True`` for a ``signed`` sign-up or anyone with ``voice_minutes`` at or above the
-    presence threshold, else ``False``."""
+    suggested_attended: bool = Field(
+        description="The Came/No-show checkbox's pre-tick before an officer touches it: the stored attended value "
+        "once attendance has been taken, else True for a signed sign-up or anyone with voice_minutes at or above "
+        "the presence threshold, else False."
+    )
 
 
 class AttendanceDetail(BaseModel):
@@ -129,11 +131,10 @@ class MemberAttendanceRow(BaseModel):
     came: int
     no_shows: int
     walk_ins: int
-    attendance_rate: float
-    """Attended signed (non-walk-in) sign-ups / signed sign-ups, ``0.0`` if the member never signed up in range.
-
-    ``came`` (which includes walk-ins) stays a separate display count above and never raises this above 1.0.
-    """
+    attendance_rate: float = Field(
+        description="Attended signed (non-walk-in) sign-ups divided by signed sign-ups. 0.0 if the member never "
+        "signed up in range. The came count includes walk-ins and stays separate, so it never raises this above 1.0."
+    )
     last_attended: datetime | None
 
 
@@ -149,14 +150,13 @@ class AttendanceTrendPoint(BaseModel):
     """One week's attendance on the trend chart."""
 
     week_start: date
-    attendees: int
-    """Distinct members who came that week."""
+    attendees: int = Field(description="Distinct members who came that week.")
     signed_up: int
-    show_rate: float
-    """Attended signed (non-walk-in) sign-ups / signed sign-ups for events starting that week, ``0.0`` if nobody
-    signed up. ``attendees`` (distinct members who came, which includes walk-ins) stays a separate display count
-    above and never raises this above 1.0.
-    """
+    show_rate: float = Field(
+        description="Attended signed (non-walk-in) sign-ups divided by signed sign-ups for events starting that "
+        "week. 0.0 if nobody signed up. The attendees count includes walk-ins and stays separate, so it never "
+        "raises this above 1.0."
+    )
 
 
 class AttendanceTrends(BaseModel):

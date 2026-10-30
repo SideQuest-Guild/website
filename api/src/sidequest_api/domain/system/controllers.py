@@ -12,13 +12,23 @@ class HealthController(Controller):
     path = "/health"
     tags = ["System"]
 
-    @get("/", operation_id="HealthCheck")
+    @get(
+        "/",
+        operation_id="HealthCheck",
+        summary="Check process and database health",
+        description="Checks that the process is running and the database is reachable.",
+        response_description="The process and database are healthy.",
+    )
     async def health(self, db_session: NamedDependency[AsyncSession]) -> dict[str, str]:
-        """Process and database are up."""
         await db_session.execute(text("SELECT 1"))
         return {"status": "ok", "database": "ok"}
 
-    @get("/live", operation_id="LivenessCheck")
+    @get(
+        "/live",
+        operation_id="LivenessCheck",
+        summary="Check process liveness",
+        description="Checks that the process is running.",
+        response_description="The process is running.",
+    )
     async def live(self) -> dict[str, str]:
-        """Process is up."""
         return {"status": "ok"}

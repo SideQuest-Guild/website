@@ -24,6 +24,7 @@ from sidequest_api.lib.battlenet import (
     provide_battlenet_client,
 )
 from sidequest_api.lib.member_auth import provide_optional_member, safe_next_path
+from sidequest_api.lib.openapi import NOT_SIGNED_IN, SECURITY_SESSION
 from sidequest_common.models import Member
 from sidequest_common.settings import WebSettings
 
@@ -40,22 +41,33 @@ class BattleNetController(Controller):
     """``/auth/battlenet``: link and unlink a Battle.net account."""
 
     path = "/auth/battlenet"
-    tags = ["Auth"]
+    tags = ["Battle.net account"]
     dependencies = {
         "battlenet_client": Provide(provide_battlenet_client),
         "members_service": Provide(provide_members_service),
         "optional_member": Provide(provide_optional_member),
     }
 
-    @get("/link", operation_id="BattleNetLink")
+    @get(
+        "/link",
+        operation_id="BattleNetLink",
+        summary="Start a Battle.net link",
+        description=(
+            "Redirects the browser to Battle.net's authorize screen so the signed-in member can link their "
+            "Battle.net account. Redirects back to the account page with an error code if the member is not "
+            "signed in with Discord or Battle.net is not configured."
+        ),
+        response_description="Redirect to Battle.net's authorize screen.",
+    )
     async def link(
         self,
         request: Request,
         web_settings: NamedDependency[WebSettings],
         optional_member: NamedDependency[Member | None],
-        next_target: Annotated[str | None, QueryParameter(name="next")] = None,
+        next_target: Annotated[
+            str | None, QueryParameter(name="next", description="Where to send the browser after linking.")
+        ] = None,
     ) -> Redirect:
-        """Redirect to Battle.net's authorize screen. Requires a Discord sign-in first."""
         if optional_member is None:
             return _back("signin_first")
         client_id = web_settings.BATTLENET_CLIENT_ID
@@ -80,7 +92,6 @@ class BattleNetController(Controller):
         oauth_state: Annotated[str | None, QueryParameter(name="state")] = None,
         oauth_error: Annotated[str | None, QueryParameter(name="error")] = None,
     ) -> Redirect:
-        """Verify ``state``, exchange ``code``, and attach the Battle.net account to the signed-in member."""
         expected_state = request.session.pop(_STATE_KEY, None)
         next_path = request.session.pop(_NEXT_KEY, None) or ACCOUNT_PATH
         if not oauth_state or not expected_state or not secrets.compare_digest(oauth_state, expected_state):
@@ -106,11 +117,19 @@ class BattleNetController(Controller):
             return _back(exc.code)
         return Redirect(next_path)
 
-    @post("/unlink", operation_id="BattleNetUnlink", status_code=204)
+    @post(
+        "/unlink",
+        operation_id="BattleNetUnlink",
+        status_code=204,
+        summary="Unlink my Battle.net account",
+        description="Removes the signed-in member's Battle.net account link.",
+        response_description="The Battle.net link was removed.",
+        security=SECURITY_SESSION,
+        responses={401: NOT_SIGNED_IN},
+    )
     async def unlink(
         self,
         authenticated_member: NamedDependency[Member],
         members_service: NamedDependency[MembersService],
     ) -> None:
-        """Remove the signed-in member's Battle.net link. 401 if not signed in."""
         await members_service.unlink_battlenet(authenticated_member)

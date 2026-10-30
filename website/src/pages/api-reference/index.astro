@@ -3,6 +3,12 @@
 // technical reference is read, not looked at, and visitors come back to it over and over, so it skips the
 // painting and uses the site's own compact nav (SiteNav, the same one Room nests under its art) straight
 // away, sticky on this page only, so the reference below is never more than a scroll away from the nav.
+//
+// Scalar draws its own intro, sidebar, content and code columns; this page gives it the full viewport width
+// under the nav instead of the site's usual centered `.wrap` measure, and skips the site's own title/intro
+// paragraph (Scalar reads its intro from the OpenAPI document's own `info.description`, which
+// api/src/sidequest_api/app.py sets). A visually hidden h1 keeps the page accessible and gives it a title
+// landmark without drawing one on screen.
 import SiteNav from "../../components/SiteNav.astro";
 import SiteFooter from "../../components/SiteFooter.astro";
 import Site from "../../layouts/Site.astro";
@@ -15,22 +21,8 @@ import Site from "../../layouts/Site.astro";
 >
   <div class="room api-reference-room">
     <SiteNav />
-    <main id="top" tabindex="-1" class="room-body wrap api-reference-body">
-      <div class="heading">
-        <span class="rule" aria-hidden="true"></span>
-        <h1>API</h1>
-        <span class="rule flip" aria-hidden="true"></span>
-      </div>
-      <p class="chamber-intro api-reference-intro">
-        This is the API behind the SideQuest site, the Discord bot and the in-game addon. Most routes need a signed-in
-        Discord session (the cookie you get from the <a href="/account/">account page</a>) or the bot's shared key, sent
-        as an <code>X-API-Key</code> header. A few routes, like event listings, are open to anyone. The reference below
-        is built from the API's own description, which you can download as{" "}
-        <a href="/schema/openapi.json">
-          <code>/schema/openapi.json</code>
-        </a>
-        .
-      </p>
+    <main id="top" tabindex="-1" class="room-body api-reference-body">
+      <h1 class="sr-only">API reference</h1>
       <div id="api-reference-mount" aria-busy="true"></div>
       <p id="api-reference-fallback" class="chamber-intro api-reference-intro" hidden>
         The API reference could not load. Reload the page, or read the raw
@@ -62,13 +54,15 @@ import Site from "../../layouts/Site.astro";
       radial-gradient(90rem 50rem at 50% 18rem, rgba(58, 88, 150, 0.2), rgba(58, 88, 150, 0) 70%),
       linear-gradient(180deg, rgba(10, 15, 26, 0.94) 0, rgba(10, 15, 26, 0.86) 55%, rgba(12, 14, 20, 0.92) 100%);
   }
+  /* No `.wrap`: Scalar draws its own three-pane layout and needs the full viewport width, sidebar flush left,
+     not the site's centered prose measure. `.room-body`'s own top/bottom rhythm (padding, gap) still applies. */
+  .api-reference-body {
+    padding-left: 0;
+    padding-right: 0;
+  }
   .api-reference-intro {
     max-width: 60em;
-  }
-  /* Scalar draws its own three-pane layout and needs the full chamber width, not the prose measure above. */
-  #api-reference-mount {
-    min-height: 70vh;
-    border: 1px solid var(--stone);
+    margin-inline: clamp(20px, 3.4vw, 56px);
   }
   #api-reference-mount:empty::before {
     content: "Loading the reference…";

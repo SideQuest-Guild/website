@@ -8,10 +8,12 @@ the bot), rather than only at sign-in. Only existing ``Member`` rows are ever to
 from litestar import Controller, put
 from litestar.di import NamedDependency, Provide
 from litestar.exceptions import NotFoundException
-from litestar.params import FromPath, JSONBody
+from litestar.openapi.datastructures import ResponseSpec
+from litestar.params import JSONBody
 
 from sidequest_api.domain.member_profiles.dependencies import provide_member_profiles_service
 from sidequest_api.domain.member_profiles.services import MemberProfilesService
+from sidequest_api.lib.openapi import GuildIdPath
 from sidequest_common.schemas import MemberProfilesReplace
 from sidequest_common.settings import WebSettings
 
@@ -26,17 +28,27 @@ class MemberProfilesController(Controller):
     """``/api/guilds/{guild_id}/member-profiles``: the bot reports linked members' current Discord profiles."""
 
     path = "/member-profiles"
-    tags = ["Member Profiles"]
+    tags = ["Member profiles"]
     dependencies = {"member_profiles_service": Provide(provide_member_profiles_service)}
 
-    @put("/", operation_id="SyncMemberProfiles", status_code=204)
+    @put(
+        "/",
+        operation_id="SyncMemberProfiles",
+        status_code=204,
+        summary="Sync member Discord profiles",
+        description=(
+            "Updates existing members' names, nicknames, avatars, and roles, and marks departures. Unknown IDs "
+            "are ignored. Returns 404 for any guild_id other than the SideQuest server."
+        ),
+        response_description="The profiles were synced.",
+        responses={404: ResponseSpec(None, description="This guild_id is not the SideQuest server.")},
+    )
     async def sync_profiles(
         self,
-        guild_id: FromPath[int],
+        guild_id: GuildIdPath,
         data: JSONBody[MemberProfilesReplace],
         member_profiles_service: NamedDependency[MemberProfilesService],
         web_settings: NamedDependency[WebSettings],
     ) -> None:
-        """Update existing members' profiles and mark departures; unknown ids are ignored."""
         _require_site_guild(guild_id, web_settings)
         await member_profiles_service.sync_profiles(data.profiles, data.departed_ids)

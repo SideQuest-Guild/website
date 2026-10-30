@@ -7,6 +7,7 @@ from litestar.datastructures import State
 from litestar.di import Provide
 from litestar.openapi import OpenAPIConfig
 from litestar.openapi.plugins import ScalarRenderPlugin
+from litestar.openapi.spec import Components
 from litestar.plugins.pydantic import PydanticPlugin
 
 from sidequest_common.settings import APISettings, DatabaseSettings, WebSettings
@@ -52,6 +53,12 @@ def create_app(
         provide_authenticated_member,
         provide_current_member,
     )
+    from sidequest_api.lib.openapi import (
+        SECURITY_API_KEY,
+        SECURITY_SCHEMES,
+        TAGS,
+        OpenAPIExtensionsMiddleware,
+    )
     from sidequest_api.lib.website import DEFAULT_WEBSITE_DIST, is_vite_dev_mode, website_routes, website_vite_plugin
     from sidequest_common.settings import DiscordSettings
 
@@ -76,6 +83,7 @@ def create_app(
         path=GUILD_API_PATH,
         route_handlers=guild_controllers,
         guards=[api_key_guard(api_settings.KEY.get_secret_value())],
+        security=SECURITY_API_KEY,
     )
     website_dev = is_vite_dev_mode()
     website_handlers = [] if website_dev else website_routes(website_dist or DEFAULT_WEBSITE_DIST)
@@ -105,11 +113,16 @@ def create_app(
             title="SideQuest Guild API",
             version="0.1.0",
             description=(
-                "Backend for the SideQuest Guild website and Discord bot. "
-                f"`/api/guilds/...` endpoints are for the bot and require the `{API_KEY_HEADER}` header."
+                'The backend for the SideQuest site, the Discord bot "Game Master", and the in-game addon. '
+                "Three ways to call it: a session cookie from Discord sign-in (member and officer routes), "
+                f"the bot's shared `{API_KEY_HEADER}` header (routes under `/api/guilds/{{guild_id}}`), or a "
+                "Bearer token for addon sync and MCP clients. See https://docs.sidequest-guild.com for guides."
             ),
             path="/schema",
             render_plugins=[ScalarRenderPlugin()],
+            openapi_router=Router(path="/schema", route_handlers=[], middleware=[OpenAPIExtensionsMiddleware]),
+            tags=TAGS,
+            components=Components(security_schemes=SECURITY_SCHEMES),
         ),
         debug=api_settings.DEBUG,
     )

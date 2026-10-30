@@ -25,9 +25,9 @@ class GuildConfigSchema(BaseModel):
     leveling_enabled: bool
     level_up_channel_id: int | None
     level_up_message: str
-    xp_min: int
-    xp_max: int
-    xp_cooldown_seconds: int
+    xp_min: int = Field(description="Lowest XP (experience points) a chat message can award.")
+    xp_max: int = Field(description="Highest XP (experience points) a chat message can award.")
+    xp_cooldown_seconds: int = Field(description="Minimum seconds between XP awards for the same member.")
     level_roles_stack: bool
     no_xp_channel_ids: list[int]
     no_xp_role_ids: list[int]
@@ -77,9 +77,15 @@ class GuildConfigUpdate(BaseModel):
     leveling_enabled: bool | None = None
     level_up_channel_id: int | None = None
     level_up_message: str | None = Field(default=None, min_length=1, max_length=2000)
-    xp_min: int | None = Field(default=None, ge=0, le=1000)
-    xp_max: int | None = Field(default=None, ge=0, le=1000)
-    xp_cooldown_seconds: int | None = Field(default=None, ge=0, le=86400)
+    xp_min: int | None = Field(
+        default=None, ge=0, le=1000, description="Lowest XP (experience points) a chat message can award."
+    )
+    xp_max: int | None = Field(
+        default=None, ge=0, le=1000, description="Highest XP (experience points) a chat message can award."
+    )
+    xp_cooldown_seconds: int | None = Field(
+        default=None, ge=0, le=86400, description="Minimum seconds between XP awards for the same member."
+    )
     level_roles_stack: bool | None = None
     no_xp_channel_ids: list[int] | None = None
     no_xp_role_ids: list[int] | None = None

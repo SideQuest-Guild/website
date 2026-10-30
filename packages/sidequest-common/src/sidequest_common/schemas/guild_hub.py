@@ -295,8 +295,8 @@ class GameImportMember(BaseModel):
     wow_class: WowClass | None = Field(default=None, alias="class", serialization_alias="class")
     rank: str | None
     raid_status: str | None
-    guild_ep: int
-    attendance_rate: float
+    guild_ep: int = Field(description="Effort points (EP, shown as Renown on the site) on the guild's standings.")
+    attendance_rate: float = Field(description="Attended divided by signed-up for completed events in range.")
     events_attended: int
     badges: list[GameImportBadgeRef]
     characters: list[GameImportCharacter]
@@ -321,8 +321,8 @@ class GameImportLedgerEntry(BaseModel):
 
     at: int
     kind: str
-    amount: int
-    decayed: float
+    amount: int = Field(description="EP or GP change, as set by kind.")
+    decayed: float = Field(description="The amount after weekly decay has been applied, read-time only.")
     reason: str
     note: str | None
 
@@ -334,7 +334,7 @@ class GameImportLootEntry(BaseModel):
     item_id: int
     item_name: str
     quality: int
-    gp: int
+    gp: int = Field(description="Gear points (GP) this item cost.")
     response: str
 
 

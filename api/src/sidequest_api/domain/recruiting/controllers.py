@@ -12,6 +12,7 @@ from litestar.params import JSONBody
 from sidequest_api.domain.recruiting.dependencies import provide_recruiting_service
 from sidequest_api.domain.recruiting.services import RecruitingService
 from sidequest_api.lib.officer_audit import record_officer_audit
+from sidequest_api.lib.openapi import NOT_AN_OFFICER, NOT_SIGNED_IN, SECURITY_SESSION
 from sidequest_api.lib.website import EDGE_CACHE_HEADER, SKIP_SESSION
 from sidequest_common.models import Member
 from sidequest_common.schemas import Recruiting, RecruitingUpdate
@@ -26,17 +27,36 @@ class RecruitingController(Controller):
     """``/api/recruiting``."""
 
     path = "/api/recruiting"
-    tags = ["Recruiting"]
     dependencies = {"recruiting_service": Provide(provide_recruiting_service)}
 
-    @get("/", operation_id="GetRecruiting", response_headers=[EDGE_RECRUITING_CACHE], opt=SKIP_SESSION)
+    @get(
+        "/",
+        operation_id="GetRecruiting",
+        response_headers=[EDGE_RECRUITING_CACHE],
+        opt=SKIP_SESSION,
+        tags=["Recruiting"],
+        summary="Get recruiting needs",
+        description=(
+            "Returns the guild's current recruiting needs. Roles and classes are empty lists if nothing has ever "
+            "been set."
+        ),
+        response_description="The guild's recruiting needs.",
+    )
     async def get_recruiting(
         self, recruiting_service: NamedDependency[RecruitingService], web_settings: NamedDependency[WebSettings]
     ) -> Recruiting:
-        """The guild's current recruiting needs, empty lists if nothing has ever been set."""
         return await recruiting_service.get_needs(web_settings.GUILD_ID)
 
-    @put("/", operation_id="UpdateRecruiting")
+    @put(
+        "/",
+        operation_id="UpdateRecruiting",
+        tags=["Recruiting needs"],
+        security=SECURITY_SESSION,
+        summary="Set recruiting needs",
+        description="Replaces the full set of wanted roles and classes. An officer must be signed in.",
+        response_description="The updated recruiting needs.",
+        responses={401: NOT_SIGNED_IN, 403: NOT_AN_OFFICER},
+    )
     async def update_recruiting(
         self,
         data: JSONBody[RecruitingUpdate],
@@ -44,7 +64,6 @@ class RecruitingController(Controller):
         web_settings: NamedDependency[WebSettings],
         current_officer: NamedDependency[Member],
     ) -> Recruiting:
-        """Replace the full set of wanted roles and classes (officer)."""
         needs = await recruiting_service.replace_needs(web_settings.GUILD_ID, data)
         await record_officer_audit(
             recruiting_service.repository.session,

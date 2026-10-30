@@ -7,6 +7,7 @@ import httpx
 from litestar import Controller, Request, get, post
 from litestar.di import NamedDependency, Provide
 from litestar.exceptions import HTTPException
+from litestar.openapi.datastructures import ResponseSpec
 from litestar.params import FromQuery, QueryParameter
 from litestar.response import Redirect
 from litestar.status_codes import HTTP_503_SERVICE_UNAVAILABLE
@@ -34,25 +35,35 @@ class AuthController(Controller):
     """``/auth``: Discord OAuth2 login, callback, and logout."""
 
     path = "/auth"
-    tags = ["Auth"]
+    tags = ["Discord sign-in"]
     dependencies = {
         "discord_client": Provide(provide_discord_client),
         "members_service": Provide(provide_members_service),
         "auth_service": Provide(provide_auth_service, sync_to_thread=False),
     }
 
-    @get("/discord/login", operation_id="DiscordLogin")
+    @get(
+        "/discord/login",
+        operation_id="DiscordLogin",
+        summary="Start a Discord sign-in",
+        description=(
+            "Redirects the browser to Discord's authorize screen. The `next` query parameter is honored only "
+            "if it is a same-site path starting with a single `/`; it is stored in the session and consumed "
+            "by the callback."
+        ),
+        response_description="Redirect to Discord's authorize screen.",
+        responses={
+            503: ResponseSpec(None, description="Discord sign-in is not configured on this server."),
+        },
+    )
     async def login(
         self,
         request: Request,
         web_settings: NamedDependency[WebSettings],
-        next_target: Annotated[str | None, QueryParameter(name="next")] = None,
+        next_target: Annotated[
+            str | None, QueryParameter(name="next", description="Where to send the browser after sign-in.")
+        ] = None,
     ) -> Redirect:
-        """Redirect to Discord's authorize screen. 503 if Discord OAuth isn't configured.
-
-        ``next`` is only honored if it's a same-site path starting with a single ``/``; stored in the session
-        and consumed by the callback.
-        """
         client_id = web_settings.DISCORD_CLIENT_ID
         if client_id is None or web_settings.DISCORD_CLIENT_SECRET is None:
             raise HTTPException(status_code=HTTP_503_SERVICE_UNAVAILABLE, detail="Discord login is not configured")
@@ -89,7 +100,13 @@ class AuthController(Controller):
         request.set_session({"member_id": member.id})
         return Redirect(next_path)
 
-    @post("/logout", operation_id="Logout", status_code=204)
+    @post(
+        "/logout",
+        operation_id="Logout",
+        status_code=204,
+        summary="Sign out",
+        description="Clears the session cookie. Returns success even if there was no active session.",
+        response_description="The session was cleared.",
+    )
     async def logout(self, request: Request) -> None:
-        """Clear the session cookie."""
         request.clear_session()
