@@ -65,7 +65,7 @@ test("pages keep working after leaving and coming back", async ({ page, site }) 
     await navTo(page, "Events");
     await expect(page.locator("#events-upcoming a.quest")).toHaveCount(2);
   }
-  await page.getByRole("link", { name: "Raids", exact: true }).click();
+  await page.locator("#kind-filter-list").getByRole("link", { name: "Raids", exact: true }).click();
   await expect(page).toHaveURL("/events/?kind=raid");
   await expect(page.locator("#events-upcoming a.quest")).toHaveCount(1);
 });

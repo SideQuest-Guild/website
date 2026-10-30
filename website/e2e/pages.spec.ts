@@ -53,9 +53,12 @@ test.describe("events", () => {
       "2T · 3H · 9D · 1 tentative · 4 interested on Discord",
     );
     await expect(page.locator("#signup-hint")).toBeHidden();
-    await page.getByRole("link", { name: "Raids", exact: true }).click();
+    await page.locator("#kind-filter-list").getByRole("link", { name: "Raids", exact: true }).click();
     await expect(page.locator("#events-upcoming a.quest")).toHaveCount(1);
-    await expect(page.getByRole("link", { name: "Raids", exact: true })).toHaveAttribute("aria-current", "page");
+    await expect(page.locator("#kind-filter-list").getByRole("link", { name: "Raids", exact: true })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
   });
 });
 
@@ -139,6 +142,26 @@ test.describe("addons", () => {
     await expect(cards.first()).toContainText("SideQuest Raid Helper");
     await expect(cards.first()).toContainText("Made by SideQuest");
     await expect(cards.nth(1)).toContainText("Community pick");
+  });
+});
+
+test.describe("raids", () => {
+  test("the upcoming list shows the mocked raid, and the contents rail links work", async ({ page, site }) => {
+    site.signIn(null);
+    await page.goto("/raids/");
+    await expect(page.getByRole("heading", { level: 1, name: "Raiding" })).toBeVisible();
+    await expect(page.locator("#raids-upcoming a.quest")).toHaveCount(1);
+    await expect(page.locator("#raids-upcoming")).toContainText(LONG_TITLE);
+    await expect(page.locator("#raids-upcoming a.quest")).toHaveAttribute("href", `/events/detail/?id=${raid?.id}`);
+    await expect(page.locator("#raids-signup-hint")).toBeVisible();
+
+    await page.locator('[data-toc="loot"]').click();
+    await expect(page).toHaveURL("/raids/#loot");
+    await expect(page.locator("#loot")).toBeInViewport();
+
+    await page.locator('[data-toc="faq"]').click();
+    await expect(page).toHaveURL("/raids/#faq");
+    await expect(page.locator("#faq")).toBeInViewport();
   });
 });
 

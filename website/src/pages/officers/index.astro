@@ -241,13 +241,13 @@ import "../../styles/room-officers.css";
     </section>
 
     <section id="panel-recruiting" role="tabpanel" aria-labelledby="tab-recruiting" tabindex="0" hidden>
-      <div class="chamber-pair">
-        <form id="recruiting-form" class="chamber form">
-          <h2 class="chamber-title">Recruiting needs</h2>
-          <p class="aside">
-            Pick the roles and classes the guild is looking for. Checked items show on the homepage and in the guild's
-            welcome message for new guests, until unchecked here.
-          </p>
+      <form id="recruiting-form" class="chamber form">
+        <h2 class="chamber-title">Recruiting needs</h2>
+        <p class="aside">
+          Pick the roles and classes the guild is looking for. Checked items show on the homepage and in the guild's
+          welcome message for new guests, until unchecked here.
+        </p>
+        <div class="recruit-columns">
           <fieldset>
             <legend class="caps">Roles</legend>
             <ul class="recruit-list" id="recruiting-role-list"></ul>
@@ -256,14 +256,14 @@ import "../../styles/room-officers.css";
             <legend class="caps">Classes</legend>
             <ul class="recruit-list" id="recruiting-class-list"></ul>
           </fieldset>
-          <div class="form-actions">
-            <button type="submit" class="btn" id="recruiting-save">
-              Save
-            </button>
-          </div>
-          <p class="status" id="recruiting-form-status" role="status" aria-live="polite"></p>
-        </form>
-      </div>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn" id="recruiting-save">
+            Save
+          </button>
+        </div>
+        <p class="status" id="recruiting-form-status" role="status" aria-live="polite"></p>
+      </form>
     </section>
 
     <section id="panel-attendance" role="tabpanel" aria-labelledby="tab-attendance" tabindex="0" hidden>

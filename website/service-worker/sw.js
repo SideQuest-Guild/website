@@ -24,6 +24,7 @@ const STALE_FIRST = [
   { page: /^\/$/, data: /^\/api\/(discord\/live|events|recruiting)$/ },
   { page: /^\/events\/$/, data: /^\/api\/events$/ },
   { page: /^\/events\/detail\/$/, data: /^\/api\/events\/[^/]+$/ },
+  { page: /^\/raids\/$/, data: /^\/api\/events$/ },
   { page: /^\/addons\/$/, data: /^\/api\/addons$/ },
 ];
 

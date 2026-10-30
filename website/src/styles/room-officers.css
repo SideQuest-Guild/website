@@ -430,6 +430,26 @@
   margin-top: clamp(28px, 2.6vw, 40px);
 }
 
+/* Roles beside classes on wide screens, stacked on narrow ones; each legend clears the intro or list above it. */
+.recruit-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 20px clamp(24px, 3vw, 48px);
+  align-items: start;
+  margin-top: 20px;
+}
+.recruit-columns fieldset {
+  min-inline-size: 0; /* fieldsets default to min-content, which would overrule the equal columns */
+}
+.recruit-columns legend {
+  margin-bottom: 10px;
+}
+@media (max-width: 1100px) {
+  .recruit-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 /* ——— Recruiting needs (Recruiting tab) ——— */
 .recruit-list {
   display: flex;

@@ -1,0 +1,321 @@
+---
+import Charter from "../../layouts/Charter.astro";
+import Article from "../../components/Article.astro";
+import raidHall from "../../../assets/rooms/raid-hall.webp";
+
+const articles = [
+  { id: "upcoming", title: "Upcoming raids" },
+  { id: "signup", title: "How to sign up" },
+  { id: "two-kinds", title: "Two kinds of raid night" },
+  { id: "loot", title: "Loot: progression (EPGP)" },
+  { id: "casual-loot", title: "Loot: casual and alt nights" },
+  { id: "alts", title: "Alts" },
+  { id: "attendance", title: "Attendance and guild EP" },
+  { id: "chart", title: "The raid chart" },
+  { id: "before-pull", title: "Before the pull" },
+  { id: "faq", title: "FAQ" },
+];
+---
+
+<Charter
+  title="Raiding · SideQuest"
+  description="How raiding works at SideQuest: signing up, the two kinds of raid night, EPGP loot for progression, attendance and guild EP, the raid chart, and what to bring to the pull."
+  heading="RAIDING"
+  lede="How raid nights work, from signing up to the loot you walk away with."
+  art={raidHall}
+  artPosition="50% 55%"
+  current="raids"
+  chamberTitle="How Raiding Works"
+  articles={articles}
+>
+  <script is:inline slot="head">
+    const link = document.createElement("link");
+    Object.assign(link, {
+      rel: "preload",
+      as: "fetch",
+      href: "/api/events?when=upcoming&kind=raid",
+      crossOrigin: "anonymous",
+    });
+    document.head.append(link);
+  </script>
+
+  <Article id="upcoming" n={1} title="Upcoming raids">
+    <ul class="quest-log" id="raids-upcoming" aria-live="polite"></ul>
+    <p class="chamber-note aside" id="raids-signup-hint">
+      Sign in with Discord on the <a href="/account/">account page</a> to see rosters and sign up.
+    </p>
+    <noscript>
+      <p class="aside">Enable JavaScript to see the upcoming raid schedule here, or check the Discord.</p>
+    </noscript>
+  </Article>
+
+  <Article id="signup" n={2} title="How to sign up">
+    <p>You can sign up for a raid two ways:</p>
+    <ul>
+      <li>
+        On the raid's own page on the site: click through from the <a href="/raids/#upcoming">upcoming list</a> above or
+        the <a href="/events/?kind=raid">events page</a> and set your status.
+      </li>
+      <li>With the Going / Maybe / Can't buttons on the raid's post in the Discord events forum.</li>
+    </ul>
+    <p>
+      Raids need your character, class and role when you sign up. If your plans change, switch to Can't so your spot can
+      be filled.
+    </p>
+    <p>
+      Planning to be away? Add the dates on your <a href="/account/">account page</a> and you'll get the Away on a Quest
+      role; officers can see who's away right on the raid's event page.
+    </p>
+    <p>
+      Once you're signed up, a private calendar link on your <a href="/account/">account page</a> puts your events and
+      sign-ups into Google or Apple Calendar.
+    </p>
+  </Article>
+
+  <Article id="two-kinds" n={3} title="Two kinds of raid night">
+    <p>
+      SideQuest raids in two ways: semi-core nights on a set schedule, open to the guild, and a progression group for
+      the hardest content. No raid nights are scheduled yet — they go up once enough members have leveled, here and in
+      the Discord.
+    </p>
+    <p>
+      How loot works depends on which kind of night you're on: progression raids run on EPGP, casual and alt raids run
+      on soft reserve. See below for both.
+    </p>
+  </Article>
+
+  <Article id="loot" n={4} title="Loot: progression (EPGP)">
+    <p>Progression raids use EPGP. Your loot priority is your EP divided by your GP: higher is first in line.</p>
+    <ul>
+      <li>
+        <b>EP</b> (effort points) comes from time in the raid — including wipes on progression bosses — and from time on
+        the bench while you're ready to come in.
+      </li>
+      <li>
+        <b>GP</b> (gear points) is added when you take an item, from published price bands with named exceptions. Item
+        level alone doesn't set the price.
+      </li>
+      <li>Among everyone who needs an item for their main spec, the highest priority wins it.</li>
+    </ul>
+    <p>
+      You have one EPGP balance per person, per progression team, shared by your main and your alts. Switching
+      characters never resets your GP or counts the same raid time twice. Separate progression teams keep separate
+      ledgers.
+    </p>
+    <p>
+      Officers record every award and correction with a reason, in game. Corrections keep their history instead of
+      erasing it. The site shows the standings.
+    </p>
+    <p class="chamber-note aside">
+      Not set yet: price bands, decay, base and minimum GP, minimum EP, starting balances, ties and trial eligibility,
+      and how a balance moves if you transfer teams. These numbers will be posted on this page before the first
+      progression raid.
+    </p>
+  </Article>
+
+  <Article id="casual-loot" n={5} title="Loot: casual and alt nights">
+    <p>
+      Casual and alt raids run on soft reserve, not EPGP: reserve the item you want before the raid, and reserved items
+      go to the people who reserved them. Everything else goes main spec over off spec. These raids never change your
+      EPGP balance.
+    </p>
+    <p class="chamber-note aside">
+      Reserve count, lock time and tie rules will be posted here before the first casual raid.
+    </p>
+  </Article>
+
+  <Article id="alts" n={6} title="Alts">
+    <p>
+      Your alts share your EPGP balance with your main on the same progression team — playing an alt there doesn't start
+      you over, and it doesn't double-count time either. Casual and alt raids don't touch EPGP at all, so there's
+      nothing to protect by bringing an alt to one.
+    </p>
+  </Article>
+
+  <Article id="attendance" n={7} title="Attendance and guild EP">
+    <p>This is a different point system from the EPGP above, so don't mix them up:</p>
+    <ul>
+      <li>
+        <b>EPGP</b> decides loot priority on progression raids, per progression team.
+      </li>
+      <li>
+        <b>Guild EP</b>, shown on the <a href="/heroes/">Hall of Heroes</a>, is earned for attending any guild event,
+        whatever kind it is: a raid is worth 10, a dungeon 5, leveling 3, PvP 3, a social night 2, transmog 2, and
+        anything else 2. Officers can set a different value for a specific event. It feeds the Hall of Heroes
+        leaderboard and badges, not your loot priority.
+      </li>
+    </ul>
+    <p>
+      For attendance itself: officers mark who came, and the bot counts the minutes you spent in the guild's voice
+      channels during the event — 30 minutes or more pre-ticks "came" for an officer to confirm. If attendance isn't
+      taken for an event, a "Going" sign-up counts as attended.
+    </p>
+  </Article>
+
+  <Article id="chart" n={8} title="The raid chart">
+    <p>
+      Officers place everyone who's signed up into groups 1 through 8, or the bench, right on the raid's event page,
+      starting from a suggested balanced layout. Check the chart before the pull — you may not be in the group you
+      expect.
+    </p>
+  </Article>
+
+  <Article id="before-pull" n={9} title="Before the pull">
+    <p>Show up ready:</p>
+    <ul>
+      <li>On time.</li>
+      <li>Repaired.</li>
+      <li>Stocked on consumables.</li>
+      <li>
+        Running the addons the group asked for — see the <a href="/addons/">addons page</a>.
+      </li>
+    </ul>
+  </Article>
+
+  <Article id="faq" n={10} title="FAQ">
+    <p>
+      <b>I can't make a raid I signed up for. What do I do?</b>
+    </p>
+    <p>
+      Switch your status to Can't as soon as you know, on the raid's page or in the Discord, so your spot can be filled.
+    </p>
+
+    <p>
+      <b>What does it mean if I'm on the bench?</b>
+    </p>
+    <p>
+      You're signed up and ready to come in. Time on the bench while you're ready still earns EPGP on progression
+      nights.
+    </p>
+
+    <p>
+      <b>Do I need the raid addon to raid?</b>
+    </p>
+    <p>No. Nobody needs it to raid — it just adds convenience.</p>
+
+    <p>
+      <b>Can I bring an alt to progression night?</b>
+    </p>
+    <p>
+      Yes, and it shares your EPGP balance with your main on that team, so you're never starting over or losing credit
+      for showing up.
+    </p>
+
+    <p>
+      <b>Where do I see my EPGP standing?</b>
+    </p>
+    <p>Officers keep the points in game, and the standings will show here once progression raids start.</p>
+
+    <p>
+      <b>Where do I see my guild EP?</b>
+    </p>
+    <p>
+      On the <a href="/heroes/">Hall of Heroes</a>, alongside your badges.
+    </p>
+
+    <p>
+      <b>What does Maybe mean when I sign up?</b>
+    </p>
+    <p>You're not committed either way yet. Switch to Going or Can't once you know, so officers can plan around it.</p>
+
+    <p>
+      <b>How is attendance decided if I didn't get marked?</b>
+    </p>
+    <p>
+      The bot counts your voice-channel minutes during the event; 30 minutes or more pre-ticks "came" for an officer to
+      confirm. If the event's attendance was never taken, your "Going" sign-up counts as attended on its own.
+    </p>
+
+    <p>
+      <b>Do casual and alt raids use EPGP?</b>
+    </p>
+    <p>No. They run on soft reserve and never change your EPGP balance.</p>
+
+    <p>
+      <b>Who decides the raid chart?</b>
+    </p>
+    <p>
+      Officers do, starting from a suggested balanced layout and placing everyone into groups 1-8 or the bench on the
+      event page.
+    </p>
+  </Article>
+</Charter>
+
+<script>
+  import {
+    apiFetch,
+    fetchMe,
+    onFreshData,
+    escapeHtml,
+    requireElement,
+    statusMessage,
+    type EventSummary,
+  } from "../../scripts/api";
+  import { onPage } from "../../scripts/page";
+  import { weekdayPhrase } from "../../scripts/series";
+
+  const RAIDS_PATH = "/api/events?when=upcoming&kind=raid";
+
+  // Quest-giver marks: a gold "!" for an event still open to sign-ups, a dim "?" once it has run.
+  function questMark(event: EventSummary): string {
+    const open = event.status === "scheduled" && new Date(event.starts_at).getTime() > Date.now();
+    return `<svg class="ico ico-quest${open ? "" : " is-done"}" aria-hidden="true"><use href="#${open ? "i-quest" : "i-quest-done"}"></use></svg>`;
+  }
+
+  onPage("#raids-upcoming", () => {
+    // Only signed-out visitors need telling how to sign up.
+    fetchMe().then(
+      () => requireElement("raids-signup-hint").setAttribute("hidden", ""),
+      () => undefined,
+    );
+
+    const dayFormat = new Intl.DateTimeFormat(undefined, { weekday: "short", month: "short", day: "numeric" });
+    const timeFormat = new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" });
+
+    function raidRow(event: EventSummary): string {
+      const start = new Date(event.starts_at);
+      const counts = (() => {
+        if (!event.counts) {
+          return "";
+        }
+        const signupCounts = `${event.counts.tank}T · ${event.counts.healer}H · ${event.counts.dps}D${
+          event.counts.tentative > 0 ? ` · ${event.counts.tentative} tentative` : ""
+        }`;
+        return event.counts.interested > 0
+          ? `${signupCounts} · ${event.counts.interested} interested on Discord`
+          : signupCounts;
+      })();
+      const statusSuffix =
+        event.status === "scheduled" ? "" : ` · ${event.status === "cancelled" ? "Cancelled" : "Completed"}`;
+      const seriesText = event.series ? weekdayPhrase(event.series.weekdays, event.series.interval_weeks) : "";
+      const meta = [event.location, seriesText, counts].filter(Boolean).join(" · ");
+      return `
+      <li>
+        <a class="quest" href="/events/detail/?id=${event.id}">
+          ${questMark(event)}
+          <span>
+            <span class="quest-name">${escapeHtml(event.title)}${escapeHtml(statusSuffix)}</span>
+            <span class="quest-meta">${escapeHtml(meta)}</span>
+          </span>
+          <span class="quest-when">${escapeHtml(timeFormat.format(start))}<small>${escapeHtml(dayFormat.format(start))}</small></span>
+        </a>
+      </li>`;
+    }
+
+    async function loadRaids(): Promise<void> {
+      const list = requireElement("raids-upcoming");
+      try {
+        const raids = await apiFetch<EventSummary[]>(RAIDS_PATH);
+        list.innerHTML =
+          raids.length > 0
+            ? raids.map(raidRow).join("")
+            : `<li class="quest-empty">Nothing scheduled yet. Raid nights go up once enough members have leveled — check back here or in the Discord, and add the <a href="/account/">calendar link</a> so you don't miss the post.</li>`;
+      } catch (err) {
+        list.innerHTML = `<li class="quest-empty">${escapeHtml(statusMessage(err))}</li>`;
+      }
+    }
+
+    onFreshData(RAIDS_PATH, () => void loadRaids());
+    void loadRaids();
+  });
+</script>

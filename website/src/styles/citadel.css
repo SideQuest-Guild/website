@@ -234,9 +234,9 @@ textarea {
   gap: clamp(56px, 4vw, 72px) clamp(24px, 2.4vw, 40px);
   align-items: start;
 }
-/* Chambers stacked inside a wrapper (a console tab, a hero profile) keep the room's rhythm; the room body's own
-   grid gap already spaces its direct children. */
-:not(.room-body) > :is(.chamber, .chamber-pair) + :is(.chamber, .chamber-pair) {
+/* Chambers stacked inside a wrapper (a console tab, a hero profile) keep the room's rhythm. Not in the room body
+   (its grid gap already spaces its children) and not inside a pair, whose chambers sit side by side. */
+:not(.room-body, .chamber-pair) > :is(.chamber, .chamber-pair) + :is(.chamber, .chamber-pair) {
   margin-top: clamp(56px, 5.4vw, 92px);
 }
 

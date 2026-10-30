@@ -13,6 +13,7 @@ const PAGES = [
   { name: "heroes", path: "/heroes/" },
   { name: "hero", path: `/heroes/member/?id=${HEROES[0]?.member_id}` },
   { name: "addons", path: "/addons/" },
+  { name: "raids", path: "/raids/" },
   { name: "account", path: "/account/" },
   { name: "officers", path: "/officers/#members" },
   { name: "officers attendance", path: "/officers/#attendance" },
@@ -115,6 +116,8 @@ test.describe("wide desktop officers console", () => {
     { tab: "events", empty: false },
     { tab: "addons", empty: false },
     { tab: "addons", empty: true },
+    { tab: "recruiting", empty: false },
+    { tab: "attendance", empty: false },
     { tab: "members", empty: false },
     { tab: "log", empty: false },
     { tab: "moderation", empty: false },
@@ -133,6 +136,22 @@ test.describe("wide desktop officers console", () => {
       const layout = await offScreen(page);
       expect(layout.scrollWidth, "page scrolls sideways").toBeLessThanOrEqual(layout.width);
       expect(layout.offenders, "content past the screen edge").toEqual([]);
+
+      // Chambers side by side start level; a chamber alone in its tab spans the tab instead of half of it.
+      const panel = page.locator(`#panel-${tab}`);
+      const geometry = await panel.evaluate((root) => ({
+        width: root.getBoundingClientRect().width,
+        pairs: [...root.querySelectorAll(".chamber-pair")].map((pair) =>
+          [...pair.children].map((child) => Math.round(child.getBoundingClientRect().top)),
+        ),
+        singles: [...root.querySelectorAll(":scope > .chamber")].map((c) => c.getBoundingClientRect().width),
+      }));
+      for (const tops of geometry.pairs) {
+        expect(new Set(tops).size, `paired chambers start at different heights: ${tops.join(", ")}`).toBe(1);
+      }
+      for (const width of geometry.singles) {
+        expect(width, "a lone chamber spans its tab").toBeGreaterThan(geometry.width * 0.95);
+      }
 
       const shot = testInfo.outputPath("page.png");
       await page.screenshot({ path: shot, fullPage: true });

@@ -13,12 +13,15 @@ interface Props {
   description: string;
   heading: string;
   lede: string;
-  /** Shown as "In effect since …"; bump it whenever the text changes in substance. */
-  effective: string;
+  /** Shown as "In effect since …" when given; omitted entirely for pages with no effective date (e.g. a guide). */
+  effective?: string;
   /** Defaults to the Great Hall; every charter hangs there. */
   art?: ImageMetadata;
   artPosition?: string;
   articles: CharterArticle[];
+  current?: "events" | "heroes" | "addons" | "officers" | "account" | "raids";
+  /** Heading above the contents rail; defaults to "The Charter". */
+  chamberTitle?: string;
 }
 
 const {
@@ -30,16 +33,31 @@ const {
   art = greatHall,
   artPosition = "50% 40%",
   articles,
+  current,
+  chamberTitle = "The Charter",
 } = Astro.props;
 ---
 
-<Room title={title} description={description} heading={heading} lede={lede} art={art} artPosition={artPosition}>
-  <p slot="title" class="charter-date caps shade">
-    In effect since {effective}
-  </p>
+<Room
+  title={title}
+  description={description}
+  heading={heading}
+  lede={lede}
+  art={art}
+  artPosition={artPosition}
+  current={current}
+>
+  <Fragment slot="head">
+    <slot name="head" />
+  </Fragment>
+  {effective && (
+    <p slot="title" class="charter-date caps shade">
+      In effect since {effective}
+    </p>
+  )}
 
   <div class="chamber charter-body">
-    <h2 class="chamber-title">The Charter</h2>
+    <h2 class="chamber-title">{chamberTitle}</h2>
     <nav class="charter-toc" aria-label="Contents">
       <ol>
         {articles.map((article, index) => (

@@ -59,7 +59,8 @@ SideQuest server, an officer is a member holding a role listed in `WEB_OFFICER_R
 Quest Guide), and a GM is a member holding a role listed in `WEB_GM_ROLE_IDS` (default: Quest Master); roles and
 nickname refresh at each sign-in and continuously thereafter via the bot's member-profile push (see "Member
 profile sync" below). The site's member pages
-are `/events/`, `/heroes/`, `/addons/`, `/account/` and `/officers/` (the GM console).
+are `/events/`, `/heroes/`, `/addons/`, `/account/` and `/officers/` (the GM console). `/raids/` is public (no
+sign-in needed): it explains how raid nights, EPGP loot and attendance work.
 
 ### Discord sign-in setup
 
@@ -447,6 +448,12 @@ description, and a link to the Hall of Heroes) with mentions scoped to just that
 (`POST /api/guilds/{guild_id}/badges/ack`) so it isn't announced twice. If no channel is set yet, role sync still
 runs every tick, but announcements are left un-acked so they post in full once a channel is configured instead of
 being lost for whoever earned them first (`bot/src/sidequest_bot/plugins/badges.py`).
+
+Role icons (the server is boost tier 2, so roles can carry an image): every rank, gate, class and badge role has one,
+generated with Codex and kept as 128px PNGs in `bot/src/sidequest_bot/assets/role_icons/` (prompts in
+`website/.impeccable/build/role-icons/`, local only). The bot gives a badge role its icon when it creates or recreates
+it, sets it once on a badge role that has none, and attaches the badge's icon to its announcement as the thumbnail.
+The other roles' icons were set once by hand from the same folder; level roles have none.
 
 | Badge | Rule |
 |---|---|
