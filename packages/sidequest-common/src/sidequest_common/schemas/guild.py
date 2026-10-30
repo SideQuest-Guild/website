@@ -54,6 +54,8 @@ class GuildConfigSchema(BaseModel):
 
     announcement_channel_id: int | None = None
 
+    forever_feed_channel_id: int | None = None
+
 
 class GuildConfigUpdate(BaseModel):
     """Partial update. Only fields present in the request body change (``exclude_unset``).
@@ -103,6 +105,8 @@ class GuildConfigUpdate(BaseModel):
     badge_role_ids: dict[str, int] | None = None
 
     announcement_channel_id: int | None = None
+
+    forever_feed_channel_id: int | None = None
 
     @model_validator(mode="after")
     def _xp_range(self) -> GuildConfigUpdate:

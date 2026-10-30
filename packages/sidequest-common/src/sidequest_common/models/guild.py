@@ -73,3 +73,7 @@ class GuildConfig(UUIDAuditBase):
     # Guild hub announcements (v2)
     announcement_channel_id: Mapped[int | None] = mapped_column(BigInteger, default=None)
     """Where the bot posts pending ``GuildAnnouncement`` rows queued for Discord; officers set it."""
+
+    # WoW: Forever news feed
+    forever_feed_channel_id: Mapped[int | None] = mapped_column(BigInteger, default=None)
+    """Where the bot posts WoW: Forever blue posts and Wowhead news; officers set it."""
