@@ -50,12 +50,13 @@ jobs:
     env:
       E2E_BASE_URL: https://sidequest-guild.com
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.event.deployment.sha }}
+          persist-credentials: false
 
       - name: Install Node (website/mise.toml)
-        uses: jdx/mise-action@v5
+        uses: jdx/mise-action@6be3c7ed4c21d4f76b208d351d95aac273ebb76d # v5.2.4
         with:
           working_directory: website
           cache: true
@@ -71,7 +72,7 @@ jobs:
 
       - name: Upload report and screenshots
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: playwright-report-live-${{ matrix.project }}-${{ matrix.shard }}
           path: |
