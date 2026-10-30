@@ -9,6 +9,8 @@ const articles = [
   { id: "battle-net", title: "Linking Battle.net" },
   { id: "events", title: "Event sign-ups" },
   { id: "hall-of-heroes", title: "Hall of Heroes" },
+  { id: "epgp-sync", title: "SQL loot ledger" },
+  { id: "guild-app", title: "The guild app" },
   { id: "cookies", title: "Cookies" },
   { id: "bot", title: "The guild bot" },
   { id: "who-else", title: "Who else handles it" },
@@ -28,7 +30,11 @@ const articles = [
 >
   <Article id="short-version" n={1} title="The short version">
     <ul>
-      <li>We keep only what we need to run the guild: who you are on Discord, and your event sign-ups.</li>
+      <li>
+        We keep only what we need to run the guild: who you are on Discord, your event sign-ups, and what the guild's
+        addon syncs — roster, crafters, bank log, announcements and (officer-only) recruit and member notes. See
+        <a href="#guild-app">The guild app</a>.
+      </li>
       <li>No ads, no analytics, no trackers. We never sell or share your data with anyone for marketing.</li>
       <li>
         Unlinking Battle.net erases your Battle.net data. Deleting your account erases your site account, every event
@@ -142,7 +148,72 @@ const articles = [
     </p>
   </Article>
 
-  <Article id="cookies" n={6} title="Cookies">
+  <Article id="epgp-sync" n={6} title="SQL loot ledger">
+    <p>
+      SideQuest raids use an in-game addon, <strong>SideQuest</strong>, to track progression loot. Officers upload what
+      it records to this site after a raid night: your character's name, realm and class; which raids you were present
+      for and when (including standby); which bosses were killed or wiped on; which items were awarded, to whom and for
+      what response (main spec, off spec, alt, council, disenchant or bank); and every EP/GP ledger entry with its
+      reason. A raid import can also mark you attended on a matching sign-up, the same as an officer taking attendance
+      by hand.
+    </p>
+    <p>
+      On your <a href="/account/">Account</a> page you can link your characters to your SideQuest account yourself;
+      officers can also link an unrecognized character to a member. An officer can create a <strong>sync token</strong>
+      for the <code>sidequest-sync</code> uploader; we store only its salted hash, never the token itself, the same as a
+      password.
+    </p>
+    <p>
+      <strong>Standings, loot and progression are public:</strong> anyone can see the <a href="/ledger/">Ledger</a> —
+      every member's EP, GP and priority ratio, recent loot and who won it, and which bosses the guild has killed —
+      without signing in. An unlinked character shows up under its own name until an officer or its owner links it to a
+      member.
+    </p>
+  </Article>
+
+  <Article id="guild-app" n={7} title="The guild app">
+    <p>
+      SideQuest's addon has grown into the guild's app, keeping everything on this site in step with the game. Officers
+      sync the following with the same export/import strings used for raids and loot:
+    </p>
+    <ul>
+      <li>
+        <strong>Guild roster snapshots:</strong> each member's in-game rank, level, current zone and when they were last
+        online, taken from the in-game guild roster and kept as the latest snapshot per character.
+      </li>
+      <li>
+        <strong>Professions and recipes:</strong> each character's professions, skill level and the recipes they know,
+        so other members can find a crafter.
+      </li>
+      <li>
+        <strong>Guild bank log:</strong> deposits, withdrawals, repairs and tab purchases from the in-game guild bank,
+        with who did it and when.
+      </li>
+      <li>
+        <strong>In-game sign-ups:</strong> Going/Maybe/Can't answers given in the addon for the same events you can sign
+        up for on this site; whichever answer came last wins.
+      </li>
+      <li>
+        <strong>Announcements:</strong> text an officer writes, in game or on this site, that reaches every member's
+        addon window and this site's guild news.
+      </li>
+      <li>
+        <strong>Recruit notes and votes (officer-only):</strong> an applicant's status, an officer's checklist and notes
+        about them, and each officer's yes/no/wait vote.
+      </li>
+      <li>
+        <strong>Member notes (officer-only):</strong> free-text notes officers keep about a member, e.g. preferred role.
+      </li>
+    </ul>
+    <p>
+      <strong>Who sees what:</strong> the roster, crafters directory, bank log and news on the{" "}
+      <a href="/guild/">Guild</a>
+      page are for signed-in members only. Recruit notes, votes and member notes are officer-only, visible on the
+      Officers page and never shown to the member or recruit they're about.
+    </p>
+  </Article>
+
+  <Article id="cookies" n={8} title="Cookies">
     <ul>
       <li>
         <strong>sq_session</strong> keeps you signed in. It's encrypted, holds only your account number, can't be read
@@ -167,7 +238,7 @@ const articles = [
     <p>No analytics or advertising cookies. If you never sign in, you get no cookies at all.</p>
   </Article>
 
-  <Article id="bot" n={7} title="The guild bot">
+  <Article id="bot" n={9} title="The guild bot">
     <p>Inside the SideQuest Discord, the guild's bot keeps:</p>
     <ul>
       <li>Your chat XP and level, erased if you delete your site account</li>
@@ -193,7 +264,7 @@ const articles = [
     </p>
   </Article>
 
-  <Article id="who-else" n={8} title="Who else handles it">
+  <Article id="who-else" n={10} title="Who else handles it">
     <ul>
       <li>
         <strong>Discord</strong> and <strong>Blizzard (Battle.net)</strong> run the sign-ins, under their own privacy
@@ -208,7 +279,7 @@ const articles = [
     <p>That's everyone. Nothing else is shared.</p>
   </Article>
 
-  <Article id="deleting" n={9} title="Deleting your data">
+  <Article id="deleting" n={11} title="Deleting your data">
     <ul>
       <li>
         <strong>Unlink Battle.net</strong> on your <a href="/account/">Account</a> page: your Battle.net data is erased.
@@ -229,7 +300,7 @@ const articles = [
     </p>
   </Article>
 
-  <Article id="changes" n={10} title="Changes">
+  <Article id="changes" n={12} title="Changes">
     <p>
       If what we keep changes, this page and its date change with it, and anything significant gets announced in the
       Discord first.

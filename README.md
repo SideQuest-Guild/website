@@ -59,8 +59,9 @@ SideQuest server, an officer is a member holding a role listed in `WEB_OFFICER_R
 Quest Guide), and a GM is a member holding a role listed in `WEB_GM_ROLE_IDS` (default: Quest Master); roles and
 nickname refresh at each sign-in and continuously thereafter via the bot's member-profile push (see "Member
 profile sync" below). The site's member pages
-are `/events/`, `/heroes/`, `/addons/`, `/account/` and `/officers/` (the GM console). `/raids/` is public (no
-sign-in needed): it explains how raid nights, SQL loot (SideQuest Loot: EPGP with a loot council), soft reserve and attendance work.
+are `/events/`, `/heroes/`, `/addons/`, `/guild/`, `/ledger/`, `/account/` and `/officers/` (the GM console, with an
+officer-only `/officers/sync/` addon import/export console). `/raids/` is public (no sign-in needed): it explains
+how raid nights, SQL loot (SideQuest Loot: EPGP with a loot council), soft reserve and attendance work.
 
 ### Discord sign-in setup
 
@@ -357,6 +358,87 @@ members are in one of the guild's voice/stage channels for each event that's sta
 with no explicit end, 3 hours after its start) and not cancelled, and pushes each member's cumulative minutes for
 that event (`PUT /api/guilds/{guild_id}/attendance/voice`, idempotent replace — not an increment — so a bot
 restart or a resent tick never double-counts) (`bot/src/sidequest_bot/plugins/attendance_voice.py`).
+
+### EPGP loot system
+The `sidequest-sync` addon records raid facts (sessions, boss pulls, loot, EP/GP ledger entries) in game; officers
+move them to the site by pasting an export string, uploading SavedVariables, or running the uploader
+(`POST /api/epgp/imports` — officer session or a `Bearer` sync token belonging to a member who's still an officer).
+The import decodes one `SQX1:` + base64 JSON string found anywhere in the posted text (regex `SQX1:[A-Za-z0-9+/=]+`,
+so a whole SavedVariables file works), upserts sessions/encounters/loot/EP-GP awards by each record's addon-assigned
+id (re-importing is a no-op), auto-links a seen character to a member when its name matches exactly one member's
+event sign-up character, and hands off attendance: every member linked to a session character (standby included,
+as bench) gets `EventSignup.attended` flipped `None` → `True` (never flips an existing `True`/`False`), with a
+walk-in sign-up created for anyone with no existing one. A session that overlaps (same instance, intersecting
+times) a stored session from a different recorder is skipped, along with its encounters/loot/awards, so two
+officers can't double-award EP.
+
+The site is the source of truth for EP/GP: standings (`GET /api/epgp/standings`, public) are computed on read —
+weekly decay (15% at every Tuesday 15:00 UTC reset) is applied to each ledger entry's amount from its timestamp to
+now rather than stored, and GP is `max(100, 100 + decayed GP sum)` so PR (`EP / GP`) never divides by zero. Officers
+pull current rules/standings/upcoming events back into the game as an `SQI1:` string (`GET /api/epgp/game-import`)
+to paste into `/sq import`. Also: the public EP/GP ledger (`GET /api/epgp/ledger`) and loot log
+(`GET /api/epgp/loot`), a kill/wipe progression board (`GET /api/epgp/progression`), officer-made ledger
+adjustments (`POST /api/epgp/adjustments`), a characters admin screen to relink/un-main a `WowCharacter`
+(`GET/PUT /api/epgp/characters`), roster trial/raider status (`GET/PUT /api/epgp/roster`, trial lasts 14 days from
+`trial_started_at`), sync-token management (`GET/POST/DELETE /api/epgp/sync-tokens`, shown once, stored only as a
+sha256 hash), and member self-service character claiming (`GET/POST/DELETE /api/me/characters`, 409 if another
+member already claimed that name-realm). See `packages/sidequest-common/src/sidequest_common/schemas/epgp.py` for
+the full rules table (EP per reason, GP by `INVTYPE_*`, chase/legendary/off-spec multipliers).
+
+### Guild hub v2
+Builds on the EPGP addon and its `SQX1:`/`SQI1:` strings (same import/export flow, officer-only, no new auth):
+roster sweeps, profession/recipe scans, in-game sign-ups, the guild bank log, announcements, recruiting and member
+notes all ride the same `SQX1:` export, and the game gets them back out through the same `SQI1:` string. See
+`local://addon-contract-v2.md`/`packages/sidequest-common/src/sidequest_common/schemas/guild_hub.py` for the wire
+shapes; this is the behavior.
+
+- **Roster** (`GET /api/guild/roster`, member): the recorder's latest `GetGuildRosterInfo` sweep, upserted by
+  character (auto-creating `WowCharacter` rows) and grouped by linked member on read, alts under their main.
+  Rank/level changes become news — level-ups only at an observed transition through a multiple of 10, never on
+  first sight — and a character absent from every sweep for 30 days is marked `left_guild_at` (never deleted).
+- **Crafters** (`GET /api/guild/crafters`, member): who knows which recipe, searchable by recipe or profession
+  substring (`?q=`, `?profession=`, up to 50 matches). Each import upserts a character's profession scan and
+  replaces its known-recipe set wholesale (≤ 2000 recipes per profession, ≤ 400 profession/character pairs per
+  payload).
+- **In-game sign-ups**: an officer's addon relays sign-ups made entirely in game into the same `EventSignup` rows
+  the site's own sign-up form writes, resolving character → member through `WowCharacter.member_id` (unlinked
+  characters are skipped and counted in the import result). **Newest wins**: a sign-up only applies if the stored
+  row's `updated_at` is older than the addon's `at`, so whichever of the site or the game answered most recently
+  is what sticks; officer chart/bench/attended fields are never touched by an import.
+- **Guild bank** (`GET /api/guild/bank`, member): an insert-only, addon-deduplicated (by the addon's own id) log of
+  deposits/withdrawals/moves/repairs/tab purchases/money changes, newest first with 30-day deposit/withdrawal
+  totals.
+- **News** (`GET /api/guild/news`, public): a generated feed (`boss_kill`, `first_kill`, `loot`, `level`, `joined`,
+  `announcement`, `badge`), one row per source event the first time it's recorded so re-importing the same addon
+  data never duplicates an entry; the last 60 entries over 14 days also ride along in the `SQI1:` game-import
+  string's public part so the addon can show it offline.
+- **Announcements** (`GET /api/guild/announcements`, public; `POST`, officer): officers post from the game
+  (`discord: true` queues it for the bot) or from the site's Sync page; both land in the same feed and also feed
+  news. The bot's `AnnouncementsCog` polls every guild with an `announcement_channel_id` set every 2 minutes
+  (`GET /api/guilds/{guild_id}/announcements/pending`, bot key), posts one gold embed per pending announcement
+  (title "Announcement", author = the announcement's author, description = its text), and acks each one
+  (`POST .../announcements/{id}/posted`) so it's never reposted; a failed ack or a Discord send failure just logs
+  and leaves the announcement pending for the next poll. `/announcements channel [channel]` (Manage Server) sets or
+  clears the channel (`bot/src/sidequest_bot/plugins/announcements.py`).
+- **Recruiting** (`GET/PUT /api/epgp/recruits`, `POST /api/epgp/recruits/{id}/votes`, officer-only): candidates with
+  a status (`applicant | trial | accepted | declined`), a free-text note, a vetting checklist (talked/gear
+  check/first raid/vouched), and one vote per officer (`yes | no | wait`) — upserted by id from the game, editable
+  from the Sync page's Recruits panel, and synced back out in the officer-only part of the game-import string.
+  Setting `status: trial` also sets the linked member's `raid_status`/`trial_started_at` the first time, from
+  either side.
+- **Member notes** (`GET /api/epgp/member-notes`, officer-only): officer notes about a character, recorded in game
+  and synced in on import — upsert by id, voidable but never un-voidable, read-only on the site (Sync page's Member
+  notes panel).
+- **Game-import v2** (`GET /api/epgp/game-import`, officer, always `"v": 2` now) adds three parts to the existing
+  `SQI1:` payload: a public part (`members`, `news`) broadcastable to the whole guild; an on-demand part
+  (`sheets` — each member's last 15 ledger entries and last 10 loot wins, `crafters` + a shared `recipe_names`
+  table) an officer's addon holds and answers member requests from; and an officer-only part (`recruits`,
+  `member_notes`, `inactive` — members seen in neither a roster sweep nor a raid session in 14 days) that stays on
+  officer addons and is never broadcast.
+
+The site pages are `/guild/` (roster/crafters/bank/news tabs, member), `/ledger/` (the EPGP standings/rules/loot/
+progression page from the previous section) and `/officers/sync/` (the import/export console, now also Recruits,
+Member notes and Announcement panels, officer).
 
 ### Link roles
 Members who sign in on the site get a role (default name **Signed the Ledger**); members who also link Battle.net

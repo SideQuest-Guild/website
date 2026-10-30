@@ -1,6 +1,19 @@
 // What each page shows to whom: signed-out visitors get event headlines only, members see rosters and can sign
 // up, officers get the Round Table, and only GMs get the member console.
-import { ADDONS, ATTENDANCE_EVENTS, EVENTS, GM, HEROES, LONG_TITLE, MEMBER, OFFICER, ONLINE } from "./data";
+import {
+  ADDONS,
+  ATTENDANCE_EVENTS,
+  EPGP_RECRUITS,
+  EVENTS,
+  GM,
+  GUILD_ANNOUNCEMENTS,
+  GUILD_ROSTER,
+  HEROES,
+  LONG_TITLE,
+  MEMBER,
+  OFFICER,
+  ONLINE,
+} from "./data";
 import { expect, test } from "./fixtures";
 
 const raid = EVENTS[0];
@@ -244,6 +257,25 @@ test.describe("account", () => {
     await expect(page.locator(".away-item")).toHaveCount(0);
     await expect(page.locator("#away-list")).toContainText("No away dates marked.");
   });
+
+  test("adding and removing a character calls the API and updates the list", async ({ page, site }) => {
+    site.signIn(MEMBER);
+    await page.goto("/account/");
+    await expect(page.locator("#char-list")).toContainText("No characters linked yet.");
+
+    await page.locator("#char-name").fill("Testerton");
+    await page.locator("#char-realm").fill("Whitemane");
+    await page.locator("#char-class").selectOption("warrior");
+    await page.locator("#char-form button[type=submit]").click();
+
+    const item = page.locator(".char-item");
+    await expect(item).toHaveCount(1);
+    await expect(item).toContainText("Testerton-Whitemane");
+
+    await item.locator(".char-delete-btn").click();
+    await expect(page.locator(".char-item")).toHaveCount(0);
+    await expect(page.locator("#char-list")).toContainText("No characters linked yet.");
+  });
 });
 
 test.describe("officers", () => {
@@ -270,6 +302,136 @@ test.describe("officers", () => {
     await expect(page.locator("#tab-members")).toHaveAttribute("aria-selected", "true");
     await expect(page.locator("#officer-member-list [data-select-member]")).toHaveCount(3);
     await expect(page.locator("#member-detail-body")).toContainText(MEMBER.display_name);
+  });
+});
+
+test.describe("ledger", () => {
+  test("signed out, standings, rules, loot and progression all show", async ({ page, site }) => {
+    site.signIn(null);
+    await page.goto("/ledger/");
+    await expect(page.locator("#standings-rows tr")).toHaveCount(4);
+    await expect(page.locator("#rules-body")).toContainText("Boss kill");
+    await expect(page.locator("#loot-list")).toContainText("Glory of the Defender");
+    await expect(page.locator("#progression-body")).toContainText("Hyjal Summit");
+    await expect(page.locator(".ledger-table tr.is-you")).toHaveCount(0);
+  });
+
+  test("signed in, the member's own standings row is highlighted", async ({ page, site }) => {
+    site.signIn(MEMBER);
+    await page.goto("/ledger/");
+    await expect(page.locator(".ledger-table tr.is-you")).toContainText("Wanderer");
+  });
+});
+
+test.describe("officers sync", () => {
+  test("members are turned away at the gate", async ({ page, site }) => {
+    site.signIn(MEMBER);
+    await page.goto("/officers/sync/");
+    await expect(page.locator("#sync-gate")).toBeVisible();
+    await expect(page.locator("#sync-body")).toBeHidden();
+  });
+
+  test("officers can import a raid night and link a character", async ({ page, site }) => {
+    site.signIn(OFFICER);
+    await page.goto("/officers/sync/");
+    await expect(page.locator("#sync-body")).toBeVisible();
+
+    await page.locator("#import-payload").fill("SQX1:bW9jaw==");
+    await page.locator("#import-submit").click();
+    await expect(page.locator("#import-result")).toContainText("Sessions: 1 new");
+
+    const strayRow = page.locator("[data-character-id='char-2']");
+    await strayRow.locator("select[data-char-member]").selectOption("7");
+    await expect(page.locator("#sync-status")).toContainText("Character updated.");
+  });
+
+  test("an officer votes on a recruit and the vote shows up", async ({ page, site }) => {
+    site.signIn(OFFICER);
+    await page.goto("/officers/sync/");
+    const recruit = EPGP_RECRUITS[0]!;
+    const row = page.locator(`[data-recruit-id="${recruit.id}"]`);
+    await expect(row).toContainText(recruit.character);
+    await row.locator('[data-recruit-vote="no"]').click();
+    await expect(row).toContainText("Quest Guide: no");
+    await expect(page.locator("#sync-status")).toHaveText("Vote recorded.");
+  });
+
+  test("an officer composes an announcement and it appears in the recent list", async ({ page, site }) => {
+    site.signIn(OFFICER);
+    await page.goto("/officers/sync/");
+    await expect(page.locator("#announcements-list")).toContainText(GUILD_ANNOUNCEMENTS[0]!.text);
+
+    await page.locator("#announcement-text").fill("Raid moved to 8pm tonight");
+    await page.locator("#announcement-discord").check();
+    await page.locator("#announcement-submit").click();
+    await expect(page.locator("#announcement-status")).toHaveText("Posted.");
+    await expect(page.locator("#announcements-list")).toContainText("Raid moved to 8pm tonight");
+  });
+});
+
+test.describe("guild hall", () => {
+  test("signed out, the guild hall stays behind a gate", async ({ page, site }) => {
+    site.signIn(null);
+    await page.goto("/guild/");
+    await expect(page.locator("#guild-gate")).toBeVisible();
+    await expect(page.locator("#guild-gate-message a")).toHaveAttribute("href", /\/auth\/discord\/login\?next=/);
+    await expect(page.locator("#guild-body")).toBeHidden();
+  });
+
+  test("members see the roster, and can switch to the other tabs", async ({ page, site }) => {
+    site.signIn(MEMBER);
+    await page.goto("/guild/");
+    await expect(page.locator("#guild-body")).toBeVisible();
+    await expect(page.locator("#tab-roster")).toHaveAttribute("aria-selected", "true");
+    await expect(page.locator("#roster-list")).toContainText(GUILD_ROSTER.members[0]!.name);
+    await expect(page.locator("#roster-list")).toContainText(GUILD_ROSTER.unlinked[0]!.name);
+
+    await page.locator("#tab-crafters").click();
+    await expect(page).toHaveURL("/guild/#crafters");
+    await expect(page.locator("#panel-crafters")).toBeVisible();
+
+    await page.locator("#tab-bank").click();
+    await expect(page).toHaveURL("/guild/#bank");
+    await expect(page.locator("#bank-totals")).toContainText("4");
+
+    await page.locator("#tab-news").click();
+    await expect(page).toHaveURL("/guild/#news");
+    await expect(page.locator("#news-list")).toContainText("Rage Winterchill");
+  });
+
+  test("a direct link to a tab opens it", async ({ page, site }) => {
+    site.signIn(MEMBER);
+    await page.goto("/guild/#crafters");
+    await expect(page.locator("#tab-crafters")).toHaveAttribute("aria-selected", "true");
+    await expect(page.locator("#panel-crafters")).toBeVisible();
+  });
+
+  test("searching for a recipe lists its crafters and copies a whisper line", async ({ page, site }) => {
+    // Browser clipboard permissions differ across engines; stub the API in-page instead of granting permission.
+    await page.addInitScript(() => {
+      const win = window as typeof window & { copiedWhispers: string[] };
+      win.copiedWhispers = [];
+      Object.defineProperty(navigator, "clipboard", {
+        value: {
+          writeText: (text: string) => {
+            win.copiedWhispers.push(text);
+            return Promise.resolve();
+          },
+        },
+      });
+    });
+    site.signIn(MEMBER);
+    await page.goto("/guild/#crafters");
+    await page.locator("#crafter-query").fill("Flask of the Titans");
+    await expect(page.locator("#crafter-results")).toContainText("Flask of the Titans");
+    await expect(page.locator("#crafter-results")).toContainText("Wanderer");
+    await page.locator("[data-copy-whisper]").first().click();
+    await expect(page.locator("[data-copy-whisper]").first()).toHaveText("Copied");
+    const copied = await page.evaluate(() => {
+      const win = window as typeof window & { copiedWhispers: string[] };
+      return win.copiedWhispers;
+    });
+    expect(copied[0]?.startsWith("/w ")).toBe(true);
   });
 });
 
