@@ -120,7 +120,12 @@ def create_app(
             ),
             path="/schema",
             render_plugins=[ScalarRenderPlugin()],
-            openapi_router=Router(path="/schema", route_handlers=[], middleware=[OpenAPIExtensionsMiddleware]),
+            openapi_router=Router(
+                path="/schema",
+                route_handlers=[],
+                middleware=[OpenAPIExtensionsMiddleware],
+                include_in_schema=False,  # a custom router loses Litestar's default of hiding its own routes
+            ),
             tags=TAGS,
             components=Components(security_schemes=SECURITY_SCHEMES),
         ),

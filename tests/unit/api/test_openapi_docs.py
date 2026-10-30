@@ -22,14 +22,13 @@ async def _openapi_document(client: AsyncTestClient[Litestar]) -> dict[str, Any]
 
 
 def _operations(document: dict[str, Any]) -> list[tuple[str, str, dict[str, Any]]]:
-    """Every ``(path, method, operation)`` triple in the document, skipping hidden (``include_in_schema=False``)
-    routes (which never reach ``paths`` in the first place) and the ``/schema/*`` routes that serve the
-    document, Scalar, and friends -- infrastructure, not part of the API's own surface."""
+    """Every ``(path, method, operation)`` triple in the document. Hidden (``include_in_schema=False``) routes never
+    reach ``paths``, so the ``/schema/*`` routes that serve the document itself must not show up here either."""
     return [
         (path, method, operation)
         for path, path_item in document["paths"].items()
         for method, operation in path_item.items()
-        if method in {"get", "post", "put", "patch", "delete"} and not path.startswith("/schema")
+        if method in {"get", "post", "put", "patch", "delete"}
     ]
 
 
