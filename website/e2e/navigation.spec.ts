@@ -89,6 +89,9 @@ test("every destination is reachable from the bar", async ({ page, site }) => {
   await navToGroup(page, "guild", "Guild rules");
   await expect(page).toHaveURL("/rules/");
 
+  await navToGroup(page, "guild", "API reference");
+  await expect(page).toHaveURL("/api-reference/");
+
   await navToPlain(page, "Addons");
   await expect(page).toHaveURL("/addons/");
 
@@ -293,3 +296,46 @@ for (const [who, me, officerShown] of [
     }
   });
 }
+
+test("the Guild panel's Docs entry opens the external docs site in a new tab", async ({ page, site }) => {
+  site.signIn(MEMBER);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+
+  await page.getByRole("button", { name: "Guild", exact: true }).hover();
+  const docs = page.locator("[data-nav-panel]").getByRole("link", { name: "Docs" });
+  await expect(docs).toHaveAttribute("href", "https://docs.sidequest-guild.com");
+  await expect(docs).toHaveAttribute("target", "_blank");
+  await expect(docs).toHaveAttribute("rel", "noreferrer");
+});
+
+test("the sheet's Docs entry opens the external docs site in a new tab", async ({ page, site }) => {
+  site.signIn(MEMBER);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+
+  await openSheet(page);
+  const docs = page.locator("[data-nav-sheet]").getByRole("link", { name: "Docs" });
+  await expect(docs).toHaveAttribute("href", "https://docs.sidequest-guild.com");
+  await expect(docs).toHaveAttribute("target", "_blank");
+});
+
+test("the crest and first link sit at the same height on the homepage and an inner page", async ({ page, site }) => {
+  site.signIn(null);
+  await page.setViewportSize({ width: 1440, height: 900 });
+
+  await page.goto("/");
+  const heroCrestBox = await page.locator(".nav-brand-crest").boundingBox();
+  const heroLinkBox = await page.locator(".nav-bar a.nav-link").first().boundingBox();
+
+  await page.goto("/events/");
+  const innerCrestBox = await page.locator(".nav-brand-crest").boundingBox();
+  const innerLinkBox = await page.locator(".nav-bar a.nav-link").first().boundingBox();
+
+  expect(heroCrestBox).not.toBeNull();
+  expect(innerCrestBox).not.toBeNull();
+  expect(heroLinkBox).not.toBeNull();
+  expect(innerLinkBox).not.toBeNull();
+  expect(Math.abs((heroCrestBox?.y ?? 0) - (innerCrestBox?.y ?? 0))).toBeLessThanOrEqual(1);
+  expect(Math.abs((heroLinkBox?.y ?? 0) - (innerLinkBox?.y ?? 0))).toBeLessThanOrEqual(1);
+});

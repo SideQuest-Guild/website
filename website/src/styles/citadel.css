@@ -106,6 +106,10 @@ textarea {
   view-transition-name: site-nav;
 }
 .room-title {
+  /* Decorative text only (no links or controls), so it never has to intercept clicks; without this, its
+     own compositing layer (from view-transition-name) can still swallow clicks meant for the nav panel
+     once the panel grows tall enough to reach this low in the room-head, regardless of z-index. */
+  pointer-events: none;
   align-self: end;
   display: grid;
   justify-items: center;

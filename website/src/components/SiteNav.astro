@@ -3,7 +3,7 @@
 // chip. Homepage and every inner page render the same markup here (`hero` only changes how it's painted over
 // the art vs. sitting in a plain bar); `nav.ts` drives the group panel, the account menu and the phone sheet.
 import { Image } from "astro:assets";
-import { DISCORD_INVITE } from "../config";
+import { DISCORD_INVITE, DOCS_URL } from "../config";
 import guildLogo from "../../assets/brand/sidequest-logo.png";
 
 interface Props {
@@ -17,7 +17,7 @@ const raidsCurrent = current === "raids" || current === "ledger";
 const guildCurrent = current === "guild" || current === "heroes" || current === "rules";
 const accountCurrent = current === "account" || current === "officers";
 
-type NavEntry = { href: string; icon: string; name: string; desc: string; members?: boolean };
+type NavEntry = { href: string; icon: string; name: string; desc: string; members?: boolean; external?: boolean };
 
 const raidEntries: NavEntry[] = [
   {
@@ -56,6 +56,19 @@ const guildEntries: NavEntry[] = [
     icon: "i-nav-rules",
     name: "Guild rules",
     desc: "Be kind, 18 and over, and Blizzard's and Discord's rules.",
+  },
+  {
+    href: "/api-reference/",
+    icon: "i-nav-api",
+    name: "API reference",
+    desc: "Every route the site, bot and addon use.",
+  },
+  {
+    href: DOCS_URL,
+    icon: "i-nav-docs",
+    name: "Docs",
+    desc: "Guides for members, officers and developers.",
+    external: true,
   },
 ];
 
@@ -106,7 +119,11 @@ const groups: { id: "raids" | "guild"; label: string; width: number; entries: Na
         {groups.map((group) => (
           <div class="nav-panel-pane" data-pane={group.id} data-w={group.width}>
             {group.entries.map((entry) => (
-              <a class="nav-entry" href={entry.href}>
+              <a
+                class="nav-entry"
+                href={entry.href}
+                {...(entry.external ? { "data-astro-reload": true, target: "_blank", rel: "noreferrer" } : {})}
+              >
                 <svg class="nav-entry-ico ico" aria-hidden="true">
                   <use href={`#${entry.icon}`} />
                 </svg>
@@ -264,7 +281,11 @@ const groups: { id: "raids" | "guild"; label: string; width: number; entries: Na
         <section class="nav-sheet-group">
           <h2 class="nav-sheet-group-title">{group.label}</h2>
           {group.entries.map((entry) => (
-            <a class="nav-entry nav-sheet-entry" href={entry.href}>
+            <a
+              class="nav-entry nav-sheet-entry"
+              href={entry.href}
+              {...(entry.external ? { "data-astro-reload": true, target: "_blank", rel: "noreferrer" } : {})}
+            >
               <svg class="nav-entry-ico ico" aria-hidden="true">
                 <use href={`#${entry.icon}`} />
               </svg>
