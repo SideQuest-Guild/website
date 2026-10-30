@@ -34,6 +34,7 @@ flowchart LR
 | `/officers/` | officers | Events, addons, recruiting and attendance. Game Masters also get members, the activity log and moderation. |
 | `/officers/sync/` | officers | Move a raid night from the addon to the site, and points back to the addon. |
 | `/rules/`, `/privacy/`, `/terms/` | everyone | Guild rules, what the site keeps about you, and the terms. |
+| `/api-reference/` | everyone | The same API reference below, styled like the rest of the site. |
 
 A **member** is anyone in the SideQuest Discord who has signed in. An **officer** holds Quest Master or Quest Guide,
 and a **Game Master** holds Quest Master. Roles are read at sign-in and kept up to date by the bot, so a promotion in
@@ -87,7 +88,8 @@ applies it.
 | `tests/` | Python tests. |
 | `website/e2e/` | Browser tests. |
 
-With the API running, `/schema` lists every route with what it takes and returns.
+With the API running, `/schema` lists every route with what it takes and returns; `/api-reference/` on the site shows
+the same thing, themed to match.
 
 ## How the pieces talk
 

@@ -1,0 +1,88 @@
+/* SideQuest's night-chamber tokens mapped onto Scalar's theme variables. Scalar runs with theme: "none" and
+   forceDarkModeState: "dark" (the site is dark-only), so these are the only colors and fonts it ever reads.
+   Injected into a <style> only while the API reference page is open (src/scripts/api-reference.ts) so these
+   rules never reach any other page. */
+.api-reference-mount {
+  --scalar-font: var(--serif);
+  --scalar-font-code: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* Square corners, like every chamber and panel on the site. --scalar-radius-full stays round: it draws small
+     circular bits (method dots, avatars), not boxes. */
+  --scalar-radius: 0;
+  --scalar-radius-md: 0;
+  --scalar-radius-lg: 0;
+  --scalar-radius-xl: 0;
+  --scalar-radius-2xl: 0;
+  --scalar-radius-3xl: 0;
+  --scalar-radius-max: 0;
+
+  --scalar-color-1: var(--ink);
+  --scalar-color-2: var(--mist);
+  --scalar-color-3: var(--mist-2);
+  --scalar-color--1: var(--ink-2);
+  --scalar-color-accent: var(--gold);
+  --scalar-color-disabled: var(--ink-3);
+  --scalar-color-ghost: var(--mist-2);
+
+  --scalar-background-1: var(--night);
+  --scalar-background-2: var(--night-2);
+  --scalar-background-3: var(--night-3);
+  --scalar-background-4: var(--night-3);
+  --scalar-background-accent: color-mix(in oklch, var(--gold), transparent 85%);
+  --scalar-border-color: var(--stone);
+
+  --scalar-link-color: var(--gold);
+  --scalar-link-color-hover: var(--gold-2);
+  --scalar-link-color-visited: var(--gold-2);
+  --scalar-focus-color: var(--gold);
+  --scalar-code-language-color-supersede: var(--ink);
+
+  /* Primary actions (Send, Copy, Download) use the site's gold call-to-action. */
+  --scalar-button-1: var(--gold);
+  --scalar-button-1-hover: color-mix(in oklch, var(--gold), var(--ink) 10%);
+  --scalar-button-1-color: var(--night);
+
+  /* HTTP method and status colors, taken from the game's own class and quality colors so they read as part of
+     the site instead of generic framework red/green/blue. */
+  --scalar-color-green: var(--c-hunter);
+  --scalar-color-red: var(--error);
+  --scalar-color-orange: var(--c-warrior);
+  --scalar-color-blue: var(--c-shaman);
+  --scalar-color-yellow: var(--gold);
+  --scalar-color-purple: var(--q-epic);
+  --scalar-color-danger: var(--error);
+  --scalar-background-danger: color-mix(in oklch, var(--error), var(--night) 88%);
+  --scalar-color-alert: var(--ink);
+  --scalar-background-alert: color-mix(in oklch, var(--gold), var(--night) 90%);
+  --scalar-color-query: var(--c-shaman);
+
+  --scalar-tooltip-background: var(--night);
+  --scalar-tooltip-color: var(--ink);
+  --scalar-scrollbar-color: var(--royal-2);
+  --scalar-scrollbar-color-active: var(--royal);
+  --scalar-shadow-1: 0 1px 3px rgba(4, 8, 16, 0.5);
+  --scalar-shadow-2: 0 12px 30px rgba(4, 8, 16, 0.6);
+
+  /* The sidebar matches the tinted night panel the rest of the site uses for secondary surfaces. */
+  --scalar-sidebar-background-1: var(--night-2);
+  --scalar-sidebar-color-1: var(--ink);
+  --scalar-sidebar-color-2: var(--mist-2);
+  --scalar-sidebar-border-color: var(--stone);
+  --scalar-sidebar-item-hover-color: var(--gold);
+  --scalar-sidebar-item-hover-background: color-mix(in oklch, var(--royal), transparent 70%);
+  --scalar-sidebar-item-active-background: color-mix(in oklch, var(--royal), transparent 55%);
+  --scalar-sidebar-color-active: var(--gold);
+  --scalar-sidebar-search-background: var(--night);
+  --scalar-sidebar-search-border-color: var(--stone);
+  --scalar-sidebar-search-color: var(--mist);
+}
+
+/* Headings inside Scalar's own document read like the rest of the site's chamber sub-headings: the display
+   serif, not Scalar's default sans. */
+.api-reference-mount .scalar-app h1,
+.api-reference-mount .scalar-app h2,
+.api-reference-mount .scalar-app .section-header {
+  font-family: var(--display);
+  font-weight: 400;
+  letter-spacing: 0.01em;
+}

@@ -24,6 +24,7 @@ const PAGES = [
   { name: "rules", path: "/rules/" },
   { name: "privacy", path: "/privacy/" },
   { name: "terms", path: "/terms/" },
+  { name: "api reference", path: "/api-reference/" },
   { name: "not found", path: "/no-such-page/", nav: false },
 ];
 

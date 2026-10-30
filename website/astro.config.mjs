@@ -7,6 +7,10 @@ import { defineConfig } from "astro/config";
 import litestar from "litestar-vite-plugin/astro";
 import serviceWorker from "./service-worker/integration.mjs";
 
+// Packages pulled in only by the API reference page's lazy-loaded Scalar renderer (Scalar itself, and the Vue it's
+// built on); bundled into one predictably-named chunk so the service worker can leave it out of the install-time
+// precache (service-worker/integration.mjs).
+const SCALAR_PACKAGES = /node_modules\/(@scalar\/|@vue\/|@vueuse\/|vue-demi\/|vue-sonner\/|vue\/)/;
 // Backend port for Astro's dev-time /api proxy and HMR websocket target (default 8000).
 const LITESTAR_PORT = process.env.LITESTAR_PORT ?? "8000";
 
@@ -36,6 +40,20 @@ export default defineConfig({
     define: {
       SQ_BUILD: JSON.stringify(BUILD_ID),
       SQ_SERVICE_WORKER: JSON.stringify(SERVICE_WORKER),
+    },
+    build: {
+      rollupOptions: {
+        output: {
+          // Scalar (the API reference's renderer) is only ever imported from that one page's script; a
+          // predictable chunk name lets the service worker (service-worker/integration.mjs) leave it out of
+          // every other visitor's install-time precache.
+          manualChunks(id) {
+            if (SCALAR_PACKAGES.test(id)) {
+              return "scalar-reference";
+            }
+          },
+        },
+      },
     },
   },
 });

@@ -5,6 +5,10 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const PRECACHED = /\.(js|css|woff2)$/;
+// Chunks only ever requested from one lazy-loaded page (e.g. the API reference's Scalar renderer) are big and
+// not worth every visitor downloading at install time; `asset()` in sw.js still caches them the first time that
+// page actually fetches one. Matched against the asset's filename, not its full path.
+const PRECACHE_EXCLUDE = [/^scalar-reference\./];
 
 // Every `<dir>/index.html` is a page at `/<dir>/`; 404.html is only ever served by the origin for a miss.
 async function pagePaths(root) {
@@ -31,7 +35,9 @@ export default function serviceWorker({ enabled, build }) {
         }
         const pages = await pagePaths(out);
         const assets = (await readdir(path.join(out, "_astro"))).toSorted().map((name) => `/_astro/${name}`);
-        const precache = assets.filter((asset) => PRECACHED.test(asset));
+        const precache = assets.filter(
+          (asset) => PRECACHED.test(asset) && !PRECACHE_EXCLUDE.some((pattern) => pattern.test(path.basename(asset))),
+        );
         const constants = [
           `const BUILD = ${JSON.stringify(build)};`,
           `const PAGES = ${JSON.stringify(pages)};`,

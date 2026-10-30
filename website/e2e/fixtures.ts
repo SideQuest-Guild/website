@@ -77,6 +77,86 @@ function anonymousDetail(detail: EventDetail): EventDetail {
 const json = (route: Route, body: unknown, status = 200) =>
   route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) });
 
+// A trimmed copy of the real API's OpenAPI document (api/src/sidequest_api/app.py), just enough paths and shapes
+// to exercise the API reference page's chrome, sidebar and an operation's parameters/responses without the
+// hundreds of real routes.
+const OPENAPI_SPEC = {
+  openapi: "3.1.0",
+  info: {
+    title: "SideQuest Guild API",
+    version: "0.1.0",
+    description: "The API behind the SideQuest site, the Discord bot and the in-game addon.",
+  },
+  servers: [{ url: "/" }],
+  tags: [
+    { name: "Events", description: "Upcoming and past guild events." },
+    { name: "Me", description: "The signed-in visitor." },
+    { name: "Bot", description: "Called by the Discord bot with its shared key." },
+  ],
+  paths: {
+    "/api/events": {
+      get: {
+        tags: ["Events"],
+        summary: "List events",
+        operationId: "list_events",
+        parameters: [
+          { name: "when", in: "query", schema: { type: "string", enum: ["upcoming", "past"] } },
+          { name: "kind", in: "query", schema: { type: "string" } },
+        ],
+        responses: {
+          "200": {
+            description: "Events matching the filters",
+            content: {
+              "application/json": {
+                schema: { type: "array", items: { $ref: "#/components/schemas/EventSummary" } },
+              },
+            },
+          },
+        },
+      },
+    },
+    "/api/me": {
+      get: {
+        tags: ["Me"],
+        summary: "The signed-in visitor",
+        operationId: "get_me",
+        security: [{ SessionAuth: [] }],
+        responses: {
+          "200": { description: "Signed in", content: { "application/json": { schema: { type: "object" } } } },
+          "401": { description: "Not signed in" },
+        },
+      },
+    },
+    "/api/guilds/{guild_id}/members": {
+      get: {
+        tags: ["Bot"],
+        summary: "List guild members",
+        operationId: "bot_list_members",
+        security: [{ ApiKeyAuth: [] }],
+        parameters: [{ name: "guild_id", in: "path", required: true, schema: { type: "string" } }],
+        responses: { "200": { description: "The guild's members" } },
+      },
+    },
+  },
+  components: {
+    securitySchemes: {
+      ApiKeyAuth: { type: "apiKey", in: "header", name: "X-API-Key" },
+      SessionAuth: { type: "apiKey", in: "cookie", name: "session" },
+    },
+    schemas: {
+      EventSummary: {
+        type: "object",
+        required: ["id", "title", "starts_at"],
+        properties: {
+          id: { type: "string" },
+          title: { type: "string" },
+          starts_at: { type: "string", format: "date-time" },
+        },
+      },
+    },
+  },
+};
+
 export const test = base.extend<{ site: Site }>({
   site: async ({ context, baseURL }, use) => {
     let me: Me | null = null;
@@ -535,6 +615,8 @@ export const test = base.extend<{ site: Site }>({
         body: "<!doctype html><title>auth</title><p>auth stub</p>",
       }),
     );
+    // The API reference page (src/pages/api-reference/) reads this directly, not through /api/.
+    await context.route("**/schema/openapi.json", (route) => json(route, OPENAPI_SPEC));
 
     for (const page of context.pages()) {
       watchErrors(page, origin, errors);

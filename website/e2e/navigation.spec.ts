@@ -70,6 +70,32 @@ test("pages keep working after leaving and coming back", async ({ page, site }) 
   await expect(page.locator("#events-upcoming a.quest")).toHaveCount(1);
 });
 
+test("the API reference keeps working after leaving and coming back", async ({ page, site }) => {
+  site.signIn(null);
+  await page.goto("/");
+  await page.evaluate(() => Object.assign(window, { e2eDocument: true }));
+
+  await page.locator("footer").getByRole("link", { name: "API", exact: true }).click();
+  await expect(page).toHaveURL("/api-reference/");
+  // Narrow viewports collapse each tag's operations behind "Show More"; "SideQuest Guild API" is Scalar's own
+  // document title, rendered either way, so it proves the spec loaded without depending on that collapse state.
+  await expect(page.getByRole("heading", { name: "SideQuest Guild API" })).toBeVisible();
+
+  await navTo(page, "Events");
+  await expect(page).toHaveURL("/events/");
+
+  await page.goBack();
+  // Scalar adds its own hash as sections scroll into view; the path, not the hash, is what proves the router
+  // actually came back here instead of reloading a stale history entry.
+  await expect(page).toHaveURL(/\/api-reference\/(#.*)?$/);
+  // The lazy-loaded Scalar chunk (service-worker/integration.mjs excludes it from the precache) re-parses from
+  // scratch here; under parallel test load that can take longer than the default assertion timeout.
+  await expect(page.getByRole("heading", { name: "SideQuest Guild API" })).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator(".t-doc__sidebar")).toBeAttached();
+
+  expect(await sameDocument(page), "a link loaded a new document").toBe(true);
+});
+
 test("sign-in leaves the site", async ({ page, site }) => {
   site.signIn(null);
   await page.goto("/account/");

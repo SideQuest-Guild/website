@@ -15,12 +15,14 @@
     "test:unit": "node --test src/scripts/*.test.ts"
   },
   "dependencies": {
+    "@scalar/api-reference": "1.76.3",
     "astro": "^7.4.2"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.12",
     "@astrojs/compiler-rs": "^0.5.2",
     "@playwright/test": "1.64.1",
+    "@scalar/types": "0.26.0",
     "@types/node": "^24.19.2",
     "litestar-vite-plugin": "^0.32.0",
     "oxfmt": "^0.75.0",

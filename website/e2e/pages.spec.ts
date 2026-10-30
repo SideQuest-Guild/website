@@ -614,3 +614,39 @@ test.describe("attendance", () => {
     await expect(page.locator("#attendance-trend-chart svg")).toBeVisible();
   });
 });
+
+test.describe("API reference", () => {
+  // Scalar hides its sidebar behind a toggle below its own "lg" breakpoint; the sidebar-under-header layout is a
+  // desktop concern, so this runs at the width used for the final 1568px review screenshot.
+  test.use({ viewport: { width: 1568, height: 980 } });
+
+  test("shows operations from the OpenAPI document, themed, under the header", async ({ page, site }) => {
+    site.signIn(null);
+    await page.goto("/api-reference/");
+    await expect(page.getByRole("heading", { level: 1, name: "API", exact: true })).toBeVisible();
+    await expect(page.locator(".t-doc__sidebar")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "List events" })).toBeVisible();
+    const sidebarNav = page.locator(".t-doc__sidebar");
+    await expect(sidebarNav.getByRole("link", { name: "Events", exact: true })).toBeVisible();
+    await expect(sidebarNav.getByRole("link", { name: "Me", exact: true })).toBeVisible();
+    await expect(sidebarNav.getByRole("link", { name: "Bot", exact: true })).toBeVisible();
+
+    const header = await page.locator(".api-reference-room .page-header").boundingBox();
+    const sidebar = await page.locator(".t-doc__sidebar").boundingBox();
+    expect(sidebar?.y ?? -1, "sidebar sits below the header").toBeGreaterThanOrEqual(
+      (header?.y ?? 0) + (header?.height ?? 0) - 1,
+    );
+
+    // theme: "none" with forced dark mode and withDefaultFonts: false; nothing but this page's own font and colors.
+    const body = page.locator(".scalar-app").first();
+    await expect(body).toHaveCSS("background-color", /rgb\(10, 15, 26\)|rgba\(10, 15, 26/);
+    // Scalar's "Ask AI" chat sends the spec and questions to Scalar's servers, so it stays off.
+    await expect(page.getByText("Ask AI")).toHaveCount(0);
+
+    // The header stays in view while reading further down, so the sidebar's offset never points at empty space.
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+    const scrolledHeader = await page.locator(".api-reference-room .page-header").boundingBox();
+    expect(scrolledHeader?.y, "header stays at the top after scrolling").toBe(0);
+  });
+});
