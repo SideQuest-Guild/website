@@ -1446,11 +1446,15 @@ html:not(.officer) [data-officer-nav] {
   padding: 0;
   list-style: none;
 }
+/* Each item is as wide as its name needs, within bounds: short names keep an even rhythm, long ones get room
+   instead of spilling into their neighbours. */
 .online-now-member {
   display: grid;
   justify-items: center;
+  align-content: start;
   gap: 6px;
-  width: 78px;
+  min-width: 78px;
+  max-width: 128px;
   text-align: center;
   transition:
     opacity 0.6s var(--ease),
@@ -1500,7 +1504,16 @@ html:not(.officer) [data-officer-nav] {
   border-color: #b05a4a;
   box-shadow: 0 0 6px rgba(176, 90, 74, 0.45);
 }
+/* Wraps at spaces; a single word too long for the item breaks anywhere; past two lines it ends in an ellipsis
+   (the full name is the item's title). */
 .online-now-name {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  max-width: 100%;
+  overflow: hidden;
+  overflow-wrap: anywhere;
   color: var(--ink-2);
 }
 .online-now-activity {

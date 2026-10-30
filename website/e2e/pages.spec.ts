@@ -88,6 +88,23 @@ test.describe("homepage", () => {
       "https://discord.com/channels/1564671275316543508",
     );
   });
+
+  test("online-now names stay inside their own item", async ({ page, site }) => {
+    site.signIn(MEMBER);
+    await page.goto("/");
+    await expect(page.locator(".online-now-member")).toHaveCount(ONLINE.members.length);
+    const spills = await page.locator(".online-now-member").evaluateAll((items) =>
+      items.flatMap((item) => {
+        const name = item.querySelector(".online-now-name");
+        const box = item.getBoundingClientRect();
+        const text = name?.getBoundingClientRect();
+        const fits =
+          name && text && name.scrollWidth <= name.clientWidth && text.left >= box.left && text.right <= box.right;
+        return fits ? [] : [item.getAttribute("title")];
+      }),
+    );
+    expect(spills).toEqual([]);
+  });
 });
 
 test.describe("events", () => {

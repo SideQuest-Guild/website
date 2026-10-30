@@ -14,7 +14,7 @@ function memberMarkup(member: DiscordOnlineMember): string {
     ? `<img class="online-now-avatar" src="${escapeHtml(member.avatar_url)}" alt="${escapeHtml(member.name)}" width="40" height="40" loading="lazy" decoding="async" />`
     : `<span class="online-now-avatar online-now-avatar-empty" role="img" aria-label="${escapeHtml(member.name)}"></span>`;
   const activity = member.activity ? `<span class="online-now-activity">${escapeHtml(member.activity)}</span>` : "";
-  return `<li class="online-now-member" data-status="${escapeHtml(member.status)}">
+  return `<li class="online-now-member" data-status="${escapeHtml(member.status)}" title="${escapeHtml(member.name)}">
     <span class="online-now-ring">${avatar}</span>
     <span class="online-now-name caps">${escapeHtml(member.name)}</span>
     ${activity}

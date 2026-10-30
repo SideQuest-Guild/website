@@ -191,6 +191,10 @@ export const ONLINE: DiscordOnline = {
     { name: "Quest Guide", status: "online", avatar_url: null, activity: null },
     { name: "Quest Master", status: "idle", avatar_url: null, activity: null },
     { name: "Lantern", status: "dnd", avatar_url: null, activity: "Raiding" },
+    // Long single-word names side by side used to spill into each other; the last is Discord's 32-character max.
+    { name: "Neonmancy", status: "online", avatar_url: null, activity: null },
+    { name: "Norris", status: "online", avatar_url: null, activity: null },
+    { name: "Thunderfuryblessedbladeofthewind", status: "online", avatar_url: null, activity: null },
   ],
 };
 
