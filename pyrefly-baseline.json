@@ -62,6 +62,27 @@
       "name": "unbound-name",
       "concise_description": "`menu` may be uninitialized",
       "severity": "error"
+    },
+    {
+      "column": 15,
+      "path": "bot/src/sidequest_bot/plugins/event_sync.py",
+      "name": "bad-override",
+      "concise_description": "Class member `SignupDetailsModal.on_submit` overrides parent class `Modal` in an inconsistent manner",
+      "severity": "error"
+    },
+    {
+      "column": 15,
+      "path": "bot/src/sidequest_bot/plugins/event_sync.py",
+      "name": "bad-override",
+      "concise_description": "Class member `EventSignupButton.callback` overrides parent class `DynamicItem` in an inconsistent manner",
+      "severity": "error"
+    },
+    {
+      "column": 15,
+      "path": "bot/src/sidequest_bot/plugins/event_sync.py",
+      "name": "bad-override",
+      "concise_description": "Class member `ChangeSignupDetailsButton.callback` overrides parent class `DynamicItem` in an inconsistent manner",
+      "severity": "error"
     }
   ]
 }

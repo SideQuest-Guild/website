@@ -8,6 +8,7 @@ const articles = [
   { id: "discord-sign-in", title: "Signing in with Discord" },
   { id: "battle-net", title: "Linking Battle.net" },
   { id: "events", title: "Event sign-ups" },
+  { id: "hall-of-heroes", title: "Hall of Heroes" },
   { id: "cookies", title: "Cookies" },
   { id: "bot", title: "The guild bot" },
   { id: "who-else", title: "Who else handles it" },
@@ -84,7 +85,9 @@ const articles = [
   <Article id="events" n={4} title="Event sign-ups">
     <p>
       When you sign up for an event we keep your answer (going, maybe or can't), and when you give them, your character,
-      class, role and note. On raid nights officers may also place you in a group or on the bench.
+      class, role and note. On raid nights officers may also place you in a group or on the bench. You can sign up
+      either on this site or with the Going/Maybe/Can't buttons on the event's post in Discord; both write the same
+      sign-up.
     </p>
     <p>
       <strong>Event details and sign-ups are for signed-in members:</strong> the public can see an event's name, kind,
@@ -101,9 +104,45 @@ const articles = [
       Signed-in members can see the count and the names of people who have signed in on this site; the public only sees
       the event's name, kind, time and place.
     </p>
+    <p>
+      You can also create a private calendar link on your <a href="/account/">Account</a> page: a random secret URL for
+      Google Calendar or Apple Calendar. Anyone holding that link can see the guild's events and your sign-ups, so don't
+      share it; making a new link stops the old one working right away.
+    </p>
+    <p>
+      You can mark date ranges you'll be away on the same page. We keep them until they pass, show them to signed-in
+      members on an event's page for that date, and the bot gives you the <strong>Away on a Quest</strong> Discord role
+      while a range is active.
+    </p>
+    <p>
+      After an event, officers record who actually came: a Came or No-show mark for each sign-up, plus anyone who showed
+      up without signing up first (a walk-in). While an event is running, the bot notes how many minutes each member
+      spends in the guild's voice channels during that event — minutes only, nothing about what's said — as a hint
+      officers can use when marking attendance. Officers and GMs can see this roster on the Officers page; GMs can also
+      see an aggregate attendance report and trend chart across the guild. Attendance feeds your
+      <a href="#hall-of-heroes">Hall of Heroes</a> stats, EP and badges.
+    </p>
   </Article>
 
-  <Article id="cookies" n={5} title="Cookies">
+  <Article id="hall-of-heroes" n={5} title="Hall of Heroes">
+    <p>
+      The <a href="/heroes/">Hall of Heroes</a> is a leaderboard for signed-in guild members only: your events and raids
+      attended, EP, attendance rate and chat level are shown there next to every other member's, ranked against each
+      other for the current season, the last month, and all time.
+    </p>
+    <p>
+      Badges on the Hall of Heroes (First Steps, Raid Regular and the rest) are earned automatically from the same
+      attendance and chat data, and are also Discord roles: the bot creates and assigns them, and announces new ones in
+      the server. Anyone in the server can see the badge roles on your Discord profile; signed-in members can also see
+      badge names and the date each was earned on your Hall of Heroes profile.
+    </p>
+    <p>
+      Deleting your account (see <a href="#deleting">Deleting your data</a>) removes you from the Hall of Heroes and
+      strips every badge role the bot can manage, the same as any other Discord role it granted you.
+    </p>
+  </Article>
+
+  <Article id="cookies" n={6} title="Cookies">
     <ul>
       <li>
         <strong>sq_session</strong> keeps you signed in. It's encrypted, holds only your account number, can't be read
@@ -128,7 +167,7 @@ const articles = [
     <p>No analytics or advertising cookies. If you never sign in, you get no cookies at all.</p>
   </Article>
 
-  <Article id="bot" n={6} title="The guild bot">
+  <Article id="bot" n={7} title="The guild bot">
     <p>Inside the SideQuest Discord, the guild's bot keeps:</p>
     <ul>
       <li>Your chat XP and level, erased if you delete your site account</li>
@@ -147,9 +186,14 @@ const articles = [
       account erases it right away. Moderation records are kept to keep the guild safe, and guild masters can read them,
       and correct a reason, on this site.
     </p>
+    <p>
+      Separately, once you're signed in, the site also shows which SideQuest members are currently online in Discord —
+      name, status and avatar — pulled live from Discord's own public server widget, not stored. Avatars load directly
+      from Discord's CDN. Signed-out visitors only see a total online count, never names.
+    </p>
   </Article>
 
-  <Article id="who-else" n={7} title="Who else handles it">
+  <Article id="who-else" n={8} title="Who else handles it">
     <ul>
       <li>
         <strong>Discord</strong> and <strong>Blizzard (Battle.net)</strong> run the sign-ins, under their own privacy
@@ -164,15 +208,16 @@ const articles = [
     <p>That's everyone. Nothing else is shared.</p>
   </Article>
 
-  <Article id="deleting" n={8} title="Deleting your data">
+  <Article id="deleting" n={9} title="Deleting your data">
     <ul>
       <li>
         <strong>Unlink Battle.net</strong> on your <a href="/account/">Account</a> page: your Battle.net data is erased.
       </li>
       <li>
-        <strong>Delete my account</strong> on the same page: your site account, every event sign-up, and your Discord
-        chat XP are erased, and you're signed out. Moderation records stay. The bot strips every Discord role it can
-        manage from you within a minute and puts you back behind #sign-the-ledger, as if you'd just joined.
+        <strong>Delete my account</strong> on the same page: your site account, every event sign-up and attendance mark,
+        your voice-minute records, your calendar link, your away dates, and your Discord chat XP are erased, and you're
+        signed out. Moderation records stay. The bot strips every Discord role it can manage from you within a minute
+        and puts you back behind #sign-the-ledger, as if you'd just joined.
       </li>
       <li>
         Removing SideQuest from <em>Authorized Apps</em> in Discord only stops future sign-ins. It doesn't reach us, so
@@ -184,7 +229,7 @@ const articles = [
     </p>
   </Article>
 
-  <Article id="changes" n={9} title="Changes">
+  <Article id="changes" n={10} title="Changes">
     <p>
       If what we keep changes, this page and its date change with it, and anything significant gets announced in the
       Discord first.

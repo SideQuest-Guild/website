@@ -90,9 +90,10 @@ web-fmt: ## Format the website with oxfmt
 web-fmt-check: ## Check website formatting with oxfmt
 	@$(WEB) npx oxfmt --check
 
-web-check: ## Type check the website's Astro files and its end-to-end tests
+web-check: ## Type check the website's Astro files and its end-to-end tests; run its unit tests
 	@$(WEB) npx astro check
 	@$(WEB) npx tsc -p e2e
+	@$(WEB) npm run test:unit
 
 check-all: fmt-check ruff-check type-check web-lint web-check test web-e2e ## Run every check CI runs
 	@$(UV) run --no-sync codespell

@@ -191,12 +191,14 @@ class Signup(BaseModel):
 class EventDetail(EventSummary):
     """A single event with its full roster.
 
-    ``signups``/``my_signup`` are empty and ``discord_interest`` is ``None`` for anonymous visitors.
+    ``signups``/``my_signup`` are empty, and ``discord_interest``/``away`` are ``None``, for anonymous visitors.
     """
 
     signups: list[Signup]
     my_signup: Signup | None
     discord_interest: DiscordInterest | None
+    away: list[SignupMember] | None
+    """Members away (see ``AwayRangeIn``) on this event's start date, America/Chicago. ``None`` if anonymous."""
 
 
 class EventCreate(BaseModel):

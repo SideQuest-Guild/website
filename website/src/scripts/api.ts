@@ -144,6 +144,8 @@ export type EventDetail = EventSummary & {
   my_signup: Signup | null;
   /** `null` for anonymous visitors (no session, no bot `X-API-Key`). */
   discord_interest: DiscordInterest | null;
+  /** Members away (see `AwayRange`) on this event's start date, America/Chicago. `null` for anonymous visitors. */
+  away: SignupMember[] | null;
 };
 
 export type AddonOrigin = "guild" | "community";
@@ -245,6 +247,75 @@ export type LogEntry = {
 
 export type LogPage = { entries: LogEntry[]; next_before: string | null };
 
+export type AttendanceRange = "last_30" | "season" | "all_time";
+
+/** One past event on the attendance tab's event picker. */
+export type AttendanceEventSummary = {
+  id: string;
+  title: string;
+  kind: EventKind;
+  starts_at: string;
+  status: EventStatus;
+  attendance_taken_at: string | null;
+  needs_attendance: boolean;
+};
+
+/** A guild member not currently signed up for the event, offered as a walk-in. */
+export type WalkInCandidate = { member_id: number; display_name: string; avatar_url: string | null };
+
+/** One sign-up on the attendance marking screen (`GET/PUT /api/events/{id}/attendance`). */
+export type AttendanceSignup = {
+  signup_id: string;
+  member_id: number;
+  display_name: string;
+  avatar_url: string | null;
+  character: string | null;
+  class: CharClass | null;
+  role: Role | null;
+  status: SignupStatus;
+  attended: boolean | null;
+  is_walk_in: boolean;
+  voice_minutes: number;
+  suggested_attended: boolean;
+};
+
+export type AttendanceDetail = {
+  event: AttendanceEventSummary;
+  signups: AttendanceSignup[];
+  walk_in_candidates: WalkInCandidate[];
+};
+
+export type AttendanceMarkEntry = { signup_id: string; attended: boolean };
+
+export type WalkInCreate = {
+  member_id: number;
+  character?: string | null;
+  class?: CharClass | null;
+  role?: Role | null;
+};
+
+export type AttendanceMark = { entries: AttendanceMarkEntry[]; walk_ins: WalkInCreate[] };
+
+/** One member's line on `GET /api/attendance/report`. */
+export type MemberAttendanceRow = {
+  member_id: number;
+  display_name: string;
+  avatar_url: string | null;
+  signed_up: number;
+  came: number;
+  no_shows: number;
+  walk_ins: number;
+  attendance_rate: number;
+  last_attended: string | null;
+};
+
+export type AttendanceReport = { range: AttendanceRange; raids_only: boolean; rows: MemberAttendanceRow[] };
+
+/** One week's point on `GET /api/attendance/trends`. */
+export type AttendanceTrendPoint = { week_start: string; attendees: number; signed_up: number; show_rate: number };
+
+export type AttendanceTrends = { range: AttendanceRange; raids_only: boolean; points: AttendanceTrendPoint[] };
+
 export type VoiceChannelCount = { name: string; count: number };
 
 /** ``GET /api/discord/live``: empty counts (``online: null``, ``voice: []``) when the bot hasn't reported recently. */
@@ -254,6 +325,114 @@ export type DiscordLive = {
   voice: VoiceChannelCount[];
   reported_at: string | null;
 };
+
+export type DiscordOnlineStatus = "online" | "idle" | "dnd";
+
+export type DiscordOnlineMember = {
+  name: string;
+  status: DiscordOnlineStatus;
+  avatar_url: string | null;
+  activity: string | null;
+};
+
+/** ``GET /api/discord/online`` (members only): the guild widget's live roster, or empty when Discord didn't answer. */
+export type DiscordOnline = {
+  presence_count: number | null;
+  members: DiscordOnlineMember[];
+  ok: boolean;
+};
+
+export type RecruitingPriority = "normal" | "high";
+
+export type RecruitingRoleWant = { role: Role; priority: RecruitingPriority; note: string | null };
+
+export type RecruitingClassWant = { class: CharClass; priority: RecruitingPriority; note: string | null };
+
+/** ``GET /api/recruiting`` (public): what the guild is currently recruiting for, empty if nothing is wanted. */
+export type Recruiting = {
+  roles: RecruitingRoleWant[];
+  classes: RecruitingClassWant[];
+  updated_at: string | null;
+};
+
+/** `GET/POST /api/me/calendar`: the signed-in member's private calendar feed link. */
+export type CalendarLink = { token: string; url: string };
+
+/** One of the signed-in member's away ranges (`GET/POST /api/me/away`); `start_date`/`end_date` are inclusive. */
+export type AwayRange = { id: string; start_date: string; end_date: string; note: string | null };
+
+/** One competitive Hall of Heroes season; mirrors `sidequest_common.schemas.heroes.Season`. */
+export type Season = { id: string; name: string; starts_at: string; ends_at: string | null };
+
+/** `season-one` is the only entry today; append here (not computed) the day a second season ships. */
+export const SEASONS: Season[] = [
+  { id: "season-one", name: "Season One", starts_at: "2026-11-04T00:00:00+00:00", ends_at: null },
+];
+
+/** One member's stats for one season (or all time), on a leaderboard row or a profile. */
+export type HeroSeasonStats = { ep: number; raids_attended: number; events_attended: number; attendance_rate: number };
+
+/** One `GET /api/heroes` leaderboard row. */
+export type HeroRow = {
+  rank: number;
+  member_id: number;
+  discord_id: string;
+  display_name: string;
+  avatar_url: string | null;
+  wow_class: CharClass | null;
+  chat_level: number;
+  ep: number;
+  raids_attended: number;
+  events_attended: number;
+  badge_ids: string[];
+};
+
+/** `GET /api/heroes?season=<id|all|month>`. Members only: 401 signed out. */
+export type HeroLeaderboard = { season_id: string; season_name: string; rows: HeroRow[] };
+
+/** One recent event on a profile's recent-events list. */
+export type HeroRecentEvent = { id: string; kind: EventKind; title: string; starts_at: string; ep: number };
+
+/** One badge a member has earned, for the profile's badge case; mirrors `sidequest_common.schemas.badges.EarnedBadge`. */
+export type EarnedBadge = { id: string; name: string; description: string; icon: string; earned_at: string };
+
+/** `GET /api/heroes/{member_id}`. Members only: 401 signed out, 404 unknown member. */
+export type HeroProfile = {
+  member_id: number;
+  discord_id: string;
+  display_name: string;
+  avatar_url: string | null;
+  wow_class: CharClass | null;
+  rank: number | null;
+  chat_level: number;
+  chat_xp: number;
+  chat_xp_into_level: number;
+  chat_xp_for_next_level: number;
+  seasons: Record<string, HeroSeasonStats>;
+  all_time: HeroSeasonStats;
+  first_event_date: string | null;
+  recent_events: HeroRecentEvent[];
+  badges: EarnedBadge[];
+};
+
+/** Badge id -> name, for the leaderboard's badge tooltips; mirrors `sidequest_common.schemas.badges.BADGES`
+ * (id and name only — the website never needs the Discord role color or the earning thresholds. Icons are drawn
+ * gold sigils in `Sprites.astro`, not sent by the API). */
+export const BADGE_INFO: Record<string, { name: string }> = {
+  first_steps: { name: "First Steps" },
+  first_raid: { name: "First Raid" },
+  raid_regular: { name: "Raid Regular" },
+  raid_veteran: { name: "Raid Veteran" },
+  perfect_month: { name: "Perfect Month" },
+  founding_member: { name: "Founding Member" },
+  chatterbox: { name: "Chatterbox" },
+  top_helper: { name: "Top Helper" },
+};
+
+/** Badge id -> the `Sprites.astro` symbol id for its gold sigil (e.g. `raid_veteran` -> `i-badge-raid-veteran`). */
+export function badgeIconId(id: string): string {
+  return `i-badge-${id.replaceAll("_", "-")}`;
+}
 
 export const CLASSES: CharClass[] = [
   "warrior",

@@ -94,6 +94,110 @@
   color: var(--mist);
 }
 
+/* ——— Calendar: a private feed link in a read-only well, with Copy beside it and framed subscribe buttons ——— */
+.calendar-link-row {
+  display: flex;
+  gap: 12px;
+  margin-top: 18px;
+}
+#calendar-url {
+  flex: 1;
+  min-width: 0;
+  min-height: 46px;
+  padding: 10px 12px;
+  background: rgba(4, 8, 16, 0.62);
+  border: 1px solid var(--stone);
+  font: inherit;
+  font-size: var(--body);
+  color: var(--mist);
+}
+#calendar-url:focus-visible {
+  outline: none;
+  border-color: var(--gold);
+}
+.calendar-link-row .btn-small {
+  flex: none;
+}
+
+/* ——— Away: a tidy list of ranges, then a one-row add form ——— */
+.away-list {
+  margin: 0 0 clamp(20px, 2vw, 28px);
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--stone-2);
+}
+.away-item {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--stone-2);
+}
+.away-range {
+  font-size: var(--body);
+  color: var(--mist);
+}
+.away-note {
+  font-size: var(--body);
+  color: var(--mist-2);
+}
+.away-note::before {
+  content: "\00b7";
+  margin-right: 0.6em;
+  color: var(--stone);
+}
+.away-item .away-delete-btn {
+  margin-left: auto;
+}
+.away-empty {
+  padding: 2px 0;
+  color: var(--mist-2);
+  font-style: italic;
+  list-style: none;
+}
+.away-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px 16px;
+}
+.away-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-weight: 500;
+  font-size: var(--caps);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--mist);
+}
+.away-form input {
+  min-height: 46px;
+  padding: 10px 12px;
+  background: rgba(4, 8, 16, 0.62);
+  border: 1px solid var(--stone);
+  font: inherit;
+  font-size: var(--body);
+  color: var(--ink);
+  color-scheme: dark;
+}
+.away-form input:hover {
+  border-color: rgba(168, 132, 73, 0.6);
+}
+.away-form input:focus-visible {
+  outline: none;
+  border-color: var(--gold);
+  background: rgba(4, 8, 16, 0.8);
+}
+.away-note-label {
+  flex: 1 1 200px;
+  min-width: 160px;
+}
+.away-form button[type="submit"] {
+  flex: none;
+}
+
 @media (max-width: 560px) {
   .sheet {
     gap: 16px;
@@ -105,5 +209,26 @@
   .links > div {
     grid-template-columns: minmax(0, 1fr);
     gap: 4px;
+  }
+  .calendar-link-row {
+    flex-direction: column;
+  }
+  .calendar-link-row .btn-small {
+    align-self: flex-start;
+  }
+  .away-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+  .away-item .away-delete-btn {
+    margin-left: 0;
+  }
+  .away-form {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .away-note-label {
+    flex: none;
   }
 }

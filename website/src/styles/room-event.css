@@ -60,6 +60,24 @@
   border-bottom: 0;
 }
 
+/* Away chips: a quieter line than the roster lists, since this is "heads up" rather than a count to scan. */
+.chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.chip-list .chip {
+  padding: 4px 10px;
+  background: rgba(6, 10, 18, 0.55);
+  border: 1px solid var(--stone-2);
+  border-radius: 999px;
+  font-size: 13px;
+  color: var(--mist);
+}
+
 /* ——— Signup chamber: either the form, or a clear invitation to sign in ——— */
 .signup-invite {
   max-width: 44em;
@@ -81,6 +99,19 @@
 }
 
 /* ——— Raid chart: eight group frames and the bench, drawn like the game's raid frames ——— */
+.chart-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.chart-preview-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
 .raid-frames {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -166,6 +197,32 @@
   padding: 8px 2px;
   color: var(--mist-2);
   font-size: var(--body);
+}
+/* A preview-suggested slot that differs from the saved chart, before Apply or Discard settles it. */
+.raid-bar-changed {
+  border-style: dashed;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--bar-color) 60%, transparent);
+}
+/* Drag-and-drop between groups and the bench: pointer events (mouse, touch, pen all fire the same ones), so the
+ * row stays the only draggable surface while its <select> keeps working as the keyboard/no-drag alternative. */
+.officer-view .raid-bar {
+  touch-action: none;
+  cursor: grab;
+}
+.raid-bar-dragging {
+  opacity: 0.35;
+}
+.raid-drag-ghost {
+  position: fixed;
+  z-index: 50;
+  list-style: none;
+  pointer-events: none;
+  opacity: 0.9;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
+}
+.raid-frame.drag-over {
+  outline: 2px dashed var(--gold);
+  outline-offset: -2px;
 }
 
 @media (max-width: 900px) {

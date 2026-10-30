@@ -2,7 +2,7 @@
 
 from advanced_alchemy.base import UUIDAuditBase
 from advanced_alchemy.types import JsonB
-from sqlalchemy import BigInteger, Boolean, Integer, Text
+from sqlalchemy import BigInteger, Boolean, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 DEFAULT_WELCOME_MESSAGE = "Welcome to **{guild}**, {mention}! Pull up a seat by the fire, adventurer."
@@ -56,3 +56,16 @@ class GuildConfig(UUIDAuditBase):
 
     # Signup notices
     signup_notice_channel_id: Mapped[int | None] = mapped_column(BigInteger, default=None)
+
+    # Weekly board
+    weekly_board_channel_id: Mapped[int | None] = mapped_column(BigInteger, default=None)
+    weekly_board_last_week: Mapped[str | None] = mapped_column(String(10), default=None)
+    """ISO date (``YYYY-MM-DD``) of the Monday whose board was last posted; prevents double-posting."""
+
+    # Away
+    away_role_id: Mapped[int | None] = mapped_column(BigInteger, default=None)
+
+    # Hall of Heroes badges
+    badge_channel_id: Mapped[int | None] = mapped_column(BigInteger, default=None)
+    badge_role_ids: Mapped[dict[str, int]] = mapped_column(JsonB, default=dict)
+    """Discord role id per badge id, created and kept by the bot's badges plugin."""

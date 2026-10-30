@@ -12,7 +12,7 @@ from uuid import UUID  # pydantic needs it at runtime
 
 from pydantic import BaseModel, Field
 
-from sidequest_common.schemas.events import EventKind
+from sidequest_common.schemas.events import EventCounts, EventKind
 
 
 class DiscordEventStatus(StrEnum):
@@ -50,6 +50,10 @@ class DiscordEventPush(BaseModel):
     discord_event_id: int | None
     thread_id: int | None = Field(default=None, description="The event's forum thread, if one has been created.")
     kind: EventKind
+    counts: EventCounts = Field(
+        default_factory=lambda: EventCounts(tank=0, healer=0, dps=0, signed=0, tentative=0, absent=0, interested=0),
+        description="Current headcounts, for the forum starter post's live counts line.",
+    )
     action: PushAction
     name: str = Field(max_length=100)
     title: str = Field(description="Full, untruncated title (``name`` is Discord's 100-char-limited version).")

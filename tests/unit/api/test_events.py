@@ -190,6 +190,18 @@ async def test_dungeon_kind_signup_without_character_class_role_is_400(
     assert response.status_code == 400
 
 
+async def test_role_kind_absent_signup_without_character_class_role_succeeds(
+    member_client: AsyncTestClient, discord_state: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    event_id = await _seed_event(db_sessionmaker, kind="raid")
+    await login_as(member_client, discord_state, discord_id=2024, roles=[])
+    response = await member_client.put(f"/api/events/{event_id}/signup", json={"status": "absent"})
+    assert response.status_code == 200
+    assert response.json()["character"] is None
+    assert response.json()["class"] is None
+    assert response.json()["role"] is None
+
+
 async def test_social_kind_accepts_bare_rsvp(
     member_client: AsyncTestClient, discord_state: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
 ) -> None:

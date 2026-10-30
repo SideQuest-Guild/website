@@ -3,7 +3,7 @@ import { getImage, Image } from "astro:assets";
 import Art from "../components/Art.astro";
 import JoinPlaque from "../components/JoinPlaque.astro";
 import SiteFooter from "../components/SiteFooter.astro";
-import { DISCORD_INVITE, LAUNCH } from "../config";
+import { DISCORD_GUILD_URL, DISCORD_INVITE, LAUNCH } from "../config";
 import Site from "../layouts/Site.astro";
 
 import addonsArt from "../../assets/plates/addons-art.png";
@@ -72,9 +72,11 @@ const panels = [
       imagesizes="100vw"
       media={mobileQuery}
     />
-    <!-- The Discord band and the Raids gate ask these as soon as their scripts run; start them with the HTML. -->
+    <!-- The Discord band, the Raids gate and the Recruiting band ask these as soon as their scripts run; start them
+         with the HTML. -->
     <link rel="preload" as="fetch" href="/api/discord/live" crossorigin="anonymous" />
     <link rel="preload" as="fetch" href="/api/events?when=upcoming&kind=raid" crossorigin="anonymous" />
+    <link rel="preload" as="fetch" href="/api/recruiting" crossorigin="anonymous" />
   </Fragment>
 
   <header class="site-header">
@@ -104,6 +106,9 @@ const panels = [
         </li>
         <li id="hero-raid-nav" hidden>
           <a href="#raids">Raids</a>
+        </li>
+        <li>
+          <a href="/heroes/">Heroes</a>
         </li>
         <li>
           <a href="#addons">Addons</a>
@@ -308,6 +313,16 @@ const panels = [
       </div>
     </section>
 
+    <section id="recruiting" class="recruit wrap" aria-labelledby="h-recruiting" hidden>
+      <div class="heading rise">
+        <span class="rule" aria-hidden="true"></span>
+        <h2 id="h-recruiting">RECRUITING</h2>
+        <span class="rule flip" aria-hidden="true"></span>
+      </div>
+      <p class="lede center">The guild is looking for a few more adventurers.</p>
+      <ul class="recruit-wanted" id="recruiting-want-list" aria-label="Roles and classes wanted"></ul>
+    </section>
+
     <section id="join" class="join" aria-labelledby="h-join">
       <Art
         class="join-art"
@@ -333,6 +348,16 @@ const panels = [
           In the Discord<span class="channels-online" data-discord-online hidden></span>
         </p>
         <ul class="hearths" aria-label="In voice now" data-hearths hidden></ul>
+        <div class="online-now" data-online-now hidden>
+          <p class="online-now-label caps">
+            Online now
+            <a class="online-now-link" data-online-now-link href={DISCORD_GUILD_URL}>
+              Open Discord
+            </a>
+          </p>
+          <ul class="online-now-list" aria-label="Online in the Discord now" data-online-now-list></ul>
+          <p class="online-now-more" data-online-now-more hidden></p>
+        </div>
       </div>
     </section>
   </main>
@@ -376,5 +401,7 @@ const panels = [
   <script>
     import "../scripts/raid-gate";
     import "../scripts/discord-live";
+    import "../scripts/discord-online";
+    import "../scripts/recruiting-band";
   </script>
 </Site>

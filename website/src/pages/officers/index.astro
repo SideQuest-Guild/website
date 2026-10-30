@@ -32,6 +32,26 @@ import "../../styles/room-officers.css";
       <button
         type="button"
         role="tab"
+        id="tab-recruiting"
+        aria-controls="panel-recruiting"
+        aria-selected="false"
+        tabindex="-1"
+      >
+        Recruiting
+      </button>
+      <button
+        type="button"
+        role="tab"
+        id="tab-attendance"
+        aria-controls="panel-attendance"
+        aria-selected="false"
+        tabindex="-1"
+      >
+        Attendance
+      </button>
+      <button
+        type="button"
+        role="tab"
         id="tab-members"
         aria-controls="panel-members"
         aria-selected="false"
@@ -220,6 +240,145 @@ import "../../styles/room-officers.css";
       </div>
     </section>
 
+    <section id="panel-recruiting" role="tabpanel" aria-labelledby="tab-recruiting" tabindex="0" hidden>
+      <div class="chamber-pair">
+        <form id="recruiting-form" class="chamber form">
+          <h2 class="chamber-title">Recruiting needs</h2>
+          <p class="aside">
+            Pick the roles and classes the guild is looking for. Checked items show on the homepage and in the guild's
+            welcome message for new guests, until unchecked here.
+          </p>
+          <fieldset>
+            <legend class="caps">Roles</legend>
+            <ul class="recruit-list" id="recruiting-role-list"></ul>
+          </fieldset>
+          <fieldset>
+            <legend class="caps">Classes</legend>
+            <ul class="recruit-list" id="recruiting-class-list"></ul>
+          </fieldset>
+          <div class="form-actions">
+            <button type="submit" class="btn" id="recruiting-save">
+              Save
+            </button>
+          </div>
+          <p class="status" id="recruiting-form-status" role="status" aria-live="polite"></p>
+        </form>
+      </div>
+    </section>
+
+    <section id="panel-attendance" role="tabpanel" aria-labelledby="tab-attendance" tabindex="0" hidden>
+      <div class="chamber-pair">
+        <div class="chamber">
+          <h2 class="chamber-title">Past events</h2>
+          <p class="aside">
+            Events that have happened. A gold quest mark shows the ones still waiting on attendance; a dim one means
+            attendance is done.
+          </p>
+          <ul class="quest-log" id="attendance-event-list" aria-label="Past events"></ul>
+        </div>
+        <div class="chamber">
+          <h2 class="chamber-title">Mark attendance</h2>
+          <p class="aside" id="attendance-empty">
+            Select an event to take attendance.
+          </p>
+          <form id="attendance-form" hidden>
+            <p class="aside">
+              Signed-up members default to Came; tentative and absent members default to not marked, unless they spent
+              at least half an hour in voice chat during the event.
+            </p>
+            <ul class="roster-list" id="attendance-signup-list" aria-label="Sign-ups"></ul>
+            <fieldset>
+              <legend class="caps">Walk-in</legend>
+              <div class="form-row">
+                <div class="field">
+                  <label for="attendance-walkin-member">Member</label>
+                  <select id="attendance-walkin-member"></select>
+                </div>
+                <div class="field" id="attendance-walkin-character-field" hidden>
+                  <label for="attendance-walkin-character">Character</label>
+                  <input id="attendance-walkin-character" maxlength="24" />
+                </div>
+                <div class="field" id="attendance-walkin-class-field" hidden>
+                  <label for="attendance-walkin-class">Class</label>
+                  <select id="attendance-walkin-class"></select>
+                </div>
+                <div class="field" id="attendance-walkin-role-field" hidden>
+                  <label for="attendance-walkin-role">Role</label>
+                  <select id="attendance-walkin-role"></select>
+                </div>
+              </div>
+              <button type="button" class="btn-quiet" id="attendance-walkin-add">
+                Add walk-in
+              </button>
+            </fieldset>
+            <ul class="roster-list" id="attendance-walkin-list" aria-label="Walk-ins to add this save"></ul>
+            <div class="form-actions">
+              <button type="submit" class="btn" id="attendance-save">
+                Save attendance
+              </button>
+            </div>
+            <p class="status" id="attendance-form-status" role="status" aria-live="polite"></p>
+          </form>
+        </div>
+      </div>
+
+      <div class="chamber" id="attendance-report" hidden>
+        <h2 class="chamber-title">Attendance report</h2>
+        <p class="aside">Only Quest Masters see this report.</p>
+        <div class="tabs" role="tablist" aria-label="Report range" id="attendance-range-tabs">
+          <button type="button" role="tab" data-range="last_30" aria-selected="true" tabindex="0">
+            Last 30 days
+          </button>
+          <button type="button" role="tab" data-range="season" aria-selected="false" tabindex="-1">
+            This season
+          </button>
+          <button type="button" role="tab" data-range="all_time" aria-selected="false" tabindex="-1">
+            All time
+          </button>
+        </div>
+        <label class="attendance-raids-only">
+          <input type="checkbox" id="attendance-raids-only" />
+          Raids only
+        </label>
+        <h3 class="sub-title">Weekly trend</h3>
+        <div
+          id="attendance-trend-chart"
+          class="attendance-trend-chart"
+          role="img"
+          aria-label="Weekly attendance trend"
+        ></div>
+        <h3 class="sub-title">By member</h3>
+        <div class="attendance-table-wrap">
+          <table class="attendance-table" id="attendance-report-table">
+            <thead>
+              <tr>
+                <th scope="col">Member</th>
+                <th scope="col" data-sort="signed_up">
+                  Signed up
+                </th>
+                <th scope="col" data-sort="came">
+                  Came
+                </th>
+                <th scope="col" data-sort="no_shows">
+                  No-shows
+                </th>
+                <th scope="col" data-sort="walk_ins">
+                  Walk-ins
+                </th>
+                <th scope="col" data-sort="attendance_rate">
+                  Rate
+                </th>
+                <th scope="col" data-sort="last_attended">
+                  Last attended
+                </th>
+              </tr>
+            </thead>
+            <tbody id="attendance-report-rows"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
     <section id="panel-members" role="tabpanel" aria-labelledby="tab-members" tabindex="0" hidden>
       <div class="chamber-pair">
         <div class="chamber">
@@ -325,6 +484,8 @@ import "../../styles/room-officers.css";
     MAX_EVENT_EP,
     ROLE_KINDS,
     ADDON_ORIGIN_LABELS,
+    CLASSES,
+    ROLES,
     type Addon,
     type AddonOrigin,
     type EventKind,
@@ -337,7 +498,21 @@ import "../../styles/room-officers.css";
     type LogEntry,
     type LogPage,
     type Me,
+    type Recruiting,
+    type RecruitingPriority,
+    type Role,
+    type CharClass,
     type RoleTag,
+    type AttendanceDetail,
+    type AttendanceEventSummary,
+    type AttendanceMark,
+    type AttendanceRange,
+    type AttendanceReport,
+    type AttendanceSignup,
+    type AttendanceTrendPoint,
+    type AttendanceTrends,
+    type MemberAttendanceRow,
+    type WalkInCreate,
   } from "../../scripts/api";
   import { onPage } from "../../scripts/page";
   import { seriesRuleText, weekdayPhrase, WEEKDAY_SHORT_LABELS } from "../../scripts/series";
@@ -507,6 +682,83 @@ import "../../styles/room-officers.css";
     const [hh, mm] = timeStr.split(":").map(Number);
     const dt = new Date(y ?? 1970, (m ?? 1) - 1, d ?? 1, hh ?? 0, (mm ?? 0) + minutes);
     return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}T${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
+  }
+  function recruitRow(kind: "role" | "class", value: string, label: string, colorClass: string): string {
+    return `
+      <li class="recruit-row">
+        <label class="recruit-check">
+          <input type="checkbox" data-${kind}="${value}" />
+          <span class="${colorClass}">${escapeHtml(label)}</span>
+        </label>
+        <select data-${kind}-priority="${value}" disabled>
+          <option value="normal">Normal</option>
+          <option value="high">High priority</option>
+        </select>
+        <input type="text" data-${kind}-note="${value}" maxlength="140" placeholder="Note (optional)" disabled />
+      </li>`;
+  }
+  function signupStateValue(s: AttendanceSignup): string {
+    if (s.attended !== null) {
+      return s.attended ? "came" : "no_show";
+    }
+    return s.suggested_attended ? "came" : "";
+  }
+  function pendingWalkInRow(w: WalkInCreate & { display_name: string }, index: number): string {
+    const detail = w.character
+      ? ` — ${escapeHtml(w.character)} · ${capitalize(w.class ?? "")} · ${capitalize(w.role ?? "")}`
+      : "";
+    return `
+      <li class="row-pair">
+        <span class="roster-row"><span class="roster-name">${escapeHtml(w.display_name)}${detail}</span></span>
+        <button type="button" class="btn-quiet" data-remove-walkin="${index}">Remove</button>
+      </li>`;
+  }
+  function attendanceSignupRow(s: AttendanceSignup): string {
+    const roleLine = s.character
+      ? `<span class="roster-meta">${escapeHtml(s.character)} · ${capitalize(s.class ?? "")} · ${capitalize(s.role ?? "")}</span>`
+      : "";
+    const walkInTag = s.is_walk_in ? `<span class="roster-meta">Walk-in</span>` : "";
+    const voiceMinutesText =
+      s.voice_minutes > 0
+        ? `<span class="roster-meta">In voice ${Math.floor(s.voice_minutes / 60) > 0 ? `${Math.floor(s.voice_minutes / 60)}h ` : ""}${s.voice_minutes % 60}m</span>`
+        : "";
+    return `
+      <li class="row-pair">
+        <span class="roster-row">
+          ${avatarMarkup(s.display_name, s.avatar_url, 36)}
+          <span>
+            <span class="roster-name">${escapeHtml(s.display_name)}</span>
+            <span class="roster-meta">${capitalize(s.status)}</span>
+            ${roleLine}
+            ${walkInTag}
+            ${voiceMinutesText}
+          </span>
+        </span>
+        <select data-signup-id="${s.signup_id}" aria-label="Attendance for ${escapeHtml(s.display_name)}">
+          <option value="" ${signupStateValue(s) === "" ? "selected" : ""}>Not marked</option>
+          <option value="came" ${signupStateValue(s) === "came" ? "selected" : ""}>Came</option>
+          <option value="no_show" ${signupStateValue(s) === "no_show" ? "selected" : ""}>No-show</option>
+        </select>
+      </li>`;
+  }
+
+  function weekLabel(weekStart: string): string {
+    return new Date(`${weekStart}T00:00:00`).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  }
+  function wireRecruitRows(container: HTMLElement): void {
+    container.querySelectorAll<HTMLInputElement>('input[type="checkbox"]').forEach((checkbox) => {
+      checkbox.addEventListener("change", () => {
+        const row = checkbox.closest("li");
+        const select = row?.querySelector<HTMLSelectElement>("select");
+        const note = row?.querySelector<HTMLInputElement>('input[type="text"]');
+        if (select) {
+          select.disabled = !checkbox.checked;
+        }
+        if (note) {
+          note.disabled = !checkbox.checked;
+        }
+      });
+    });
   }
   onPage("#officers-body", (signal) => {
     const statusEl = requireElement("officers-status");
@@ -1010,6 +1262,108 @@ import "../../styles/room-officers.css";
       }
     });
 
+    // ——— Recruiting ———
+    const ROLE_LABELS: Record<Role, string> = { tank: "Tank", healer: "Healer", dps: "DPS" };
+    const CLASS_LABELS: Record<CharClass, string> = {
+      warrior: "Warrior",
+      paladin: "Paladin",
+      hunter: "Hunter",
+      rogue: "Rogue",
+      priest: "Priest",
+      shaman: "Shaman",
+      mage: "Mage",
+      warlock: "Warlock",
+      druid: "Druid",
+    };
+
+    const recruitingForm = requireElement<HTMLFormElement>("recruiting-form");
+    const recruitingRoleList = requireElement("recruiting-role-list");
+    const recruitingClassList = requireElement("recruiting-class-list");
+    const recruitingFormStatus = requireElement("recruiting-form-status");
+
+    recruitingRoleList.innerHTML = ROLES.map((role) => recruitRow("role", role, ROLE_LABELS[role], "")).join("");
+    recruitingClassList.innerHTML = CLASSES.map((cls) =>
+      recruitRow("class", cls, CLASS_LABELS[cls], `cls-${cls}`),
+    ).join("");
+    wireRecruitRows(recruitingRoleList);
+    wireRecruitRows(recruitingClassList);
+
+    function applyRecruiting(recruiting: Recruiting): void {
+      for (const want of recruiting.roles) {
+        const checkbox = recruitingRoleList.querySelector<HTMLInputElement>(`input[data-role="${want.role}"]`);
+        const select = recruitingRoleList.querySelector<HTMLSelectElement>(`select[data-role-priority="${want.role}"]`);
+        const note = recruitingRoleList.querySelector<HTMLInputElement>(`input[data-role-note="${want.role}"]`);
+        if (checkbox) {
+          checkbox.checked = true;
+        }
+        if (select) {
+          select.disabled = false;
+          select.value = want.priority;
+        }
+        if (note) {
+          note.disabled = false;
+          note.value = want.note ?? "";
+        }
+      }
+      for (const want of recruiting.classes) {
+        const checkbox = recruitingClassList.querySelector<HTMLInputElement>(`input[data-class="${want.class}"]`);
+        const select = recruitingClassList.querySelector<HTMLSelectElement>(
+          `select[data-class-priority="${want.class}"]`,
+        );
+        const note = recruitingClassList.querySelector<HTMLInputElement>(`input[data-class-note="${want.class}"]`);
+        if (checkbox) {
+          checkbox.checked = true;
+        }
+        if (select) {
+          select.disabled = false;
+          select.value = want.priority;
+        }
+        if (note) {
+          note.disabled = false;
+          note.value = want.note ?? "";
+        }
+      }
+    }
+
+    async function loadRecruiting(): Promise<void> {
+      try {
+        applyRecruiting(await apiFetch<Recruiting>("/api/recruiting"));
+      } catch (err) {
+        recruitingFormStatus.textContent = statusMessage(err);
+      }
+    }
+
+    recruitingForm.addEventListener("submit", async (ev) => {
+      ev.preventDefault();
+      const roles = ROLES.filter(
+        (role) => recruitingRoleList.querySelector<HTMLInputElement>(`input[data-role="${role}"]`)?.checked,
+      ).map((role) => ({
+        role,
+        priority: (recruitingRoleList.querySelector<HTMLSelectElement>(`select[data-role-priority="${role}"]`)?.value ??
+          "normal") as RecruitingPriority,
+        note:
+          recruitingRoleList.querySelector<HTMLInputElement>(`input[data-role-note="${role}"]`)?.value.trim() ||
+          undefined,
+      }));
+      const classes = CLASSES.filter(
+        (cls) => recruitingClassList.querySelector<HTMLInputElement>(`input[data-class="${cls}"]`)?.checked,
+      ).map((cls) => ({
+        class: cls,
+        priority: (recruitingClassList.querySelector<HTMLSelectElement>(`select[data-class-priority="${cls}"]`)
+          ?.value ?? "normal") as RecruitingPriority,
+        note:
+          recruitingClassList.querySelector<HTMLInputElement>(`input[data-class-note="${cls}"]`)?.value.trim() ||
+          undefined,
+      }));
+      recruitingFormStatus.textContent = "Saving…";
+      try {
+        await apiFetch("/api/recruiting", { method: "PUT", body: JSON.stringify({ roles, classes }) });
+        recruitingFormStatus.textContent = "Saved.";
+      } catch (err) {
+        recruitingFormStatus.textContent = statusMessage(err);
+      }
+    });
+
     // ——— Members (Quest Masters only) ———
     const memberSearch = requireElement<HTMLInputElement>("m-search");
     const memberFilterTabsEl = requireElement("member-filter-tabs");
@@ -1425,8 +1779,343 @@ import "../../styles/room-officers.css";
       }
     }
 
+    // ——— Attendance ———
+    const attendanceEventListEl = requireElement("attendance-event-list");
+    const attendanceEmptyEl = requireElement("attendance-empty");
+    const attendanceFormEl = requireElement<HTMLFormElement>("attendance-form");
+    const attendanceSignupListEl = requireElement("attendance-signup-list");
+    const attendanceWalkinMemberEl = requireElement<HTMLSelectElement>("attendance-walkin-member");
+    const attendanceWalkinCharacterField = requireElement("attendance-walkin-character-field");
+    const attendanceWalkinCharacterEl = requireElement<HTMLInputElement>("attendance-walkin-character");
+    const attendanceWalkinClassField = requireElement("attendance-walkin-class-field");
+    const attendanceWalkinClassEl = requireElement<HTMLSelectElement>("attendance-walkin-class");
+    const attendanceWalkinRoleField = requireElement("attendance-walkin-role-field");
+    const attendanceWalkinRoleEl = requireElement<HTMLSelectElement>("attendance-walkin-role");
+    const attendanceWalkinAddBtn = requireElement<HTMLButtonElement>("attendance-walkin-add");
+    const attendanceWalkinListEl = requireElement("attendance-walkin-list");
+    const attendanceFormStatusEl = requireElement("attendance-form-status");
+    const attendanceReportSectionEl = requireElement("attendance-report");
+    const attendanceRangeTabsEl = requireElement("attendance-range-tabs");
+    const attendanceRaidsOnlyEl = requireElement<HTMLInputElement>("attendance-raids-only");
+    const attendanceTrendChartEl = requireElement("attendance-trend-chart");
+    const attendanceReportTableEl = requireElement("attendance-report-table");
+    const attendanceReportRowsEl = requireElement("attendance-report-rows");
+
+    attendanceWalkinClassEl.innerHTML = CLASSES.map((c) => `<option value="${c}">${capitalize(c)}</option>`).join("");
+    attendanceWalkinRoleEl.innerHTML = ROLES.map((r) => `<option value="${r}">${capitalize(r)}</option>`).join("");
+
+    let attendanceEvents: AttendanceEventSummary[] = [];
+    let selectedAttendanceEventId: string | null = null;
+    let currentAttendanceDetail: AttendanceDetail | null = null;
+    let pendingWalkIns: (WalkInCreate & { display_name: string })[] = [];
+    let attendanceRange: AttendanceRange = "last_30";
+    let attendanceRaidsOnly = false;
+    let attendanceReportRows: MemberAttendanceRow[] = [];
+    let attendanceSortKey: keyof MemberAttendanceRow = "display_name";
+    let attendanceSortDesc = false;
+
+    function attendanceEventRow(e: AttendanceEventSummary): string {
+      const start = new Date(e.starts_at);
+      const iconClasses = `ico ico-quest${e.needs_attendance ? "" : " is-done"}`;
+      const iconId = e.needs_attendance ? "i-quest" : "i-quest-done";
+      const marker = e.needs_attendance ? `<span class="attendance-needed">Needs attendance</span>` : "";
+      return `
+      <li>
+        <button type="button" class="quest quest-btn" data-select-attendance-event="${e.id}" aria-current="${e.id === selectedAttendanceEventId}">
+          <svg class="${iconClasses}" aria-hidden="true"><use href="#${iconId}"></use></svg>
+          <span>
+            <span class="quest-name">${escapeHtml(e.title)}</span>
+            <span class="quest-meta">${EVENT_KIND_LABELS[e.kind]} · ${start.toLocaleString()}</span>
+          </span>
+          <span class="quest-when">${marker}</span>
+        </button>
+      </li>`;
+    }
+
+    function renderAttendanceEvents(): void {
+      attendanceEventListEl.innerHTML =
+        attendanceEvents.length > 0
+          ? attendanceEvents.map(attendanceEventRow).join("")
+          : `<li class="quest-empty">No past events yet.</li>`;
+      attendanceEventListEl.querySelectorAll<HTMLButtonElement>("[data-select-attendance-event]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const id = btn.dataset.selectAttendanceEvent;
+          if (id) {
+            void selectAttendanceEvent(id);
+          }
+        });
+      });
+    }
+
+    async function loadAttendanceEvents(): Promise<void> {
+      attendanceEventListEl.innerHTML = `<li class="quest-empty">Loading…</li>`;
+      try {
+        attendanceEvents = await apiFetch<AttendanceEventSummary[]>("/api/attendance/events");
+        renderAttendanceEvents();
+      } catch (err) {
+        attendanceEventListEl.innerHTML = `<li class="quest-empty">${escapeHtml(statusMessage(err))}</li>`;
+      }
+    }
+
+    function renderWalkInCandidates(): void {
+      const taken = new Set(pendingWalkIns.map((w) => w.member_id));
+      const candidates = (currentAttendanceDetail?.walk_in_candidates ?? []).filter((c) => !taken.has(c.member_id));
+      attendanceWalkinMemberEl.innerHTML = candidates
+        .map((c) => `<option value="${c.member_id}">${escapeHtml(c.display_name)}</option>`)
+        .join("");
+      attendanceWalkinAddBtn.disabled = candidates.length === 0;
+    }
+
+    function renderPendingWalkIns(): void {
+      attendanceWalkinListEl.innerHTML = pendingWalkIns.map(pendingWalkInRow).join("");
+      attendanceWalkinListEl.querySelectorAll<HTMLButtonElement>("[data-remove-walkin]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const index = Number(btn.dataset.removeWalkin);
+          pendingWalkIns.splice(index, 1);
+          renderPendingWalkIns();
+          renderWalkInCandidates();
+        });
+      });
+    }
+
+    function renderAttendanceForm(detail: AttendanceDetail): void {
+      currentAttendanceDetail = detail;
+      pendingWalkIns = [];
+      attendanceEmptyEl.hidden = true;
+      attendanceFormEl.hidden = false;
+      attendanceFormStatusEl.textContent = "";
+      const roleKind = (ROLE_KINDS as EventKind[]).includes(detail.event.kind);
+      attendanceWalkinCharacterField.hidden = !roleKind;
+      attendanceWalkinClassField.hidden = !roleKind;
+      attendanceWalkinRoleField.hidden = !roleKind;
+      attendanceSignupListEl.innerHTML =
+        detail.signups.length > 0
+          ? detail.signups.map(attendanceSignupRow).join("")
+          : `<li class="roster-empty">No sign-ups for this event.</li>`;
+      renderWalkInCandidates();
+      renderPendingWalkIns();
+    }
+
+    async function selectAttendanceEvent(id: string): Promise<void> {
+      selectedAttendanceEventId = id;
+      renderAttendanceEvents();
+      attendanceEmptyEl.hidden = false;
+      attendanceEmptyEl.textContent = "Loading…";
+      attendanceFormEl.hidden = true;
+      try {
+        const detail = await apiFetch<AttendanceDetail>(`/api/events/${id}/attendance`);
+        renderAttendanceForm(detail);
+      } catch (err) {
+        attendanceEmptyEl.textContent = statusMessage(err);
+      }
+    }
+
+    attendanceWalkinAddBtn.addEventListener("click", () => {
+      const memberId = Number(attendanceWalkinMemberEl.value);
+      const candidate = currentAttendanceDetail?.walk_in_candidates.find((c) => c.member_id === memberId);
+      if (!candidate) {
+        return;
+      }
+      const roleKind = currentAttendanceDetail
+        ? (ROLE_KINDS as EventKind[]).includes(currentAttendanceDetail.event.kind)
+        : false;
+      const character = attendanceWalkinCharacterEl.value.trim() || null;
+      const wowClass = (attendanceWalkinClassEl.value || null) as CharClass | null;
+      const role = (attendanceWalkinRoleEl.value || null) as Role | null;
+      if (roleKind && (!character || !wowClass || !role)) {
+        attendanceFormStatusEl.textContent = "Character, class, and role are required for this event's kind.";
+        return;
+      }
+      pendingWalkIns.push({
+        member_id: memberId,
+        character,
+        class: wowClass,
+        role,
+        display_name: candidate.display_name,
+      });
+      attendanceWalkinCharacterEl.value = "";
+      attendanceFormStatusEl.textContent = "";
+      renderPendingWalkIns();
+      renderWalkInCandidates();
+    });
+
+    attendanceFormEl.addEventListener("submit", async (ev) => {
+      ev.preventDefault();
+      if (!selectedAttendanceEventId) {
+        return;
+      }
+      const entries = Array.from(attendanceSignupListEl.querySelectorAll<HTMLSelectElement>("[data-signup-id]"))
+        .filter((select) => select.value !== "")
+        .map((select) => ({ signup_id: select.dataset.signupId!, attended: select.value === "came" }));
+      const walkIns: WalkInCreate[] = pendingWalkIns.map(({ display_name: _display_name, ...rest }) => rest);
+      const body: AttendanceMark = { entries, walk_ins: walkIns };
+      const saveBtn = requireElement<HTMLButtonElement>("attendance-save");
+      saveBtn.disabled = true;
+      attendanceFormStatusEl.textContent = "Saving…";
+      try {
+        const detail = await apiFetch<AttendanceDetail>(`/api/events/${selectedAttendanceEventId}/attendance`, {
+          method: "PUT",
+          body: JSON.stringify(body),
+        });
+        renderAttendanceForm(detail);
+        attendanceFormStatusEl.textContent = "Attendance saved.";
+        await loadAttendanceEvents();
+        if (isGm) {
+          await Promise.all([loadAttendanceReport(), loadAttendanceTrends()]);
+        }
+      } catch (err) {
+        attendanceFormStatusEl.textContent = statusMessage(err);
+      } finally {
+        saveBtn.disabled = false;
+      }
+    });
+
+    // ——— Attendance report (GM only) ———
+    function sortAttendanceRows(): void {
+      attendanceReportRows.sort((a, b) => {
+        const av = a[attendanceSortKey];
+        const bv = b[attendanceSortKey];
+        let cmp = 0;
+        if (typeof av === "string" && typeof bv === "string") {
+          cmp = av.localeCompare(bv);
+        } else if (typeof av === "number" && typeof bv === "number") {
+          cmp = av - bv;
+        }
+        return attendanceSortDesc ? -cmp : cmp;
+      });
+    }
+
+    function renderAttendanceReportRows(): void {
+      sortAttendanceRows();
+      attendanceReportRowsEl.innerHTML =
+        attendanceReportRows
+          .map(
+            (r) => `
+          <tr>
+            <td>${avatarMarkup(r.display_name, r.avatar_url, 28)} ${escapeHtml(r.display_name)}</td>
+            <td>${r.signed_up}</td>
+            <td>${r.came}</td>
+            <td>${r.no_shows}</td>
+            <td>${r.walk_ins}</td>
+            <td>${Math.round(r.attendance_rate * 100)}%</td>
+            <td>${r.last_attended ? new Date(r.last_attended).toLocaleDateString() : "—"}</td>
+          </tr>`,
+          )
+          .join("") || `<tr><td colspan="7" class="aside">No attendance in this range.</td></tr>`;
+    }
+
+    async function loadAttendanceReport(): Promise<void> {
+      try {
+        const params = new URLSearchParams({ window: attendanceRange, raids_only: String(attendanceRaidsOnly) });
+        const report = await apiFetch<AttendanceReport>(`/api/attendance/report?${params}`);
+        attendanceReportRows = report.rows;
+        renderAttendanceReportRows();
+      } catch (err) {
+        attendanceReportRowsEl.innerHTML = `<tr><td colspan="7" class="aside">${escapeHtml(statusMessage(err))}</td></tr>`;
+      }
+    }
+
+    function renderTrendChart(points: AttendanceTrendPoint[]): void {
+      if (points.length === 0) {
+        attendanceTrendChartEl.innerHTML = `<p class="aside">No events in this range yet.</p>`;
+        return;
+      }
+      const width = 600;
+      const height = 180;
+      const padSide = 24;
+      const padTop = 26;
+      const padBottom = 32;
+      const chartHeight = height - padTop - padBottom;
+      const maxAttendees = Math.max(1, ...points.map((p) => p.attendees));
+      const maxBarWidth = 48;
+      const gap = 16;
+      const available = width - padSide * 2;
+      const slot = Math.min(maxBarWidth + gap, available / points.length);
+      const barWidth = Math.max(4, Math.min(maxBarWidth, slot - gap));
+      const rowWidth = points.length * slot - gap;
+      const startX = padSide + Math.max(0, (available - rowWidth) / 2);
+      const showLine = points.length >= 2;
+      const bars = points
+        .map((p, i) => {
+          const barHeight = (p.attendees / maxAttendees) * chartHeight;
+          const x = startX + i * slot + (slot - gap - barWidth) / 2;
+          const y = height - padBottom - barHeight;
+          return `<rect x="${x}" y="${y}" width="${barWidth}" height="${barHeight}" style="fill:var(--gold-2, #c9a24b)" />`;
+        })
+        .join("");
+      const centerX = (i: number): number => startX + i * slot + (slot - gap) / 2;
+      const linePoints = showLine
+        ? points.map((p, i) => `${centerX(i)},${height - padBottom - p.show_rate * chartHeight}`).join(" ")
+        : "";
+      const dots = showLine
+        ? points
+            .map(
+              (p, i) =>
+                `<circle cx="${centerX(i)}" cy="${height - padBottom - p.show_rate * chartHeight}" r="3" style="fill:var(--gold, #d8b25c)" />`,
+            )
+            .join("")
+        : "";
+      const labels = points
+        .map(
+          (p, i) =>
+            `<text x="${centerX(i)}" y="${height - 10}" text-anchor="middle" font-size="10" style="fill:var(--mist-2, #9aa)">${escapeHtml(weekLabel(p.week_start))}</text>`,
+        )
+        .join("");
+      attendanceTrendChartEl.innerHTML = `
+        <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMidYMid meet" style="width:100%;height:180px">
+          <text x="${padSide}" y="16" font-size="10" style="fill:var(--mist-2, #9aa)">Max ${maxAttendees} attendee${maxAttendees === 1 ? "" : "s"}</text>
+          ${bars}
+          ${showLine ? `<polyline points="${linePoints}" fill="none" style="stroke:var(--gold, #d8b25c)" stroke-width="2" />` : ""}
+          ${dots}
+          ${labels}
+        </svg>
+        <p class="aside">Bars: distinct attendees per week.${showLine ? " Line: show rate (came ÷ signed up)." : ""}</p>
+      `;
+    }
+
+    async function loadAttendanceTrends(): Promise<void> {
+      try {
+        const params = new URLSearchParams({ window: attendanceRange, raids_only: String(attendanceRaidsOnly) });
+        const trends = await apiFetch<AttendanceTrends>(`/api/attendance/trends?${params}`);
+        renderTrendChart(trends.points);
+      } catch (err) {
+        attendanceTrendChartEl.innerHTML = `<p class="aside">${escapeHtml(statusMessage(err))}</p>`;
+      }
+    }
+
+    setupTablist(attendanceRangeTabsEl, (tab) => {
+      attendanceRange = (tab.dataset.range ?? "last_30") as AttendanceRange;
+      void Promise.all([loadAttendanceReport(), loadAttendanceTrends()]);
+    });
+
+    attendanceRaidsOnlyEl.addEventListener("change", () => {
+      attendanceRaidsOnly = attendanceRaidsOnlyEl.checked;
+      void Promise.all([loadAttendanceReport(), loadAttendanceTrends()]);
+    });
+
+    attendanceReportTableEl.querySelectorAll<HTMLTableCellElement>("th[data-sort]").forEach((th) => {
+      th.style.cursor = "pointer";
+      th.addEventListener("click", () => {
+        const key = th.dataset.sort as keyof MemberAttendanceRow;
+        attendanceSortDesc = attendanceSortKey === key ? !attendanceSortDesc : false;
+        attendanceSortKey = key;
+        renderAttendanceReportRows();
+      });
+    });
+
+    let attendanceLoaded = false;
+
+    async function loadAttendance(): Promise<void> {
+      const tasks = [loadAttendanceEvents()];
+      if (isGm) {
+        attendanceReportSectionEl.hidden = false;
+        tasks.push(loadAttendanceReport(), loadAttendanceTrends());
+      }
+      await Promise.all(tasks);
+    }
+
     // ——— Tabs & gate ———
-    const VALID_TABS = ["events", "addons", "members", "log", "moderation"] as const;
+    const VALID_TABS = ["events", "addons", "recruiting", "attendance", "members", "log", "moderation"] as const;
     const GM_TABS = new Set(["members", "log", "moderation"]);
 
     let isGm = false;
@@ -1448,6 +2137,9 @@ import "../../styles/room-officers.css";
       } else if (name === "moderation" && !casesLoaded) {
         casesLoaded = true;
         loadCases();
+      } else if (name === "attendance" && !attendanceLoaded) {
+        attendanceLoaded = true;
+        void loadAttendance();
       }
     }
 
@@ -1506,7 +2198,7 @@ import "../../styles/room-officers.css";
         },
         { signal },
       );
-      await Promise.all([loadEvents(), loadSeries(), loadAddons()]);
+      await Promise.all([loadEvents(), loadSeries(), loadAddons(), loadRecruiting()]);
     }
 
     void init();

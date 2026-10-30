@@ -16,6 +16,8 @@
           "**/scripts/site-chrome",
           "**/scripts/raid-gate",
           "**/scripts/discord-live",
+          "**/scripts/discord-online",
+          "**/scripts/recruiting-band",
           "**/scripts/charter"
         ]
       }

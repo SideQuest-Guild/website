@@ -9,7 +9,16 @@ from litestar.exceptions import NotFoundException
 from sqlalchemy import delete, select, update
 
 from sidequest_api.lib.battlenet import BattleNetOAuthError
-from sidequest_common.models import EventSignup, EventSignupActivity, Member, MemberLevel, MemberRoleReset, OfficerAudit
+from sidequest_common.models import (
+    EventSignup,
+    EventSignupActivity,
+    EventVoicePresence,
+    Member,
+    MemberAwayRange,
+    MemberLevel,
+    MemberRoleReset,
+    OfficerAudit,
+)
 
 SIGNUP_NOTICE_LIMIT = 25
 
@@ -80,9 +89,11 @@ class MembersService(SQLAlchemyAsyncRepositoryService[Member]):
 
         Deletes event signups explicitly rather than relying on the database's ``ON DELETE CASCADE`` alone, so
         this holds regardless of whether the engine enforces foreign keys (e.g. SQLite in tests). Also deletes
-        the member's sign-up activity (the GM console's sign-up log), the member's chat-XP totals in every guild
-        (``MemberLevel``, keyed by Discord ID with no FK), and nulls any officer-audit rows they authored, keeping
-        each row's ``actor_name`` snapshot. Moderation records (``ModCase``) are kept.
+        the member's sign-up activity (the GM console's sign-up log), per-event voice-presence minutes (keyed by
+        Discord ID with no FK), away date ranges, chat-XP totals in every guild (``MemberLevel``, keyed by
+        Discord ID with no FK), and nulls any officer-audit rows they authored, keeping each row's
+        ``actor_name`` snapshot. Moderation records (``ModCase``) are kept. The member row's ``calendar_token``
+        goes with it, so the old calendar link 404s right away.
 
         Also queues a ``MemberRoleReset`` outbox row (same transaction) so the bot's ``link_roles`` plugin strips
         every Discord role it can manage from ``member``, leaving them gated behind #sign-the-ledger again.
@@ -90,6 +101,8 @@ class MembersService(SQLAlchemyAsyncRepositoryService[Member]):
         session = self.repository.session
         await session.execute(delete(EventSignup).where(EventSignup.member_id == member.id))
         await session.execute(delete(EventSignupActivity).where(EventSignupActivity.discord_id == member.discord_id))
+        await session.execute(delete(EventVoicePresence).where(EventVoicePresence.discord_id == member.discord_id))
+        await session.execute(delete(MemberAwayRange).where(MemberAwayRange.member_id == member.id))
         await session.execute(delete(MemberLevel).where(MemberLevel.user_id == member.discord_id))
         await session.execute(
             update(OfficerAudit).where(OfficerAudit.actor_member_id == member.id).values(actor_member_id=None)

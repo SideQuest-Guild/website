@@ -35,7 +35,12 @@ flowchart LR
 | `/api/guilds/{guild_id}/member-profiles` (PUT) | `X-API-Key` | Bot pushes linked members' current Discord username/global name/nick/avatar/roles (full sweep plus debounced pushes on profile/role/membership changes), and reports departed linked members; only updates existing members, never creates them (404s for any guild other than the site guild) |
 | `/api/guilds/{guild_id}/signup-notices` (GET), `/signup-notices/{member_id}/ack` (POST) | `X-API-Key` | New-signup officer notice outbox: members with no notice posted yet, and posted notices whose message is stale (confirmed since, e.g. on the site); the bot acks a message's channel/message id once it accurately reflects the member's state (404s for any guild other than the site guild) |
 | `/api/guilds/{guild_id}/role-resets` (GET), `/role-resets/{reset_id}/ack` (POST) | `X-API-Key` | Discord role-reset outbox: members whose site account was deleted and still need every manageable Discord role stripped (requested_at oldest first, capped at 50; unacked rows older than 7 days are dropped); the bot acks once it has acted, or immediately if the member already left the guild (404s for any guild other than the site guild) |
+| `/api/guilds/{guild_id}/events/{event_id}/signups/by-discord/{discord_id}` (GET, PUT) | `X-API-Key` | Bot reads/writes a member's event signup by Discord id, for the Discord Going/Maybe/Can't buttons (reuses the same upsert as the site's own sign-up form); 404 for a `discord_id` with no site account or any `guild_id` other than the site guild, 409 if the event isn't scheduled |
+| `/api/guilds/{guild_id}/attendance/voice` (PUT) | `X-API-Key` | Bot reports cumulative per-event voice minutes for every member it's tracked in the guild's voice channels while an event runs (idempotent replace, not increment; 404s for any guild other than the site guild) |
 | `/api/discord/live` (GET) | none | Website reads the site guild's live counts; empty counts (not 404) if the bot hasn't reported recently |
+| `/api/heroes` (GET) | signed in or `X-API-Key` | Hall of Heroes leaderboard for `?season=<id\|all\|month>`, highest EP first |
+| `/api/heroes/{member_id}` (GET) | signed in or `X-API-Key` | One member's Hall of Heroes profile: season/all-time stats, rank, chat level/XP, recent events, earned badges |
+| `/api/discord/online` (GET) | signed-in guild member | Trims Discord's public server widget (`https://discord.com/api/guilds/{id}/widget.json`) to `presence_count` plus each member's name/status/avatar/activity, cached in-process ~60s; `ok: false` with an empty list if the widget fetch fails or times out (3s) rather than a 500. Never edge-cached (varies by session). |
 | `/auth/discord/login`, `/auth/discord/callback`, `/auth/logout` | none | Discord OAuth sign-in (session cookie `sq_session`) |
 | `/auth/battlenet/link`, `/auth/battlenet/callback`, `/auth/battlenet/unlink` | signed in | Link a Battle.net account (BattleTag) to the member |
 | `/api/me` (GET), `/api/me` (DELETE) | signed in | The signed-in member; `DELETE` permanently deletes the member, their event signups, and their sign-up activity rows, clears the session cookie, and queues a Discord role-reset outbox row so the bot strips the member's Discord roles |
@@ -43,6 +48,8 @@ flowchart LR
 | `/api/events`, `/api/event-series`, `/api/addons` (GET) | none | Guild events (raids, dungeons, leveling, pvp, social, transmog, other) with roster + raid chart, attendance EP, repeating event series, guild addon links (each addon carries an `origin` of `guild` or `community`); anonymous `/api/events` requests get the headline fields only (title, kind, time, location) — notes, counts, signups and Discord interest are `null`/empty unless the caller is signed in or presents the bot's `X-API-Key` |
 | `/api/events/{id}/signup` | guild member | Sign up for / withdraw from a guild event |
 | `/api/events`, `/api/event-series`, `/api/addons` (POST/PATCH/DELETE), `/api/events/{id}/signups/{id}` | officer | Manage guild events, repeating event series, the raid chart and addons |
+| `/api/attendance/events` (GET), `/api/events/{id}/attendance` (GET, PUT) | officer | Past events still needing attendance, an event's sign-up roster with voice minutes, and marking Came/No-show plus walk-ins (audited as `attendance.mark`; 409 before the event starts or once cancelled) |
+| `/api/attendance/report`, `/api/attendance/trends` (GET) | GM | Per-member attendance counts/rate and weekly attendee/show-rate trends for `?window=last_30\|season\|all_time&raids_only=` |
 | `/api/gm/members`, `/api/gm/members/{member_id}`, `/api/gm/log`, `/api/gm/cases` (GET), `/api/gm/cases/{case_number}` (PATCH) | GM | Member management detail, unified activity log (sign-ups, sign-ins, Battle.net links, officer actions, moderation), and moderation case review/edit |
 | `/health`, `/health/live` | none | Health checks |
 | `/schema` | none | OpenAPI docs |
@@ -52,7 +59,7 @@ SideQuest server, an officer is a member holding a role listed in `WEB_OFFICER_R
 Quest Guide), and a GM is a member holding a role listed in `WEB_GM_ROLE_IDS` (default: Quest Master); roles and
 nickname refresh at each sign-in and continuously thereafter via the bot's member-profile push (see "Member
 profile sync" below). The site's member pages
-are `/events/`, `/addons/`, `/account/` and `/officers/` (the GM console).
+are `/events/`, `/heroes/`, `/addons/`, `/account/` and `/officers/` (the GM console).
 
 ### Discord sign-in setup
 
@@ -119,8 +126,12 @@ test. Run `make web-e2e-install` once for the browsers.
   `website/test-results/` and the HTML report (`npx playwright show-report` in `website/`).
 - `navigation.spec.ts`: links change the page in place (desktop nav and phone menu), back works, sign-in is a full load,
   the Officers link is for officers only.
-- `pages.spec.ts`: what each page shows signed out, to members, officers and GMs; signing up for a raid.
+- `pages.spec.ts`: what each page shows signed out, to members, officers and GMs; signing up for a raid, and the raid
+  chart's "Suggest groups" preview/Apply and drag-and-drop.
 - `offline.spec.ts`: after one visit the service worker opens pages with the network off.
+
+`npm run test:unit` (`website/`) runs the raid chart suggestion heuristic's own unit tests
+(`src/scripts/raid-suggest.test.ts`) with Node's built-in test runner — no browser needed.
 
 `E2E_BASE_URL=https://sidequest-guild.com npm run e2e` runs the same tests against a deployed site (the API stays
 mocked). The `Deployed` workflow (`.github/workflows/deployed.yml`) does that after every production web deploy: Cabotage
@@ -233,6 +244,54 @@ restored.
   their sign-up comment ("✅ @Coffee is going — Oakenshield · Warrior · Tank" then "> bring flasks"); needs **Send
   Messages in Threads** and **Create Posts**.
 
+### Discord sign-ups
+Every forum starter post carries persistent **Going**/**Maybe**/**Can't** buttons, so members can sign up without
+leaving Discord, kept in step with the site's own sign-up form. A click with no site account gets an ephemeral
+"Sign in at sidequest-guild.com/account/ first" reply with a link button. Non-role-kind events (social, pvp, …)
+RSVP immediately with an ephemeral confirmation. Role-kind events (raid, dungeon) for Going/Maybe: a member who's
+given a character/class/role on any earlier event signs up with those details at once ("Going as Oakenshield ·
+Warrior · Tank", with a "Change character or role" button); otherwise a modal asks for character name, class
+(defaulting to a matching Discord class role, e.g. `@Warrior`), and role. Can't never asks for character details.
+Cancelled/completed events have their buttons removed, and the live counts line ("Going 12 (2 tanks · 3 healers ·
+7 DPS) · Maybe 1 · Can't 2") refreshes within one sync cycle (~15-30s) of any change from either side. Existing
+upcoming threads pick up the buttons automatically on the next sync cycle after an upgrade, no manual action
+needed. Bot-key routes: `GET/PUT /api/guilds/{guild_id}/events/{event_id}/signups/by-discord/{discord_id}` (404 for
+no site account, 409 if the event isn't scheduled).
+
+
+### Raid chart
+On a raid event's detail page, officers get a "Suggest groups" button above the chart (`website/src/pages/events/
+detail/index.astro`, heuristic in `website/src/scripts/raid-suggest.ts`): it fills groups 1-8 (5 per group, fewer
+groups for a smaller event's size) from everyone signed, spreading tanks and healers one per group before doubling
+up, doing the same for Paladins and Shamans so their auras/totems reach more groups, spreading Priests the same way,
+seating Hunters with a group that already has a Shaman or Druid, and benching whoever doesn't fit. It only replaces
+the view, not the saved chart: officers see a dashed-outline preview and can **Apply** (PATCHes each changed
+signup, one at a time) or **Discard** without saving anything. Officers can also drag a player between groups and
+the bench (pointer events, so it works with touch); the per-row select stays as the keyboard/no-drag alternative,
+and a failed drag or select save reverts and reports the error. Members (and officers) also see who's marked away
+for the event's date as an "Away" chip list in the roster, pulled from `EventDetail.away`
+(`SignupMember[] | null`; `null` for anonymous visitors, like `discord_interest`).
+
+### Calendar feed
+Signed-in members get a private `.ics` link for their own upcoming sign-ups, for Google Calendar or Apple Calendar —
+subscribed once, new events show up on their own (`/account/`'s Calendar chamber; `GET/POST /api/me/calendar`,
+lazily issuing a token on first use). The link's token is a random secret in the URL
+(`GET /api/calendar/{token}.ics`, public, no session cookie, `Cache-Control: private`), so holding it is enough to
+read that member's schedule: "Make a new link" (`POST /api/me/calendar/rotate`) issues a new token and immediately
+invalidates the old one. Deleting the account drops the token with it
+(`api/src/sidequest_api/domain/calendar/`, `api/src/sidequest_api/lib/ics.py`).
+
+### Away dates
+Members mark date ranges they'll be away (`/account/`'s Away chamber; `GET/POST /api/me/away`,
+`DELETE /api/me/away/{id}`; past ranges are pruned on read) so officers and raid leads know not to expect them —
+shown to signed-in members as the "Away" chip list on an event's detail page for that event's date (see Raid chart
+above). While a range is active the bot also grants a configured Discord role so it's visible outside the site,
+synced every 60 seconds against the bot-key `GET /api/guilds/{guild_id}/away-now` route
+(`bot/src/sidequest_bot/plugins/away.py`).
+
+- `/away role <role>` (Manage Server) — sets or clears the role; in production this is
+  `/away role role:@Away on a Quest` (role id `1564677987859963975`).
+
 ### Live status
 The bot reports live counts, never names: how many people are in each public voice/stage channel, plus the guild's
 approximate online/member counts. The homepage "In the Discord" line shows the online count and, for each voice channel
@@ -242,6 +301,58 @@ known values if that fetch fails) and pushes a full report; voice/stage channel 
 debounced ~5 seconds per guild so a burst of joins/leaves coalesces into one push (mute/deafen toggles don't count
 as a channel change). No privileged presence intent is used
 (`bot/src/sidequest_bot/plugins/live_status.py`, `PUT /api/guilds/{guild_id}/live`).
+
+### Online now
+Signed-in guild members see an "Online now" roster in the homepage's Discord band, below the hearths: avatars,
+names and status (online/idle/dnd) pulled from Discord's own public server widget JSON
+(`https://discord.com/api/guilds/{guild_id}/widget.json`), not the bot. `GET /api/discord/online`
+(`api/src/sidequest_api/domain/discord_online/`) requires a signed-in guild member (401 signed out, 403 signed in
+but not a member), fetches the widget with a 3s timeout, caches the trimmed result in-process for ~60s, and answers
+`{presence_count, members, ok: false}` with an empty list rather than a 500 if Discord is slow or down. Signed-out
+visitors never see the roster or make the request; the hearths band above is unaffected
+(`website/src/scripts/discord-online.ts`). The widget doesn't distinguish the bot from other members, so it can
+appear in the roster.
+
+### Hall of Heroes
+`/heroes/` is a members-only, raider.io-style leaderboard (`GET /api/heroes?season=<id|all|month>`, 401 signed
+out) with rank, EP, raids/events attended, chat level and badge icons, sortable client-side by EP/raids/level and
+switchable between a season, the last calendar month, and all time. `/heroes/member/?id=<member_id>` is one
+member's profile (`GET /api/heroes/{member_id}`, 401/404): season and all-time stats, a chat-level XP bar, earned
+badges (name, description, earned date — see "Hall of Heroes badges" above) and recent events. Seasons are one
+code constant, `SEASONS` in `packages/sidequest-common/src/sidequest_common/schemas/heroes.py` (mirrored for the
+website in `website/src/scripts/api.ts`): append an entry with a `starts_at` after the previous season's `ends_at`
+to add one. Season One starts at launch (2026-11-04); until then the leaderboard defaults to All time with a note
+that Season One hasn't begun.
+
+### Attendance
+From the Officers page's Attendance tab, officers mark who actually showed up to a past event: a list of
+completed/past events still needing attendance (a torch/needs-attendance marker on each), and for the selected
+event, every sign-up with a Came/No-show dropdown plus each member's minutes in the guild's voice channels during
+the event. Signed-up members default to Came; tentative and absent members default to unmarked unless they spent
+at least `VOICE_PRESENT_THRESHOLD_MINUTES` (30) minutes in voice, in which case Came is pre-ticked for them too.
+Officers can also add a walk-in: anyone not already signed up who showed anyway, picked from the event's other
+members (character/class/role required for raid and dungeon events). Saving (`PUT /api/events/{id}/attendance`,
+audited as `attendance.mark`) stamps `GuildEvent.attendance_taken_at`, sets each marked sign-up's `attended` flag,
+and creates a `signed`+`attended` sign-up for every walk-in; it 409s before the event starts or once it's
+cancelled.
+
+The one rule every attendance-derived number (Hall of Heroes stats, badges, EP, the GM report below) shares,
+`attended_condition()`/`no_show_condition()` in `api/src/sidequest_api/lib/attendance.py`: a sign-up counts as
+attended once its event has started and isn't cancelled, and either an officer explicitly marked it `attended`, or
+attendance was never taken for that event — in which case a still-`signed` sign-up counts as attended by default
+(the pre-attendance-tracking behavior). A no-show is only ever a sign-up an officer explicitly marked not attended
+after taking attendance.
+
+The report (GM only, same tab) shows per-member signed-up/came/no-show/walk-in counts and attendance rate for
+`?window=last_30|season|all_time` (season starts `SEASON_START`, 2026-11-04), optionally raids only, sortable by
+column (`GET /api/attendance/report`), plus a weekly trend chart of distinct attendees and show rate
+(`GET /api/attendance/trends`), both GM-only.
+
+While an event is running, the bot tracks per-event voice presence: every 60 seconds it notes which non-bot
+members are in one of the guild's voice/stage channels for each event that's started and not yet past its end (or,
+with no explicit end, 3 hours after its start) and not cancelled, and pushes each member's cumulative minutes for
+that event (`PUT /api/guilds/{guild_id}/attendance/voice`, idempotent replace — not an increment — so a bot
+restart or a resent tick never double-counts) (`bot/src/sidequest_bot/plugins/attendance_voice.py`).
 
 ### Link roles
 Members who sign in on the site get a role (default name **Signed the Ledger**); members who also link Battle.net
@@ -293,6 +404,21 @@ member's message to say so instead of leaving it stuck on "Guest". The bot acks 
 
 - `/signups channel` (Manage Server)
 
+### Weekly events board
+Every Monday at 10:00 America/Chicago, for each guild with a weekly-board channel configured, the bot posts one gold
+embed listing that week's scheduled events (Monday 00:00 to the following Monday 00:00 Central), soonest first: each
+line shows the weekday, a Discord timestamp (so it renders in every reader's own timezone), the event kind, a link
+to its detail page on the site, and a link to its forum thread if it has one. The events come from the bot-key
+`GET /api/guilds/{guild_id}/weekly-board/events?start=...&end=...` route (scoped to the week, unlike the public
+`/api/events` list, and the only one that also returns each event's forum thread id). A week with no events posts
+nothing. The last posted week is stored on `GuildConfig.weekly_board_last_week`, so a restart or a second check
+within the same day never double-posts; because the check only ever fires on Monday, a bot that was down past
+10:00 catches up the moment it's back online that day, but never later in the week
+(`bot/src/sidequest_bot/plugins/weekly_board.py`).
+
+- `/weeklyboard channel <channel>` (Manage Server)
+- `/weeklyboard preview` (Manage Server) — ephemeral preview of the current week's board
+
 ### Member profile sync
 Member rows (username, global name, nick, avatar, roles, guild membership) stay current with Discord continuously,
 not just at sign-in: on `on_ready` and every 10 minutes, the bot pushes a full sweep — the current profile for
@@ -304,6 +430,37 @@ departures (`on_member_remove`). Only linked members are ever pushed; the period
 current. `PUT /api/guilds/{guild_id}/member-profiles` only updates existing `Member` rows (never creates one) and
 never touches `last_login_at`, Battle.net fields, or roster confirmation
 (`bot/src/sidequest_bot/plugins/member_profiles.py`).
+
+### Hall of Heroes badges
+Badges are Discord roles: members earn them on `sidequest-guild.com/heroes/` and the bot grants/announces the
+matching role, so earning a badge shows up in Discord without anyone configuring a role manually. Every 5 minutes
+(and once on ready), the bot calls `GET /api/guilds/{guild_id}/badges/sync`, which recomputes and awards badges
+server-side and reports every linked member's current badge set plus any newly earned badges not yet announced. For
+each badge below the bot creates (and, if deleted, recreates) a matching Discord role — not hoisted, not
+mentionable, colored per the badge, left wherever Discord places a freshly created role (below the bot's own role,
+above `@everyone`) so no other role is ever moved — storing the role id on `GuildConfig.badge_role_ids`. Each
+member's badge roles are then reconciled to match exactly what the API reports: permanent badges are only ever
+added, never removed, and **Top Helper** is a single moving title the bot adds to the new month's winner and
+removes from the last one, both driven by the same reconciliation, with no special-casing in the bot. If a badge
+channel is configured, each newly earned badge posts a gold embed (`<@member>` mention, badge name and
+description, and a link to the Hall of Heroes) with mentions scoped to just that member, then the bot acks it
+(`POST /api/guilds/{guild_id}/badges/ack`) so it isn't announced twice. If no channel is set yet, role sync still
+runs every tick, but announcements are left un-acked so they post in full once a channel is configured instead of
+being lost for whoever earned them first (`bot/src/sidequest_bot/plugins/badges.py`).
+
+| Badge | Rule |
+|---|---|
+| 👣 First Steps | Attended their first guild event. |
+| ⚔️ First Raid | Attended their first raid. |
+| 🛡️ Raid Regular | Attended 10 raids with the guild. |
+| 🏅 Raid Veteran | Attended 25 raids with the guild. |
+| 🌙 Perfect Month | Attended every raid the guild ran in a calendar month (at least 4 raids that month). |
+| 🏰 Founding Member | Confirmed on the guild roster before launch. |
+| 💬 Chatterbox | Reached chat level 10. |
+| 🌟 Top Helper | Attended the most dungeon and leveling events last month. A moving monthly title. |
+
+- `/badges channel [channel]` (Manage Server) — set or clear the announcement channel
+- `/badges sync` (Manage Server) — run a sync now, with an ephemeral summary
 
 ## Role safety
 Anything the bot hands out on its own (level rewards, the auto-role, role-menu buttons, link roles) goes through

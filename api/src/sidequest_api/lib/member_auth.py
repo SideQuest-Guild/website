@@ -102,6 +102,20 @@ def create_full_access_provider(api_key: str) -> Callable[[Request, Member | Non
     return provide_full_access
 
 
+def create_member_or_bot_provider(api_key: str) -> Callable[[Request, Member | None], Awaitable[None]]:
+    """Dependency factory: 401 unless the caller is signed in or presents the bot's ``X-API-Key``.
+
+    Unlike :func:`create_full_access_provider` (a boolean an endpoint uses to redact data for anonymous visitors),
+    this guard rejects the request outright: for endpoints with no anonymous-visitor view at all (Hall of Heroes).
+    """
+
+    async def provide_member_or_bot(request: Request, optional_member: NamedDependency[Member | None]) -> None:
+        if optional_member is None and not is_valid_api_key(request, api_key):
+            raise NotAuthorizedException(_NO_SESSION_MESSAGE)
+
+    return provide_member_or_bot
+
+
 def is_officer(member: Member, officer_role_ids: list[int]) -> bool:
     """Whether ``member`` holds any of ``officer_role_ids`` (their Discord roles as of their last sign-in)."""
     return bool(set(officer_role_ids) & set(member.roles))

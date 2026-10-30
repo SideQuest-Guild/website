@@ -1,0 +1,259 @@
+---
+import Room from "../../../layouts/Room.astro";
+import hallOfHeroes from "../../../../assets/rooms/hall-of-heroes.webp";
+import "../../../styles/room-heroes.css";
+---
+
+<Room
+  title="Hero · SideQuest"
+  description="A SideQuest member's Hall of Heroes profile: EP, raids, events, chat level and earned badges."
+  heading="HERO"
+  art={hallOfHeroes}
+  artPosition="50% 30%"
+  current="heroes"
+  longTitle
+>
+  <!-- Ask for the profile with the HTML, not after the page script loads; the URL matches refresh() below. -->
+  <script is:inline slot="head">
+    const memberId = new URLSearchParams(location.search).get("id");
+    if (memberId) {
+      const link = document.createElement("link");
+      Object.assign(link, { rel: "preload", as: "fetch", href: `/api/heroes/${memberId}`, crossOrigin: "anonymous" });
+      document.head.append(link);
+    }
+  </script>
+
+  <p class="status" id="hero-status" role="status" aria-live="polite"></p>
+
+  <div id="hero-gate" hidden>
+    <section class="chamber" aria-labelledby="h-hero-gate">
+      <h2 class="chamber-title" id="h-hero-gate">
+        Hero
+      </h2>
+      <p class="chamber-intro" id="hero-gate-message"></p>
+    </section>
+  </div>
+
+  <div id="hero-content" hidden>
+    <section class="chamber" aria-labelledby="h-hero-sheet">
+      <h2 class="chamber-title" id="h-hero-sheet">
+        Character Sheet
+      </h2>
+      <div class="hero-sheet">
+        <span class="hero-sheet-portrait" id="hero-portrait">
+          <img id="hero-avatar" alt="" width="96" height="96" hidden />
+          <span class="hero-avatar-empty" id="hero-avatar-fallback" aria-hidden="true" hidden></span>
+        </span>
+        <div class="hero-sheet-info">
+          <p class="hero-sheet-name" id="hero-name"></p>
+          <p class="hero-sheet-meta" id="hero-meta"></p>
+          <div class="level-bar-row">
+            <div class="level-bar">
+              <div class="level-bar-fill" id="hero-level-fill"></div>
+            </div>
+            <span class="level-bar-label" id="hero-level-label"></span>
+          </div>
+        </div>
+      </div>
+
+      <h3 class="sub-title" id="hero-season-label">
+        Season
+      </h3>
+      <div class="hero-stat-tiles" id="hero-season-tiles"></div>
+
+      <h3 class="sub-title">All time</h3>
+      <div class="hero-stat-tiles" id="hero-all-time-tiles"></div>
+    </section>
+
+    <section class="chamber" aria-labelledby="h-hero-badges">
+      <h2 class="chamber-title" id="h-hero-badges">
+        Badge Case
+      </h2>
+      <ul class="badge-case" id="hero-badge-case"></ul>
+    </section>
+
+    <section class="chamber" aria-labelledby="h-hero-recent">
+      <h2 class="chamber-title" id="h-hero-recent">
+        Recent Events
+      </h2>
+      <ul class="quest-log" id="hero-recent-events"></ul>
+    </section>
+  </div>
+
+  <noscript>
+    <p class="aside">Enable JavaScript to view this member's Hall of Heroes profile.</p>
+  </noscript>
+</Room>
+
+<script>
+  import {
+    apiFetch,
+    fetchMe,
+    escapeHtml,
+    requireElement,
+    statusMessage,
+    capitalize,
+    ApiError,
+    EVENT_KIND_LABELS,
+    SEASONS,
+    badgeIconId,
+    type HeroProfile,
+    type HeroSeasonStats,
+    type EarnedBadge,
+    type Me,
+  } from "../../../scripts/api";
+  import { onPage } from "../../../scripts/page";
+
+  function statTile(label: string, value: string): string {
+    return `<div class="hero-stat-tile"><span class="hero-stat-tile-label">${escapeHtml(label)}</span><span class="hero-stat-tile-value">${escapeHtml(value)}</span></div>`;
+  }
+
+  function statTiles(stats: HeroSeasonStats): string {
+    return [
+      statTile("EP", String(stats.ep)),
+      statTile("Raids", String(stats.raids_attended)),
+      statTile("Events", String(stats.events_attended)),
+      statTile("Attendance", `${Math.round(stats.attendance_rate * 100)}%`),
+    ].join("");
+  }
+
+  function badgePlaque(badge: EarnedBadge, dateFormat: Intl.DateTimeFormat): string {
+    return `
+    <li class="badge-plaque">
+      <svg class="ico badge-plaque-icon" role="img" aria-label="${escapeHtml(badge.name)}"><use href="#${badgeIconId(badge.id)}"></use></svg>
+      <span>
+        <p class="badge-plaque-name">${escapeHtml(badge.name)}</p>
+        <p class="badge-plaque-desc">${escapeHtml(badge.description)}</p>
+        <p class="badge-plaque-date">Earned ${escapeHtml(dateFormat.format(new Date(badge.earned_at)))}</p>
+      </span>
+    </li>`;
+  }
+
+  onPage("#hero-content", (signal) => {
+    const statusEl = requireElement("hero-status");
+    const gateEl = requireElement("hero-gate");
+    const gateMessage = requireElement("hero-gate-message");
+    const contentEl = requireElement("hero-content");
+    const portraitEl = requireElement("hero-portrait");
+    const avatarImg = requireElement<HTMLImageElement>("hero-avatar");
+    const avatarFallback = requireElement("hero-avatar-fallback");
+    const nameEl = requireElement("hero-name");
+    const metaEl = requireElement("hero-meta");
+    const levelFill = requireElement("hero-level-fill");
+    const levelLabel = requireElement("hero-level-label");
+    const seasonLabel = requireElement("hero-season-label");
+    const seasonTiles = requireElement("hero-season-tiles");
+    const allTimeTiles = requireElement("hero-all-time-tiles");
+    const badgeCase = requireElement("hero-badge-case");
+    const recentList = requireElement("hero-recent-events");
+
+    const memberId = new URLSearchParams(location.search).get("id");
+    const dateFormat = new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", year: "numeric" });
+
+    async function refresh(): Promise<void> {
+      if (!memberId) {
+        statusEl.textContent = "No member specified.";
+        return;
+      }
+      let me: Me | null = null;
+      try {
+        me = await fetchMe();
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 0) {
+          statusEl.textContent = statusMessage(err);
+          return;
+        }
+        me = null;
+      }
+      if (!me) {
+        gateEl.hidden = false;
+        contentEl.hidden = true;
+        const next = encodeURIComponent(location.pathname + location.search);
+        gateMessage.innerHTML = `Guild stats and badges are for members only. <a href="/auth/discord/login?next=${next}">Sign in with Discord</a> to see this hero.`;
+        statusEl.textContent = "";
+        return;
+      }
+      gateEl.hidden = true;
+
+      let profile: HeroProfile;
+      try {
+        profile = await apiFetch<HeroProfile>(`/api/heroes/${memberId}`, { signal });
+      } catch (err) {
+        contentEl.hidden = true;
+        statusEl.textContent = statusMessage(err);
+        return;
+      }
+      statusEl.textContent = "";
+      contentEl.hidden = false;
+
+      const headingEl = requireElement<HTMLHeadingElement>("page-heading");
+      headingEl.textContent = profile.display_name;
+      headingEl.classList.add("heading-title");
+      document.title = `${profile.display_name} · SideQuest`;
+
+      portraitEl.style.borderColor = profile.wow_class ? `var(--c-${profile.wow_class})` : "";
+      if (profile.avatar_url) {
+        avatarImg.src = profile.avatar_url;
+        avatarImg.hidden = false;
+        avatarFallback.hidden = true;
+      } else {
+        avatarImg.hidden = true;
+        avatarFallback.hidden = false;
+        avatarFallback.textContent = profile.display_name.trim().charAt(0).toUpperCase() || "?";
+      }
+      nameEl.textContent = profile.display_name;
+      if (profile.wow_class) {
+        nameEl.className = `hero-sheet-name cls-${profile.wow_class}`;
+      } else {
+        nameEl.className = "hero-sheet-name";
+      }
+
+      const classLabel = profile.wow_class ? capitalize(profile.wow_class) : "No class yet";
+      const rankLabel = profile.rank !== null ? `Rank #${profile.rank} this season` : "Unranked this season";
+      metaEl.textContent = `${classLabel} · ${rankLabel}`;
+
+      const haveNextLevel = profile.chat_xp_for_next_level > 0;
+      const pct = haveNextLevel
+        ? Math.min(100, Math.round((profile.chat_xp_into_level / profile.chat_xp_for_next_level) * 100))
+        : 100;
+      levelFill.style.width = `${pct}%`;
+      levelLabel.textContent = haveNextLevel
+        ? `Level ${profile.chat_level} · ${profile.chat_xp_into_level.toLocaleString()} / ${profile.chat_xp_for_next_level.toLocaleString()} XP`
+        : `Level ${profile.chat_level} · ${profile.chat_xp.toLocaleString()} XP`;
+
+      const currentSeasonId = Object.keys(profile.seasons).at(-1);
+      const currentSeasonStats = currentSeasonId ? profile.seasons[currentSeasonId] : undefined;
+      seasonLabel.textContent = SEASONS.find((s) => s.id === currentSeasonId)?.name ?? "This season";
+      seasonTiles.innerHTML = currentSeasonStats
+        ? statTiles(currentSeasonStats)
+        : `<p class="aside">No stats for this season yet.</p>`;
+      allTimeTiles.innerHTML = statTiles(profile.all_time);
+
+      badgeCase.innerHTML =
+        profile.badges.length > 0
+          ? profile.badges.map((b) => badgePlaque(b, dateFormat)).join("")
+          : `<li class="aside">No badges earned yet. They show up here as they're announced in Discord.</li>`;
+
+      recentList.innerHTML =
+        profile.recent_events.length > 0
+          ? profile.recent_events
+              .map(
+                (e) => `
+        <li>
+          <a class="quest" href="/events/detail/?id=${e.id}">
+            <svg class="ico ico-quest is-done" aria-hidden="true"><use href="#i-quest-done"></use></svg>
+            <span>
+              <span class="quest-name">${escapeHtml(e.title)}</span>
+              <span class="quest-meta">${escapeHtml(EVENT_KIND_LABELS[e.kind])} · ${e.ep} EP</span>
+            </span>
+            <span class="quest-when">${escapeHtml(dateFormat.format(new Date(e.starts_at)))}</span>
+          </a>
+        </li>`,
+              )
+              .join("")
+          : `<li class="quest-empty">No events attended yet.</li>`;
+    }
+
+    refresh();
+  });
+</script>

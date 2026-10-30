@@ -4,14 +4,42 @@
 // full page loads. Any API call the mock doesn't know fails the test, so a page can't quietly drift from it.
 import { test as base, expect, type Page, type Route } from "@playwright/test";
 
-import type { Addon, EventDetail, EventSummary, Me } from "../src/scripts/api";
-import { ADDONS, EVENTS, GM_MEMBERS, LIVE, eventDetail, gmMemberDetail } from "./data";
+import type {
+  Addon,
+  AttendanceMark,
+  AwayRange,
+  EventDetail,
+  EventSummary,
+  HeroRow,
+  Me,
+  Recruiting,
+} from "../src/scripts/api";
+import {
+  ADDONS,
+  ATTENDANCE_EVENTS,
+  ATTENDANCE_REPORT,
+  ATTENDANCE_TRENDS,
+  EVENTS,
+  GM_MEMBERS,
+  HEROES,
+  LIVE,
+  ONLINE,
+  RECRUITING,
+  SIGNUPS,
+  attendanceDetail,
+  eventDetail,
+  gmMemberDetail,
+  heroLeaderboard,
+  heroProfile,
+} from "./data";
 
 type Site = {
   /** Who `/api/me` says is signed in; `null` (the default) is a signed-out visitor. */
   signIn(me: Me | null): void;
   /** What `/api/addons` lists; `ADDONS` by default. */
   addons(list: Addon[]): void;
+  /** What `/api/recruiting` reports; `RECRUITING` (nothing wanted) by default. */
+  recruiting(data: Recruiting): void;
   /** API calls that reached the mock without a handler. */
   unmocked: string[];
   /** Uncaught page errors and `console.error` lines. */
@@ -23,7 +51,7 @@ function anonymousSummary(event: EventSummary): EventSummary {
 }
 
 function anonymousDetail(detail: EventDetail): EventDetail {
-  return { ...detail, notes: null, counts: null, signups: [], my_signup: null, discord_interest: null };
+  return { ...detail, notes: null, counts: null, signups: [], my_signup: null, discord_interest: null, away: null };
 }
 
 const json = (route: Route, body: unknown, status = 200) =>
@@ -33,6 +61,12 @@ export const test = base.extend<{ site: Site }>({
   site: async ({ context, baseURL }, use) => {
     let me: Me | null = null;
     let addons = ADDONS;
+    let recruiting = RECRUITING;
+    let calendarToken = "mock-calendar-token";
+    let awayRanges: AwayRange[] = [];
+    // A per-test copy: the raid chart's PATCH handler mutates this, and a shared SIGNUPS array would leak those
+    // group/bench changes into the next test.
+    const signups = SIGNUPS.map((s) => Object.assign({}, s));
     const unmocked: string[] = [];
     const errors: string[] = [];
 
@@ -55,8 +89,63 @@ export const test = base.extend<{ site: Site }>({
       if (path === "/api/discord/live") {
         return json(route, LIVE);
       }
+      if (path === "/api/discord/online") {
+        if (!me) {
+          return json(route, { detail: "Not signed in" }, 401);
+        }
+        if (!me.is_guild_member) {
+          return json(route, { detail: "Not a guild member" }, 403);
+        }
+        return json(route, ONLINE);
+      }
       if (path === "/api/addons" && method === "GET") {
         return json(route, addons);
+      }
+      if (path === "/api/recruiting" && method === "GET") {
+        return json(route, recruiting);
+      }
+      if (path === "/api/recruiting" && method === "PUT") {
+        recruiting = { ...JSON.parse(request.postData() ?? "{}"), updated_at: new Date().toISOString() };
+        return json(route, recruiting);
+      }
+      if (path === "/api/me/calendar" && method === "GET") {
+        if (!me) {
+          return json(route, { detail: "Not signed in" }, 401);
+        }
+        return json(route, { token: calendarToken, url: `${origin}/api/calendar/${calendarToken}.ics` });
+      }
+      if (path === "/api/me/calendar/rotate" && method === "POST") {
+        if (!me) {
+          return json(route, { detail: "Not signed in" }, 401);
+        }
+        calendarToken = `mock-calendar-token-${Date.now()}`;
+        return json(route, { token: calendarToken, url: `${origin}/api/calendar/${calendarToken}.ics` });
+      }
+      if (path === "/api/me/away" && method === "GET") {
+        if (!me) {
+          return json(route, { detail: "Not signed in" }, 401);
+        }
+        return json(route, awayRanges);
+      }
+      if (path === "/api/me/away" && method === "POST") {
+        if (!me) {
+          return json(route, { detail: "Not signed in" }, 401);
+        }
+        const body = JSON.parse(request.postData() ?? "{}");
+        const created: AwayRange = { id: `away-${awayRanges.length + 1}`, note: null, ...body };
+        awayRanges = [...awayRanges, created].toSorted((a, b) => a.start_date.localeCompare(b.start_date));
+        return json(route, created, 201);
+      }
+      const awayDeleteMatch = /^\/api\/me\/away\/([^/]+)$/.exec(path);
+      if (awayDeleteMatch && method === "DELETE") {
+        if (!me) {
+          return json(route, { detail: "Not signed in" }, 401);
+        }
+        if (!awayRanges.some((range) => range.id === awayDeleteMatch[1])) {
+          return json(route, { detail: "No such away range" }, 404);
+        }
+        awayRanges = awayRanges.filter((range) => range.id !== awayDeleteMatch[1]);
+        return route.fulfill({ status: 204 });
       }
       if (path === "/api/event-series" && method === "GET") {
         return json(route, []);
@@ -78,10 +167,20 @@ export const test = base.extend<{ site: Site }>({
         if (!event) {
           return json(route, { detail: "No such event" }, 404);
         }
-        return json(route, me ? eventDetail(event) : anonymousDetail(eventDetail(event)));
+        const detail = { ...eventDetail(event), signups };
+        return json(route, me ? detail : anonymousDetail(detail));
       }
       if (/^\/api\/events\/[^/]+\/signup$/.test(path) && method === "PUT") {
         return json(route, { ...eventDetail(EVENTS[0]).signups[0], ...JSON.parse(request.postData() ?? "{}") });
+      }
+      const chartMatch = /^\/api\/events\/[^/]+\/signups\/([^/]+)$/.exec(path);
+      if (chartMatch && method === "PATCH") {
+        const target = signups.find((s) => s.id === chartMatch[1]);
+        if (!target) {
+          return json(route, { detail: "No such signup" }, 404);
+        }
+        Object.assign(target, JSON.parse(request.postData() ?? "{}"));
+        return json(route, target);
       }
       if (path === "/api/gm/members") {
         return json(route, GM_MEMBERS);
@@ -97,8 +196,47 @@ export const test = base.extend<{ site: Site }>({
       if (path === "/api/gm/cases") {
         return json(route, []);
       }
-      unmocked.push(`${method} ${path}${url.search}`);
-      return json(route, { detail: "Not mocked" }, 404);
+      if (path === "/api/attendance/events") {
+        return json(route, ATTENDANCE_EVENTS);
+      }
+      const attendanceMatch = /^\/api\/events\/([^/]+)\/attendance$/.exec(path);
+      if (attendanceMatch && (method === "GET" || method === "PUT")) {
+        const summary = ATTENDANCE_EVENTS.find((e) => e.id === attendanceMatch[1]) ?? ATTENDANCE_EVENTS[0];
+        if (method === "PUT") {
+          const body = JSON.parse(request.postData() ?? "{}") as AttendanceMark;
+          const detail = attendanceDetail({
+            ...summary,
+            attendance_taken_at: new Date().toISOString(),
+            needs_attendance: false,
+          });
+          detail.signups = detail.signups.map((s) => {
+            const entry = body.entries.find((e) => e.signup_id === s.signup_id);
+            return entry ? { ...s, attended: entry.attended } : s;
+          });
+          return json(route, detail);
+        }
+        return json(route, attendanceDetail(summary));
+      }
+      if (path === "/api/attendance/report") {
+        return json(route, ATTENDANCE_REPORT);
+      }
+      if (path === "/api/attendance/trends") {
+        return json(route, ATTENDANCE_TRENDS);
+      }
+      if (path === "/api/heroes" && method === "GET") {
+        if (!me) {
+          return json(route, { detail: "Not signed in" }, 401);
+        }
+        return json(route, heroLeaderboard(url.searchParams.get("season") ?? "season-one"));
+      }
+      const heroMatch = /^\/api\/heroes\/(\d+)$/.exec(path);
+      if (heroMatch && method === "GET") {
+        if (!me) {
+          return json(route, { detail: "Not signed in" }, 401);
+        }
+        const row = HEROES.find((h: HeroRow) => h.member_id === Number(heroMatch[1]));
+        return row ? json(route, heroProfile(row)) : json(route, { detail: "No such member" }, 404);
+      }
     });
     // Sign-in leaves the site (the real server redirects to Discord): a stub shows the browser really loaded it.
     await context.route("**/auth/**", (route) =>
@@ -113,7 +251,13 @@ export const test = base.extend<{ site: Site }>({
       watchErrors(page, origin, errors);
     }
     context.on("page", (page) => watchErrors(page, origin, errors));
-    await use({ signIn: (who) => (me = who), addons: (list) => (addons = list), unmocked, errors });
+    await use({
+      signIn: (who) => (me = who),
+      addons: (list) => (addons = list),
+      recruiting: (data) => (recruiting = data),
+      unmocked,
+      errors,
+    });
     expect(unmocked, "API calls the mock doesn't handle").toEqual([]);
     expect(errors, "page errors").toEqual([]);
   },

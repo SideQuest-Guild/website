@@ -1085,6 +1085,130 @@ html:not(.officer) [data-officer-nav] {
   }
 }
 
+/* ——— Online now: who's in the Discord right now, members-only (scripts/discord-online.ts). An avatar in a round
+   frame per person, ringed like a small hearth: gold glow online, dim amber idle, a cold ember's muted red
+   do-not-disturb. Signed-out visitors never fetch this and the container stays `hidden`, so it adds no layout
+   shift for them. ——— */
+.online-now {
+  width: 100%;
+  margin: clamp(26px, 2.6vw, 40px) 0 0;
+  display: grid;
+  justify-items: center;
+  gap: clamp(14px, 1.4vw, 20px);
+}
+.online-now-label {
+  display: flex;
+  align-items: center;
+  gap: 0.9em;
+  color: var(--ink-2);
+}
+.online-now-link {
+  font-weight: 500;
+  font-size: var(--caps);
+  letter-spacing: 0.14em;
+  color: var(--gold-2);
+  text-decoration: underline;
+  text-decoration-color: var(--gold-2);
+  text-underline-offset: 3px;
+  transition:
+    color 0.3s,
+    text-decoration-color 0.3s;
+}
+.online-now-link:hover {
+  color: var(--gold);
+  text-decoration-color: var(--gold);
+}
+.online-now-list {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: clamp(16px, 1.8vw, 26px) clamp(10px, 1.4vw, 18px);
+  width: min(100%, 720px);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.online-now-member {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  width: 78px;
+  text-align: center;
+  transition:
+    opacity 0.6s var(--ease),
+    translate 0.6s var(--ease),
+    filter 0.6s var(--ease);
+}
+@starting-style {
+  .online-now-member {
+    opacity: 0;
+    translate: 0 8px;
+    filter: blur(3px);
+  }
+}
+.online-now-ring {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+}
+.online-now-ring::before {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  border: 2px solid var(--gold);
+  box-shadow: 0 0 10px rgba(255, 186, 92, 0.55);
+}
+.online-now-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+  background: var(--charcoal);
+}
+.online-now-avatar-empty {
+  background: linear-gradient(180deg, var(--gold-2), var(--gold));
+}
+.online-now-member[data-status="idle"] .online-now-ring::before {
+  border-color: var(--gold-2);
+  box-shadow: 0 0 6px rgba(168, 132, 73, 0.35);
+  opacity: 0.75;
+}
+.online-now-member[data-status="dnd"] .online-now-ring::before {
+  border-color: #b05a4a;
+  box-shadow: 0 0 6px rgba(176, 90, 74, 0.45);
+}
+.online-now-name {
+  color: var(--ink-2);
+}
+.online-now-activity {
+  display: block;
+  font-style: italic;
+  font-size: 13px;
+  color: var(--ink-3);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.online-now-more {
+  margin: 0;
+  font-weight: 500;
+  font-size: max(var(--caps), 13px);
+  letter-spacing: 0.08em;
+  color: var(--gold);
+  font-variant-numeric: tabular-nums;
+}
+@media (prefers-reduced-motion: reduce) {
+  .online-now-member {
+    transition: none;
+  }
+}
+
 .foot {
   margin-top: clamp(110px, 10vw, 170px);
   padding-bottom: 48px;
@@ -1759,5 +1883,57 @@ html:not(.officer) [data-officer-nav] {
   }
   .article-body {
     padding-left: 0;
+  }
+}
+
+/* ——— Recruiting band: built by scripts/recruiting-band.ts, hidden until an officer marks a role/class wanted ——— */
+.recruit {
+  padding-top: clamp(64px, 6vw, 100px);
+  text-align: center;
+}
+.recruit .lede {
+  margin-inline: auto;
+}
+.recruit-wanted {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px 14px;
+  margin: clamp(22px, 2vw, 32px) 0 0;
+  padding: 0;
+  list-style: none;
+}
+.recruit-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border: 1px solid var(--hair);
+  font-size: var(--body);
+  color: var(--ink-2);
+}
+.recruit-chip .ico {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+.recruit-chip-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: currentcolor;
+  flex-shrink: 0;
+}
+.recruit-chip-priority {
+  color: var(--gold);
+  font-weight: 500;
+}
+.recruit-chip-note {
+  color: var(--ink-3);
+}
+@media (max-width: 420px) {
+  .recruit-chip {
+    padding: 6px 12px;
+    font-size: calc(var(--body) * 0.9);
   }
 }

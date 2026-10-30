@@ -415,7 +415,8 @@
   .row-pair {
     flex-wrap: wrap;
   }
-  .row-pair > .btn-quiet {
+  .row-pair > .btn-quiet,
+  .row-pair > select[data-signup-id] {
     flex: none;
     width: 100%;
   }
@@ -427,4 +428,125 @@
 /* The repeating-series list follows the one-off list in the same chamber: separate the groups. */
 .quest-log + .sub-title {
   margin-top: clamp(28px, 2.6vw, 40px);
+}
+
+/* ——— Recruiting needs (Recruiting tab) ——— */
+.recruit-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.recruit-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.recruit-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 9em;
+  cursor: pointer;
+}
+.recruit-row select,
+.recruit-row input[type="text"] {
+  min-height: 40px;
+  padding: 8px 10px;
+  background: rgba(4, 8, 16, 0.62);
+  border: 1px solid var(--stone);
+  border-radius: 0;
+  font: inherit;
+  font-size: var(--body);
+  color: var(--ink);
+  color-scheme: dark;
+  transition:
+    border-color 0.3s,
+    background-color 0.3s;
+}
+.recruit-row select:hover,
+.recruit-row input[type="text"]:hover {
+  border-color: rgba(168, 132, 73, 0.6);
+}
+.recruit-row select:focus-visible,
+.recruit-row input[type="text"]:focus-visible {
+  outline: none;
+  border-color: var(--gold);
+  background: rgba(4, 8, 16, 0.8);
+}
+.recruit-row select:disabled,
+.recruit-row input[type="text"]:disabled {
+  opacity: 0.4;
+}
+.recruit-row input[type="text"] {
+  flex: 1 1 14em;
+  min-width: 0;
+}
+@media (max-width: 560px) {
+  .recruit-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+/* ——— Attendance tab ——— */
+.attendance-needed {
+  margin-left: 8px;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  color: var(--gold);
+}
+#attendance-form select[data-signup-id] {
+  min-height: 36px;
+  padding: 4px 8px;
+  background: rgba(4, 8, 16, 0.62);
+  border: 1px solid var(--stone);
+  border-radius: 0;
+  font: inherit;
+  color: var(--ink);
+  color-scheme: dark;
+}
+.attendance-raids-only {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 14px 0;
+  font-size: var(--caps);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--mist);
+  cursor: pointer;
+}
+.attendance-trend-chart {
+  margin: 12px 0 20px;
+}
+.attendance-table-wrap {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  overflow-x: auto;
+}
+.attendance-table {
+  width: 100%;
+  min-width: 560px;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.attendance-table th,
+.attendance-table td {
+  padding: 8px 10px;
+  text-align: left;
+  border-bottom: 1px solid var(--stone-2);
+}
+.attendance-table th {
+  font-family: var(--display);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--mist-2);
+}
+.attendance-table td {
+  color: var(--ink);
 }

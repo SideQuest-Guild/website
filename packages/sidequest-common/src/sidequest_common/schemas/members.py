@@ -41,3 +41,14 @@ class MemberListing(BaseModel):
     battletag: str | None
     roster_confirmed: bool
     last_login_at: datetime | None
+
+
+class CalendarLink(BaseModel):
+    """The signed-in member's private calendar feed link (``GET/POST /api/me/calendar``).
+
+    ``url`` is the full ``https://.../api/calendar/{token}.ics`` address; rotating replaces ``token`` and
+    invalidates the old link.
+    """
+
+    token: str
+    url: str

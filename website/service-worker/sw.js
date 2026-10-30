@@ -21,7 +21,7 @@ const BUILD_META = /<meta name="sq-build" content="([^"]+)"/;
 // src/scripts/api.ts). Everything else, including /api/me, the account page and the officers console, always goes
 // to the network.
 const STALE_FIRST = [
-  { page: /^\/$/, data: /^\/api\/(discord\/live|events)$/ },
+  { page: /^\/$/, data: /^\/api\/(discord\/live|events|recruiting)$/ },
   { page: /^\/events\/$/, data: /^\/api\/events$/ },
   { page: /^\/events\/detail\/$/, data: /^\/api\/events\/[^/]+$/ },
   { page: /^\/addons\/$/, data: /^\/api\/addons$/ },

@@ -2,6 +2,7 @@
 
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, Literal
+from zoneinfo import ZoneInfo
 
 from advanced_alchemy.exceptions import IntegrityError
 from advanced_alchemy.repository import SQLAlchemyAsyncRepository
@@ -20,6 +21,7 @@ from sidequest_common.models import (
     EventSignupActivity,
     GuildEvent,
     Member,
+    MemberAwayRange,
 )
 from sidequest_common.schemas import (
     ROLE_KINDS,
@@ -32,8 +34,13 @@ from sidequest_common.schemas import (
     EventSummary,
     EventUpdate,
     Signup,
+    SignupByDiscord,
+    SignupDefaults,
     SignupMember,
+    SignupRole,
+    SignupStatus,
     SignupUpsert,
+    WowClass,
     event_ep,
 )
 
@@ -42,6 +49,8 @@ if TYPE_CHECKING:
 
 UPCOMING_LOOKBACK = timedelta(hours=6)
 PAST_LIMIT = 50
+_GUILD_TZ = ZoneInfo("America/Chicago")
+"""US guild: an event's away roster is computed against its local calendar date, matching the bot's presence clock."""
 
 
 def _series_ref(event: GuildEvent) -> dict[str, object] | None:
@@ -176,8 +185,8 @@ class EventsService(SQLAlchemyAsyncRepositoryService[GuildEvent]):
     async def get_detail(self, event_id: UUID, *, viewer: Member | None, full_access: bool) -> EventDetail:
         """An event with its full roster and the viewer's own signup (``None`` if anonymous or not signed up).
 
-        Anonymous callers (``full_access=False``) get the headline fields only: ``notes``, ``counts``, and
-        ``discord_interest`` are ``None``, and ``signups``/``my_signup`` are empty; no roster queries run.
+        Anonymous callers (``full_access=False``) get the headline fields only: ``notes``, ``counts``,
+        ``discord_interest`` and ``away`` are ``None``, and ``signups``/``my_signup`` are empty; no roster queries run.
         """
         event = await self.get_event_or_404(event_id)
         if not full_access:
@@ -189,6 +198,7 @@ class EventsService(SQLAlchemyAsyncRepositoryService[GuildEvent]):
                     "signups": [],
                     "my_signup": None,
                     "discord_interest": None,
+                    "away": None,
                 }
             )
         session = self.repository.session
@@ -206,6 +216,7 @@ class EventsService(SQLAlchemyAsyncRepositoryService[GuildEvent]):
                 my_signup = _to_signup_schema(*own)
         counts = (await self._counts_for([event_id]))[event_id]
         discord_interest = await self._discord_interest_for(event_id)
+        away = await self._away_for(event)
         return EventDetail.model_validate(
             {
                 **_event_summary_fields(event),
@@ -213,6 +224,7 @@ class EventsService(SQLAlchemyAsyncRepositoryService[GuildEvent]):
                 "signups": signups,
                 "my_signup": my_signup,
                 "discord_interest": discord_interest,
+                "away": away,
             }
         )
 
@@ -327,6 +339,24 @@ class EventsService(SQLAlchemyAsyncRepositoryService[GuildEvent]):
             ],
         )
 
+    async def _away_for(self, event: GuildEvent) -> list[SignupMember]:
+        """Site members away (``MemberAwayRange``) on ``event``'s start date, America/Chicago."""
+        local_date = event.starts_at.astimezone(_GUILD_TZ).date()
+        session = self.repository.session
+        statement = (
+            select(Member)
+            .join(MemberAwayRange, MemberAwayRange.member_id == Member.id)
+            .where(MemberAwayRange.start_date <= local_date, MemberAwayRange.end_date >= local_date)
+            .distinct()
+        )
+        members = sorted(
+            (await session.execute(statement)).scalars().all(), key=lambda member: member.display_name.casefold()
+        )
+        return [
+            SignupMember(display_name=member.display_name, avatar_url=avatar_url(member.discord_id, member.avatar_hash))
+            for member in members
+        ]
+
 
 class EventSignupsRepository(SQLAlchemyAsyncRepository[EventSignup]):
     """EventSignup persistence."""
@@ -342,7 +372,8 @@ class EventSignupsService(SQLAlchemyAsyncRepositoryService[EventSignup]):
     async def upsert_signup(self, event_id: UUID, member: Member, data: SignupUpsert) -> Signup:
         """Create or replace the member's signup for ``event_id``. 409 if the event isn't scheduled.
 
-        400 if the event's kind is ``raid``/``dungeon`` and ``character``/``class``/``role`` aren't all present.
+        400 if the event's kind is ``raid``/``dungeon`` and ``character``/``class``/``role`` aren't all present,
+        unless ``status`` is ``absent`` (a "can't make it" never needs a character to go with it).
         Writes an ``EventSignupActivity`` row when the sign-up is created, its status changes, or its comment changes
         to a non-empty one; character/class/role edits alone and clearing the comment write nothing.
         """
@@ -354,8 +385,10 @@ class EventSignupsService(SQLAlchemyAsyncRepositoryService[EventSignup]):
         if event.status != "scheduled":
             msg = "Event is not open for signups"
             raise HTTPException(status_code=HTTP_409_CONFLICT, detail=msg)
-        if event.kind in {kind.value for kind in ROLE_KINDS} and (
-            data.character is None or data.wow_class is None or data.role is None
+        if (
+            data.status != SignupStatus.ABSENT
+            and event.kind in {kind.value for kind in ROLE_KINDS}
+            and (data.character is None or data.wow_class is None or data.role is None)
         ):
             msg = "character, class, and role are required for this event's kind"
             raise ValidationException(msg)
@@ -411,6 +444,37 @@ class EventSignupsService(SQLAlchemyAsyncRepositoryService[EventSignup]):
             )
         )
         await session.commit()
+
+    async def get_by_discord(self, event_id: UUID, member: Member) -> SignupByDiscord:
+        """``member``'s current signup for ``event_id`` (if any), plus their most recent character/class/role.
+
+        "Most recent" looks across every event the member has ever given a character for, not just this one, so
+        a first-time signup on a new event can default to what they last played. 404 if ``event_id`` doesn't exist.
+        """
+        session = self.repository.session
+        event = await session.get(GuildEvent, event_id)
+        if event is None:
+            msg = f"No event {event_id}"
+            raise NotFoundException(msg)
+        existing = await self.get_one_or_none(event_id=event_id, member_id=member.id)
+        signup = _to_signup_schema(existing, member) if existing is not None else None
+        statement = (
+            select(EventSignup)
+            .where(EventSignup.member_id == member.id, EventSignup.character.is_not(None))
+            .order_by(EventSignup.updated_at.desc())
+            .limit(1)
+        )
+        latest = (await session.execute(statement)).scalar_one_or_none()
+        defaults = (
+            SignupDefaults(
+                character=latest.character,
+                wow_class=WowClass(latest.wow_class) if latest.wow_class else None,
+                role=SignupRole(latest.role) if latest.role else None,
+            )
+            if latest is not None
+            else None
+        )
+        return SignupByDiscord(signup=signup, defaults=defaults, kind=EventKind(event.kind))
 
     async def update_chart(self, event_id: UUID, signup_id: UUID, data: ChartUpdate) -> Signup:
         """Place a signup on the raid chart (group 1-8) or the bench. 409 if the event isn't a raid."""

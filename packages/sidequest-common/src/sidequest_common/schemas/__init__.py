@@ -1,6 +1,32 @@
 """Pydantic request/response schemas shared by the API and the bot's API client."""
 
 from sidequest_common.schemas.addons import ADDON_ORIGIN_LABELS, AddonCreate, AddonOrigin, AddonSchema, AddonUpdate
+from sidequest_common.schemas.attendance import (
+    AttendanceDetail,
+    AttendanceEventSummary,
+    AttendanceMark,
+    AttendanceMarkEntry,
+    AttendanceRange,
+    AttendanceReport,
+    AttendanceSignup,
+    AttendanceTrendPoint,
+    AttendanceTrends,
+    MemberAttendanceRow,
+    VoicePresenceEntry,
+    VoicePresenceReport,
+    WalkInCandidate,
+    WalkInCreate,
+)
+from sidequest_common.schemas.away import AwayNowReport, AwayRangeIn, AwayRangeSchema
+from sidequest_common.schemas.badges import (
+    BADGE_LIST,
+    BADGES,
+    BadgeAck,
+    BadgeRoleState,
+    BadgeSyncReport,
+    EarnedBadge,
+    PendingBadgeAnnouncement,
+)
 from sidequest_common.schemas.discord_events import (
     ActivityAck,
     DiscordEventPush,
@@ -14,6 +40,7 @@ from sidequest_common.schemas.discord_events import (
     SignupActivity,
 )
 from sidequest_common.schemas.discord_live import DiscordLive, DiscordLiveReport, VoiceChannelCount
+from sidequest_common.schemas.discord_online import DiscordOnline, DiscordOnlineMember
 from sidequest_common.schemas.events import (
     EVENT_KIND_EP,
     EVENT_KIND_LABELS,
@@ -53,6 +80,15 @@ from sidequest_common.schemas.gm import (
 )
 from sidequest_common.schemas.guild import GuildConfigSchema, GuildConfigUpdate
 from sidequest_common.schemas.guild_roles import GuildRoleIn, GuildRolesReplace
+from sidequest_common.schemas.heroes import (
+    SEASONS,
+    HeroLeaderboard,
+    HeroProfile,
+    HeroRecentEvent,
+    HeroRow,
+    HeroSeasonStats,
+    Season,
+)
 from sidequest_common.schemas.levels import (
     LeaderboardEntry,
     LeaderboardPage,
@@ -65,8 +101,15 @@ from sidequest_common.schemas.levels import (
 )
 from sidequest_common.schemas.member_links import MemberLink
 from sidequest_common.schemas.member_profiles import MemberProfileIn, MemberProfilesReplace
-from sidequest_common.schemas.members import Me, MemberListing
+from sidequest_common.schemas.members import CalendarLink, Me, MemberListing
 from sidequest_common.schemas.moderation import CaseAction, ModCaseCreate, ModCaseSchema, ModCaseUpdate
+from sidequest_common.schemas.recruiting import (
+    Recruiting,
+    RecruitingClassWant,
+    RecruitingPriority,
+    RecruitingRoleWant,
+    RecruitingUpdate,
+)
 from sidequest_common.schemas.role_menus import (
     RoleMenuCreate,
     RoleMenuOptionSchema,
@@ -75,6 +118,7 @@ from sidequest_common.schemas.role_menus import (
     RoleMenuUpdate,
 )
 from sidequest_common.schemas.role_resets import RoleResetCandidate
+from sidequest_common.schemas.signup_by_discord import SignupByDiscord, SignupDefaults
 from sidequest_common.schemas.signup_notices import (
     ConfirmByDiscordRequest,
     SignupNoticeAck,
@@ -82,17 +126,37 @@ from sidequest_common.schemas.signup_notices import (
     SignupNoticeResolution,
     SignupNoticesPage,
 )
+from sidequest_common.schemas.weekly_board import WeeklyBoardEvent
 
 __all__ = (
     "ADDON_ORIGIN_LABELS",
+    "BADGES",
+    "BADGE_LIST",
     "EVENT_KIND_EP",
     "EVENT_KIND_LABELS",
     "ROLE_KINDS",
+    "SEASONS",
     "ActivityAck",
     "AddonCreate",
     "AddonOrigin",
     "AddonSchema",
     "AddonUpdate",
+    "AttendanceDetail",
+    "AttendanceEventSummary",
+    "AttendanceMark",
+    "AttendanceMarkEntry",
+    "AttendanceRange",
+    "AttendanceReport",
+    "AttendanceSignup",
+    "AttendanceTrendPoint",
+    "AttendanceTrends",
+    "AwayNowReport",
+    "AwayRangeIn",
+    "AwayRangeSchema",
+    "BadgeAck",
+    "BadgeRoleState",
+    "BadgeSyncReport",
+    "CalendarLink",
     "CaseAction",
     "ChartUpdate",
     "ConfirmByDiscordRequest",
@@ -104,8 +168,11 @@ __all__ = (
     "DiscordInterestReport",
     "DiscordLive",
     "DiscordLiveReport",
+    "DiscordOnline",
+    "DiscordOnlineMember",
     "DiscordPushAck",
     "DiscordSyncPending",
+    "EarnedBadge",
     "EventCounts",
     "EventCreate",
     "EventDetail",
@@ -125,6 +192,11 @@ __all__ = (
     "GuildConfigUpdate",
     "GuildRoleIn",
     "GuildRolesReplace",
+    "HeroLeaderboard",
+    "HeroProfile",
+    "HeroRecentEvent",
+    "HeroRow",
+    "HeroSeasonStats",
     "LeaderboardEntry",
     "LeaderboardPage",
     "LevelRoleSchema",
@@ -133,6 +205,7 @@ __all__ = (
     "LogEntry",
     "LogPage",
     "Me",
+    "MemberAttendanceRow",
     "MemberLevelSchema",
     "MemberLink",
     "MemberListing",
@@ -141,8 +214,14 @@ __all__ = (
     "ModCaseCreate",
     "ModCaseSchema",
     "ModCaseUpdate",
+    "PendingBadgeAnnouncement",
     "PushAction",
     "RankSchema",
+    "Recruiting",
+    "RecruitingClassWant",
+    "RecruitingPriority",
+    "RecruitingRoleWant",
+    "RecruitingUpdate",
     "RoleMenuCreate",
     "RoleMenuOptionSchema",
     "RoleMenuOptionUpsert",
@@ -150,11 +229,14 @@ __all__ = (
     "RoleMenuUpdate",
     "RoleResetCandidate",
     "RoleTag",
+    "Season",
     "SeriesRef",
     "SeriesRule",
     "SetXPRequest",
     "Signup",
     "SignupActivity",
+    "SignupByDiscord",
+    "SignupDefaults",
     "SignupMember",
     "SignupNoticeAck",
     "SignupNoticeCandidate",
@@ -164,6 +246,11 @@ __all__ = (
     "SignupStatus",
     "SignupUpsert",
     "VoiceChannelCount",
+    "VoicePresenceEntry",
+    "VoicePresenceReport",
+    "WalkInCandidate",
+    "WalkInCreate",
+    "WeeklyBoardEvent",
     "WowClass",
     "XPAwardResult",
     "event_ep",

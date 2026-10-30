@@ -48,6 +48,11 @@ import "../../../styles/room-event.css";
         <h3 id="h-interest">Interested on Discord</h3>
         <div id="interest-grid"></div>
       </div>
+
+      <div class="roster-block" id="away-section" hidden>
+        <h3 id="h-away">Away this event</h3>
+        <ul class="chip-list" id="away-chips"></ul>
+      </div>
     </section>
 
     <section class="chamber" aria-labelledby="h-signed-out" id="signed-out-section" hidden>
@@ -61,6 +66,21 @@ import "../../../styles/room-event.css";
       <h2 class="chamber-title" id="h-chart">
         Raid chart
       </h2>
+      <div class="chart-toolbar" id="chart-toolbar" hidden>
+        <button type="button" class="btn-quiet" id="suggest-btn">
+          Suggest groups
+        </button>
+        <div class="chart-preview-actions" id="suggest-preview-actions" hidden>
+          <span class="aside">Previewing a suggestion — nothing is saved yet.</span>
+          <button type="button" class="btn" id="suggest-apply-btn">
+            Apply
+          </button>
+          <button type="button" class="btn-quiet" id="suggest-discard-btn">
+            Discard
+          </button>
+        </div>
+      </div>
+      <p class="status" id="chart-status" role="status" aria-live="polite"></p>
       <div class="raid-frames" id="chart-grid"></div>
     </section>
 
@@ -137,6 +157,7 @@ import "../../../styles/room-event.css";
   } from "../../../scripts/api";
   import { onPage } from "../../../scripts/page";
   import { weekdayPhrase } from "../../../scripts/series";
+  import { diffAssignments, suggestGroups, type SuggestedAssignment } from "../../../scripts/raid-suggest";
 
   // A character row: class color on the name when the event tracks classes, a role mark when the row mixes roles.
   function memberRow(s: Signup, opts: { showClass: boolean; showRole: boolean }): string {
@@ -148,14 +169,15 @@ import "../../../styles/room-event.css";
     const clsAttr = opts.showClass && s.class ? ` class="cls-${s.class}"` : "";
     return `<li>${roleIcon}<span${clsAttr}>${escapeHtml(name)}</span></li>`;
   }
-  // A raid-frame unit: the class color tints the bar and names the character; officers get a group/bench select.
-  function raidBar(s: Signup, isOfficer: boolean, isBench: boolean): string {
+  // A raid-frame unit: the class color tints the bar and names the character; officers get a group/bench select and
+  // a drag handle (data-signup-id), and a preview-suggested slot that differs from the saved one is marked changed.
+  function raidBar(s: Signup, isInteractive: boolean, isBench: boolean, isChanged: boolean): string {
     const name = s.character ?? s.member.display_name;
     const barColor = s.class ? `var(--c-${s.class})` : "var(--mist-2)";
     const roleIcon = s.role
       ? `<svg class="ico role-${s.role}" aria-hidden="true"><use href="#i-${s.role}"></use></svg>`
       : "";
-    const control = isOfficer
+    const control = isInteractive
       ? `<select data-signup-id="${s.id}" aria-label="Group for ${escapeHtml(name)}">
           ${Array.from({ length: 8 }, (_, i) => i + 1)
             .map((g) => `<option value="${g}" ${!isBench && s.group === g ? "selected" : ""}>Group ${g}</option>`)
@@ -163,7 +185,8 @@ import "../../../styles/room-event.css";
           <option value="bench" ${isBench ? "selected" : ""}>Bench</option>
         </select>`
       : "";
-    return `<li class="raid-bar" style="--bar-color: ${barColor}">${roleIcon}<span class="raid-bar-name">${escapeHtml(name)}</span>${control}</li>`;
+    const barClass = `raid-bar${isChanged ? " raid-bar-changed" : ""}`;
+    return `<li class="${barClass}" data-signup-id="${s.id}" style="--bar-color: ${barColor}">${roleIcon}<span class="raid-bar-name">${escapeHtml(name)}</span>${control}</li>`;
   }
   function rosterList(signups: Signup[], emptyText: string, opts: { showClass: boolean; showRole: boolean }): string {
     if (signups.length === 0) {
@@ -171,12 +194,25 @@ import "../../../styles/room-event.css";
     }
     return signups.map((s) => memberRow(s, opts)).join("");
   }
-  function raidFrame(label: string, members: Signup[], isOfficer: boolean, isBench: boolean): string {
-    const rows = members.map((s) => raidBar(s, isOfficer, isBench)).join("");
+  // `target` is the frame's drop identity for drag-and-drop ("1".."8" or "bench"); `changed` are signup ids whose
+  // suggested slot differs from what's saved, so the preview can call them out before Apply commits anything.
+  function raidFrame(
+    label: string,
+    members: Signup[],
+    isInteractive: boolean,
+    isBench: boolean,
+    target: string,
+    changed: ReadonlySet<string>,
+  ): string {
+    const rows = members.map((s) => raidBar(s, isInteractive, isBench, changed.has(s.id))).join("");
     const frameClass = isBench ? "raid-frame raid-frame-bench" : "raid-frame";
-    return `<div class="${frameClass}"><h3 class="raid-frame-title">${label}</h3><ul class="raid-roster">${rows || `<li class="raid-empty">Empty</li>`}</ul></div>`;
+    return `<div class="${frameClass}" data-chart-target="${target}"><h3 class="raid-frame-title">${label}</h3><ul class="raid-roster">${rows || `<li class="raid-empty">Empty</li>`}</ul></div>`;
   }
-  onPage("#event-content", () => {
+  // The raid-frame (or bench) under a drag's current pointer position, for pointermove highlighting and the drop.
+  function frameAt(x: number, y: number): HTMLElement | null {
+    return document.elementFromPoint(x, y)?.closest<HTMLElement>(".raid-frame") ?? null;
+  }
+  onPage("#event-content", (signal) => {
     const LOCKED_MESSAGE = "This event is no longer open for signups.";
 
     const params = new URLSearchParams(location.search);
@@ -194,7 +230,15 @@ import "../../../styles/room-event.css";
     const interestSection = requireElement("interest-section");
     const interestHeading = requireElement("h-interest");
     const interestGrid = requireElement("interest-grid");
+    const awaySection = requireElement("away-section");
+    const awayChips = requireElement("away-chips");
     const chartSection = requireElement("chart-section");
+    const chartToolbar = requireElement("chart-toolbar");
+    const suggestBtn = requireElement<HTMLButtonElement>("suggest-btn");
+    const suggestPreviewActions = requireElement("suggest-preview-actions");
+    const suggestApplyBtn = requireElement<HTMLButtonElement>("suggest-apply-btn");
+    const suggestDiscardBtn = requireElement<HTMLButtonElement>("suggest-discard-btn");
+    const chartStatus = requireElement("chart-status");
     const chartGrid = requireElement("chart-grid");
     const signupInvite = requireElement("signup-invite");
     const signupSection = requireElement("signup-section");
@@ -221,6 +265,8 @@ import "../../../styles/room-event.css";
 
     let me: Me | null = null;
     let event: EventDetail | null = null;
+    // Set by "Suggest groups"; renderChart shows this instead of the saved chart until Apply or Discard.
+    let previewAssignments: SuggestedAssignment[] | null = null;
 
     function renderRoster(detail: EventDetail): void {
       const roleKind = ROLE_KINDS.includes(detail.kind);
@@ -286,39 +332,261 @@ import "../../../styles/room-event.css";
       interestGrid.innerHTML = `<ul class="roster-list">${names}${more}</ul>`;
     }
 
-    async function onChartAssign(ev: Event): Promise<void> {
-      const select = ev.currentTarget as HTMLSelectElement;
-      const signupId = select.dataset.signupId;
-      if (!signupId || !event) {
+    // `null` for anonymous visitors, same as discord_interest; an empty list hides the section just like no interest.
+    function renderAway(detail: EventDetail): void {
+      if (!detail.away || detail.away.length === 0) {
+        awaySection.hidden = true;
         return;
       }
-      const value = select.value;
+      awaySection.hidden = false;
+      awayChips.innerHTML = detail.away.map((m) => `<li class="chip">${escapeHtml(m.display_name)}</li>`).join("");
+    }
+
+    // Shared by the per-row select, drag-and-drop, and Apply: saves one signup's slot and refreshes from the
+    // server, or calls `revert` and reports the error if the save failed.
+    async function saveAssignment(signupId: string, value: string, revert?: () => void): Promise<boolean> {
+      if (!event) {
+        return false;
+      }
       const body = value === "bench" ? { bench: true, group: null } : { bench: false, group: Number(value) };
       try {
         await apiFetch(`/api/events/${event.id}/signups/${signupId}`, { method: "PATCH", body: JSON.stringify(body) });
         await refresh();
+        return true;
       } catch (err) {
-        signupStatus.textContent = statusMessage(err);
+        revert?.();
+        chartStatus.textContent = statusMessage(err);
+        return false;
       }
     }
+
+    async function onChartAssign(ev: Event): Promise<void> {
+      const select = ev.currentTarget as HTMLSelectElement;
+      const signupId = select.dataset.signupId;
+      if (!signupId) {
+        return;
+      }
+      await saveAssignment(signupId, select.value);
+    }
+
+    // Pointer-based drag (mouse, touch and pen all fire the same events), so moving a raid bar between groups and
+    // the bench works on a phone too; the row's <select> stays as the keyboard/no-drag alternative either way.
+    type DragState = {
+      pointerId: number;
+      signupId: string;
+      li: HTMLLIElement;
+      ghost: HTMLElement;
+      offsetX: number;
+      offsetY: number;
+      originalParent: HTMLElement;
+      originalNext: ChildNode | null;
+    };
+    let drag: DragState | null = null;
+
+    function clearDragOver(): void {
+      chartGrid.querySelectorAll(".raid-frame.drag-over").forEach((el) => el.classList.remove("drag-over"));
+    }
+
+    function endDrag(): void {
+      if (!drag) {
+        return;
+      }
+      drag.ghost.remove();
+      drag.li.classList.remove("raid-bar-dragging");
+      clearDragOver();
+      drag = null;
+    }
+
+    chartGrid.addEventListener(
+      "pointerdown",
+      (ev) => {
+        if (!chartGrid.classList.contains("officer-view") || (ev.pointerType === "mouse" && ev.button !== 0)) {
+          return;
+        }
+        const target = ev.target as HTMLElement;
+        if (target.closest("select")) {
+          return;
+        }
+        const li = target.closest<HTMLLIElement>(".raid-bar[data-signup-id]");
+        const signupId = li?.dataset.signupId;
+        if (!li || !signupId) {
+          return;
+        }
+        ev.preventDefault();
+        const rect = li.getBoundingClientRect();
+        const ghost = li.cloneNode(true) as HTMLElement;
+        ghost.classList.add("raid-drag-ghost");
+        ghost.querySelectorAll("select").forEach((el) => el.remove());
+        ghost.style.width = `${rect.width}px`;
+        ghost.style.left = `${rect.left}px`;
+        ghost.style.top = `${rect.top}px`;
+        document.body.append(ghost);
+        li.classList.add("raid-bar-dragging");
+        li.setPointerCapture(ev.pointerId);
+        drag = {
+          pointerId: ev.pointerId,
+          signupId,
+          li,
+          ghost,
+          offsetX: ev.clientX - rect.left,
+          offsetY: ev.clientY - rect.top,
+          originalParent: li.parentElement as HTMLElement,
+          originalNext: li.nextSibling,
+        };
+      },
+      { signal },
+    );
+
+    document.addEventListener(
+      "pointermove",
+      (ev) => {
+        if (!drag || ev.pointerId !== drag.pointerId) {
+          return;
+        }
+        drag.ghost.style.left = `${ev.clientX - drag.offsetX}px`;
+        drag.ghost.style.top = `${ev.clientY - drag.offsetY}px`;
+        clearDragOver();
+        frameAt(ev.clientX, ev.clientY)?.classList.add("drag-over");
+      },
+      { signal },
+    );
+
+    document.addEventListener(
+      "pointerup",
+      (ev) => {
+        if (!drag || ev.pointerId !== drag.pointerId || !event) {
+          endDrag();
+          return;
+        }
+        const { signupId, li, originalParent, originalNext } = drag;
+        const frame = frameAt(ev.clientX, ev.clientY);
+        const value = frame?.dataset.chartTarget;
+        endDrag();
+        if (!value) {
+          return;
+        }
+        const current = event.signups.find((s) => s.id === signupId);
+        const currentValue = current?.bench ? "bench" : (current?.group?.toString() ?? "");
+        if (value === currentValue) {
+          return;
+        }
+        const roster = frame?.querySelector(".raid-roster");
+        roster?.querySelector(".raid-empty")?.remove();
+        roster?.append(li);
+        void saveAssignment(signupId, value, () => {
+          if (originalNext) {
+            originalParent.insertBefore(li, originalNext);
+          } else {
+            originalParent.append(li);
+          }
+        });
+      },
+      { signal },
+    );
+
+    document.addEventListener("pointercancel", () => endDrag(), { signal });
+
+    suggestBtn.addEventListener(
+      "click",
+      () => {
+        if (!event) {
+          return;
+        }
+        const signed = event.signups
+          .filter((s) => s.status === "signed")
+          .map((s) => ({ id: s.id, class: s.class, role: s.role }));
+        previewAssignments = suggestGroups(signed, event.size);
+        chartStatus.textContent = "Previewing a suggested chart.";
+        renderChart(event);
+      },
+      { signal },
+    );
+
+    suggestDiscardBtn.addEventListener(
+      "click",
+      () => {
+        previewAssignments = null;
+        chartStatus.textContent = "";
+        if (event) {
+          renderChart(event);
+        }
+      },
+      { signal },
+    );
+
+    suggestApplyBtn.addEventListener(
+      "click",
+      async () => {
+        if (!event || !previewAssignments) {
+          return;
+        }
+        const current = new Map(event.signups.map((s) => [s.id, { group: s.group, bench: s.bench }]));
+        const diff = diffAssignments(current, previewAssignments);
+        previewAssignments = null;
+        if (diff.length === 0) {
+          chartStatus.textContent = "Nothing to change.";
+          renderChart(event);
+          return;
+        }
+        chartStatus.textContent = "Applying…";
+        suggestApplyBtn.disabled = true;
+        suggestDiscardBtn.disabled = true;
+        try {
+          for (const a of diff) {
+            const body = a.bench ? { bench: true, group: null } : { bench: false, group: a.group };
+            // Sequential on purpose: each signup gets its own PATCH, one at a time, so a mid-run failure leaves a
+            // predictable prefix applied rather than a burst of concurrent partial writes.
+            // oxlint-disable-next-line no-await-in-loop
+            await apiFetch(`/api/events/${event.id}/signups/${a.signupId}`, {
+              method: "PATCH",
+              body: JSON.stringify(body),
+            });
+          }
+          chartStatus.textContent = "Chart updated.";
+        } catch (err) {
+          chartStatus.textContent = statusMessage(err);
+        } finally {
+          suggestApplyBtn.disabled = false;
+          suggestDiscardBtn.disabled = false;
+          await refresh();
+        }
+      },
+      { signal },
+    );
 
     function renderChart(detail: EventDetail): void {
       chartSection.hidden = detail.kind !== "raid";
       if (detail.kind !== "raid") {
         return;
       }
-      const signed = detail.signups.filter((s) => s.status === "signed");
       const isOfficer = me?.is_officer ?? false;
+      const previewing = previewAssignments !== null;
+      chartToolbar.hidden = !isOfficer;
+      suggestBtn.hidden = previewing;
+      suggestPreviewActions.hidden = !previewing;
+      const signed = detail.signups.filter((s) => s.status === "signed");
+      const bySignupId = previewAssignments ? new Map(previewAssignments.map((a) => [a.signupId, a])) : null;
+      const changed = new Set<string>();
+      const effective = signed.map((s) => {
+        const a = bySignupId?.get(s.id);
+        if (!a || (a.group === s.group && a.bench === s.bench)) {
+          return s;
+        }
+        changed.add(s.id);
+        return Object.assign({}, s, { group: a.group, bench: a.bench });
+      });
+      const interactive = isOfficer && !previewing;
       const frames: string[] = [];
       for (let group = 1; group <= 8; group++) {
-        const members = signed.filter((s) => s.group === group && !s.bench);
-        frames.push(raidFrame(`Group ${group}`, members, isOfficer, false));
+        const members = effective.filter((s) => s.group === group && !s.bench);
+        frames.push(raidFrame(`Group ${group}`, members, interactive, false, String(group), changed));
       }
-      const bench = signed.filter((s) => s.bench || s.group === null);
-      frames.push(raidFrame("Bench", bench, isOfficer, true));
+      const bench = effective.filter((s) => s.bench || s.group === null);
+      frames.push(raidFrame("Bench", bench, interactive, true, "bench", changed));
       chartGrid.innerHTML = frames.join("");
+      chartGrid.classList.toggle("officer-view", interactive);
 
-      if (isOfficer) {
+      if (interactive) {
         chartGrid.querySelectorAll<HTMLSelectElement>("select[data-signup-id]").forEach((select) => {
           select.addEventListener("change", onChartAssign);
         });
@@ -416,6 +684,7 @@ import "../../../styles/room-event.css";
       signedOutSection.hidden = !signedOut;
       if (signedOut) {
         chartSection.hidden = true;
+        awaySection.hidden = true;
         const next = encodeURIComponent(location.pathname + location.search);
         signedOutMessage.innerHTML = `The plan and who's going are for guild members. <a href="/auth/discord/login?next=${next}">Sign in with Discord</a> to see them.`;
         return;
@@ -424,6 +693,7 @@ import "../../../styles/room-event.css";
       notesEl.textContent = event.notes ?? "";
       renderRoster(event);
       renderInterest(event);
+      renderAway(event);
       renderChart(event);
       renderSignupForm(event);
     }
@@ -472,10 +742,11 @@ import "../../../styles/room-event.css";
       }
     });
 
-    // A newer copy from the service worker re-renders the page, unless someone is part-way through the sign-up form.
+    // A newer copy from the service worker re-renders the page, unless someone is part-way through the sign-up
+    // form or reviewing a suggested chart they haven't applied or discarded yet.
     if (eventId) {
       onFreshData(`/api/events/${eventId}`, () => {
-        if (!signupForm.contains(document.activeElement)) {
+        if (!signupForm.contains(document.activeElement) && previewAssignments === null) {
           void refresh();
         }
       });

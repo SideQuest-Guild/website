@@ -12,6 +12,7 @@ import pytest
 from litestar.testing import AsyncTestClient
 
 from sidequest_api.app import create_app
+from sidequest_api.domain.discord_online import services as discord_online_services
 from sidequest_common.settings import APISettings, DatabaseSettings, WebSettings
 from tests.conftest import GUILD_ID, TEST_API_KEY
 
@@ -26,7 +27,7 @@ MEMBER_SESSION_SECRET = "a" * 32
 
 
 def _discord_transport(discord_state: dict) -> httpx.MockTransport:
-    """Fakes the three Discord endpoints the OAuth flow calls, driven by the mutable ``discord_state`` dict."""
+    """Fakes the Discord endpoints the OAuth flow and the online-now widget call, driven by ``discord_state``."""
 
     def handler(request: httpx.Request) -> httpx.Response:
         path = request.url.path
@@ -39,6 +40,11 @@ def _discord_transport(discord_state: dict) -> httpx.MockTransport:
             if guild_member is None:
                 return httpx.Response(404, json={"message": "Not Found"})
             return httpx.Response(200, json=guild_member)
+        if path.endswith("/widget.json"):
+            discord_state["widget_calls"] = discord_state.get("widget_calls", 0) + 1
+            if discord_state.get("widget_down"):
+                raise httpx.ConnectError("Discord is down", request=request)
+            return httpx.Response(200, json=discord_state["widget"])
         return httpx.Response(404, json={"message": "Not Found"})
 
     return httpx.MockTransport(handler)
@@ -47,7 +53,19 @@ def _discord_transport(discord_state: dict) -> httpx.MockTransport:
 @pytest.fixture
 def discord_state() -> dict:
     """Mutable holder the test updates before calling ``login_as``; read by the mocked Discord transport."""
-    return {"user": None, "guild_member": None}
+    return {
+        "user": None,
+        "guild_member": None,
+        "widget": {"presence_count": 0, "members": []},
+        "widget_down": False,
+        "widget_calls": 0,
+    }
+
+
+@pytest.fixture(autouse=True)
+def _clear_discord_online_cache() -> None:
+    """The widget roster cache (``domain.discord_online.services._cache``) is process-wide; tests must not leak it."""
+    discord_online_services._cache.clear()
 
 
 def _battlenet_transport(battlenet_state: dict) -> httpx.MockTransport:

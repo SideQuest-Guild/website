@@ -8,6 +8,7 @@ from sqlalchemy import select
 from sidequest_common.models import (
     EventSignup,
     EventSignupActivity,
+    EventVoicePresence,
     GuildEvent,
     Member,
     MemberLevel,
@@ -144,6 +145,35 @@ async def test_delete_account_removes_event_signup_activity_by_discord_id(
     async with db_sessionmaker() as session:
         rows = (
             (await session.execute(select(EventSignupActivity).where(EventSignupActivity.discord_id == 9006)))
+            .scalars()
+            .all()
+        )
+        assert rows == []
+
+
+async def test_delete_account_removes_event_voice_presence_by_discord_id(
+    member_client: AsyncTestClient, discord_state: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    event_id = await _seed_event(db_sessionmaker)
+    await login_as(member_client, discord_state, discord_id=9011, username="voice-haver", roles=[])
+
+    async with db_sessionmaker() as session:
+        session.add(EventVoicePresence(event_id=event_id, discord_id=9011, minutes=42))
+        await session.commit()
+
+    async with db_sessionmaker() as session:
+        rows = (
+            (await session.execute(select(EventVoicePresence).where(EventVoicePresence.discord_id == 9011)))
+            .scalars()
+            .all()
+        )
+        assert len(rows) == 1
+
+    assert (await member_client.delete("/api/me")).status_code == 204
+
+    async with db_sessionmaker() as session:
+        rows = (
+            (await session.execute(select(EventVoicePresence).where(EventVoicePresence.discord_id == 9011)))
             .scalars()
             .all()
         )

@@ -40,16 +40,19 @@ def create_app(
     from sidequest_api.lib.battlenet import BATTLENET_TRANSPORT_STATE_KEY
     from sidequest_api.lib.db import build_alchemy_config
     from sidequest_api.lib.discord import DISCORD_TRANSPORT_STATE_KEY
+    from sidequest_api.lib.logging import install_calendar_log_redaction
     from sidequest_api.lib.member_auth import (
         build_session_config,
         create_current_gm_provider,
         create_current_officer_provider,
         create_full_access_provider,
+        create_member_or_bot_provider,
         provide_authenticated_member,
         provide_current_member,
     )
     from sidequest_api.lib.website import DEFAULT_WEBSITE_DIST, is_vite_dev_mode, website_routes, website_vite_plugin
 
+    install_calendar_log_redaction()
     db_settings = db_settings or DatabaseSettings()
     api_settings = api_settings or APISettings()
     web_settings = web_settings or WebSettings()
@@ -74,6 +77,7 @@ def create_app(
             "authenticated_member": Provide(provide_authenticated_member),
             "current_member": Provide(provide_current_member),
             "full_access": Provide(create_full_access_provider(api_settings.KEY.get_secret_value())),
+            "member_or_bot": Provide(create_member_or_bot_provider(api_settings.KEY.get_secret_value())),
             "current_officer": Provide(create_current_officer_provider(web_settings.OFFICER_ROLE_IDS)),
             "current_gm": Provide(create_current_gm_provider(web_settings.GM_ROLE_IDS)),
         },

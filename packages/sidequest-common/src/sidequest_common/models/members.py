@@ -48,6 +48,8 @@ class Member(BigIntAuditBase):
     officer_notice_resolved_at: Mapped[datetime | None] = mapped_column(DateTimeUTC(timezone=True), default=None)
     officer_notice_channel_id: Mapped[int | None] = mapped_column(BigInteger, default=None)
     officer_notice_message_id: Mapped[int | None] = mapped_column(BigInteger, default=None)
+    calendar_token: Mapped[str | None] = mapped_column(Text, unique=True, default=None)
+    """Secret token for the member's private calendar feed (``GET /api/calendar/{token}.ics``); generated lazily."""
 
     @property
     def display_name(self) -> str:

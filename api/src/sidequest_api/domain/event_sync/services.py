@@ -51,6 +51,7 @@ _ROLE_KIND_VALUES = {kind.value for kind in ROLE_KINDS}
 _WEEKDAY_NAMES = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
 _BIWEEKLY_INTERVAL = 2
 _TWO_WEEKDAYS = 2
+FORUM_SIGNUP_BUTTONS_MARKER = "signup-buttons-v1"
 
 
 def _truncate(text: str, limit: int) -> str:
@@ -150,6 +151,10 @@ def _push_hash(
 
     ``needs_thread`` makes configuring the events forum push already-synced events once more, which is when the bot
     creates their post; a failed attempt is acked under the same hash, so it isn't retried every poll.
+
+    The trailing ``FORUM_SIGNUP_BUTTONS_MARKER`` isn't a real field: it only exists so every already-synced event
+    gets pushed (and its forum starter post re-edited) once after this marker was added, which is how existing
+    upcoming threads pick up the Going/Maybe/Can't buttons without anyone re-running sync by hand.
     """
     payload = json.dumps(
         [
@@ -160,6 +165,7 @@ def _push_hash(
             starts_at.astimezone(UTC).isoformat(),
             ends_at.astimezone(UTC).isoformat(),
             needs_thread,
+            FORUM_SIGNUP_BUTTONS_MARKER,
         ],
         separators=(",", ":"),
     )
@@ -199,6 +205,7 @@ def _desired_state(
         discord_event_id=event.discord_event_id,
         thread_id=event.discord_thread_id,
         kind=EventKind(event.kind),
+        counts=counts,
         action=action,
         name=name,
         title=event.title,

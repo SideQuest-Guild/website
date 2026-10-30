@@ -1,0 +1,243 @@
+---
+import Room from "../../layouts/Room.astro";
+import hallOfHeroes from "../../../assets/rooms/hall-of-heroes.webp";
+import "../../styles/room-heroes.css";
+---
+
+<Room
+  title="Hall of Heroes · SideQuest"
+  description="The guild's leaderboard: EP, raids, events and badges earned by SideQuest members."
+  heading="HALL OF HEROES"
+  lede="Where the guild's champions are remembered: EP, raids, events and the badges they've earned."
+  art={hallOfHeroes}
+  artPosition="50% 30%"
+  current="heroes"
+>
+  <p class="status" id="heroes-status" role="status" aria-live="polite"></p>
+
+  <div id="heroes-gate" hidden>
+    <section class="chamber" aria-labelledby="h-heroes-gate">
+      <h2 class="chamber-title" id="h-heroes-gate">
+        Hall of Heroes
+      </h2>
+      <p class="chamber-intro" id="heroes-gate-message"></p>
+    </section>
+  </div>
+
+  <div id="heroes-body" hidden>
+    <section class="chamber" aria-labelledby="h-leaderboard">
+      <h2 class="chamber-title" id="h-leaderboard">
+        Leaderboard
+      </h2>
+      <p class="season-note aside" id="season-note" hidden>
+        Season One begins November 4
+      </p>
+      <div class="tabs" role="tablist" aria-label="Season" id="season-tabs">
+        <button type="button" role="tab" data-season="season-one" aria-selected="false" tabindex="-1">
+          Season One
+        </button>
+        <button type="button" role="tab" data-season="month" aria-selected="false" tabindex="-1">
+          This month
+        </button>
+        <button type="button" role="tab" data-season="all" aria-selected="false" tabindex="-1">
+          All time
+        </button>
+      </div>
+      <div class="tabs sort-tabs" role="group" aria-label="Sort by" id="sort-tabs">
+        <button type="button" data-sort="ep" aria-pressed="true">
+          EP
+        </button>
+        <button type="button" data-sort="raids_attended" aria-pressed="false">
+          Raids
+        </button>
+        <button type="button" data-sort="chat_level" aria-pressed="false">
+          Level
+        </button>
+      </div>
+      <div class="leaderboard" id="leaderboard" aria-live="polite"></div>
+    </section>
+  </div>
+
+  <noscript>
+    <p class="aside">Enable JavaScript to view the Hall of Heroes.</p>
+  </noscript>
+</Room>
+
+<script>
+  import {
+    apiFetch,
+    fetchMe,
+    escapeHtml,
+    requireElement,
+    statusMessage,
+    capitalize,
+    ApiError,
+    SEASONS,
+    BADGE_INFO,
+    badgeIconId,
+    type HeroLeaderboard,
+    type HeroRow,
+    type Me,
+  } from "../../scripts/api";
+  import { onPage } from "../../scripts/page";
+
+  type SortKey = "ep" | "raids_attended" | "chat_level";
+
+  function rankBadge(rank: number): string {
+    const tier = rank === 1 ? " rank-gold" : rank === 2 ? " rank-silver" : rank === 3 ? " rank-bronze" : "";
+    return `<span class="hero-rank${tier}">${rank}</span>`;
+  }
+
+  function badgeIcons(ids: string[]): string {
+    if (ids.length === 0) {
+      return `<span class="hero-badges"></span>`;
+    }
+    const icons = ids
+      .map((id) => BADGE_INFO[id] && { id, ...BADGE_INFO[id] })
+      .filter((info): info is { id: string; name: string } => Boolean(info))
+      .map(
+        (info) =>
+          `<svg class="ico hero-badge" role="img" aria-label="${escapeHtml(info.name)}"><title>${escapeHtml(info.name)}</title><use href="#${badgeIconId(info.id)}"></use></svg>`,
+      )
+      .join("");
+    return `<span class="hero-badges">${icons}</span>`;
+  }
+
+  function avatarMarkup(row: HeroRow): string {
+    if (row.avatar_url) {
+      return `<img class="hero-avatar" src="${escapeHtml(row.avatar_url)}" alt="" width="36" height="36" loading="lazy" />`;
+    }
+    const initial = escapeHtml(row.display_name.trim().charAt(0).toUpperCase() || "?");
+    return `<span class="hero-avatar hero-avatar-empty" aria-hidden="true">${initial}</span>`;
+  }
+
+  function heroRow(row: HeroRow): string {
+    const className = row.wow_class ? capitalize(row.wow_class) : "No class yet";
+    const nameClass = `hero-display-name${row.wow_class ? ` cls-${row.wow_class}` : ""}`;
+    return `
+    <a class="hero-row" href="/heroes/member/?id=${row.member_id}">
+      ${rankBadge(row.rank)}
+      ${avatarMarkup(row)}
+      <span class="hero-name">
+        <span class="${nameClass}">${escapeHtml(row.display_name)}</span>
+        <span class="hero-class">${escapeHtml(className)}</span>
+      </span>
+      <span class="hero-stats-group">
+        <span class="hero-stat hero-stat-ep">${row.ep}<small>EP</small></span>
+        <span class="hero-stat">${row.raids_attended}<small>Raids</small></span>
+        <span class="hero-stat">${row.events_attended}<small>Events</small></span>
+        <span class="hero-stat">${row.chat_level}<small>Lvl</small></span>
+      </span>
+      ${badgeIcons(row.badge_ids)}
+    </a>`;
+  }
+
+  onPage("#heroes-body", (signal) => {
+    const statusEl = requireElement("heroes-status");
+    const gateEl = requireElement("heroes-gate");
+    const gateMessage = requireElement("heroes-gate-message");
+    const bodyEl = requireElement("heroes-body");
+    const seasonNote = requireElement("season-note");
+    const seasonTabsEl = requireElement("season-tabs");
+    const sortTabsEl = requireElement("sort-tabs");
+    const boardEl = requireElement("leaderboard");
+
+    // Season One hasn't started yet at launch: default to All time until it has, per SEASONS[0].starts_at.
+    const seasonOneStarted = Date.now() >= new Date(SEASONS[0]!.starts_at).getTime();
+    let season = seasonOneStarted ? SEASONS[0]!.id : "all";
+    let sortKey: SortKey = "ep";
+    let rows: HeroRow[] = [];
+
+    function selectSeasonTab(id: string): void {
+      for (const btn of seasonTabsEl.querySelectorAll<HTMLButtonElement>("button")) {
+        const active = btn.dataset.season === id;
+        btn.setAttribute("aria-selected", String(active));
+        btn.tabIndex = active ? 0 : -1;
+      }
+    }
+
+    function selectSortTab(key: SortKey): void {
+      for (const btn of sortTabsEl.querySelectorAll<HTMLButtonElement>("button")) {
+        btn.setAttribute("aria-pressed", String(btn.dataset.sort === key));
+      }
+    }
+
+    function renderRows(): void {
+      const sorted = rows.toSorted((a, b) => b[sortKey] - a[sortKey]);
+      boardEl.innerHTML =
+        sorted.length > 0
+          ? sorted.map(heroRow).join("")
+          : `<p class="hero-empty aside">No one has earned EP this season yet. Sign up for an event to be the first on the board.</p>`;
+    }
+
+    async function loadLeaderboard(): Promise<void> {
+      statusEl.textContent = "Loading…";
+      try {
+        const board = await apiFetch<HeroLeaderboard>(`/api/heroes?season=${season}`, { signal });
+        statusEl.textContent = "";
+        seasonNote.hidden = !(season === "all" && !seasonOneStarted);
+        rows = board.rows;
+        renderRows();
+      } catch (err) {
+        statusEl.textContent = statusMessage(err);
+      }
+    }
+
+    for (const btn of seasonTabsEl.querySelectorAll<HTMLButtonElement>("button")) {
+      btn.addEventListener(
+        "click",
+        () => {
+          const next = btn.dataset.season;
+          if (!next || next === season) {
+            return;
+          }
+          season = next;
+          selectSeasonTab(season);
+          void loadLeaderboard();
+        },
+        { signal },
+      );
+    }
+
+    for (const btn of sortTabsEl.querySelectorAll<HTMLButtonElement>("button")) {
+      btn.addEventListener(
+        "click",
+        () => {
+          const next = btn.dataset.sort as SortKey | undefined;
+          if (!next || next === sortKey) {
+            return;
+          }
+          sortKey = next;
+          selectSortTab(sortKey);
+          renderRows();
+        },
+        { signal },
+      );
+    }
+
+    async function init(): Promise<void> {
+      let me: Me | null = null;
+      try {
+        me = await fetchMe();
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 0) {
+          statusEl.textContent = statusMessage(err);
+        }
+        me = null;
+      }
+      if (!me) {
+        gateEl.hidden = false;
+        const next = encodeURIComponent(location.pathname + location.search);
+        gateMessage.innerHTML = `Guild stats and badges are for members only. <a href="/auth/discord/login?next=${next}">Sign in with Discord</a> to see the Hall of Heroes.`;
+        statusEl.textContent = "";
+        return;
+      }
+      bodyEl.hidden = false;
+      selectSeasonTab(season);
+      selectSortTab(sortKey);
+      await loadLeaderboard();
+    }
+
+    void init();
+  });
+</script>

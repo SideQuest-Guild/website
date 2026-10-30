@@ -3,16 +3,19 @@
 // of each is attached to the report for a human look.
 import type { Page } from "@playwright/test";
 
-import { EVENTS, GM } from "./data";
+import { EVENTS, GM, HEROES } from "./data";
 import { expect, test } from "./fixtures";
 
 const PAGES = [
   { name: "home", path: "/" },
   { name: "events", path: "/events/" },
   { name: "raid", path: `/events/detail/?id=${EVENTS[0]?.id}` },
+  { name: "heroes", path: "/heroes/" },
+  { name: "hero", path: `/heroes/member/?id=${HEROES[0]?.member_id}` },
   { name: "addons", path: "/addons/" },
   { name: "account", path: "/account/" },
   { name: "officers", path: "/officers/#members" },
+  { name: "officers attendance", path: "/officers/#attendance" },
   { name: "rules", path: "/rules/" },
   { name: "privacy", path: "/privacy/" },
   { name: "terms", path: "/terms/" },

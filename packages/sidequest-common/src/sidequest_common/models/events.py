@@ -91,6 +91,7 @@ class GuildEvent(UUIDAuditBase):
     ends_at: Mapped[datetime | None] = mapped_column(DateTimeUTC(timezone=True), default=None)
     size: Mapped[int | None] = mapped_column(Integer, default=None)
     ep_override: Mapped[int | None] = mapped_column(Integer, default=None)
+    attendance_taken_at: Mapped[datetime | None] = mapped_column(DateTimeUTC(timezone=True), default=None)
     status: Mapped[str] = mapped_column(String(20), default="scheduled")
     notes: Mapped[str | None] = mapped_column(Text, default=None)
     discord_event_id: Mapped[int | None] = mapped_column(BigInteger, unique=True, default=None)
@@ -113,6 +114,25 @@ class DiscordEventTombstone(UUIDAuditBase):
     __table_args__ = {"comment": "Discord scheduled events still to delete after their guild event was deleted."}
 
     discord_event_id: Mapped[int] = mapped_column(BigInteger, unique=True)
+
+
+class EventVoicePresence(UUIDAuditBase):
+    """Minutes a Discord member spent in the guild's voice channels while one event ran.
+
+    Bot-reported (``PUT /api/guilds/{guild_id}/attendance/voice``) with cumulative minutes-so-far per member for
+    the event; each push stores ``max(existing, reported)``, so repeated pushes -- including after a bot restart
+    resets its in-memory counter -- are idempotent and never lower an already-accumulated total.
+    """
+
+    __tablename__ = "event_voice_presence"
+    __table_args__ = (
+        UniqueConstraint("event_id", "discord_id", name="uq_event_voice_presence_event_discord"),
+        {"comment": "Minutes a Discord member spent in guild voice channels during an event, bot-reported."},
+    )
+
+    event_id: Mapped[UUID] = mapped_column(ForeignKey("guild_event.id", ondelete="CASCADE"), index=True)
+    discord_id: Mapped[int] = mapped_column(BigInteger)
+    minutes: Mapped[int] = mapped_column(Integer, default=0)
 
 
 SIGNUP_ACTIVITY_ACTIONS = ("going", "maybe", "not_going", "withdrew")
@@ -179,3 +199,5 @@ class EventSignup(UUIDAuditBase):
     comment: Mapped[str | None] = mapped_column(String(200), default=None)
     chart_group: Mapped[int | None] = mapped_column("chart_group", Integer, default=None)
     bench: Mapped[bool] = mapped_column(Boolean, default=False)
+    attended: Mapped[bool | None] = mapped_column(Boolean, default=None)
+    is_walk_in: Mapped[bool] = mapped_column(Boolean, default=False)

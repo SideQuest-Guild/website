@@ -88,6 +88,58 @@ import "../../styles/room-account.css";
       </div>
     </section>
 
+    <section class="chamber" aria-labelledby="calendar-title">
+      <h2 class="chamber-title" id="calendar-title">
+        Calendar
+      </h2>
+      <p class="aside">
+        Subscribe once and new events show up on their own. Anyone with this link can see the guild's events and your
+        sign-ups, so keep it to yourself.
+      </p>
+      <div class="calendar-link-row">
+        <input type="text" id="calendar-url" readonly aria-label="Your private calendar link" />
+        <button type="button" class="btn-quiet btn-small" id="calendar-copy-btn">
+          Copy
+        </button>
+      </div>
+      <div class="form-actions">
+        <a class="btn" id="calendar-google" target="_blank" rel="noopener noreferrer">
+          Add to Google Calendar
+        </a>
+        <a class="btn" id="calendar-apple">
+          Add to Apple Calendar
+        </a>
+        <button type="button" class="btn-quiet" id="calendar-rotate-btn">
+          Make a new link
+        </button>
+      </div>
+    </section>
+
+    <section class="chamber" aria-labelledby="away-title">
+      <h2 class="chamber-title" id="away-title">
+        Away
+      </h2>
+      <p>Mark the dates you'll be away so officers and raid leads know not to expect you at those events.</p>
+      <ul class="away-list" id="away-list"></ul>
+      <form id="away-form" class="away-form">
+        <label>
+          From
+          <input type="date" id="away-start" required />
+        </label>
+        <label>
+          To
+          <input type="date" id="away-end" required />
+        </label>
+        <label class="away-note-label">
+          Note (optional)
+          <input type="text" id="away-note" maxlength="100" placeholder="e.g. Family trip" />
+        </label>
+        <button type="submit" class="btn-quiet">
+          Add
+        </button>
+      </form>
+    </section>
+
     <section class="chamber" aria-labelledby="account-data-title">
       <h2 class="chamber-title" id="account-data-title">
         Your Data
@@ -113,7 +165,16 @@ import "../../styles/room-account.css";
 </Room>
 
 <script>
-  import { apiFetch, fetchMe, requireElement, statusMessage, type Me } from "../../scripts/api";
+  import {
+    apiFetch,
+    escapeHtml,
+    fetchMe,
+    requireElement,
+    statusMessage,
+    type AwayRange,
+    type CalendarLink,
+    type Me,
+  } from "../../scripts/api";
   import { onPage } from "../../scripts/page";
 
   /** `is_gm` isn't on `Me` yet; read it defensively so the rank line is ready the day it ships. */
@@ -123,6 +184,20 @@ import "../../styles/room-account.css";
       return "GM";
     }
     return me.is_officer ? "Officer" : "Member";
+  }
+
+  function toWebcal(url: string): string {
+    return url.replace(/^https?:\/\//, "webcal://");
+  }
+
+  function formatAwayDate(iso: string): string {
+    return new Date(`${iso}T00:00:00`).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  }
+
+  function formatAwayRange(range: AwayRange): string {
+    return range.start_date === range.end_date
+      ? formatAwayDate(range.start_date)
+      : `${formatAwayDate(range.start_date)} \u2013 ${formatAwayDate(range.end_date)}`;
   }
   onPage("#account-status", () => {
     const ERROR_MESSAGES: Record<string, string> = {
@@ -158,6 +233,16 @@ import "../../styles/room-account.css";
     const bnetLink = requireElement<HTMLAnchorElement>("bnet-link");
     const bnetUnlinkBtn = requireElement<HTMLButtonElement>("bnet-unlink-btn");
     const deleteAccountBtn = requireElement<HTMLButtonElement>("delete-account-btn");
+    const calendarUrlInput = requireElement<HTMLInputElement>("calendar-url");
+    const calendarCopyBtn = requireElement<HTMLButtonElement>("calendar-copy-btn");
+    const calendarGoogleLink = requireElement<HTMLAnchorElement>("calendar-google");
+    const calendarAppleLink = requireElement<HTMLAnchorElement>("calendar-apple");
+    const calendarRotateBtn = requireElement<HTMLButtonElement>("calendar-rotate-btn");
+    const awayList = requireElement("away-list");
+    const awayForm = requireElement<HTMLFormElement>("away-form");
+    const awayStartInput = requireElement<HTMLInputElement>("away-start");
+    const awayEndInput = requireElement<HTMLInputElement>("away-end");
+    const awayNoteInput = requireElement<HTMLInputElement>("away-note");
 
     function show(target: HTMLElement): void {
       for (const el of [signedOut, notMember, signedIn]) {
@@ -177,6 +262,50 @@ import "../../styles/room-account.css";
       params.delete("error");
       const query = params.toString();
       history.replaceState(null, "", `${location.pathname}${query ? `?${query}` : ""}${location.hash}`);
+    }
+
+    function applyCalendarLink(link: CalendarLink): void {
+      calendarUrlInput.value = link.url;
+      const webcalUrl = toWebcal(link.url);
+      calendarGoogleLink.href = `https://calendar.google.com/calendar/r?cid=${encodeURIComponent(webcalUrl)}`;
+      calendarAppleLink.href = webcalUrl;
+    }
+
+    async function renderCalendar(): Promise<void> {
+      try {
+        const link = await apiFetch<CalendarLink>("/api/me/calendar");
+        applyCalendarLink(link);
+      } catch {
+        calendarUrlInput.value = "";
+      }
+    }
+
+    function renderAwayList(ranges: AwayRange[]): void {
+      if (ranges.length === 0) {
+        awayList.innerHTML = '<li class="away-empty">No away dates marked.</li>';
+        return;
+      }
+      awayList.innerHTML = ranges
+        .map(
+          (range) => `
+            <li class="away-item" data-id="${range.id}">
+              <span class="away-range">${formatAwayRange(range)}</span>
+              ${range.note ? `<span class="away-note">${escapeHtml(range.note)}</span>` : ""}
+              <button type="button" class="btn-quiet away-delete-btn" data-id="${range.id}" aria-label="Remove">
+                Remove
+              </button>
+            </li>`,
+        )
+        .join("");
+    }
+
+    async function renderAway(): Promise<void> {
+      try {
+        const ranges = await apiFetch<AwayRange[]>("/api/me/away");
+        renderAwayList(ranges);
+      } catch {
+        awayList.innerHTML = '<li class="away-empty">Couldn\u2019t load your away dates.</li>';
+      }
     }
 
     async function render({ fresh = false }: { fresh?: boolean } = {}): Promise<void> {
@@ -213,6 +342,8 @@ import "../../styles/room-account.css";
       bnetLink.hidden = linked;
       bnetUnlinkBtn.hidden = !linked;
       show(signedIn);
+      await renderCalendar();
+      await renderAway();
     }
 
     signOutBtn.addEventListener("click", async () => {
@@ -266,6 +397,79 @@ import "../../styles/room-account.css";
       }
     });
 
+    calendarCopyBtn.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(calendarUrlInput.value);
+        statusEl.dataset.tone = "";
+        statusEl.textContent = "Calendar link copied.";
+      } catch {
+        calendarUrlInput.select();
+      }
+    });
+
+    calendarRotateBtn.addEventListener("click", async () => {
+      if (!confirm("Make a new calendar link? The current link will stop working for anyone who has it, right away.")) {
+        return;
+      }
+      calendarRotateBtn.disabled = true;
+      try {
+        const link = await apiFetch<CalendarLink>("/api/me/calendar/rotate", { method: "POST" });
+        applyCalendarLink(link);
+        statusEl.dataset.tone = "";
+        statusEl.textContent = "New calendar link ready.";
+      } catch (err) {
+        statusEl.dataset.tone = "error";
+        statusEl.textContent = statusMessage(err);
+      } finally {
+        calendarRotateBtn.disabled = false;
+      }
+    });
+
+    awayForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const submitBtn = awayForm.querySelector<HTMLButtonElement>('button[type="submit"]');
+      if (submitBtn) {
+        submitBtn.disabled = true;
+      }
+      try {
+        await apiFetch("/api/me/away", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            start_date: awayStartInput.value,
+            end_date: awayEndInput.value,
+            note: awayNoteInput.value.trim() || null,
+          }),
+        });
+        awayForm.reset();
+        statusEl.dataset.tone = "";
+        statusEl.textContent = "Away dates added.";
+        await renderAway();
+      } catch (err) {
+        statusEl.dataset.tone = "error";
+        statusEl.textContent = statusMessage(err);
+      } finally {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+        }
+      }
+    });
+
+    awayList.addEventListener("click", async (event) => {
+      const button = (event.target as HTMLElement).closest<HTMLButtonElement>(".away-delete-btn");
+      if (!button?.dataset.id) {
+        return;
+      }
+      button.disabled = true;
+      try {
+        await apiFetch(`/api/me/away/${button.dataset.id}`, { method: "DELETE" });
+        await renderAway();
+      } catch (err) {
+        statusEl.dataset.tone = "error";
+        statusEl.textContent = statusMessage(err);
+        button.disabled = false;
+      }
+    });
     showRedirectError();
     render();
   });

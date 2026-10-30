@@ -2,12 +2,23 @@
 // change that the pages depend on breaks the build here too. Times are relative to now so "upcoming" stays upcoming.
 import type {
   Addon,
+  AttendanceDetail,
+  AttendanceEventSummary,
+  AttendanceReport,
+  AttendanceSignup,
+  AttendanceTrends,
   DiscordLive,
+  DiscordOnline,
+  EarnedBadge,
   EventDetail,
   EventSummary,
   GmMember,
   GmMemberDetail,
+  HeroLeaderboard,
+  HeroProfile,
+  HeroRow,
   Me,
+  Recruiting,
   Signup,
 } from "../src/scripts/api";
 
@@ -111,7 +122,13 @@ export const SIGNUPS: Signup[] = [
 ];
 
 export function eventDetail(event: EventSummary): EventDetail {
-  return { ...event, signups: SIGNUPS, my_signup: null, discord_interest: { count: 4, members: [] } };
+  return {
+    ...event,
+    signups: SIGNUPS,
+    my_signup: null,
+    discord_interest: { count: 4, members: [] },
+    away: [{ display_name: "Kaelthasmaybe", avatar_url: null }],
+  };
 }
 
 export const ADDONS: Addon[] = [
@@ -149,6 +166,19 @@ export const LIVE: DiscordLive = {
   reported_at: new Date().toISOString(),
 };
 
+export const ONLINE: DiscordOnline = {
+  presence_count: 6,
+  ok: true,
+  members: [
+    { name: "Wanderer", status: "online", avatar_url: null, activity: "World of Warcraft: Forever" },
+    { name: "Quest Guide", status: "online", avatar_url: null, activity: null },
+    { name: "Quest Master", status: "idle", avatar_url: null, activity: null },
+    { name: "Lantern", status: "dnd", avatar_url: null, activity: "Raiding" },
+  ],
+};
+
+export const RECRUITING: Recruiting = { roles: [], classes: [], updated_at: null };
+
 export const GM_MEMBERS: GmMember[] = [MEMBER, OFFICER, GM].map((me) => ({
   id: me.id,
   discord_id: me.discord_id,
@@ -171,4 +201,151 @@ export const GM_MEMBERS: GmMember[] = [MEMBER, OFFICER, GM].map((me) => ({
 
 export function gmMemberDetail(member: GmMember): GmMemberDetail {
   return { member, signups: [], cases: [], xp: 1200, message_count: 340 };
+}
+
+export const ATTENDANCE_EVENTS: AttendanceEventSummary[] = [
+  {
+    id: EVENTS[2].id,
+    title: EVENTS[2].title,
+    kind: EVENTS[2].kind,
+    starts_at: EVENTS[2].starts_at,
+    status: EVENTS[2].status,
+    attendance_taken_at: null,
+    needs_attendance: true,
+  },
+];
+
+const attendanceSignup = (name: string, overrides: Partial<AttendanceSignup> = {}): AttendanceSignup => ({
+  signup_id: `att-${name}`,
+  member_id: 7,
+  display_name: name,
+  avatar_url: null,
+  character: null,
+  class: null,
+  role: null,
+  status: "signed",
+  attended: null,
+  is_walk_in: false,
+  voice_minutes: 0,
+  suggested_attended: true,
+  ...overrides,
+});
+
+export function attendanceDetail(event: AttendanceEventSummary): AttendanceDetail {
+  return {
+    event,
+    signups: [attendanceSignup("Wanderer", { member_id: MEMBER.id, voice_minutes: 42 })],
+    walk_in_candidates: [{ member_id: OFFICER.id, display_name: OFFICER.display_name, avatar_url: null }],
+  };
+}
+
+export const ATTENDANCE_REPORT: AttendanceReport = {
+  range: "last_30",
+  raids_only: false,
+  rows: [
+    {
+      member_id: MEMBER.id,
+      display_name: MEMBER.display_name,
+      avatar_url: null,
+      signed_up: 4,
+      came: 3,
+      no_shows: 1,
+      walk_ins: 0,
+      attendance_rate: 0.75,
+      last_attended: inDays(-3),
+    },
+  ],
+};
+
+export const ATTENDANCE_TRENDS: AttendanceTrends = {
+  range: "season",
+  raids_only: false,
+  points: [{ week_start: new Date().toISOString().slice(0, 10), attendees: 3, signed_up: 4, show_rate: 0.75 }],
+};
+
+export const HEROES: HeroRow[] = [
+  {
+    rank: 1,
+    member_id: GM.id,
+    discord_id: GM.discord_id,
+    display_name: GM.display_name,
+    avatar_url: null,
+    wow_class: "paladin",
+    chat_level: 14,
+    ep: 240,
+    raids_attended: 18,
+    events_attended: 22,
+    badge_ids: ["first_steps", "first_raid", "raid_veteran", "founding_member"],
+  },
+  {
+    rank: 2,
+    member_id: OFFICER.id,
+    discord_id: OFFICER.discord_id,
+    display_name: OFFICER.display_name,
+    avatar_url: null,
+    wow_class: "priest",
+    chat_level: 11,
+    ep: 180,
+    raids_attended: 12,
+    events_attended: 15,
+    badge_ids: ["first_steps", "first_raid", "raid_regular"],
+  },
+  {
+    rank: 3,
+    member_id: MEMBER.id,
+    discord_id: MEMBER.discord_id,
+    display_name: MEMBER.display_name,
+    avatar_url: null,
+    wow_class: "warrior",
+    chat_level: 6,
+    ep: 60,
+    raids_attended: 4,
+    events_attended: 6,
+    badge_ids: ["first_steps"],
+  },
+];
+
+export function heroLeaderboard(season: string): HeroLeaderboard {
+  return {
+    season_id: season === "season-one" ? "season-one" : season,
+    season_name: season === "season-one" ? "Season One" : season === "month" ? "This month" : "All time",
+    rows: HEROES,
+  };
+}
+
+const badge = (id: string, name: string, description: string, icon: string, daysAgo: number): EarnedBadge => ({
+  id,
+  name,
+  description,
+  icon,
+  earned_at: inDays(-daysAgo),
+});
+
+export function heroProfile(row: HeroRow): HeroProfile {
+  const stats = {
+    ep: row.ep,
+    raids_attended: row.raids_attended,
+    events_attended: row.events_attended,
+    attendance_rate: 0.8,
+  };
+  return {
+    member_id: row.member_id,
+    discord_id: row.discord_id,
+    display_name: row.display_name,
+    avatar_url: row.avatar_url,
+    wow_class: row.wow_class,
+    rank: row.rank,
+    chat_level: row.chat_level,
+    chat_xp: row.chat_level * 1000 + 250,
+    chat_xp_into_level: 250,
+    chat_xp_for_next_level: 1000,
+    seasons: { "season-one": stats },
+    all_time: stats,
+    first_event_date: inDays(-90).slice(0, 10),
+    recent_events: [
+      { id: EVENTS[0]!.id, kind: EVENTS[0]!.kind, title: EVENTS[0]!.title, starts_at: EVENTS[0]!.starts_at, ep: 10 },
+      { id: EVENTS[1]!.id, kind: EVENTS[1]!.kind, title: EVENTS[1]!.title, starts_at: EVENTS[1]!.starts_at, ep: 5 },
+    ],
+    badges: [badge("first_steps", "First Steps", "Attended their first guild event.", "👣", 60)],
+  };
 }

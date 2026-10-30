@@ -54,6 +54,8 @@ textarea {
 }
 .room-head {
   position: relative;
+  /* Above the room body, so the phone menu dropping out of the header covers chamber ribbons (z-index 1). */
+  z-index: 2;
   isolation: isolate;
   display: grid;
   grid-template-rows: auto 1fr;
@@ -231,6 +233,11 @@ textarea {
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: clamp(56px, 4vw, 72px) clamp(24px, 2.4vw, 40px);
   align-items: start;
+}
+/* Chambers stacked inside a wrapper (a console tab, a hero profile) keep the room's rhythm; the room body's own
+   grid gap already spaces its direct children. */
+:not(.room-body) > :is(.chamber, .chamber-pair) + :is(.chamber, .chamber-pair) {
+  margin-top: clamp(56px, 5.4vw, 92px);
 }
 
 /* A sub-heading inside a chamber: tracked caps with a fading gold line, never an eyebrow over another heading. */
