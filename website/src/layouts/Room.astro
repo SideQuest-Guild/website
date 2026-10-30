@@ -1,6 +1,7 @@
 ---
-// Every page past the homepage is a room of the citadel from the hero: its own painting opens the page under the
-// nav, the title sits in the painting's lower calm, and the page continues in the same moonlit night below.
+// Every page past the homepage is a room of the citadel from the hero: its own painting is the room's backdrop,
+// with the nav and a compact title over its upper part and the page's chambers starting over its lower part, so the
+// work is near the top instead of a screen below a banner. The painting fades into the same moonlit night below.
 // The painting carries a shared view-transition name, so walking between rooms crossfades the art.
 import type { ImageMetadata } from "astro";
 import { getImage } from "astro:assets";
@@ -64,23 +65,23 @@ if (!placeholder) {
     <slot name="head" />
   </Fragment>
   <div class="room">
+    <picture class="room-art-pic">
+      <source type="image/avif" srcset={avif.srcSet.attribute} sizes="100vw" />
+      <img
+        class="room-art"
+        src={webp.src}
+        srcset={webp.srcSet.attribute}
+        sizes="100vw"
+        width={art.width}
+        height={art.height}
+        loading="eager"
+        fetchpriority="high"
+        decoding="async"
+        alt=""
+        style={`object-position: ${artPosition}; background-image: url(${placeholder}); background-position: ${artPosition}`}
+      />
+    </picture>
     <header class="room-head">
-      <picture class="room-art-pic">
-        <source type="image/avif" srcset={avif.srcSet.attribute} sizes="100vw" />
-        <img
-          class="room-art"
-          src={webp.src}
-          srcset={webp.srcSet.attribute}
-          sizes="100vw"
-          width={art.width}
-          height={art.height}
-          loading="eager"
-          fetchpriority="high"
-          decoding="async"
-          alt=""
-          style={`object-position: ${artPosition}; background-image: url(${placeholder}); background-position: ${artPosition}`}
-        />
-      </picture>
       <SiteNav current={current} />
       <div class="room-title wrap">
         <div class="heading">
