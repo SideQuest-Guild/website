@@ -61,5 +61,8 @@ feature reference; keep it current.
 - Prod is Cabotage on Kubernetes: `AWS_PROFILE=cabo-preview KUBECONFIG=~/.cache/cabotage/kube/preview.kubeconfig`,
   namespace `coffee-4afef8ec-production-a8baafc7`. The database rejects direct connections; run Python inside the
   web or worker pod with the app's settings instead. A deploy is done when `SOURCE_COMMIT` in both pods matches.
+- Cabotage deploys a push only after its CI passes, and only if that one commit touches the app's watch paths: a
+  push that changes just `.github/` or docs deploys nothing, even when an earlier undeployed commit is underneath.
+  Its log line is `skipping …: no changes in watch paths` (`kubectl -n cabotage logs` on the cabotage-app-worker).
 - After each prod web deploy, `.github/workflows/deployed.yml` purges Cloudflare's cache and runs the e2e suite
   against sidequest-guild.com. Check that run (`gh run list --workflow deployed.yml`) before calling a deploy good.

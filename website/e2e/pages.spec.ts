@@ -43,6 +43,7 @@ test.describe("events", () => {
     await expect(page.locator("#events-upcoming a.quest")).toHaveCount(2);
     await expect(page.locator("#events-past a.quest")).toHaveCount(1);
     await expect(page.locator("#events-upcoming")).not.toContainText("2T");
+    await expect(page.locator("#signup-hint")).toBeVisible();
   });
 
   test("members see counts, and the kind filter narrows the list", async ({ page, site }) => {
@@ -51,6 +52,7 @@ test.describe("events", () => {
     await expect(page.locator("#events-upcoming .quest-meta").filter({ hasText: "Molten Core" })).toContainText(
       "2T · 3H · 9D · 1 tentative · 4 interested on Discord",
     );
+    await expect(page.locator("#signup-hint")).toBeHidden();
     await page.getByRole("link", { name: "Raids", exact: true }).click();
     await expect(page.locator("#events-upcoming a.quest")).toHaveCount(1);
     await expect(page.getByRole("link", { name: "Raids", exact: true })).toHaveAttribute("aria-current", "page");

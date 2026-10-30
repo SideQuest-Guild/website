@@ -79,7 +79,7 @@ const eventKinds = Object.keys(EVENT_KIND_LABELS);
       </ul>
     </nav>
     <ul class="quest-log" id="events-upcoming" aria-live="polite"></ul>
-    <p class="chamber-note aside">
+    <p class="chamber-note aside" id="signup-hint">
       Sign in with Discord on the <a href="/account/">account page</a> to sign up for an event.
     </p>
   </section>
@@ -99,6 +99,7 @@ const eventKinds = Object.keys(EVENT_KIND_LABELS);
 <script>
   import {
     apiFetch,
+    fetchMe,
     onFreshData,
     escapeHtml,
     requireElement,
@@ -128,6 +129,11 @@ const eventKinds = Object.keys(EVENT_KIND_LABELS);
       }
     }
 
+    // Only signed-out visitors need telling how to sign up.
+    fetchMe().then(
+      () => requireElement("signup-hint").setAttribute("hidden", ""),
+      () => undefined,
+    );
     const dayFormat = new Intl.DateTimeFormat(undefined, { weekday: "short", month: "short", day: "numeric" });
     const timeFormat = new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" });
 
