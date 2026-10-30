@@ -282,7 +282,7 @@ test.describe("hall of heroes", () => {
     await expect(page.locator("#heroes-body")).toBeHidden();
   });
 
-  test("members see the leaderboard ranked by EP, and can switch season and sort", async ({ page, site }) => {
+  test("members see the leaderboard ranked by Renown, and can switch season and sort", async ({ page, site }) => {
     site.signIn(MEMBER);
     await page.goto("/heroes/");
     await expect(page.locator("#heroes-body")).toBeVisible();
@@ -298,7 +298,7 @@ test.describe("hall of heroes", () => {
     await expect(rows.first()).toContainText(GM.display_name);
   });
 
-  test("before anyone earns EP, the roster is listed unranked", async ({ page, site }) => {
+  test("before anyone earns Renown, the roster is listed unranked", async ({ page, site }) => {
     site.signIn(MEMBER);
     const fresh = HEROES.map((row) => ({ ...row, rank: null, ep: 0, raids_attended: 0, events_attended: 0 }));
     await page.route("**/api/heroes?*", (route) =>
@@ -307,7 +307,7 @@ test.describe("hall of heroes", () => {
     await page.goto("/heroes/");
     const rows = page.locator(".hero-row");
     await expect(rows).toHaveCount(HEROES.length);
-    await expect(page.locator(".hero-empty")).toContainText("No one has earned EP");
+    await expect(page.locator(".hero-empty")).toContainText("No one has earned Renown");
     await expect(rows.locator(".hero-rank-none")).toHaveCount(HEROES.length);
 
     await page.locator('#sort-tabs button[data-sort="chat_level"]').click();

@@ -1257,6 +1257,14 @@ html:not(.officer) [data-officer-nav] {
 .foot-nav a:hover {
   color: var(--gold);
 }
+.foot-github {
+  gap: 0.5em;
+}
+.foot-github-mark {
+  flex: none;
+  width: 1.15em;
+  height: 1.15em;
+}
 .foot-meta {
   margin: 0;
   color: var(--ink-3);
@@ -1861,6 +1869,13 @@ html:not(.officer) [data-officer-nav] {
 .article-body a:hover {
   color: var(--gold);
   text-decoration-color: var(--gold);
+}
+/* A link that reads as plain text, for the odd easter egg; keyboard focus still shows the ring. */
+.article-body a.easter-egg,
+.article-body a.easter-egg:hover {
+  color: inherit;
+  text-decoration: none;
+  cursor: text;
 }
 /* The one line a reader must not miss on a page (e.g. 18+); framed by hairline gold, never filled. */
 .charter-mark {

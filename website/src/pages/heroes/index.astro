@@ -6,9 +6,9 @@ import "../../styles/room-heroes.css";
 
 <Room
   title="Hall of Heroes · SideQuest"
-  description="The guild's leaderboard: EP, raids, events and badges earned by SideQuest members."
+  description="The guild's leaderboard: Renown, raids, events and badges earned by SideQuest members."
   heading="HALL OF HEROES"
-  lede="Where the guild's champions are remembered: EP, raids, events and the badges they've earned."
+  lede="Where the guild's champions are remembered: Renown, raids, events and the badges they've earned."
   art={hallOfHeroes}
   artPosition="50% 30%"
   current="heroes"
@@ -45,7 +45,7 @@ import "../../styles/room-heroes.css";
       </div>
       <div class="tabs sort-tabs" role="group" aria-label="Sort by" id="sort-tabs">
         <button type="button" data-sort="ep" aria-pressed="true">
-          EP
+          Renown
         </button>
         <button type="button" data-sort="raids_attended" aria-pressed="false">
           Raids
@@ -84,7 +84,7 @@ import "../../styles/room-heroes.css";
   type SortKey = "ep" | "raids_attended" | "chat_level";
 
   const NOTHING_YET: Record<SortKey, string> = {
-    ep: "No one has earned EP this season yet. Sign up for an event to be the first on the board.",
+    ep: "No one has earned Renown this season yet. Sign up for an event to be the first on the board.",
     raids_attended: "No one has attended a raid this season yet.",
     chat_level: "No one has a chat level yet. Talk in the Discord to earn one.",
   };
@@ -133,7 +133,7 @@ import "../../styles/room-heroes.css";
         <span class="hero-class">${escapeHtml(className)}</span>
       </span>
       <span class="hero-stats-group">
-        <span class="hero-stat hero-stat-ep">${row.ep}<small>EP</small></span>
+        <span class="hero-stat hero-stat-ep">${row.ep}<small>Renown</small></span>
         <span class="hero-stat">${row.raids_attended}<small>Raids</small></span>
         <span class="hero-stat">${row.events_attended}<small>Events</small></span>
         <span class="hero-stat">${row.chat_level}<small>Lvl</small></span>

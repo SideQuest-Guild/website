@@ -7,10 +7,12 @@ const articles = [
   { id: "upcoming", title: "Upcoming raids" },
   { id: "signup", title: "How to sign up" },
   { id: "two-kinds", title: "Two kinds of raid night" },
-  { id: "loot", title: "Loot: progression (EPGP)" },
+  { id: "loot", title: "Loot: SQL" },
+  { id: "council", title: "The loot council" },
+  { id: "trials", title: "Trials and main changes" },
   { id: "casual-loot", title: "Loot: casual and alt nights" },
   { id: "alts", title: "Alts" },
-  { id: "attendance", title: "Attendance and guild EP" },
+  { id: "attendance", title: "Attendance and Renown" },
   { id: "chart", title: "The raid chart" },
   { id: "before-pull", title: "Before the pull" },
   { id: "faq", title: "FAQ" },
@@ -19,7 +21,7 @@ const articles = [
 
 <Charter
   title="Raiding · SideQuest"
-  description="How raiding works at SideQuest: signing up, the two kinds of raid night, EPGP loot for progression, attendance and guild EP, the raid chart, and what to bring to the pull."
+  description="How raiding works at SideQuest: signing up, the two kinds of raid night, SQL (our EPGP and loot council mix), soft reserve, attendance and Renown, the raid chart, and what to bring to the pull."
   heading="RAIDING"
   lede="How raid nights work, from signing up to the loot you walk away with."
   art={raidHall}
@@ -73,78 +75,130 @@ const articles = [
   </Article>
 
   <Article id="two-kinds" n={3} title="Two kinds of raid night">
-    <p>
-      SideQuest raids in two ways: semi-core nights on a set schedule, open to the guild, and a progression group for
-      the hardest content. No raid nights are scheduled yet — they go up once enough members have leveled, here and in
-      the Discord.
-    </p>
-    <p>
-      How loot works depends on which kind of night you're on: progression raids run on EPGP, casual and alt raids run
-      on soft reserve. See below for both.
-    </p>
-  </Article>
-
-  <Article id="loot" n={4} title="Loot: progression (EPGP)">
-    <p>Progression raids use EPGP. Your loot priority is your EP divided by your GP: higher is first in line.</p>
     <ul>
       <li>
-        <b>EP</b> (effort points) comes from time in the raid — including wipes on progression bosses — and from time on
-        the bench while you're ready to come in.
+        <b>Progression.</b> One 20-player roster raids Hyjal Summit, then splits into two Barrow Deeps 10s. Your sign-up
+        picks your Barrow night, and officers balance the two groups by role. Progression is for mains, and its loot
+        runs on <a href="/raids/#loot">SQL</a>.
       </li>
       <li>
-        <b>GP</b> (gear points) is added when you take an item, from published price bands with named exceptions. Item
-        level alone doesn't set the price.
+        <b>Casual and alt nights.</b> Onyxia, alt runs and other casual runs are open to the guild and use
+        <a href="/raids/#casual-loot">soft reserve</a>. A future 40-player raid that drops progression gear joins SQL
+        instead.
       </li>
-      <li>Among everyone who needs an item for their main spec, the highest priority wins it.</li>
+    </ul>
+    <p>No raid nights are scheduled yet. They go up once enough members have leveled, here and in the Discord.</p>
+  </Article>
+
+  <Article id="loot" n={4} title="Loot: SQL">
+    <p>
+      Progression loot runs on <b>SQL</b>, short for SideQuest Loot and pronounced "
+      <a class="easter-egg" href="https://www.youtube.com/shorts/z5p-aMyfT98" target="_blank" rel="noopener noreferrer">
+        squeel
+      </a>
+      ". It's EPGP with a loot council for the biggest drops. You earn EP by showing up, you pay GP when you take gear,
+      and your priority is your EP divided by your GP. Everyone starts at 100 GP, and GP never drops below 100.
+    </p>
+    <p>
+      <b>Earning EP</b>
+    </p>
+    <ul>
+      <li>Boss kill: 10.</li>
+      <li>A night spent wiping on a boss the group hasn't killed yet: 10, once per boss per night.</li>
+      <li>On time at invite: 5.</li>
+      <li>Stayed to the end: 5.</li>
+      <li>Standby: the same as the raid, as long as you're signed up, online, and can be in within 10 minutes.</li>
     </ul>
     <p>
-      You have one EPGP balance per person, per progression team, shared by your main and your alts. Switching
-      characters never resets your GP or counts the same raid time twice. Separate progression teams keep separate
-      ledgers.
+      <b>Spending GP</b> (main spec; off spec pays 10%)
     </p>
+    <ul>
+      <li>Head, chest, legs: 100.</li>
+      <li>Shoulders, hands, waist, feet: 75.</li>
+      <li>Neck, wrist, back, ring, off-hand, shield: 55.</li>
+      <li>Trinket: 125.</li>
+      <li>One-handed weapon: 150.</li>
+      <li>Two-handed weapon or main caster weapon: 200.</li>
+      <li>Ranged, wand, relic: 50.</li>
+      <li>Tier token: the cost of its slot.</li>
+      <li>Chase item: its slot's cost × 1.5.</li>
+      <li>Legendary piece: 300.</li>
+    </ul>
     <p>
-      Officers record every award and correction with a reason, in game. Corrections keep their history instead of
-      erasing it. The site shows the standings.
+      <b>Who gets each drop</b>
     </p>
-    <p class="chamber-note aside">
-      Not set yet: price bands, decay, base and minimum GP, minimum EP, starting balances, ties and trial eligibility,
-      and how a balance moves if you transfer teams. These numbers will be posted on this page before the first
-      progression raid.
-    </p>
-  </Article>
-
-  <Article id="casual-loot" n={5} title="Loot: casual and alt nights">
-    <p>
-      Casual and alt raids run on soft reserve, not EPGP: reserve the item you want before the raid, and reserved items
-      go to the people who reserved them. Everything else goes main spec over off spec. These raids never change your
-      EPGP balance.
-    </p>
-    <p class="chamber-note aside">
-      Reserve count, lock time and tie rules will be posted here before the first casual raid.
-    </p>
-  </Article>
-
-  <Article id="alts" n={6} title="Alts">
-    <p>
-      Your alts share your EPGP balance with your main on the same progression team — playing an alt there doesn't start
-      you over, and it doesn't double-count time either. Casual and alt raids don't touch EPGP at all, so there's
-      nothing to protect by bringing an alt to one.
-    </p>
-  </Article>
-
-  <Article id="attendance" n={7} title="Attendance and guild EP">
-    <p>This is a different point system from the EPGP above, so don't mix them up:</p>
     <ul>
       <li>
-        <b>EPGP</b> decides loot priority on progression raids, per progression team.
+        Chase items, legendary pieces and crafted tier go to the <a href="/raids/#council">loot council</a>.
+      </li>
+      <li>Everything else goes to the highest priority among main-spec bids.</li>
+      <li>No main-spec bids: the highest priority among off-spec bids, for 10% of the GP.</li>
+      <li>No bids at all: an alt filling a slot can take it for free.</li>
+      <li>Nobody wants it: it's disenchanted, and the Essence goes to the guild bank for crafted tier.</li>
+    </ul>
+    <p>
+      EP and GP both drop 15% at every weekly reset, so a new raider catches up in about five or six weeks. Ties go to
+      the higher EP, then a roll. In week one everyone starts level, so it plays out as main spec, off spec, then rolls;
+      priority starts sorting people from week two.
+    </p>
+    <p>
+      Officers record every award and correction with the SideQuest addon, in game, and sync it to the site after the
+      raid. Corrections keep their history instead of erasing it.
+    </p>
+  </Article>
+
+  <Article id="council" n={5} title="The loot council">
+    <p>
+      The council decides only chase items (each boss has one), legendary pieces and crafted tier. Whoever it picks
+      still pays the GP. For crafted tier it checks who can still equip one: you start with one crafted piece allowed,
+      and Guardians of Hyjal reputation raises the limit.
+    </p>
+    <p>
+      The council is the raid leader, two officers and one rotating raider. Anyone who wants the item sits that vote
+      out, and every decision is posted in #loot-log with a one-line reason.
+    </p>
+  </Article>
+
+  <Article id="trials" n={6} title="Trials and main changes">
+    <ul>
+      <li>
+        <b>Trials</b> earn EP from their first night. For their first two raid weeks, a full raider's main-spec bid
+        beats theirs. After that they're full raiders and keep the EP they earned.
       </li>
       <li>
-        <b>Guild EP</b>, shown on the <a href="/heroes/">Hall of Heroes</a>, is earned for attending any guild event,
-        whatever kind it is: a raid is worth 10, a dungeon 5, leveling 3, PvP 3, a social night 2, transmog 2, and
-        anything else 2. Officers can set a different value for a specific event. It feeds the Hall of Heroes
-        leaderboard and badges, not your loot priority.
+        <b>Changing your main</b> needs an officer's OK, once per tier unless the officers ask you to. You keep your EP,
+        and your GP resets to 100.
       </li>
     </ul>
+  </Article>
+
+  <Article id="casual-loot" n={7} title="Loot: casual and alt nights">
+    <p>
+      Casual and alt nights use soft reserve and never touch SQL. You get one reserve per raid. Every week you reserve
+      the same item, show up and miss it, you get +10 on your roll for it. The bonus resets when you win the item or
+      skip a week.
+    </p>
+    <p>
+      Progression raiders can't reserve tier on these nights, so nobody gets tier around SQL. Items nobody reserved go
+      main spec, then off spec, by roll, and the rest is disenchanted.
+    </p>
+  </Article>
+
+  <Article id="alts" n={8} title="Alts">
+    <p>
+      Progression is for mains. An alt can fill a short slot on a progression night: it only gets items no main in the
+      raid wants, for free, and your main earns the EP for that night. Bring your alts to alt runs, which use soft
+      reserve.
+    </p>
+  </Article>
+
+  <Article id="attendance" n={9} title="Attendance and Renown">
+    <p>
+      <b>Renown</b> is the guild's points for showing up to anything, and it's separate from SQL. It's shown on the
+      <a href="/heroes/">Hall of Heroes</a> and feeds its leaderboard and badges, not your loot. A raid is worth 10, a
+      dungeon 5, leveling 3, PvP 3, a social night 2, transmog 2, and anything else 2. Officers can set a different
+      value for a specific event.
+    </p>
     <p>
       For attendance itself: officers mark who came, and the bot counts the minutes you spent in the guild's voice
       channels during the event — 30 minutes or more pre-ticks "came" for an officer to confirm. If attendance isn't
@@ -152,7 +206,7 @@ const articles = [
     </p>
   </Article>
 
-  <Article id="chart" n={8} title="The raid chart">
+  <Article id="chart" n={10} title="The raid chart">
     <p>
       Officers place everyone who's signed up into groups 1 through 8, or the bench, right on the raid's event page,
       starting from a suggested balanced layout. Check the chart before the pull — you may not be in the group you
@@ -160,7 +214,7 @@ const articles = [
     </p>
   </Article>
 
-  <Article id="before-pull" n={9} title="Before the pull">
+  <Article id="before-pull" n={11} title="Before the pull">
     <p>Show up ready:</p>
     <ul>
       <li>On time.</li>
@@ -169,10 +223,22 @@ const articles = [
       <li>
         Running the addons the group asked for — see the <a href="/addons/">addons page</a>.
       </li>
+      <li>
+        With your lockout free: don't pug Hyjal or Barrow on your main before the guild's run that week, because a pug
+        uses up your lockout.
+      </li>
     </ul>
   </Article>
 
-  <Article id="faq" n={10} title="FAQ">
+  <Article id="faq" n={12} title="FAQ">
+    <p>
+      <b>Why SQL and not plain EPGP or loot council?</b>
+    </p>
+    <p>
+      EPGP keeps almost every drop mechanical and earned by showing up, so nobody has to trust anyone's judgment. The
+      council only handles the few items where one choice moves the whole raid forward.
+    </p>
+
     <p>
       <b>I can't make a raid I signed up for. What do I do?</b>
     </p>
@@ -184,8 +250,8 @@ const articles = [
       <b>What does it mean if I'm on the bench?</b>
     </p>
     <p>
-      You're signed up and ready to come in. Time on the bench while you're ready still earns EPGP on progression
-      nights.
+      You're signed up and ready to come in. Standby earns the same EP as the raid, as long as you're online and can be
+      in within 10 minutes.
     </p>
 
     <p>
@@ -196,18 +262,15 @@ const articles = [
     <p>
       <b>Can I bring an alt to progression night?</b>
     </p>
-    <p>
-      Yes, and it shares your EPGP balance with your main on that team, so you're never starting over or losing credit
-      for showing up.
-    </p>
+    <p>Only to fill a short slot. The alt takes items no main wants, for free, and your main earns the night's EP.</p>
 
     <p>
-      <b>Where do I see my EPGP standing?</b>
+      <b>Where do I see my SQL standing?</b>
     </p>
     <p>Officers keep the points in game, and the standings will show here once progression raids start.</p>
 
     <p>
-      <b>Where do I see my guild EP?</b>
+      <b>Where do I see my Renown?</b>
     </p>
     <p>
       On the <a href="/heroes/">Hall of Heroes</a>, alongside your badges.
@@ -227,9 +290,17 @@ const articles = [
     </p>
 
     <p>
-      <b>Do casual and alt raids use EPGP?</b>
+      <b>Do casual and alt raids use SQL?</b>
     </p>
-    <p>No. They run on soft reserve and never change your EPGP balance.</p>
+    <p>No. They use soft reserve and never change your SQL standing.</p>
+
+    <p>
+      <b>What if the game has no master loot?</b>
+    </p>
+    <p>
+      If loot can be traded, one designated looter takes everything and trades it out by SQL. If it can't, every raid
+      runs on soft reserve until there's a way to hand out loot.
+    </p>
 
     <p>
       <b>Who decides the raid chart?</b>

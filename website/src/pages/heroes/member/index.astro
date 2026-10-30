@@ -6,7 +6,7 @@ import "../../../styles/room-heroes.css";
 
 <Room
   title="Hero · SideQuest"
-  description="A SideQuest member's Hall of Heroes profile: EP, raids, events, chat level and earned badges."
+  description="A SideQuest member's Hall of Heroes profile: Renown, raids, events, chat level and earned badges."
   heading="HERO"
   art={hallOfHeroes}
   artPosition="50% 30%"
@@ -110,7 +110,7 @@ import "../../../styles/room-heroes.css";
 
   function statTiles(stats: HeroSeasonStats): string {
     return [
-      statTile("EP", String(stats.ep)),
+      statTile("Renown", String(stats.ep)),
       statTile("Raids", String(stats.raids_attended)),
       statTile("Events", String(stats.events_attended)),
       statTile("Attendance", `${Math.round(stats.attendance_rate * 100)}%`),
@@ -244,7 +244,7 @@ import "../../../styles/room-heroes.css";
             <svg class="ico ico-quest is-done" aria-hidden="true"><use href="#i-quest-done"></use></svg>
             <span>
               <span class="quest-name">${escapeHtml(e.title)}</span>
-              <span class="quest-meta">${escapeHtml(EVENT_KIND_LABELS[e.kind])} · ${e.ep} EP</span>
+              <span class="quest-meta">${escapeHtml(EVENT_KIND_LABELS[e.kind])} · ${e.ep} Renown</span>
             </span>
             <span class="quest-when">${escapeHtml(dateFormat.format(new Date(e.starts_at)))}</span>
           </a>

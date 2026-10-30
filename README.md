@@ -45,7 +45,7 @@ flowchart LR
 | `/auth/battlenet/link`, `/auth/battlenet/callback`, `/auth/battlenet/unlink` | signed in | Link a Battle.net account (BattleTag) to the member |
 | `/api/me` (GET), `/api/me` (DELETE) | signed in | The signed-in member; `DELETE` permanently deletes the member, their event signups, and their sign-up activity rows, clears the session cookie, and queues a Discord role-reset outbox row so the bot strips the member's Discord roles |
 | `/api/members/{member_id}/roster-confirmation` (PUT, DELETE) | GM | Confirm or clear that a member is on the in-game guild roster |
-| `/api/events`, `/api/event-series`, `/api/addons` (GET) | none | Guild events (raids, dungeons, leveling, pvp, social, transmog, other) with roster + raid chart, attendance EP, repeating event series, guild addon links (each addon carries an `origin` of `guild` or `community`); anonymous `/api/events` requests get the headline fields only (title, kind, time, location) — notes, counts, signups and Discord interest are `null`/empty unless the caller is signed in or presents the bot's `X-API-Key` |
+| `/api/events`, `/api/event-series`, `/api/addons` (GET) | none | Guild events (raids, dungeons, leveling, pvp, social, transmog, other) with roster + raid chart, attendance Renown, repeating event series, guild addon links (each addon carries an `origin` of `guild` or `community`); anonymous `/api/events` requests get the headline fields only (title, kind, time, location) — notes, counts, signups and Discord interest are `null`/empty unless the caller is signed in or presents the bot's `X-API-Key` |
 | `/api/events/{id}/signup` | guild member | Sign up for / withdraw from a guild event |
 | `/api/events`, `/api/event-series`, `/api/addons` (POST/PATCH/DELETE), `/api/events/{id}/signups/{id}` | officer | Manage guild events, repeating event series, the raid chart and addons |
 | `/api/attendance/events` (GET), `/api/events/{id}/attendance` (GET, PUT) | officer | Past events still needing attendance, an event's sign-up roster with voice minutes, and marking Came/No-show plus walk-ins (audited as `attendance.mark`; 409 before the event starts or once cancelled) |
@@ -60,7 +60,7 @@ Quest Guide), and a GM is a member holding a role listed in `WEB_GM_ROLE_IDS` (d
 nickname refresh at each sign-in and continuously thereafter via the bot's member-profile push (see "Member
 profile sync" below). The site's member pages
 are `/events/`, `/heroes/`, `/addons/`, `/account/` and `/officers/` (the GM console). `/raids/` is public (no
-sign-in needed): it explains how raid nights, EPGP loot and attendance work.
+sign-in needed): it explains how raid nights, SQL loot (SideQuest Loot: EPGP with a loot council), soft reserve and attendance work.
 
 ### Discord sign-in setup
 
@@ -227,10 +227,11 @@ restored.
   than the series rule itself. Editing a single occurrence detaches it from the series; editing the series updates
   its still-attached future occurrences (re-timing or cancelling ones a schedule change no longer matches); ending
   a series cancels its signed-up future occurrences and deletes the signup-less ones, keeping past occurrences.
-- Every event and series carries the EP (effort points) attending it is worth: `ep_override` if an officer set one
+- Every event and series carries the Renown attending it is worth (the API field is still `ep`; on the site it's
+  labelled Renown so "EP" only ever means SQL, the loot system): `ep_override` if an officer set one
   (0–50), else its kind's preset (`EVENT_KIND_EP`: raid 10, dungeon 5, leveling 3, PvP 3, social 2, transmog 2,
-  other 2). Responses return both `ep` (what attending awards) and `ep_override`; a blank EP box on the officer form
-  sends `null`, which follows the kind's preset (including after a kind change or a preset retune). Series copy
+  other 2). Responses return both `ep` (what attending awards) and `ep_override`; a blank Renown box on the officer
+  form sends `null`, which follows the kind's preset (including after a kind change or a preset retune). Series copy
   their override onto occurrences.
 - Clicking "Interested" on the Discord event reports the full interested-user list to the site (one-way: the API
   can't mark a Discord user interested on the bot's behalf), debounced ~5s per event; `EventDetail.discord_interest`
@@ -316,9 +317,9 @@ appear in the roster.
 
 ### Hall of Heroes
 `/heroes/` is a members-only, raider.io-style leaderboard (`GET /api/heroes?season=<id|all|month>`, 401 signed
-out) with rank, EP, raids/events attended, chat level and badge icons, sortable client-side by EP/raids/level and
-switchable between a season, the last calendar month, and all time. It lists the whole confirmed roster, badge
-holders and anyone with EP, so it isn't empty before the first event; the rank follows the chosen sort, ties share a
+out) with rank, Renown, raids/events attended, chat level and badge icons, sortable client-side by Renown/raids/level
+and switchable between a season, the last calendar month, and all time. It lists the whole confirmed roster, badge
+holders and anyone with Renown, so it isn't empty before the first event; the rank follows the chosen sort, ties share a
 rank, and anyone at zero is listed without one. `/heroes/member/?id=<member_id>` is one
 member's profile (`GET /api/heroes/{member_id}`, 401/404): season and all-time stats, a chat-level XP bar, earned
 badges (name, description, earned date — see "Hall of Heroes badges" above) and recent events. Seasons are one
@@ -339,7 +340,7 @@ audited as `attendance.mark`) stamps `GuildEvent.attendance_taken_at`, sets each
 and creates a `signed`+`attended` sign-up for every walk-in; it 409s before the event starts or once it's
 cancelled.
 
-The one rule every attendance-derived number (Hall of Heroes stats, badges, EP, the GM report below) shares,
+The one rule every attendance-derived number (Hall of Heroes stats, badges, Renown, the GM report below) shares,
 `attended_condition()`/`no_show_condition()` in `api/src/sidequest_api/lib/attendance.py`: a sign-up counts as
 attended once its event has started and isn't cancelled, and either an officer explicitly marked it `attended`, or
 attendance was never taken for that event — in which case a still-`signed` sign-up counts as attended by default

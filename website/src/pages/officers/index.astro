@@ -139,7 +139,7 @@ import "../../styles/room-officers.css";
                 <input id="e-until" type="date" />
               </div>
               <div class="field">
-                <label for="e-ep">EP</label>
+                <label for="e-ep">Renown</label>
                 <input id="e-ep" type="number" min="0" step="1" inputmode="numeric" />
               </div>
             </div>
@@ -586,7 +586,7 @@ import "../../styles/room-officers.css";
           <svg class="ico ico-quest" aria-hidden="true"><use href="#i-quest"></use></svg>
           <span>
             <span class="quest-name">${escapeHtml(EVENT_KIND_LABELS[s.kind])} · ${escapeHtml(ruleText)}</span>
-            <span class="quest-meta">${escapeHtml([s.location, `${s.ep} EP`].filter(Boolean).join(" · "))}</span>
+            <span class="quest-meta">${escapeHtml([s.location, `${s.ep} Renown`].filter(Boolean).join(" · "))}</span>
           </span>
           <span class="quest-when">${escapeHtml(nextText)}</span>
         </button>
@@ -926,7 +926,7 @@ import "../../styles/room-officers.css";
       const start = new Date(e.starts_at);
       const seriesText = e.series ? weekdayPhrase(e.series.weekdays, e.series.interval_weeks) : "";
       const statusSuffix = e.status === "scheduled" ? "" : e.status === "cancelled" ? "Cancelled" : "Completed";
-      const meta = [EVENT_KIND_LABELS[e.kind], e.location, seriesText, `${e.ep} EP`, statusSuffix]
+      const meta = [EVENT_KIND_LABELS[e.kind], e.location, seriesText, `${e.ep} Renown`, statusSuffix]
         .filter(Boolean)
         .join(" · ");
       return `
