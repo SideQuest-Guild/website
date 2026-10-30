@@ -10,3 +10,6 @@ htmlcov/
 dist/
 *.db
 .DS_Store
+
+# Local-only operator notes (prod access); this repo is public.
+ops.local.md

@@ -58,9 +58,10 @@ feature reference; keep it current.
   `/api` and `/auth` is never cached. A route is edge-cached only if it sends `Cloudflare-CDN-Cache-Control` and
   skips the session middleware (`SKIP_SESSION`), so it can never carry `Set-Cookie`. Details in the README.
 - Cloudflare CLI: `cf` (installed through mise as `cloudflare-cf`, signed in with `cf auth login`).
-- Prod is Cabotage on Kubernetes: `AWS_PROFILE=cabo-preview KUBECONFIG=~/.cache/cabotage/kube/preview.kubeconfig`,
-  namespace `coffee-4afef8ec-production-a8baafc7`. The database rejects direct connections; run Python inside the
-  web or worker pod with the app's settings instead. A deploy is done when `SOURCE_COMMIT` in both pods matches.
+- Prod is Cabotage on Kubernetes. How to reach it (AWS profile, kubeconfig, namespace) is in `ops.local.md` at the
+  repo root, which is gitignored because this repo is public. The database rejects direct connections; run Python
+  inside the web or worker pod with the app's settings instead. A deploy is done when `SOURCE_COMMIT` in both pods
+  matches.
 - Cabotage deploys a push only after its CI passes, and only if that one commit touches the app's watch paths: a
   push that changes just `.github/` or docs deploys nothing, even when an earlier undeployed commit is underneath.
   Its log line is `skipping …: no changes in watch paths` (`kubectl -n cabotage logs` on the cabotage-app-worker).
