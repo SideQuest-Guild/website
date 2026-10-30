@@ -1,0 +1,254 @@
+---
+import Room from "../../layouts/Room.astro";
+import courierLoft from "../../../assets/rooms/courier-loft.webp";
+import { COMPANION_RELEASES_URL, COMPANION_SOURCE_URL, DOCS_URL } from "../../config";
+import "../../styles/room-companion.css";
+---
+
+<Room
+  title="Companion · SideQuest"
+  description="Download SideQuest Companion, the guild's tray app that syncs the addon with this site, keeps both up to date, and reminds you about raids."
+  heading="COMPANION"
+  lede="A tray app for Windows, macOS and Linux that keeps the SideQuest addon and this site in step, and keeps itself and the addon up to date."
+  art={courierLoft}
+  current="companion"
+>
+  <section class="chamber" aria-labelledby="h-companion-about">
+    <h2 class="chamber-title" id="h-companion-about">
+      What it does
+    </h2>
+    <p class="aside">
+      SideQuest Companion sits in your system tray on Windows, macOS or Linux. No browser, no webview, just its own
+      window. Open the app and choose <strong>Sign in with sidequest-guild.com</strong>; it opens your browser to{" "}
+      <a href="/companion/authorize/">check the code and authorize it</a>. Any guild member can sign in.
+    </p>
+    <p class="aside">
+      <strong>Officers</strong> get auto-sync. The moment the addon writes a new raid record to{" "}
+      <code>SideQuest.lua</code> on logout or <code>/reload</code>, Companion uploads it to this site within seconds and
+      stages the site's reply back into the addon for your next login. No copy-pasting.
+    </p>
+    <p class="aside">
+      <strong>Every member</strong> gets addon update checks and installs, Companion's own self-update, and a reminder
+      before raids they're signed up for.
+    </p>
+  </section>
+
+  <section class="chamber" aria-labelledby="h-companion-download">
+    <h2 class="chamber-title" id="h-companion-download">
+      Download
+    </h2>
+    <p class="aside" id="companion-version">
+      Checking the latest release…
+    </p>
+    <ul class="platform-grid" id="companion-platform-list">
+      <li class="platform-card" data-platform="windows-x86_64">
+        <p class="platform-name">
+          Windows<span class="platform-arch">Intel / AMD</span>
+        </p>
+        <p class="platform-meta" data-platform-meta>
+          .zip
+        </p>
+        <div class="form-actions">
+          <a class="btn btn-small" data-platform-link href={COMPANION_RELEASES_URL}>
+            Download
+          </a>
+        </div>
+      </li>
+      <li class="platform-card" data-platform="windows-aarch64">
+        <p class="platform-name">
+          Windows<span class="platform-arch">ARM</span>
+        </p>
+        <p class="platform-meta" data-platform-meta>
+          .zip
+        </p>
+        <div class="form-actions">
+          <a class="btn btn-small" data-platform-link href={COMPANION_RELEASES_URL}>
+            Download
+          </a>
+        </div>
+      </li>
+      <li class="platform-card" data-platform="macos-universal">
+        <p class="platform-name">
+          macOS<span class="platform-arch">Intel or Apple Silicon</span>
+        </p>
+        <p class="platform-meta" data-platform-meta>
+          .zip
+        </p>
+        <div class="form-actions">
+          <a class="btn btn-small" data-platform-link href={COMPANION_RELEASES_URL}>
+            Download
+          </a>
+        </div>
+      </li>
+      <li class="platform-card" data-platform="linux-x86_64">
+        <p class="platform-name">
+          Linux<span class="platform-arch">x86_64</span>
+        </p>
+        <p class="platform-meta" data-platform-meta>
+          .tar.gz
+        </p>
+        <div class="form-actions">
+          <a class="btn btn-small" data-platform-link href={COMPANION_RELEASES_URL}>
+            Download
+          </a>
+        </div>
+      </li>
+    </ul>
+    <p class="aside">
+      Builds aren't code-signed (macOS is signed only ad-hoc), so the first launch needs one extra step. See{" "}
+      <a href="#h-companion-first-launch">First launch</a> below. Check what you downloaded against{" "}
+      <a href="#h-companion-verify">Verify your download</a>.
+    </p>
+    <noscript>
+      <p class="aside">
+        Enable JavaScript for a direct link per platform, or get the current build from the
+        <a href={COMPANION_RELEASES_URL}>releases page</a>.
+      </p>
+    </noscript>
+  </section>
+
+  <section class="chamber" aria-labelledby="h-companion-verify">
+    <h2 class="chamber-title" id="h-companion-verify">
+      Verify your download
+    </h2>
+    <p class="aside">
+      Every release asset is built by GitHub Actions from a signed tag and attested with build provenance. With the{" "}
+      <a href="https://cli.github.com/" rel="noopener">
+        GitHub CLI
+      </a>{" "}
+      installed:
+    </p>
+    <pre class="code-block">gh attestation verify sidequest-companion-X.Y.Z-macos-universal.zip -R SideQuest-Guild/companion</pre>
+    <p class="aside">To check a file matches what was published in that release:</p>
+    <pre class="code-block">gh release verify-asset vX.Y.Z sidequest-companion-X.Y.Z-macos-universal.zip -R SideQuest-Guild/companion</pre>
+    <p class="aside">Or check it against the published checksums:</p>
+    <pre class="code-block">sha256sum --ignore-missing -c SHA256SUMS.txt</pre>
+  </section>
+
+  <section class="chamber" aria-labelledby="h-companion-first-launch">
+    <h2 class="chamber-title" id="h-companion-first-launch">
+      First launch
+    </h2>
+    <p class="aside">
+      <strong>macOS:</strong> unzip, drag "SideQuest Companion.app" wherever you like, and open it. The app is signed
+      with an ad-hoc signature (not a paid Apple Developer certificate), so the first launch is blocked by Gatekeeper.
+      Either right-click the app and choose <strong>Open</strong>, or run{" "}
+      <code>xattr -d com.apple.quarantine "SideQuest Companion.app"</code> once, then launch it normally from then on.
+    </p>
+    <p class="aside">
+      <strong>Windows:</strong> unzip and run <code>sidequest-companion.exe</code>. SmartScreen will warn about an
+      unrecognized app the first time; click <strong>More info</strong>, then <strong>Run anyway</strong>. This isn't a
+      sign the file is unsafe. See <a href="#h-companion-verify">Verify your download</a> above to check it yourself.
+    </p>
+    <p class="aside">
+      <strong>Linux:</strong> untar anywhere, then run <code>sidequest-companion</code>. The tarball also has a{" "}
+      <code>.desktop</code> file and an icon if you want it in your app launcher.
+    </p>
+  </section>
+
+  <p class="aside">
+    <a href={COMPANION_SOURCE_URL}>Source</a> · <a href={COMPANION_RELEASES_URL}>All releases</a> ·{" "}
+    <a href={DOCS_URL} data-astro-reload target="_blank" rel="noreferrer">
+      Docs
+    </a>
+  </p>
+</Room>
+
+<script>
+  import { COMPANION_RELEASES_API, COMPANION_RELEASES_URL } from "../../config";
+  import { escapeHtml, requireElement } from "../../scripts/api";
+  import { onPage } from "../../scripts/page";
+
+  interface GithubAsset {
+    name: string;
+    browser_download_url: string;
+  }
+  interface GithubRelease {
+    tag_name: string;
+    assets: GithubAsset[];
+  }
+
+  type PlatformOs = "windows" | "macos" | "linux";
+
+  /** Maps each download card's `data-platform` id to the suffix its release asset's filename ends with. */
+  const PLATFORM_SUFFIXES: Record<string, string> = {
+    "windows-x86_64": "-windows-x86_64.zip",
+    "windows-aarch64": "-windows-aarch64.zip",
+    "macos-universal": "-macos-universal.zip",
+    "linux-x86_64": "-linux-x86_64.tar.gz",
+  };
+
+  function osForPlatform(id: string): PlatformOs {
+    if (id.startsWith("windows")) {
+      return "windows";
+    }
+    if (id.startsWith("macos")) {
+      return "macos";
+    }
+    return "linux";
+  }
+
+  /** Best-guess OS from the UA string, just to highlight a card — never guesses CPU architecture. */
+  function detectOs(): PlatformOs | null {
+    const ua = navigator.userAgent;
+    if (/Windows/.test(ua)) {
+      return "windows";
+    }
+    if (/Mac OS X|Macintosh/.test(ua)) {
+      return "macos";
+    }
+    if (/Linux/.test(ua) && !/Android/.test(ua)) {
+      return "linux";
+    }
+    return null;
+  }
+
+  function highlightVisitorPlatform(): void {
+    const os = detectOs();
+    if (!os) {
+      return;
+    }
+    for (const card of document.querySelectorAll<HTMLElement>("[data-platform]")) {
+      if (card.dataset.platform && osForPlatform(card.dataset.platform) === os) {
+        card.classList.add("is-your-platform");
+      }
+    }
+  }
+
+  /** Every button already points at the releases page; this only upgrades them to direct per-asset links. */
+  async function loadRelease(signal: AbortSignal): Promise<void> {
+    const versionEl = requireElement("companion-version");
+    try {
+      const response = await fetch(COMPANION_RELEASES_API, {
+        signal,
+        headers: { Accept: "application/vnd.github+json" },
+      });
+      if (!response.ok) {
+        throw new Error(`GitHub releases request failed (${response.status})`);
+      }
+      const release = (await response.json()) as GithubRelease;
+      versionEl.innerHTML = `SideQuest Companion ${escapeHtml(release.tag_name)}. See <a href="${escapeHtml(COMPANION_RELEASES_URL)}">everything in this release</a>.`;
+      for (const [id, suffix] of Object.entries(PLATFORM_SUFFIXES)) {
+        const asset = release.assets.find((a) => a.name.endsWith(suffix));
+        if (!asset) {
+          continue;
+        }
+        const link = document.querySelector<HTMLAnchorElement>(`[data-platform="${id}"] [data-platform-link]`);
+        const meta = document.querySelector<HTMLElement>(`[data-platform="${id}"] [data-platform-meta]`);
+        if (link) {
+          link.href = asset.browser_download_url;
+        }
+        if (meta) {
+          meta.textContent = asset.name;
+        }
+      }
+    } catch {
+      versionEl.innerHTML = `Couldn't check the latest version. Every button below goes to the <a href="${escapeHtml(COMPANION_RELEASES_URL)}">releases page</a> instead.`;
+    }
+  }
+
+  onPage("#companion-platform-list", (signal) => {
+    highlightVisitorPlatform();
+    void loadRelease(signal);
+  });
+</script>

@@ -16,5 +16,14 @@ export const ADDON_SOURCE_URL = "https://github.com/SideQuest-Guild/addon";
 /** The guild's documentation site: setup guides and references for members, officers and developers. */
 export const DOCS_URL = "https://docs.sidequest-guild.com";
 
+/** Source for SideQuest Companion, the tray app that syncs the addon with this site. */
+export const COMPANION_SOURCE_URL = "https://github.com/SideQuest-Guild/companion";
+
+/** Companion's GitHub releases, the fallback for every download button and the page shown without JavaScript. */
+export const COMPANION_RELEASES_URL = "https://github.com/SideQuest-Guild/companion/releases/latest";
+
+/** GitHub API endpoint Companion's download page reads for the latest release's version and asset URLs. */
+export const COMPANION_RELEASES_API = "https://api.github.com/repos/SideQuest-Guild/companion/releases/latest";
+
 /** Launch day of World of Warcraft: Forever (local calendar date; the launch hour is not announced). */
 export const LAUNCH = { year: 2026, month: 11, day: 4 };

@@ -7,7 +7,17 @@ import { DISCORD_INVITE, DOCS_URL } from "../config";
 import guildLogo from "../../assets/brand/sidequest-logo.png";
 
 interface Props {
-  current?: "events" | "raids" | "ledger" | "heroes" | "guild" | "rules" | "addons" | "officers" | "account";
+  current?:
+    | "events"
+    | "raids"
+    | "ledger"
+    | "heroes"
+    | "guild"
+    | "rules"
+    | "addons"
+    | "officers"
+    | "account"
+    | "companion";
   /** The homepage's hero nav, painted over the art instead of sitting in a plain bar. */
   hero?: boolean;
 }
@@ -109,6 +119,16 @@ const groups: { id: "raids" | "guild"; label: string; width: number; entries: Na
       <li>
         <a class="nav-link" data-nav-roving href="/addons/" aria-current={current === "addons" ? "page" : undefined}>
           Addons
+        </a>
+      </li>
+      <li>
+        <a
+          class="nav-link"
+          data-nav-roving
+          href="/companion/"
+          aria-current={current === "companion" ? "page" : undefined}
+        >
+          Companion
         </a>
       </li>
     </ul>
@@ -310,6 +330,13 @@ const groups: { id: "raids" | "guild"; label: string; width: number; entries: Na
         aria-current={current === "addons" ? "page" : undefined}
       >
         Addons
+      </a>
+      <a
+        class="nav-sheet-link nav-sheet-plain"
+        href="/companion/"
+        aria-current={current === "companion" ? "page" : undefined}
+      >
+        Companion
       </a>
     </nav>
   </div>
