@@ -1,602 +1,215 @@
-# SideQuest Guild
+# SideQuest Guild website
 
-The guild website and a single Litestar backend that serves it (and addons later). The Discord bot
-("Game Master") lives in a separate repo, [SideQuest-Guild/bot](https://github.com/SideQuest-Guild/bot), and talks
-to this backend over HTTP. Structure follows [byte](https://github.com/JacobCoffee/byte): a uv workspace where the
-backend owns the data.
+The website and API for SideQuest, an Alliance guild on World of Warcraft: Forever. Members sign in with Discord,
+sign up for events, check their loot points and see the Hall of Heroes. Officers run events, attendance and the
+roster from the Officers page. It runs at [sidequest-guild.com](https://sidequest-guild.com).
+
+Two other repos work with it: the Discord bot, [SideQuest-Guild/bot](https://github.com/SideQuest-Guild/bot), and the
+in-game addon, [SideQuest-Guild/addon](https://github.com/SideQuest-Guild/addon). Neither one opens the database. They
+both go through the API.
 
 ```mermaid
 flowchart LR
     Browser -->|"/ (static site)"| API
     Discord <-->|gateway + REST| Bot["SideQuest-Guild/bot<br/>discord.py plugins"]
     Bot -->|"/api/guilds/... + X-API-Key"| API["api/<br/>Litestar backend"]
+    Addon["SideQuest-Guild/addon<br/>in game"] -->|"raid nights via /officers/sync/"| API
     Website["website/<br/>Astro → dist/"] -.->|built output| API
     API --> DB[(PostgreSQL)]
     Common["packages/sidequest-common<br/>models · schemas · leveling math"] -.-> Bot & API
 ```
 
-| Path | What lives there |
-|---|---|
-| `api/` | The Litestar backend: `domain/{guilds,levels,cases,role_menus,events,event_series,event_sync,system}`, migrations in `lib/migrations`, website serving in `lib/website.py` |
-| `website/` | Guild website (Astro, static build). Its built `website/dist/` is served by the backend at `/` |
-| `packages/sidequest-common` | ORM models, pydantic schemas (the API contract shared with the bot repo), leveling curve, message templates, settings |
-| `tests/` | API tests run the real app on a per-test SQLite DB |
+## What's on the site
 
-### Routes
-
-| Path | Auth | Purpose |
+| Page | Who sees it | What it's for |
 |---|---|---|
-| `/` | none | Website (`website/dist`, built by `make web-build`; a placeholder page until the first build) |
-| `/api/guilds/{guild_id}/...` | `X-API-Key` (shared secret with the bot) | Guild config, XP/levels, moderation cases, role menus |
-| `/api/guilds/{guild_id}/event-sync` (GET), `/event-sync/{event_id}/ack`, `/event-sync/events`, `/event-sync/events/{event_id}` (DELETE), `/event-sync/tombstones/{event_id}` (DELETE), `/event-sync/reconcile`, `/event-sync/interest/{discord_event_id}` (PUT), `/event-sync/activity/ack` | `X-API-Key` | Two-way guild event <-> Discord scheduled event sync, Discord "Interested" reporting, and sign-up activity for forum comments (404s for any guild other than the site guild) |
-| `/api/guilds/{guild_id}/live` (PUT) | `X-API-Key` | Bot reports the guild's live online/member/voice-channel counts (404s for any guild other than the site guild) |
-| `/api/guilds/{guild_id}/roles` (PUT) | `X-API-Key` | Bot reports the guild's full current role set (names, colors, positions); `@everyone` excluded (404s for any guild other than the site guild) |
-| `/api/guilds/{guild_id}/member-links` (GET) | `X-API-Key` | Bot reads every signed-in member's Discord id and Battle.net-link status for role syncing (404s for any guild other than the site guild) |
-| `/api/guilds/{guild_id}/member-profiles` (PUT) | `X-API-Key` | Bot pushes linked members' current Discord username/global name/nick/avatar/roles (full sweep plus debounced pushes on profile/role/membership changes), and reports departed linked members; only updates existing members, never creates them (404s for any guild other than the site guild) |
-| `/api/guilds/{guild_id}/signup-notices` (GET), `/signup-notices/{member_id}/ack` (POST) | `X-API-Key` | New-signup officer notice outbox: members with no notice posted yet, and posted notices whose message is stale (confirmed since, e.g. on the site); the bot acks a message's channel/message id once it accurately reflects the member's state (404s for any guild other than the site guild) |
-| `/api/guilds/{guild_id}/role-resets` (GET), `/role-resets/{reset_id}/ack` (POST) | `X-API-Key` | Discord role-reset outbox: members whose site account was deleted and still need every manageable Discord role stripped (requested_at oldest first, capped at 50; unacked rows older than 7 days are dropped); the bot acks once it has acted, or immediately if the member already left the guild (404s for any guild other than the site guild) |
-| `/api/guilds/{guild_id}/events/{event_id}/signups/by-discord/{discord_id}` (GET, PUT) | `X-API-Key` | Bot reads/writes a member's event signup by Discord id, for the Discord Going/Maybe/Can't buttons (reuses the same upsert as the site's own sign-up form); 404 for a `discord_id` with no site account or any `guild_id` other than the site guild, 409 if the event isn't scheduled |
-| `/api/guilds/{guild_id}/attendance/voice` (PUT) | `X-API-Key` | Bot reports cumulative per-event voice minutes for every member it's tracked in the guild's voice channels while an event runs (idempotent replace, not increment; 404s for any guild other than the site guild) |
-| `/api/discord/live` (GET) | none | Website reads the site guild's live counts; empty counts (not 404) if the bot hasn't reported recently |
-| `/api/heroes` (GET) | signed in or `X-API-Key` | Hall of Heroes leaderboard for `?season=<id\|all\|month>`: everyone confirmed on the roster and still in the server, anyone holding a badge, and anyone with EP that season; highest EP first, `rank` null for those with no EP yet |
-| `/api/heroes/{member_id}` (GET) | signed in or `X-API-Key` | One member's Hall of Heroes profile: season/all-time stats, rank, chat level/XP, recent events, earned badges |
-| `/api/discord/online` (GET) | signed-in guild member | Trims Discord's public server widget (`https://discord.com/api/guilds/{id}/widget.json`) to `presence_count` plus each member's name/status/avatar/activity, cached in-process ~60s; `ok: false` with an empty list if the widget fetch fails or times out (3s) rather than a 500. Never edge-cached (varies by session). |
-| `/auth/discord/login`, `/auth/discord/callback`, `/auth/logout` | none | Discord OAuth sign-in (session cookie `sq_session`) |
-| `/auth/battlenet/link`, `/auth/battlenet/callback`, `/auth/battlenet/unlink` | signed in | Link a Battle.net account (BattleTag) to the member |
-| `/api/me` (GET), `/api/me` (DELETE) | signed in | The signed-in member; `DELETE` permanently deletes the member, their event signups, and their sign-up activity rows, clears the session cookie, and queues a Discord role-reset outbox row so the bot strips the member's Discord roles |
-| `/api/members/{member_id}/roster-confirmation` (PUT, DELETE) | GM | Confirm or clear that a member is on the in-game guild roster |
-| `/api/events`, `/api/event-series`, `/api/addons` (GET) | none | Guild events (raids, dungeons, leveling, pvp, social, transmog, other) with roster + raid chart, attendance Renown, repeating event series, guild addon links (each addon carries an `origin` of `guild` or `community`); anonymous `/api/events` requests get the headline fields only (title, kind, time, location) — notes, counts, signups and Discord interest are `null`/empty unless the caller is signed in or presents the bot's `X-API-Key` |
-| `/api/events/{id}/signup` | guild member | Sign up for / withdraw from a guild event |
-| `/api/events`, `/api/event-series`, `/api/addons` (POST/PATCH/DELETE), `/api/events/{id}/signups/{id}` | officer | Manage guild events, repeating event series, the raid chart and addons |
-| `/api/attendance/events` (GET), `/api/events/{id}/attendance` (GET, PUT) | officer | Past events still needing attendance, an event's sign-up roster with voice minutes, and marking Came/No-show plus walk-ins (audited as `attendance.mark`; 409 before the event starts or once cancelled) |
-| `/api/attendance/report`, `/api/attendance/trends` (GET) | GM | Per-member attendance counts/rate and weekly attendee/show-rate trends for `?window=last_30\|season\|all_time&raids_only=` |
-| `/api/gm/members`, `/api/gm/members/{member_id}`, `/api/gm/log`, `/api/gm/cases` (GET), `/api/gm/cases/{case_number}` (PATCH) | GM | Member management detail, unified activity log (sign-ups, sign-ins, Battle.net links, officer actions, moderation), and moderation case review/edit |
-| `/health`, `/health/live` | none | Health checks |
-| `/schema` | none | OpenAPI docs |
+| `/` | everyone | The next raid, who is in Discord right now, and what the guild is recruiting. |
+| `/events/` | everyone | Upcoming and past events. Members also see who signed up, and can sign up themselves. |
+| `/raids/` | everyone | How raid nights, SQL loot and attendance work. |
+| `/ledger/` | everyone | Loot points for every raider, the loot rules, recent loot and boss kills. |
+| `/heroes/` | members | The Hall of Heroes: Renown, raids attended, chat level and badges for each member. |
+| `/guild/` | members | The in-game roster, who can craft what, the guild bank log and guild news. |
+| `/addons/` | everyone | The addons the guild uses, with download links. |
+| `/account/` | anyone signed in | Link Battle.net, get a calendar link, mark away dates, or delete your account. |
+| `/officers/` | officers | Events, addons, recruiting and attendance. Game Masters also get members, the activity log and moderation. |
+| `/officers/sync/` | officers | Move a raid night from the addon to the site, and points back to the addon. |
+| `/rules/`, `/privacy/`, `/terms/` | everyone | Guild rules, what the site keeps about you, and the terms. |
 
-Only the bot's guild router is behind the bot key. Members sign in with Discord: a "guild member" is anyone in the
-SideQuest server, an officer is a member holding a role listed in `WEB_OFFICER_ROLE_IDS` (default: Quest Master and
-Quest Guide), and a GM is a member holding a role listed in `WEB_GM_ROLE_IDS` (default: Quest Master); roles and
-nickname refresh at each sign-in and continuously thereafter via the bot's member-profile push (see "Member
-profile sync" below). The site's member pages
-are `/events/`, `/heroes/`, `/addons/`, `/guild/`, `/ledger/`, `/account/` and `/officers/` (the GM console, with an
-officer-only `/officers/sync/` addon import/export console). `/raids/` is public (no sign-in needed): it explains
-how raid nights, SQL loot (SideQuest Loot: EPGP with a loot council), soft reserve and attendance work.
+A **member** is anyone in the SideQuest Discord who has signed in. An **officer** holds Quest Master or Quest Guide,
+and a **Game Master** holds Quest Master. Roles are read at sign-in and kept up to date by the bot, so a promotion in
+Discord shows on the site within a few minutes.
 
-### Discord sign-in setup
+## Run it on your computer
 
-In the Developer Portal → Game Master → OAuth2, add the redirect `{WEB_BASE_URL}/auth/discord/callback` (locally
-`http://localhost:8000/auth/discord/callback`) and copy the client ID and secret into `WEB_DISCORD_CLIENT_ID` and
-`WEB_DISCORD_CLIENT_SECRET`. Set `WEB_SESSION_SECRET` to a long random string (without it, sessions end on every
-restart), `WEB_OFFICER_ROLE_IDS` / `WEB_GM_ROLE_IDS` only to override the SideQuest role defaults, and
-`WEB_COOKIE_SECURE=true` behind HTTPS. Until the client ID and secret are set, sign-in returns 503 and the public
-pages keep working. See `.env.example`.
+You need [uv](https://docs.astral.sh/uv/), [mise](https://mise.jdx.dev) and Docker. uv installs the right Python and
+mise installs the right Node.
 
-### Battle.net linking setup
-
-Signed-in members can link Battle.net from `/account/`; officers then see each BattleTag on `/officers/` and match it
-against the in-game roster. Linking asks only for the `openid` scope (account id + BattleTag). Characters aren't read:
-Blizzard hasn't said whether World of Warcraft: Forever will be in its Profile API. One Battle.net account can be
-linked to only one member.
-
-Create a client at [develop.battle.net/access/clients](https://develop.battle.net/access/clients) with the redirect
-`{WEB_BASE_URL}/auth/battlenet/callback` (production `https://sidequest-guild.com/auth/battlenet/callback`, locally
-`http://localhost:8000/auth/battlenet/callback`), then set `WEB_BATTLENET_CLIENT_ID` and
-`WEB_BATTLENET_CLIENT_SECRET`. Blizzard notes changes can take up to 10 minutes to apply.
-
-## Running locally
-
-Requires uv (Python 3.15 is installed from `.python-version`), [mise](https://mise.jdx.dev) (the website's Node is
-pinned in `website/mise.toml`), Docker (for Postgres), and the bot's token (Developer Portal → Game Master → Bot). The
-bot needs the **Server Members** and **Message Content** privileged intents enabled in the portal, plus the
-**Manage Events** server permission (Create Events + Manage Events) for event sync, and, if using the events
-forum, **Manage Channels** (forum tags), **Send Messages in Threads**, and **Create Posts**.
-
-```bash
-cp .env.example .env              # then set API_KEY to a random secret
-make install                      # uv sync + the website's Node and npm packages
-make db-up migrate                # Postgres in Docker (host port 55432, clear of other projects' 5432) + migrations
-make dev                          # API + Astro dev server, hot reload, both on http://localhost:8000
-make bot                          # in another terminal
+```sh
+cp .env.example .env      # set API_KEY to any long random string
+make install              # Python and Node packages
+make db-up migrate        # start Postgres in Docker and create the tables
+make dev                  # the site and the API at http://localhost:8000
 ```
 
-`make dev` runs the API with `VITE_DEV_MODE=1` (litestar-vite's `VitePlugin`, `mode="framework"`) and the Astro dev
-server together; Litestar proxies every request it doesn't own to Astro, so the browser only ever talks to
-`http://localhost:8000` and `/api`, `/auth` and the site share one cookie jar. For production, build once and run the
-API alone: `make web-build` (site into `website/dist`) then `make api` (serves `/` from that build, themed 404 for
-unknown paths). `make web-dev` on its own still works too (plain Astro on `http://localhost:4321`, not proxied).
+`make dev` reloads as you edit. The site and the API share port 8000, so the sign-in cookie works on both.
 
-`make bot` uses `DISCORD_TOKEN` from the environment or `.env`; if neither is set it reads the macOS Keychain item
-`discord-mcp` (the same token the Discord MCP server uses), so the token never has to sit in a file.
-`DISCORD_GUILD_ID` makes slash commands sync to that server instantly instead of globally.
+Signing in needs a Discord app (see [Sign-in](#sign-in)). Without one, the public pages still work and the sign-in
+button returns an error.
 
-`make ci` runs what GitHub Actions runs: ruff format and lint, pyrefly, codespell, the test suite (deprecation warnings
-are errors), and for the website oxfmt, oxlint, `astro check`, a build, and the end-to-end tests. pyrefly fails only on
-type errors that aren't recorded in `pyrefly-baseline.json`; after fixing some, `make type-baseline` re-records it.
-`make fmt` formats both sides, `make lint` runs every prek hook (`make install-prek` installs them), and `make help`
-lists the rest. `make migration MSG="..."` autogenerates a migration after a model change.
+To run the bot against your local API, clone the bot repo and set its `API_URL` to `http://localhost:8000` and its
+`API_KEY` to the same value as yours.
 
-### End-to-end tests
-`make web-e2e` builds the site and runs it in Playwright (`website/e2e/`): desktop Chrome, iPhone (WebKit, the engine
-of every iPhone browser), Android Chrome and a 320px phone. The API is mocked from `e2e/data.ts` (typed against
-`src/scripts/api.ts`), so no database is needed; an API call the mock doesn't handle, or any page error, fails the
-test. Run `make web-e2e-install` once for the browsers.
+`make help` lists every command.
 
-- `layout.spec.ts`: every page, signed out and in, at every size: nothing scrolls sideways or sits past the screen
-  edge, the painting spans the screen, pictures on screen load, the header fits; plus each officers console tab at
-  1568px (desktop project only), with the addon list full and empty. Screenshots of each land in
-  `website/test-results/` and the HTML report (`npx playwright show-report` in `website/`).
-- `navigation.spec.ts`: links change the page in place (desktop nav and phone menu), back works, sign-in is a full load,
-  the Officers link is for officers only.
-- `pages.spec.ts`: what each page shows signed out, to members, officers and GMs; signing up for a raid, and the raid
-  chart's "Suggest groups" preview/Apply and drag-and-drop.
-- `offline.spec.ts`: after one visit the service worker opens pages with the network off.
+## Before you push
 
-`npm run test:unit` (`website/`) runs the raid chart suggestion heuristic's own unit tests
-(`src/scripts/raid-suggest.test.ts`) with Node's built-in test runner — no browser needed.
+`make ci` runs every check GitHub runs: formatting, lint, type checks, the Python tests, the website checks, a build
+and the browser tests. `make fmt` fixes formatting.
 
-`E2E_BASE_URL=https://sidequest-guild.com npm run e2e` runs the same tests against a deployed site (the API stays
-mocked). The `Deployed` workflow (`.github/workflows/deployed.yml`) does that after every production web deploy: Cabotage
-reports each deploy to GitHub as a deployment, and on its `success` status the workflow purges Cloudflare's cache, then
-runs the suite against the live site. A failure shows on the commit's checks with the report and screenshots attached.
+- **Python tests** (`make test`) start the real API with a fresh database for each test, so they don't need Postgres.
+- **Browser tests** (`make web-e2e`; run `make web-e2e-install` once first) open every page in desktop Chrome, on an
+  iPhone, an Android phone and a 320px phone. The API is faked from `website/e2e/data.ts`. A test fails if anything
+  scrolls sideways, falls off the screen, doesn't load or logs an error. `npx playwright show-report` in `website/`
+  shows the screenshots.
+- **Type checks** fail only on new errors. Known ones are listed in `pyrefly-baseline.json`. After you fix some, run
+  `make type-baseline`.
 
-The website's Discord buttons read one constant, `DISCORD_INVITE` in `website/src/config.ts`. Its paintings live in
-`website/assets/plates/` and are resized to WebP at build time.
+After you change a database model, `make migration MSG="add away dates"` writes the migration and `make migrate`
+applies it.
 
-## Features
+## Where things are
 
-Admin command groups are hidden from members without the listed permission (server admins can re-scope them under
-Server Settings → Integrations). Every config change is stored by the API and applies immediately.
-
-### Discord bot
-The guild's Discord bot ([SideQuest-Guild/bot](https://github.com/SideQuest-Guild/bot)) is a separate repo that
-talks to this API only over HTTP (`X-API-Key`), pinning `sidequest-common` to a commit of this repo. It covers
-leveling (`/rank`, `/leaderboard`, `/levels …`), moderation (`/warn`, `/timeout`, `/kick`, `/ban`, `/cases`) and
-automod, the member-event log, welcome messages and the auto-role, self-assignable role menus, class halls, and
-the status line. See that repo for slash commands and bot-side behavior; routes the bot calls against this API are
-documented below next to the feature they belong to.
-
-### Event sync
-Guild events created, edited, or cancelled on the site appear as Discord scheduled events, and events created,
-edited, or deleted in Discord update the matching guild event, in either direction. Site edits reach Discord within
-about 15 seconds (the bot's sync loop interval); Discord edits reach the site immediately via gateway listeners.
-Requires the bot's **Manage Events** permission; without it, sync pauses for that server until the permission is
-restored.
-
-- Each Discord event's description ends with a `── SideQuest event ──` block: the event's kind, location and size,
-  live sign-up counts, and a sign-up link built from `WEB_BASE_URL` (so set it to the public domain in production).
-  Text above that block is the event's notes in both directions. Occurrences of a repeating series add the rule
-  (e.g. `Every Friday`, `Every other Friday`) to that line.
-- Events made in Discord become guild events of kind `other` with no location or size; officers can fill those in on
-  the site.
-- Deleting an event in Discord cancels its guild event on the site and keeps the sign-ups; deleting a guild event on
-  the site deletes its Discord event. Events that already started aren't created in Discord (Discord rejects past
-  starts).
-- The bot reconciles every event when it starts, so changes made while it was offline are picked up.
-- Officers create repeating events (`POST /api/event-series`: weekdays, interval, time, timezone, optional end date)
-  and the API keeps the next 14 days of occurrences materialized as ordinary guild events, each with its own
-  sign-ups and Discord event, so the bot's sync loop and `GET /api/events` always see real, signable events rather
-  than the series rule itself. Editing a single occurrence detaches it from the series; editing the series updates
-  its still-attached future occurrences (re-timing or cancelling ones a schedule change no longer matches); ending
-  a series cancels its signed-up future occurrences and deletes the signup-less ones, keeping past occurrences.
-- Every event and series carries the Renown attending it is worth (the API field is still `ep`; on the site it's
-  labelled Renown so "EP" only ever means SQL, the loot system): `ep_override` if an officer set one
-  (0–50), else its kind's preset (`EVENT_KIND_EP`: raid 10, dungeon 5, leveling 3, PvP 3, social 2, transmog 2,
-  other 2). Responses return both `ep` (what attending awards) and `ep_override`; a blank Renown box on the officer
-  form sends `null`, which follows the kind's preset (including after a kind change or a preset retune). Series copy
-  their override onto occurrences.
-- Clicking "Interested" on the Discord event reports the full interested-user list to the site (one-way: the API
-  can't mark a Discord user interested on the bot's behalf), debounced ~5s per event; `EventDetail.discord_interest`
-  shows the total count plus the names/avatars of interested users who also have a site account (others stay
-  anonymous), visible only to signed-in site members (or the bot) — anonymous visitors get `discord_interest: null`.
-- `/eventsync forum [channel]` (Manage Server) points upcoming events at a forum channel: one thread per guild
-  event, named after the event and tagged by kind (`Raid`/`Dungeon`/`Leveling`/`PvP`/`Social`/`Transmog`/`Other`;
-  the bot creates missing tags, needs **Manage Channels**). The starter post is edited in place as the event changes;
-  cancelling posts a notice and archives+locks the thread, completing just archives+locks it, and deleting the
-  guild event on the site posts a removal notice and archives+locks it too. Sign-ups, status changes, new
-  comments, and withdrawals get a short forum comment that @-mentions the member without pinging them and quotes
-  their sign-up comment ("✅ @Coffee is going — Oakenshield · Warrior · Tank" then "> bring flasks"); needs **Send
-  Messages in Threads** and **Create Posts**.
-
-### Discord sign-ups
-Every forum starter post carries persistent **Going**/**Maybe**/**Can't** buttons, so members can sign up without
-leaving Discord, kept in step with the site's own sign-up form. A click with no site account gets an ephemeral
-"Sign in at sidequest-guild.com/account/ first" reply with a link button. Non-role-kind events (social, pvp, …)
-RSVP immediately with an ephemeral confirmation. Role-kind events (raid, dungeon) for Going/Maybe: a member who's
-given a character/class/role on any earlier event signs up with those details at once ("Going as Oakenshield ·
-Warrior · Tank", with a "Change character or role" button); otherwise a modal asks for character name, class
-(defaulting to a matching Discord class role, e.g. `@Warrior`), and role. Can't never asks for character details.
-Cancelled/completed events have their buttons removed, and the live counts line ("Going 12 (2 tanks · 3 healers ·
-7 DPS) · Maybe 1 · Can't 2") refreshes within one sync cycle (~15-30s) of any change from either side. Existing
-upcoming threads pick up the buttons automatically on the next sync cycle after an upgrade, no manual action
-needed. Bot-key routes: `GET/PUT /api/guilds/{guild_id}/events/{event_id}/signups/by-discord/{discord_id}` (404 for
-no site account, 409 if the event isn't scheduled).
-
-
-### Raid chart
-On a raid event's detail page, officers get a "Suggest groups" button above the chart (`website/src/pages/events/
-detail/index.astro`, heuristic in `website/src/scripts/raid-suggest.ts`): it fills groups 1-8 (5 per group, fewer
-groups for a smaller event's size) from everyone signed, spreading tanks and healers one per group before doubling
-up, doing the same for Paladins and Shamans so their auras/totems reach more groups, spreading Priests the same way,
-seating Hunters with a group that already has a Shaman or Druid, and benching whoever doesn't fit. It only replaces
-the view, not the saved chart: officers see a dashed-outline preview and can **Apply** (PATCHes each changed
-signup, one at a time) or **Discard** without saving anything. Officers can also drag a player between groups and
-the bench (pointer events, so it works with touch); the per-row select stays as the keyboard/no-drag alternative,
-and a failed drag or select save reverts and reports the error. Members (and officers) also see who's marked away
-for the event's date as an "Away" chip list in the roster, pulled from `EventDetail.away`
-(`SignupMember[] | null`; `null` for anonymous visitors, like `discord_interest`).
-
-### Calendar feed
-Signed-in members get a private `.ics` link for their own upcoming sign-ups, for Google Calendar or Apple Calendar —
-subscribed once, new events show up on their own (`/account/`'s Calendar chamber; `GET/POST /api/me/calendar`,
-lazily issuing a token on first use). The link's token is a random secret in the URL
-(`GET /api/calendar/{token}.ics`, public, no session cookie, `Cache-Control: private`), so holding it is enough to
-read that member's schedule: "Make a new link" (`POST /api/me/calendar/rotate`) issues a new token and immediately
-invalidates the old one. Deleting the account drops the token with it
-(`api/src/sidequest_api/domain/calendar/`, `api/src/sidequest_api/lib/ics.py`).
-
-### Away dates
-Members mark date ranges they'll be away (`/account/`'s Away chamber; `GET/POST /api/me/away`,
-`DELETE /api/me/away/{id}`; past ranges are pruned on read) so officers and raid leads know not to expect them —
-shown to signed-in members as the "Away" chip list on an event's detail page for that event's date (see Raid chart
-above). While a range is active the bot also grants a configured Discord role so it's visible outside the site,
-synced every 60 seconds against the bot-key `GET /api/guilds/{guild_id}/away-now` route.
-
-- `/away role <role>` (Manage Server) — sets or clears the role; in production this is
-  `/away role role:@Away on a Quest` (role id `1564677987859963975`).
-
-### Live status
-The bot reports live counts, never names: how many people are in each public voice/stage channel, plus the guild's
-approximate online/member counts. The homepage "In the Discord" line shows the online count and, for each voice channel
-with someone in it, a lit hearth with one ember per person (`website/src/scripts/discord-live.ts`). Every 60 seconds the bot refreshes
-`approximate_presence_count`/`approximate_member_count` (`fetch_guild(..., with_counts=True)`, keeping the last
-known values if that fetch fails) and pushes a full report; voice/stage channel changes also push immediately,
-debounced ~5 seconds per guild so a burst of joins/leaves coalesces into one push (mute/deafen toggles don't count
-as a channel change). No privileged presence intent is used (`PUT /api/guilds/{guild_id}/live`).
-
-### Online now
-Signed-in guild members see an "Online now" roster in the homepage's Discord band, below the hearths: avatars,
-names and status (online/idle/dnd) pulled from Discord's own public server widget JSON
-(`https://discord.com/api/guilds/{guild_id}/widget.json`), not the bot. `GET /api/discord/online`
-(`api/src/sidequest_api/domain/discord_online/`) requires a signed-in guild member (401 signed out, 403 signed in
-but not a member), fetches the widget with a 3s timeout, caches the trimmed result in-process for ~60s, and answers
-`{presence_count, members, ok: false}` with an empty list rather than a 500 if Discord is slow or down. Signed-out
-visitors never see the roster or make the request; the hearths band above is unaffected
-(`website/src/scripts/discord-online.ts`). The widget doesn't distinguish the bot from other members, so it can
-appear in the roster.
-
-### Hall of Heroes
-`/heroes/` is a members-only, raider.io-style leaderboard (`GET /api/heroes?season=<id|all|month>`, 401 signed
-out) with rank, Renown, raids/events attended, chat level and badge icons, sortable client-side by Renown/raids/level
-and switchable between a season, the last calendar month, and all time. It lists the whole confirmed roster, badge
-holders and anyone with Renown, so it isn't empty before the first event; the rank follows the chosen sort, ties share a
-rank, and anyone at zero is listed without one. `/heroes/member/?id=<member_id>` is one
-member's profile (`GET /api/heroes/{member_id}`, 401/404): season and all-time stats, a chat-level XP bar, earned
-badges (name, description, earned date — see "Hall of Heroes badges" above) and recent events. Seasons are one
-code constant, `SEASONS` in `packages/sidequest-common/src/sidequest_common/schemas/heroes.py` (mirrored for the
-website in `website/src/scripts/api.ts`): append an entry with a `starts_at` after the previous season's `ends_at`
-to add one. Season One starts at launch (2026-11-04); until then the leaderboard defaults to All time with a note
-that Season One hasn't begun.
-
-### Attendance
-From the Officers page's Attendance tab, officers mark who actually showed up to a past event: a list of
-completed/past events still needing attendance (a torch/needs-attendance marker on each), and for the selected
-event, every sign-up with a Came/No-show dropdown plus each member's minutes in the guild's voice channels during
-the event. Signed-up members default to Came; tentative and absent members default to unmarked unless they spent
-at least `VOICE_PRESENT_THRESHOLD_MINUTES` (30) minutes in voice, in which case Came is pre-ticked for them too.
-Officers can also add a walk-in: anyone not already signed up who showed anyway, picked from the event's other
-members (character/class/role required for raid and dungeon events). Saving (`PUT /api/events/{id}/attendance`,
-audited as `attendance.mark`) stamps `GuildEvent.attendance_taken_at`, sets each marked sign-up's `attended` flag,
-and creates a `signed`+`attended` sign-up for every walk-in; it 409s before the event starts or once it's
-cancelled.
-
-The one rule every attendance-derived number (Hall of Heroes stats, badges, Renown, the GM report below) shares,
-`attended_condition()`/`no_show_condition()` in `api/src/sidequest_api/lib/attendance.py`: a sign-up counts as
-attended once its event has started and isn't cancelled, and either an officer explicitly marked it `attended`, or
-attendance was never taken for that event — in which case a still-`signed` sign-up counts as attended by default
-(the pre-attendance-tracking behavior). A no-show is only ever a sign-up an officer explicitly marked not attended
-after taking attendance.
-
-The report (GM only, same tab) shows per-member signed-up/came/no-show/walk-in counts and attendance rate for
-`?window=last_30|season|all_time` (season starts `SEASON_START`, 2026-11-04), optionally raids only, sortable by
-column (`GET /api/attendance/report`), plus a weekly trend chart of distinct attendees and show rate
-(`GET /api/attendance/trends`), both GM-only.
-
-While an event is running, the bot tracks per-event voice presence: every 60 seconds it notes which non-bot
-members are in one of the guild's voice/stage channels for each event that's started and not yet past its end (or,
-with no explicit end, 3 hours after its start) and not cancelled, and pushes each member's cumulative minutes for
-that event (`PUT /api/guilds/{guild_id}/attendance/voice`, idempotent replace — not an increment — so a bot
-restart or a resent tick never double-counts).
-
-### EPGP loot system
-The `sidequest-sync` addon records raid facts (sessions, boss pulls, loot, EP/GP ledger entries) in game; officers
-move them to the site by pasting an export string, uploading SavedVariables, or running the uploader
-(`POST /api/epgp/imports` — officer session or a `Bearer` sync token belonging to a member who's still an officer).
-The import decodes one `SQX1:` + base64 JSON string found anywhere in the posted text (regex `SQX1:[A-Za-z0-9+/=]+`,
-so a whole SavedVariables file works), upserts sessions/encounters/loot/EP-GP awards by each record's addon-assigned
-id (re-importing is a no-op), auto-links a seen character to a member when its name matches exactly one member's
-event sign-up character, and hands off attendance: every member linked to a session character (standby included,
-as bench) gets `EventSignup.attended` flipped `None` → `True` (never flips an existing `True`/`False`), with a
-walk-in sign-up created for anyone with no existing one. A session that overlaps (same instance, intersecting
-times) a stored session from a different recorder is skipped, along with its encounters/loot/awards, so two
-officers can't double-award EP.
-
-The site is the source of truth for EP/GP: standings (`GET /api/epgp/standings`, public) are computed on read —
-weekly decay (15% at every Tuesday 15:00 UTC reset) is applied to each ledger entry's amount from its timestamp to
-now rather than stored, and GP is `max(100, 100 + decayed GP sum)` so PR (`EP / GP`) never divides by zero. Officers
-pull current rules/standings/upcoming events back into the game as an `SQI1:` string (`GET /api/epgp/game-import`)
-to paste into `/sq import`. Also: the public EP/GP ledger (`GET /api/epgp/ledger`) and loot log
-(`GET /api/epgp/loot`), a kill/wipe progression board (`GET /api/epgp/progression`), officer-made ledger
-adjustments (`POST /api/epgp/adjustments`), a characters admin screen to relink/un-main a `WowCharacter`
-(`GET/PUT /api/epgp/characters`), roster trial/raider status (`GET/PUT /api/epgp/roster`, trial lasts 14 days from
-`trial_started_at`), sync-token management (`GET/POST/DELETE /api/epgp/sync-tokens`, shown once, stored only as a
-sha256 hash), and member self-service character claiming (`GET/POST/DELETE /api/me/characters`, 409 if another
-member already claimed that name-realm). See `packages/sidequest-common/src/sidequest_common/schemas/epgp.py` for
-the full rules table (EP per reason, GP by `INVTYPE_*`, chase/legendary/off-spec multipliers).
-
-### Guild hub v2
-Builds on the EPGP addon and its `SQX1:`/`SQI1:` strings (same import/export flow, officer-only, no new auth):
-roster sweeps, profession/recipe scans, in-game sign-ups, the guild bank log, announcements, recruiting and member
-notes all ride the same `SQX1:` export, and the game gets them back out through the same `SQI1:` string. See
-`local://addon-contract-v2.md`/`packages/sidequest-common/src/sidequest_common/schemas/guild_hub.py` for the wire
-shapes; this is the behavior.
-
-- **Roster** (`GET /api/guild/roster`, member): the recorder's latest `GetGuildRosterInfo` sweep, upserted by
-  character (auto-creating `WowCharacter` rows) and grouped by linked member on read, alts under their main.
-  Rank/level changes become news — level-ups only at an observed transition through a multiple of 10, never on
-  first sight — and a character absent from every sweep for 30 days is marked `left_guild_at` (never deleted).
-- **Crafters** (`GET /api/guild/crafters`, member): who knows which recipe, searchable by recipe or profession
-  substring (`?q=`, `?profession=`, up to 50 matches). Each import upserts a character's profession scan and
-  replaces its known-recipe set wholesale (≤ 2000 recipes per profession, ≤ 400 profession/character pairs per
-  payload).
-- **In-game sign-ups**: an officer's addon relays sign-ups made entirely in game into the same `EventSignup` rows
-  the site's own sign-up form writes, resolving character → member through `WowCharacter.member_id` (unlinked
-  characters are skipped and counted in the import result). **Newest wins**: a sign-up only applies if the stored
-  row's `updated_at` is older than the addon's `at`, so whichever of the site or the game answered most recently
-  is what sticks; officer chart/bench/attended fields are never touched by an import.
-- **Guild bank** (`GET /api/guild/bank`, member): an insert-only, addon-deduplicated (by the addon's own id) log of
-  deposits/withdrawals/moves/repairs/tab purchases/money changes, newest first with 30-day deposit/withdrawal
-  totals.
-- **News** (`GET /api/guild/news`, public): a generated feed (`boss_kill`, `first_kill`, `loot`, `level`, `joined`,
-  `announcement`, `badge`), one row per source event the first time it's recorded so re-importing the same addon
-  data never duplicates an entry; the last 60 entries over 14 days also ride along in the `SQI1:` game-import
-  string's public part so the addon can show it offline.
-- **Announcements** (`GET /api/guild/announcements`, public; `POST`, officer): officers post from the game
-  (`discord: true` queues it for the bot) or from the site's Sync page; both land in the same feed and also feed
-  news. The bot's `AnnouncementsCog` polls every guild with an `announcement_channel_id` set every 2 minutes
-  (`GET /api/guilds/{guild_id}/announcements/pending`, bot key), posts one gold embed per pending announcement
-  (title "Announcement", author = the announcement's author, description = its text), and acks each one
-  (`POST .../announcements/{id}/posted`) so it's never reposted; a failed ack or a Discord send failure just logs
-  and leaves the announcement pending for the next poll. `/announcements channel [channel]` (Manage Server) sets or
-  clears the channel.
-- **Recruiting** (`GET/PUT /api/epgp/recruits`, `POST /api/epgp/recruits/{id}/votes`, officer-only): candidates with
-  a status (`applicant | trial | accepted | declined`), a free-text note, a vetting checklist (talked/gear
-  check/first raid/vouched), and one vote per officer (`yes | no | wait`) — upserted by id from the game, editable
-  from the Sync page's Recruits panel, and synced back out in the officer-only part of the game-import string.
-  Setting `status: trial` also sets the linked member's `raid_status`/`trial_started_at` the first time, from
-  either side.
-- **Member notes** (`GET /api/epgp/member-notes`, officer-only): officer notes about a character, recorded in game
-  and synced in on import — upsert by id, voidable but never un-voidable, read-only on the site (Sync page's Member
-  notes panel).
-- **Game-import v2** (`GET /api/epgp/game-import`, officer, always `"v": 2` now) adds three parts to the existing
-  `SQI1:` payload: a public part (`members`, `news`) broadcastable to the whole guild; an on-demand part
-  (`sheets` — each member's last 15 ledger entries and last 10 loot wins, `crafters` + a shared `recipe_names`
-  table) an officer's addon holds and answers member requests from; and an officer-only part (`recruits`,
-  `member_notes`, `inactive` — members seen in neither a roster sweep nor a raid session in 14 days) that stays on
-  officer addons and is never broadcast.
-
-The site pages are `/guild/` (roster/crafters/bank/news tabs, member), `/ledger/` (the EPGP standings/rules/loot/
-progression page from the previous section) and `/officers/sync/` (the import/export console, now also Recruits,
-Member notes and Announcement panels, officer).
-
-### Link roles
-Members who sign in on the site get a role (default name **Signed the Ledger**); members who also link Battle.net
-get a second one (**Battle-Tagged**). Unlinking Battle.net drops just that role; unlinking the site account (or no
-longer appearing in the sign-in list) drops both. New joiners who haven't signed in get a third role, the gate role
-(**At the Gate**), removed the moment they sign in; it's granted immediately on join (or screening-clear) just like
-the other two. Once a GM confirms a member on the Officers page's Members tab as actually being on the in-game guild
-roster (ahead of the WoW Forever roster API that will later set the same flag automatically), the member gets a
-fourth role, the roster role (**New Arrival**) — but never if they already hold a rank above it, so a promoted
-member who dropped the role doesn't get it back every minute. Channels other than the sign-in channel are set in
-Discord to be visible only to the **Signed the Ledger** role (and `@everyone` loses `View Channel`), so the gate
-role's only purpose is to show new members the sign-in channel until they're in; every member channel is further
-restricted to the roster role and ranks above it. A sync loop reconciles every member every 60 seconds against
-`GET /api/guilds/{guild_id}/member-links`, and joins/screening-clears apply the same plan immediately. Only
-configured roles are ever touched, and a role that's missing or unsafe to grant is skipped with a one-time warning.
-The same loop also drains the Discord role-reset outbox (`GET /api/guilds/{guild_id}/role-resets`): a member who
-deletes their site account keeps nothing but the gate role, stripped of every other role the bot can manage
-(skipping `@everyone`, managed/integration roles, and anything at or above the bot's own top role — Discord would
-reject those anyway) and immediately re-gated, rather than waiting for the next tick; the bot acks each reset
-(`POST .../role-resets/{reset_id}/ack`), acking immediately with no role changes if the member already left.
-
-- `/linkroles site | battlenet | gate | roster` (Manage Server)
-
-### Signup notices
-Every 60 seconds, for each guild with a signup-notice channel configured, the bot posts a gold embed in that channel
-for every member who signed in for the first time since the last check (`GET /api/guilds/{guild_id}/signup-notices`):
-their name, avatar, BattleTag if linked, and a "Guest until a Quest Master approves" status. The embed carries an
-**Approve** button (a persistent component surviving restarts, like `role_menus`) and a **More info** link button to
-the member's detail on the Officers page's Members tab (`/officers/#members?member={id}`). Approve re-checks the
-clicker holds a `WEB_GM_ROLE_IDS` role, then confirms the member on the roster through the same route the GM console
-uses — just with the clicker identified by Discord id instead of a session — and edits the message in place to show
-who approved it. If a member is instead confirmed on the site before anyone clicks Approve, the next poll edits that
-member's message to say so instead of leaving it stuck on "Guest". The bot acks every post and edit
-(`POST /api/guilds/{guild_id}/signup-notices/{member_id}/ack`) so nothing is posted or re-posted twice.
-
-- `/signups channel` (Manage Server)
-
-### Weekly events board
-Every Monday at 10:00 America/Chicago, for each guild with a weekly-board channel configured, the bot posts one gold
-embed listing that week's scheduled events (Monday 00:00 to the following Monday 00:00 Central), soonest first: each
-line shows the weekday, a Discord timestamp (so it renders in every reader's own timezone), the event kind, a link
-to its detail page on the site, and a link to its forum thread if it has one. The events come from the bot-key
-`GET /api/guilds/{guild_id}/weekly-board/events?start=...&end=...` route (scoped to the week, unlike the public
-`/api/events` list, and the only one that also returns each event's forum thread id). A week with no events posts
-nothing. The last posted week is stored on `GuildConfig.weekly_board_last_week`, so a restart or a second check
-within the same day never double-posts; because the check only ever fires on Monday, a bot that was down past
-10:00 catches up the moment it's back online that day, but never later in the week.
-
-- `/weeklyboard channel <channel>` (Manage Server)
-- `/weeklyboard preview` (Manage Server) — ephemeral preview of the current week's board
-
-### Member profile sync
-Member rows (username, global name, nick, avatar, roles, guild membership) stay current with Discord continuously,
-not just at sign-in: on `on_ready` and every 10 minutes, the bot pushes a full sweep — the current profile for
-every linked member (from `GET /api/guilds/{guild_id}/member-links`) still in the guild, plus the ids of linked
-members no longer in the guild. It also pushes immediately, debounced ~5 seconds per guild and coalescing ids, on
-nick/role/guild-avatar changes (`on_member_update`), username/global-name/avatar changes
-(`on_user_update`, checked against every site guild the user shares with the bot), joins (`on_member_join`), and
-departures (`on_member_remove`). Only linked members are ever pushed; the periodic sweep keeps that linked set
-current. `PUT /api/guilds/{guild_id}/member-profiles` only updates existing `Member` rows (never creates one) and
-never touches `last_login_at`, Battle.net fields, or roster confirmation.
-
-### Hall of Heroes badges
-Badges are Discord roles: members earn them on `sidequest-guild.com/heroes/` and the bot grants/announces the
-matching role, so earning a badge shows up in Discord without anyone configuring a role manually. Every 5 minutes
-(and once on ready), the bot calls `GET /api/guilds/{guild_id}/badges/sync`, which recomputes and awards badges
-server-side and reports every linked member's current badge set plus any newly earned badges not yet announced. For
-each badge below the bot creates (and, if deleted, recreates) a matching Discord role — not hoisted, not
-mentionable, colored per the badge, left wherever Discord places a freshly created role (below the bot's own role,
-above `@everyone`) so no other role is ever moved — storing the role id on `GuildConfig.badge_role_ids`. Each
-member's badge roles are then reconciled to match exactly what the API reports: permanent badges are only ever
-added, never removed, and **Top Helper** is a single moving title the bot adds to the new month's winner and
-removes from the last one, both driven by the same reconciliation, with no special-casing in the bot. If a badge
-channel is configured, each newly earned badge posts a gold embed (`<@member>` mention, badge name and
-description, and a link to the Hall of Heroes) with mentions scoped to just that member, then the bot acks it
-(`POST /api/guilds/{guild_id}/badges/ack`) so it isn't announced twice. If no channel is set yet, role sync still
-runs every tick, but announcements are left un-acked so they post in full once a channel is configured instead of
-being lost for whoever earned them first.
-
-Role icons (the server is boost tier 2, so roles can carry an image): every rank, gate, class and badge role has one,
-generated with Codex (prompts in `website/.impeccable/build/role-icons/`, local only). The bot gives a badge role
-its icon when it creates or recreates it, sets it once on a badge role that has none, and attaches the badge's icon
-to its announcement as the thumbnail. The other roles' icons were set once by hand from the same folder; level
-roles have none.
-
-| Badge | Rule |
+| Folder | What's in it |
 |---|---|
-| 👣 First Steps | Attended their first guild event. |
-| ⚔️ First Raid | Attended their first raid. |
-| 🛡️ Raid Regular | Attended 10 raids with the guild. |
-| 🏅 Raid Veteran | Attended 25 raids with the guild. |
-| 🌙 Perfect Month | Attended every raid the guild ran in a calendar month (at least 4 raids that month). |
-| 🏰 Founding Member | Confirmed on the guild roster before launch. |
-| 💬 Chatterbox | Reached chat level 10. |
-| 🌟 Top Helper | Attended the most dungeon and leveling events last month. A moving monthly title. |
+| `api/` | The API, built with Litestar. Each feature has a folder in `api/src/sidequest_api/domain/`. Migrations are in `api/src/sidequest_api/lib/migrations/`. |
+| `website/` | The site, built with Astro. Pages are in `src/pages/`, page scripts in `src/scripts/`, paintings in `assets/`. |
+| `packages/sidequest-common/` | The database models, the shape of every API request and reply, and the SQL loot rules. The bot uses it too. |
+| `tests/` | Python tests. |
+| `website/e2e/` | Browser tests. |
 
-- `/badges channel [channel]` (Manage Server) — set or clear the announcement channel
-- `/badges sync` (Manage Server) — run a sync now, with an ephemeral summary
+With the API running, `/schema` lists every route with what it takes and returns.
 
-## Role safety
-Anything the bot hands out on its own (level rewards, the auto-role, role-menu buttons, link roles) is checked
-against two rules before every grant:
+## How the pieces talk
 
-- **The role itself:** it must be below the bot's role, not managed by an integration, and free of moderator/admin
-  permissions. This is re-checked right before every grant, so a role that later gains permissions stops being
-  handed out.
-- **Who configures it:** they need Manage Roles, and the role must sit below their own highest role.
+- **The bot** calls `/api/guilds/{guild_id}/...` with the shared `API_KEY`. About once a minute it asks what changed
+  (new events, sign-ups, who should hold which role) and reports what happened in Discord (button clicks, voice
+  channels, name and role changes). A change on either side reaches the other within about a minute.
+- **The addon** records raid nights in game. An officer sends one to the site from `/officers/sync/` by pasting a
+  `SQX1:` string, uploading the addon's save file, or running `sidequest-sync`. The site sends points back as an
+  `SQI1:` string for `/sq import`. Both formats are in `packages/sidequest-common/src/sidequest_common/schemas/`
+  (`epgp.py` and `guild_hub.py`).
+- **The bot pins `sidequest-common` to a commit of this repo.** If you change a schema the bot uses, keep the old
+  fields working until the bot moves to the new commit.
 
-## Deploying with Docker
-Host-agnostic: a single multi-stage `Dockerfile` builds the website (Node 24) and the Python workspace (uv) into one
-slim Python 3.15 image. The image's default (and only) command runs the API (`sidequest-api`). `docker-compose.yml`
-wires up Postgres, a one-shot `migrate` service (`litestar database upgrade`) that runs before the API starts, and
-the `api` service (port 8000).
+## How the features work
 
-```bash
-cp .env.example .env            # set API_KEY, etc.
-make docker-build                # build the image
-make docker-up                   # postgres + migrate + api (http://localhost:8000)
-make docker-migrate              # re-run migrations on demand
-make docker-logs                 # follow logs
-make docker-down                 # stop everything (keeps the pgdata volume)
-```
+**Events.** Each event on the site gets a Discord event and a thread in the events forum. The thread has Going, Maybe
+and Can't buttons, so members can sign up from either place. Edits on the site reach Discord in about 15 seconds,
+and edits in Discord reach the site at once. A repeating event keeps its next 14 days filled in as ordinary events,
+each with its own sign-ups.
 
-`API_HOST=0.0.0.0` is baked into the image so it binds inside the container; `API_PORT` stays 8000. The image has a
-`HEALTHCHECK` against `/health`. `.dockerignore` keeps `.venv`, `node_modules`, `dist`, caches, and tests out of the
-build context. CI builds the image (no push) on every PR via `docker/build-push-action` with GitHub Actions layer
-caching.
+**Two kinds of points.** *Renown* is for the Hall of Heroes. Each event is worth some: a raid 10, a dungeon 5,
+leveling and PvP 3, anything else 2, and an officer can change it for one event. *EP and GP* are the SQL loot
+points. The addon records them and the site shows them on `/ledger/`. In the code and the API, Renown is still
+called `ep`. The loot rules and prices are in `schemas/epgp.py`.
 
-### Cabotage
-The `Procfile` defines the two processes, both from the same image:
+**Attendance.** Officers mark who came on the Officers page. Anyone who spent 30 minutes in voice during the event is
+ticked already. Every number about who came (Hall of Heroes, badges, Renown, the attendance report) uses one rule,
+`attended_condition()` in `api/src/sidequest_api/lib/attendance.py`. Use it for any new one too.
 
-| Process | Command | Notes |
-|---|---|---|
-| `release` | `litestar … database upgrade --no-prompt` | Runs once per deploy, before traffic |
-| `web` | `uvicorn … --uds /var/run/cabotage/cabotage.sock` | Serves the API and the built site |
+**Hall of Heroes and badges.** Seasons are listed in `SEASONS` in `schemas/heroes.py`. Season One starts on November
+4, 2026. Each badge is also a Discord role, which the bot grants and announces.
 
-Set the health check path to **`/health/live`** (no database round-trip, fits the 2 s probe timeout). The site's
-canonical and og URLs are baked in at build time from the `SITE_URL` build arg, which defaults to
-`https://sidequest-guild.com`.
+| Badge | How to earn it |
+|---|---|
+| First Steps | Come to your first guild event. |
+| First Raid | Come to your first raid. |
+| Raid Regular | Come to 10 raids. |
+| Raid Veteran | Come to 25 raids. |
+| Perfect Month | Come to every raid in a month that had at least 4. |
+| Founding Member | Be on the guild roster before launch. |
+| Chatterbox | Reach chat level 10. |
+| Top Helper | Come to the most dungeons and leveling groups last month. It moves to the next winner each month. |
 
-Environment (secrets in Vault, the rest in Consul):
+**Discord roles from the site.** Signing in gives *Signed the Ledger*, and linking Battle.net gives *Battle-Tagged*.
+New people who haven't signed in get *At the Gate*. When a Game Master confirms someone on the in-game roster, they
+get *New Arrival*, which opens the guild channels. The bot checks every member once a minute, and it never hands out
+a role with moderator powers or one above its own.
 
-| Variable | Value | Used by |
-|---|---|---|
-| `DB_URL` | `postgresql+asyncpg://{PGUSER}:{PGPASSWORD}@{PGHOST}:{PGPORT}/{PGDATABASE}?ssl=verify-full`, built from the database's shared `SIDEQUEST_PG*` variables (scheme must be `postgresql+asyncpg`; asyncpg takes `ssl=`, not `sslmode=`) | release, web |
-| `PGSSLROOTCERT` | the shared `SIDEQUEST_PGSSLROOTCERT` (`/var/run/secrets/cabotage.io/ca.crt`); asyncpg verifies the server against it | release, web |
-| `API_KEY` | shared secret (`secrets.token_urlsafe(32)`) | web, worker |
-| `API_URL` | `https://sidequest-guild.com`: the bot reaches the API through the public site | worker |
-| `DISCORD_TOKEN` | bot token | worker |
-| `DISCORD_GUILD_ID` | `1564671275316543508` (instant slash-command sync) | worker |
-| `WEB_BASE_URL` | `https://sidequest-guild.com` | web |
-| `WEB_COOKIE_SECURE` | `true` | web |
-| `WEB_SESSION_SECRET` | at least 32 characters | web |
-| `WEB_DISCORD_CLIENT_ID` / `WEB_DISCORD_CLIENT_SECRET` | Discord OAuth app | web |
-| `WEB_BATTLENET_CLIENT_ID` / `WEB_BATTLENET_CLIENT_SECRET` | Battle.net API client | web |
-| `WEB_OFFICER_ROLE_IDS` | optional; defaults to Quest Master + Quest Guide | web |
-| `WEB_GM_ROLE_IDS` | optional; defaults to Quest Master | web |
+**Calendar and away dates.** Each member can get a private calendar link for Google or Apple Calendar with the events
+they signed up for. Anyone with the link can read it, so "Make a new link" on `/account/` turns the old one off.
+Members can also mark dates they'll be away. The bot gives them *Away on a Quest* for those days, and the raid chart
+shows who is away.
 
-Register `https://sidequest-guild.com/auth/discord/callback` as a Discord OAuth redirect (the Battle.net one is
-already registered).
+**Your data.** If you start keeping something new about members, add it to `/privacy/` and make `delete_account` in
+`api/src/sidequest_api/domain/members/services.py` remove it.
+
+## Sign-in
+
+**Discord.** In the Discord Developer Portal, open the Game Master app, then OAuth2. Add the redirect
+`http://localhost:8000/auth/discord/callback` (on the live site, `https://sidequest-guild.com/auth/discord/callback`).
+Copy the client ID and secret into `WEB_DISCORD_CLIENT_ID` and `WEB_DISCORD_CLIENT_SECRET`, and set
+`WEB_SESSION_SECRET` to a long random string. Without it, everyone is signed out each time the API restarts.
+
+**Battle.net.** Make a client at [develop.battle.net](https://develop.battle.net/access/clients) with the redirect
+`http://localhost:8000/auth/battlenet/callback`, and copy its ID and secret into `WEB_BATTLENET_CLIENT_ID` and
+`WEB_BATTLENET_CLIENT_SECRET`. The site asks only for the BattleTag. It can't read characters yet, because Blizzard
+hasn't said whether Forever will be in its API.
+
+## Deploying
+
+Push to `main`. When CI passes, Cabotage builds the Docker image, runs the migrations, then starts the new version.
+It takes about 13 minutes. Two things to know:
+
+- A push deploys only if its newest commit changes app files. A commit that touches only `.github/` deploys nothing,
+  even if older commits under it were never deployed.
+- For a minute the old and new versions run side by side, and the migrations run first. So a migration must work
+  with the old code too: give new columns a default or let them be empty.
+
+After each deploy, the **Deployed** workflow clears Cloudflare's cache and runs the browser tests against the live
+site. `gh run list --workflow deployed.yml` shows how it went. Each deploy also starts two or three runs that skip
+themselves, so look for the one that didn't.
+
+The `Procfile` has two processes from the same image: `release` runs the migrations, and `web` serves the API and the
+site. The health check path is `/health/live`. Settings for the live site:
+
+| Setting | Value |
+|---|---|
+| `DB_URL` | `postgresql+asyncpg://...?ssl=verify-full`, built from the database's `SIDEQUEST_PG*` settings |
+| `PGSSLROOTCERT` | the database's `SIDEQUEST_PGSSLROOTCERT` |
+| `API_KEY` | a long random string, the same one the bot uses |
+| `WEB_BASE_URL` | `https://sidequest-guild.com` |
+| `WEB_COOKIE_SECURE` | `true` |
+| `WEB_SESSION_SECRET` | at least 32 characters |
+| `WEB_DISCORD_CLIENT_ID`, `WEB_DISCORD_CLIENT_SECRET` | the Discord app |
+| `WEB_BATTLENET_CLIENT_ID`, `WEB_BATTLENET_CLIENT_SECRET` | the Battle.net client |
+| `WEB_OFFICER_ROLE_IDS`, `WEB_GM_ROLE_IDS` | only to change who counts as an officer or Game Master |
+
+To run the whole thing in Docker on your computer, use `make docker-up`, and `make docker-down` to stop it.
 
 ### Cloudflare
-The origin is a single low-traffic pod, so every request Cloudflare passes through pays a fresh TLS handshake to it
-(200-500 ms). The site is built so Cloudflare can answer almost everything itself:
 
-| What | Origin headers | At the edge |
-|---|---|---|
-| `/_astro/*` (hashed images, JS, fonts) | `public, max-age=31536000, immutable` | Cached for a year |
-| Pages (`/`, `/events/`, `404.html`, …) | `Cache-Control: no-cache` plus `Cloudflare-CDN-Cache-Control: max-age=60, stale-while-revalidate=86400, stale-if-error=86400` | Fresh for a minute, then served stale while one background fetch refreshes it; a deploy reaches everyone within about a minute |
-| `/api/discord/live` | `Cloudflare-CDN-Cache-Control: max-age=15, stale-while-revalidate=60` | Same counts for everyone |
-| Every other `/api/*`, `/auth/*` | none | Never cached |
+Cloudflare answers almost every request itself, so the server rarely sees a visitor.
 
-Browsers only ever see `no-cache` on pages (Cloudflare strips its own header), so they always ask the edge. None of the
-cached routes run the session middleware, so they can never carry a `Set-Cookie`.
+| What | How long Cloudflare keeps it |
+|---|---|
+| `/_astro/*` (scripts, fonts, pictures) | a year. The file names change with every build. |
+| Pages | a minute. After that it shows the copy it has while it fetches a new one. |
+| `/api/discord/live` | 15 seconds. Everyone sees the same counts. |
+| Everything else in `/api/` and `/auth/` | never kept |
 
-Zone settings (`cf` CLI or dashboard, zone `sidequest-guild.com`):
+A route is kept only if it sends a `Cloudflare-CDN-Cache-Control` header and skips the session, so it can never hand
+one person's cookie to another. The cache rule is "Pages and live counts at the edge" on the `sidequest-guild.com`
+zone. It ignores the query string, so every `/events/detail/?id=...` is one page. Smart Tiered Cache, 0-RTT and Early
+Hints are on.
 
-- **Cache rule** "Pages and live counts at the edge" (phase `http_request_cache_settings`): when the path doesn't
-  start with `/api/`, `/auth/`, `/schema` or `/health`, or is exactly `/api/discord/live`, mark it eligible for
-  cache with edge TTL "use cache-control header if present, bypass cache if not" (a route without the header is
-  never cached), browser TTL "respect origin", and the query string left out of the cache key (every
-  `/events/detail/?id=…` is the same page).
-- **Smart Tiered Cache** on, so one regional Cloudflare copy feeds the others instead of each going to the origin.
-- **0-RTT** and **Early Hints** on.
-- **Purge after deploy:** the `Deployed` workflow empties the whole zone cache once a web deploy succeeds, so nobody
-  gets a previous build's page pointing at files the new build removed. It uses a Cloudflare user token
-  `sidequest-ci-cache-purge` (Cache Purge on this zone only) stored as the `CLOUDFLARE_PURGE_TOKEN` repository
-  secret, and the zone id as the `CLOUDFLARE_ZONE_ID` repository variable.
+### Page scripts and the offline copy
 
-### Moving between pages
-Links swap the page in place with Astro's ClientRouter instead of loading a new document: the header holds still and
-the painting dissolves into the next room. Each page script starts through `onPage` (`website/src/scripts/page.ts`),
-which runs it on arrival and aborts its listeners and timers when the page is swapped away. A new page script must
-do the same, or it runs only on the first visit. Sign-in, sign-out and `/api` links always get a full load.
+Links change the page without a full reload. A page script must start with `onPage` from
+`website/src/scripts/page.ts`, or it runs only on the first page a visitor opens.
 
-### Service worker
-After the first visit, `website/service-worker/sw.js` answers from the device: every page and its scripts and fonts
-(precached per build), and each painting once it has loaded. Hovering, focusing or touching a link also fetches that
-page's painting ahead of the click (`setupWarmUp` in `site-chrome.ts`).
-
-- **Builds stay whole.** Every build gets a random id, in each page's `<meta name="sq-build">` and in the worker. The
-  worker only caches a page that carries its own id, retrying while Cloudflare still serves the previous deploy;
-  otherwise the install fails and the current worker stays. The site re-checks for a new worker at most once a
-  minute while someone moves between pages, and a page from a newer build gets a full load rather than being
-  swapped into the old one.
-- **Data shows from the device, then refreshes.** The homepage, `/events/`, event pages and `/addons/` get their
-  public data from the device first; when the fresh answer differs, the page re-renders (`onFreshData` in
-  `api.ts`). Every other request, `/api/me`, `/account/` and `/officers/` always go to the network.
-- **Nobody sees someone else's data.** The data copies are deleted on any sign-up, edit, sign-in or sign-out, and
-  whenever `/api/me` names a different person than last time.
-- **Kill switch.** Set `SERVICE_WORKER = false` in `website/astro.config.mjs` and deploy: the shipped `sw.js` deletes
-  its caches, unregisters itself and reloads open pages, and pages stop registering a worker.
+After the first visit, a service worker (`website/service-worker/sw.js`) keeps every page, script and font on the
+device, so pages open at once and work offline. Public data shows from the device first and updates when the fresh
+copy arrives. The saved data is deleted on every sign-up, edit, sign-in and sign-out, so nobody sees another
+person's data. To turn the service worker off, set `SERVICE_WORKER = false` in `website/astro.config.mjs` and deploy.
+It deletes its copies and removes itself.

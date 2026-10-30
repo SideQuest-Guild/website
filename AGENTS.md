@@ -3,7 +3,7 @@
 A WoW: Forever guild's site and API. One uv workspace, one Docker image, two Cabotage processes (`Procfile`:
 `release` migrates, `web` serves the API and built site). The Discord bot lives in a separate repo,
 [SideQuest-Guild/bot](https://github.com/SideQuest-Guild/bot), and talks to this API only over HTTP
-(`X-API-Key`). `README.md` is the feature reference; keep it current.
+(`X-API-Key`). `README.md` explains the site to people; keep it current and in plain words.
 
 ## Layout
 - `api/` Litestar API. `domain/<area>/` = `controllers.py` + `services.py` + `dependencies.py`. Migrations in
