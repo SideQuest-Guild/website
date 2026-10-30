@@ -169,11 +169,3 @@ class MembersService(SQLAlchemyAsyncRepositoryService[Member]):
             member.officer_notice_posted_at = datetime.now(UTC)
         member.officer_notice_resolved_at = datetime.now(UTC) if member.roster_confirmed_at is not None else None
         return await self.update(member, auto_commit=True)
-
-    async def get_by_discord_id_or_404(self, discord_id: int) -> Member:
-        """The member with this Discord id. Raises ``NotFoundException`` if they've never signed in."""
-        member = await self.get_one_or_none(discord_id=discord_id)
-        if member is None:
-            msg = f"No member with discord_id {discord_id}"
-            raise NotFoundException(msg)
-        return member

@@ -2,7 +2,7 @@
 
 ``GET/PUT /api/guilds/{guild_id}/events/{event_id}/signups/by-discord/{discord_id}``: lets the bot read and write a
 member's signup without a site session, identifying them by Discord id instead (same shape of trick as
-``signup_notices``'s roster-confirmation-by-discord routes).
+``signup_notices``'s bot-key roster-confirmation routes).
 """
 
 from pydantic import BaseModel, ConfigDict, Field

@@ -99,68 +99,74 @@ async def test_ack_resolves_a_confirmed_member(
     assert member_id not in resolved_ids
 
 
-async def test_confirm_by_discord_unknown_actor_is_403(
+async def test_confirm_from_notice_unknown_actor_is_403(
     client: AsyncTestClient, db_sessionmaker: async_sessionmaker[AsyncSession]
 ) -> None:
-    await _seed_member(db_sessionmaker, discord_id=8006, username="target")
+    member_id = await _seed_member(db_sessionmaker, discord_id=8006, username="target")
     response = await client.put(
-        f"/api/guilds/{GUILD_ID}/members/by-discord/8006/roster-confirmation",
+        f"{NOTICES_PATH}/{member_id}/roster-confirmation",
         json={"actor_discord_id": "999999999", "actor_name": "Nobody"},
     )
     assert response.status_code == 403
 
 
-async def test_confirm_by_discord_non_gm_actor_is_403(
+async def test_confirm_from_notice_non_gm_actor_is_403(
     client: AsyncTestClient, db_sessionmaker: async_sessionmaker[AsyncSession]
 ) -> None:
-    await _seed_member(db_sessionmaker, discord_id=8007, username="target")
+    member_id = await _seed_member(db_sessionmaker, discord_id=8007, username="target")
     await _seed_member(db_sessionmaker, discord_id=8008, username="rando", roles=[])
     response = await client.put(
-        f"/api/guilds/{GUILD_ID}/members/by-discord/8007/roster-confirmation",
+        f"{NOTICES_PATH}/{member_id}/roster-confirmation",
         json={"actor_discord_id": "8008", "actor_name": "Rando"},
     )
     assert response.status_code == 403
 
 
-async def test_confirm_by_discord_unknown_member_is_404(
+async def test_confirm_from_notice_unknown_member_is_404(
     client: AsyncTestClient, db_sessionmaker: async_sessionmaker[AsyncSession]
 ) -> None:
     await _seed_member(db_sessionmaker, discord_id=8009, username="gm", roles=[GM_ROLE_ID])
     response = await client.put(
-        f"/api/guilds/{GUILD_ID}/members/by-discord/999999999/roster-confirmation",
+        f"{NOTICES_PATH}/999999999/roster-confirmation",
         json={"actor_discord_id": "8009", "actor_name": "GM"},
     )
     assert response.status_code == 404
 
 
-async def test_gm_confirms_by_discord_and_records_audit(
+async def test_gm_confirms_notice_member_not_self_and_records_audit(
     client: AsyncTestClient, db_sessionmaker: async_sessionmaker[AsyncSession]
 ) -> None:
     member_id = await _seed_member(db_sessionmaker, discord_id=8010, username="target")
-    await _seed_member(db_sessionmaker, discord_id=8011, username="gm-clicker", roles=[GM_ROLE_ID])
+    gm_id = await _seed_member(db_sessionmaker, discord_id=8011, username="gm-clicker", roles=[GM_ROLE_ID])
 
     response = await client.put(
-        f"/api/guilds/{GUILD_ID}/members/by-discord/8010/roster-confirmation",
+        f"{NOTICES_PATH}/{member_id}/roster-confirmation",
         json={"actor_discord_id": "8011", "actor_name": "GM Clicker"},
     )
     assert response.status_code == 200
     assert response.json()["roster_confirmed"] is True
 
     async with db_sessionmaker() as session:
+        target = await session.get(Member, member_id)
+        gm = await session.get(Member, gm_id)
+        assert target is not None
+        assert target.roster_confirmed_at is not None
+        assert gm is not None
+        assert gm.roster_confirmed_at is None
         audit = (await session.scalars(select(OfficerAudit).where(OfficerAudit.action == "roster.confirm"))).one()
         assert audit.subject_id == str(member_id)
         assert audit.actor_name == "gm-clicker"
 
 
-async def test_gm_unconfirms_by_discord_and_records_audit(
+async def test_gm_unconfirms_from_notice_and_records_audit(
     client: AsyncTestClient, db_sessionmaker: async_sessionmaker[AsyncSession]
 ) -> None:
-    await _seed_member(db_sessionmaker, discord_id=8012, username="target", confirmed=True)
+    member_id = await _seed_member(db_sessionmaker, discord_id=8012, username="target", confirmed=True)
     await _seed_member(db_sessionmaker, discord_id=8013, username="gm-clicker", roles=[GM_ROLE_ID])
 
     response = await client.request(
         "DELETE",
-        f"/api/guilds/{GUILD_ID}/members/by-discord/8012/roster-confirmation",
+        f"{NOTICES_PATH}/{member_id}/roster-confirmation",
         json={"actor_discord_id": "8013", "actor_name": "GM Clicker"},
     )
     assert response.status_code == 200

@@ -1,12 +1,13 @@
-"""New-signup officer notice outbox, and bot-key roster confirmation by Discord id.
+"""New-signup officer notice outbox, and bot-key roster confirmation from a notice's Approve button.
 
 Bot-key only, mounted at ``/api/guilds/{guild_id}``. Every route 404s for any ``guild_id`` other than
 ``WebSettings.GUILD_ID`` (same rule as ``event_sync``/``discord_live``).
 
-The confirm/unconfirm-by-discord routes do the same thing as the GM console's session-based
+The ``signup-notices/{member_id}/roster-confirmation`` routes do the same thing as the GM console's session-based
 ``PUT``/``DELETE /api/members/{member_id}/roster-confirmation``, but for the bot's "Approve" button on a signup
-notice: the actor is identified by Discord id instead of a cookie session, so the API independently checks the
-actor's last-known roles (it never trusts the bot's own Discord-side role check alone).
+notice: the target is the notice's site member id (carried in the button's ``custom_id``), and the actor is
+identified by Discord id instead of a cookie session, so the API independently checks the actor's last-known roles
+(it never trusts the bot's own Discord-side role check alone).
 """
 
 from litestar import Controller, delete, get, post, put
@@ -92,7 +93,7 @@ def _require_gm_actor(actor: Member | None, gm_role_ids: list[int]) -> Member:
 
 
 class SignupNoticesController(Controller):
-    """``/api/guilds/{guild_id}/signup-notices`` and ``/members/by-discord/{discord_id}/roster-confirmation``."""
+    """``/api/guilds/{guild_id}/signup-notices`` and ``/signup-notices/{member_id}/roster-confirmation``."""
 
     path = ""
     tags = ["Signup Notices"]
@@ -139,11 +140,11 @@ class SignupNoticesController(Controller):
         member = await members_service.get_for_officer_action(member_id)
         await members_service.ack_notice(member, channel_id=data.channel_id, message_id=data.message_id)
 
-    @put("/members/by-discord/{discord_id:int}/roster-confirmation", operation_id="ConfirmMemberRosterByDiscord")
-    async def confirm_by_discord(
+    @put("/signup-notices/{member_id:int}/roster-confirmation", operation_id="ConfirmSignupNoticeMember")
+    async def confirm_from_notice(
         self,
         guild_id: FromPath[int],
-        discord_id: FromPath[int],
+        member_id: FromPath[int],
         data: JSONBody[ConfirmByDiscordRequest],
         members_service: NamedDependency[MembersService],
         web_settings: NamedDependency[WebSettings],
@@ -151,10 +152,10 @@ class SignupNoticesController(Controller):
         """Same as the GM console's confirm route, but the actor is a Discord id (the bot's Approve button).
 
         403 unless ``actor_discord_id`` has a ``Member`` row holding a ``WEB_GM_ROLE_IDS`` role (the API never
-        trusts the bot's own Discord-side role check alone). 404 if ``discord_id`` has never signed in.
+        trusts the bot's own Discord-side role check alone). 404 if ``member_id`` doesn't exist.
         """
         _require_site_guild(guild_id, web_settings)
-        member = await members_service.get_by_discord_id_or_404(discord_id)
+        member = await members_service.get_for_officer_action(member_id)
         actor = await members_service.get_one_or_none(discord_id=int(data.actor_discord_id))
         actor = _require_gm_actor(actor, web_settings.GM_ROLE_IDS)
         member = await members_service.confirm_roster(member)
@@ -169,21 +170,21 @@ class SignupNoticesController(Controller):
         return _to_listing(member, web_settings)
 
     @delete(
-        "/members/by-discord/{discord_id:int}/roster-confirmation",
-        operation_id="UnconfirmMemberRosterByDiscord",
+        "/signup-notices/{member_id:int}/roster-confirmation",
+        operation_id="UnconfirmSignupNoticeMember",
         status_code=200,
     )
-    async def unconfirm_by_discord(
+    async def unconfirm_from_notice(
         self,
         guild_id: FromPath[int],
-        discord_id: FromPath[int],
+        member_id: FromPath[int],
         data: JSONBody[ConfirmByDiscordRequest],
         members_service: NamedDependency[MembersService],
         web_settings: NamedDependency[WebSettings],
     ) -> MemberListing:
         """Same as the GM console's unconfirm route, but the actor is a Discord id. 403/404 as above."""
         _require_site_guild(guild_id, web_settings)
-        member = await members_service.get_by_discord_id_or_404(discord_id)
+        member = await members_service.get_for_officer_action(member_id)
         actor = await members_service.get_one_or_none(discord_id=int(data.actor_discord_id))
         actor = _require_gm_actor(actor, web_settings.GM_ROLE_IDS)
         member = await members_service.unconfirm_roster(member)
