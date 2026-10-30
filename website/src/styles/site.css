@@ -1454,7 +1454,7 @@ html:not(.officer) [data-officer-nav] {
   align-content: start;
   gap: 6px;
   min-width: 78px;
-  max-width: 128px;
+  max-width: 152px;
   text-align: center;
   transition:
     opacity 0.6s var(--ease),
@@ -1505,7 +1505,8 @@ html:not(.officer) [data-officer-nav] {
   box-shadow: 0 0 6px rgba(176, 90, 74, 0.45);
 }
 /* Wraps at spaces; a single word too long for the item breaks anywhere; past two lines it ends in an ellipsis
-   (the full name is the item's title). */
+   (the full name is the item's title). .caps's 0.18em tracking left no room for a wrapped 32-character Discord
+   name, so this tightens it back up just for names. */
 .online-now-name {
   display: -webkit-box;
   -webkit-box-orient: vertical;
@@ -1514,6 +1515,8 @@ html:not(.officer) [data-officer-nav] {
   max-width: 100%;
   overflow: hidden;
   overflow-wrap: anywhere;
+  word-break: break-all;
+  letter-spacing: 0.04em;
   color: var(--ink-2);
 }
 .online-now-activity {
