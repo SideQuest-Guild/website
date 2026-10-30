@@ -1,5 +1,20 @@
 # Changelog
 
+## v0.2.0 (2026-10-30)
+
+### New
+
+- The game-import route accepts a sync token, and calendar events say their kind and your sign-up status
+- SideQuest Companion sign-in and sync tokens open to every guild member
+- The API reference groups routes by who can use them, names and describes each one in plain words, and runs full width
+
+### Fixed
+
+- The service worker can precache the Companion sign-in redirect page
+- The device authorizations migration follows the forever_feed_channel migration, not a sibling of it
+- The Online now roster's long single-word names fit their two-line wrap in every browser
+- The homepage nav sits at the same height as every other page, reads clearly over the painting, and the Guild menu links to the docs and the API reference
+- The API reference no longer lists the routes that serve the reference itself
 ## v0.1.0 (2026-10-30)
 
 ### New
