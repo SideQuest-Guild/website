@@ -36,6 +36,8 @@ A WoW: Forever guild's site and API. One uv workspace, one Docker image, two Cab
   warnings.
 - Signup status is `signed | tentative | absent`.
 - Anything that changes what data is kept or shown: update `website/src/pages/privacy/index.astro`.
+- A new MCP tool (`api/src/sidequest_api/domain/mcp/tools.py`) must write a `record_officer_audit` row; MCP tokens
+  are bearer secrets, so never log their plaintext.
 
 ## Website
 - **No page reloads.** Astro's ClientRouter swaps pages in place and module scripts run once per visit, so every

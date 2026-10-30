@@ -245,6 +245,7 @@ from sidequest_common.schemas.levels import (
     SetXPRequest,
     XPAwardResult,
 )
+from sidequest_common.schemas.mcp import McpTokenCreate, McpTokenCreated, McpTokenList, McpTokenSummary
 from sidequest_common.schemas.member_links import MemberLink
 from sidequest_common.schemas.member_profiles import MemberProfileIn, MemberProfilesReplace
 from sidequest_common.schemas.members import CalendarLink, Me, MemberListing
@@ -479,6 +480,10 @@ __all__ = (
     "LogPage",
     "LootImportCounts",
     "LootResponse",
+    "McpTokenCreate",
+    "McpTokenCreated",
+    "McpTokenList",
+    "McpTokenSummary",
     "Me",
     "MemberAttendanceRow",
     "MemberLevelSchema",

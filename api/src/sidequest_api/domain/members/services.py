@@ -13,6 +13,7 @@ from sidequest_common.models import (
     EventSignup,
     EventSignupActivity,
     EventVoicePresence,
+    McpToken,
     Member,
     MemberAwayRange,
     MemberLevel,
@@ -95,6 +96,8 @@ class MembersService(SQLAlchemyAsyncRepositoryService[Member]):
         ``actor_name`` snapshot. Moderation records (``ModCase``) are kept. The member row's ``calendar_token``
         goes with it, so the old calendar link 404s right away.
 
+        Also deletes the member's own MCP (Model Context Protocol) client tokens.
+
         Also queues a ``MemberRoleReset`` outbox row (same transaction) so the bot's ``link_roles`` plugin strips
         every Discord role it can manage from ``member``, leaving them gated behind #sign-the-ledger again.
         """
@@ -104,6 +107,7 @@ class MembersService(SQLAlchemyAsyncRepositoryService[Member]):
         await session.execute(delete(EventVoicePresence).where(EventVoicePresence.discord_id == member.discord_id))
         await session.execute(delete(MemberAwayRange).where(MemberAwayRange.member_id == member.id))
         await session.execute(delete(MemberLevel).where(MemberLevel.user_id == member.discord_id))
+        await session.execute(delete(McpToken).where(McpToken.member_id == member.id))
         await session.execute(
             update(OfficerAudit).where(OfficerAudit.actor_member_id == member.id).values(actor_member_id=None)
         )

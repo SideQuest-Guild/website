@@ -39,6 +39,7 @@ from sidequest_common.models.guild_hub import (
 )
 from sidequest_common.models.guild_roles import GuildRole
 from sidequest_common.models.levels import LevelRole, MemberLevel
+from sidequest_common.models.mcp import McpToken
 from sidequest_common.models.members import Member
 from sidequest_common.models.moderation import ModCase
 from sidequest_common.models.recruiting import RecruitingNeeds
@@ -70,6 +71,7 @@ __all__ = (
     "GuildRosterSnapshot",
     "LevelRole",
     "LootAward",
+    "McpToken",
     "Member",
     "MemberAwayRange",
     "MemberBadge",

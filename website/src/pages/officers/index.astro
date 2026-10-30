@@ -49,6 +49,9 @@ import "../../styles/room-officers.css";
       >
         Attendance
       </button>
+      <button type="button" role="tab" id="tab-mcp" aria-controls="panel-mcp" aria-selected="false" tabindex="-1">
+        MCP
+      </button>
       <button
         type="button"
         role="tab"
@@ -385,6 +388,29 @@ import "../../styles/room-officers.css";
       </div>
     </section>
 
+    <section id="panel-mcp" role="tabpanel" aria-labelledby="tab-mcp" tabindex="0" hidden>
+      <div class="chamber">
+        <h2 class="chamber-title">Claude / MCP access</h2>
+        <p class="aside">
+          Let Claude Code or omp on your computer work on the guild for you: look up members, post announcements, and
+          make or change events. Name a token, then run the command it shows you. The site shows each token once.
+          Everything a token does appears in the log under your name.
+        </p>
+        <form id="mcp-token-form" class="form-row token-form">
+          <div class="field">
+            <label for="mcp-token-name">Name</label>
+            <input id="mcp-token-name" maxlength="60" placeholder="e.g. my laptop" required />
+          </div>
+          <button type="submit" class="btn-quiet" id="mcp-token-create">
+            Create token
+          </button>
+        </form>
+        <p class="status" id="mcp-token-status" role="status" aria-live="polite"></p>
+        <div id="mcp-token-reveal" class="token-reveal" hidden></div>
+        <ul class="item-list" id="mcp-token-list" aria-label="MCP tokens"></ul>
+      </div>
+    </section>
+
     <section id="panel-members" role="tabpanel" aria-labelledby="tab-members" tabindex="0" hidden>
       <div class="chamber-pair">
         <div class="chamber">
@@ -519,6 +545,9 @@ import "../../styles/room-officers.css";
     type AttendanceTrends,
     type MemberAttendanceRow,
     type WalkInCreate,
+    type McpToken,
+    type McpTokenCreated,
+    type McpTokens,
   } from "../../scripts/api";
   import { onPage } from "../../scripts/page";
   import { seriesRuleText, weekdayPhrase, WEEKDAY_SHORT_LABELS } from "../../scripts/series";
@@ -605,6 +634,21 @@ import "../../styles/room-officers.css";
         <button type="button" class="item-row" data-edit-addon="${a.id}">
           <span class="item-title">${escapeHtml(a.name)}</span>
           <span class="item-meta">v${escapeHtml(a.version)} · ${escapeHtml(a.slug)} · ${escapeHtml(ADDON_ORIGIN_LABELS[a.origin])}</span>
+        </button>
+      </li>`;
+  }
+  function mcpTokenRow(token: McpToken): string {
+    const lastUsed = token.last_used_at
+      ? `Last used ${new Date(token.last_used_at).toLocaleDateString()}`
+      : "Never used";
+    return `
+      <li class="row-pair" data-mcp-token-id="${token.id}">
+        <span class="mcp-token-main">
+          <span class="item-title">${escapeHtml(token.name)}</span>
+          <span class="item-meta">Created ${new Date(token.created_at).toLocaleDateString()} \u00b7 ${lastUsed}</span>
+        </span>
+        <button type="button" class="btn-quiet btn-small btn-danger" data-revoke-mcp-token="${token.id}">
+          Revoke
         </button>
       </li>`;
   }
@@ -1370,6 +1414,102 @@ import "../../styles/room-officers.css";
       }
     });
 
+    // ——— MCP tokens ———
+    const mcpTokenForm = requireElement<HTMLFormElement>("mcp-token-form");
+    const mcpTokenNameEl = requireElement<HTMLInputElement>("mcp-token-name");
+    const mcpTokenStatusEl = requireElement("mcp-token-status");
+    const mcpTokenRevealEl = requireElement("mcp-token-reveal");
+    const mcpTokenListEl = requireElement("mcp-token-list");
+
+    async function loadMcpTokens(): Promise<void> {
+      try {
+        const data = await apiFetch<McpTokens>("/api/me/mcp-tokens", { signal });
+        mcpTokenListEl.innerHTML =
+          data.tokens.length > 0
+            ? data.tokens.map(mcpTokenRow).join("")
+            : `<li class="quest-empty">No tokens yet.</li>`;
+      } catch (err) {
+        mcpTokenListEl.innerHTML = `<li class="quest-empty">${escapeHtml(statusMessage(err))}</li>`;
+      }
+    }
+
+    mcpTokenForm.addEventListener(
+      "submit",
+      async (event) => {
+        event.preventDefault();
+        const createBtn = requireElement<HTMLButtonElement>("mcp-token-create");
+        createBtn.disabled = true;
+        try {
+          const created = await apiFetch<McpTokenCreated>("/api/me/mcp-tokens", {
+            method: "POST",
+            body: JSON.stringify({ name: mcpTokenNameEl.value.trim() }),
+          });
+          const connectCommand = `claude mcp add --transport http sidequest https://sidequest-guild.com/api/mcp --header "Authorization: Bearer ${created.token}"`;
+          mcpTokenStatusEl.dataset.tone = "";
+          mcpTokenStatusEl.textContent = "Token created.";
+          mcpTokenRevealEl.innerHTML = `
+            <p class="aside">This token is shown once. Save it somewhere safe, or run the connect command below now.</p>
+            <div class="token-reveal-row">
+              <input type="text" readonly value="${escapeHtml(created.token)}" aria-label="New MCP token" />
+              <button type="button" class="btn-quiet btn-small" id="mcp-token-copy-btn">Copy</button>
+            </div>
+            <p class="aside">Connect command:</p>
+            <pre class="code-block">${escapeHtml(connectCommand)}</pre>
+            <div class="token-reveal-row">
+              <button type="button" class="btn-quiet btn-small" id="mcp-command-copy-btn">Copy command</button>
+            </div>`;
+          mcpTokenRevealEl.hidden = false;
+          requireElement<HTMLButtonElement>("mcp-token-copy-btn").addEventListener(
+            "click",
+            async () => {
+              await navigator.clipboard.writeText(created.token);
+              mcpTokenStatusEl.textContent = "Token copied.";
+            },
+            { signal },
+          );
+          requireElement<HTMLButtonElement>("mcp-command-copy-btn").addEventListener(
+            "click",
+            async () => {
+              await navigator.clipboard.writeText(connectCommand);
+              mcpTokenStatusEl.textContent = "Command copied.";
+            },
+            { signal },
+          );
+          mcpTokenForm.reset();
+          await loadMcpTokens();
+        } catch (err) {
+          mcpTokenStatusEl.dataset.tone = "error";
+          mcpTokenStatusEl.textContent = statusMessage(err);
+        } finally {
+          createBtn.disabled = false;
+        }
+      },
+      { signal },
+    );
+
+    mcpTokenListEl.addEventListener(
+      "click",
+      async (event) => {
+        const button = (event.target as HTMLElement).closest<HTMLButtonElement>("[data-revoke-mcp-token]");
+        if (!button?.dataset.revokeMcpToken) {
+          return;
+        }
+        if (!confirm("Revoke this token? Anything using it stops working right away.")) {
+          return;
+        }
+        button.disabled = true;
+        try {
+          await apiFetch(`/api/me/mcp-tokens/${button.dataset.revokeMcpToken}`, { method: "DELETE" });
+          await loadMcpTokens();
+        } catch (err) {
+          mcpTokenStatusEl.dataset.tone = "error";
+          mcpTokenStatusEl.textContent = statusMessage(err);
+          button.disabled = false;
+        }
+      },
+      { signal },
+    );
+
     // ——— Members (Quest Masters only) ———
     const memberSearch = requireElement<HTMLInputElement>("m-search");
     const memberFilterTabsEl = requireElement("member-filter-tabs");
@@ -2121,7 +2261,7 @@ import "../../styles/room-officers.css";
     }
 
     // ——— Tabs & gate ———
-    const VALID_TABS = ["events", "addons", "recruiting", "attendance", "members", "log", "moderation"] as const;
+    const VALID_TABS = ["events", "addons", "recruiting", "attendance", "mcp", "members", "log", "moderation"] as const;
     const GM_TABS = new Set(["members", "log", "moderation"]);
 
     let isGm = false;
@@ -2204,7 +2344,7 @@ import "../../styles/room-officers.css";
         },
         { signal },
       );
-      await Promise.all([loadEvents(), loadSeries(), loadAddons(), loadRecruiting()]);
+      await Promise.all([loadEvents(), loadSeries(), loadAddons(), loadRecruiting(), loadMcpTokens()]);
     }
 
     void init();

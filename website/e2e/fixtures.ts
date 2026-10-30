@@ -41,6 +41,7 @@ import {
   GUILD_ROSTER,
   HEROES,
   LIVE,
+  MCP_TOKENS,
   ONLINE,
   RECRUITING,
   SIGNUPS,
@@ -90,6 +91,7 @@ export const test = base.extend<{ site: Site }>({
     const epgpCharacters = EPGP_CHARACTERS.map((c) => Object.assign({}, c));
     const epgpRoster = EPGP_ROSTER.map((m) => Object.assign({}, m));
     const epgpSyncTokens = EPGP_SYNC_TOKENS.map((t) => Object.assign({}, t));
+    const mcpTokens = MCP_TOKENS.map((t) => Object.assign({}, t));
     const epgpRecruits = EPGP_RECRUITS.map((r) =>
       Object.assign({}, r, { checklist: { ...r.checklist }, votes: [...r.votes] }),
     );
@@ -374,6 +376,33 @@ export const test = base.extend<{ site: Site }>({
           return json(route, { detail: "No such token" }, 404);
         }
         epgpSyncTokens.splice(index, 1);
+        return route.fulfill({ status: 204 });
+      }
+      if (path === "/api/me/mcp-tokens" && method === "GET") {
+        if (!me?.is_officer) {
+          return json(route, { detail: "Officers only" }, 401);
+        }
+        return json(route, { tokens: mcpTokens });
+      }
+      if (path === "/api/me/mcp-tokens" && method === "POST") {
+        if (!me?.is_officer) {
+          return json(route, { detail: "Officers only" }, 401);
+        }
+        const body = JSON.parse(request.postData() ?? "{}") as { name: string };
+        const id = `mcp-token-${mcpTokens.length + 1}`;
+        mcpTokens.push({ id, name: body.name, created_at: new Date().toISOString(), last_used_at: null });
+        return json(route, { id, name: body.name, token: `sqm_${"x".repeat(40)}` }, 201);
+      }
+      const mcpTokenDeleteMatch = /^\/api\/me\/mcp-tokens\/([^/]+)$/.exec(path);
+      if (mcpTokenDeleteMatch && method === "DELETE") {
+        if (!me?.is_officer) {
+          return json(route, { detail: "Officers only" }, 401);
+        }
+        const index = mcpTokens.findIndex((t) => t.id === mcpTokenDeleteMatch[1]);
+        if (index === -1) {
+          return json(route, { detail: "No such token" }, 404);
+        }
+        mcpTokens.splice(index, 1);
         return route.fulfill({ status: 204 });
       }
       if (path === "/api/guild/roster" && method === "GET") {

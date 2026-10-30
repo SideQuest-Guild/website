@@ -11,6 +11,7 @@ const articles = [
   { id: "hall-of-heroes", title: "Hall of Heroes" },
   { id: "epgp-sync", title: "SQL loot ledger" },
   { id: "guild-app", title: "The guild app" },
+  { id: "mcp-access", title: "Officer MCP access" },
   { id: "cookies", title: "Cookies" },
   { id: "bot", title: "The guild bot" },
   { id: "who-else", title: "Who else handles it" },
@@ -213,7 +214,21 @@ const articles = [
     </p>
   </Article>
 
-  <Article id="cookies" n={8} title="Cookies">
+  <Article id="mcp-access" n={8} title="Officer MCP access">
+    <p>
+      Officers can create their own personal access tokens to connect Claude Code, omp, or another MCP (Model Context
+      Protocol) client to the guild's tools from their own computer, for things like looking up a member, posting an
+      announcement or managing an event.
+    </p>
+    <p>
+      The token's plaintext is shown once, when it's created, and never again. After that, only a one-way hash of it is
+      stored, the same as a password, so even we can't read it back. Revoking a token, or deleting the officer's
+      account, removes it right away. Every action a token takes is written to the officer audit log, which other
+      officers can read.
+    </p>
+  </Article>
+
+  <Article id="cookies" n={9} title="Cookies">
     <ul>
       <li>
         <strong>sq_session</strong> keeps you signed in. It's encrypted, holds only your account number, can't be read
@@ -238,7 +253,7 @@ const articles = [
     <p>No analytics or advertising cookies. If you never sign in, you get no cookies at all.</p>
   </Article>
 
-  <Article id="bot" n={9} title="The guild bot">
+  <Article id="bot" n={10} title="The guild bot">
     <p>Inside the SideQuest Discord, the guild's bot keeps:</p>
     <ul>
       <li>Your chat XP and level, erased if you delete your site account</li>
@@ -264,7 +279,7 @@ const articles = [
     </p>
   </Article>
 
-  <Article id="who-else" n={10} title="Who else handles it">
+  <Article id="who-else" n={11} title="Who else handles it">
     <ul>
       <li>
         <strong>Discord</strong> and <strong>Blizzard (Battle.net)</strong> run the sign-ins, under their own privacy
@@ -279,7 +294,7 @@ const articles = [
     <p>That's everyone. Nothing else is shared.</p>
   </Article>
 
-  <Article id="deleting" n={11} title="Deleting your data">
+  <Article id="deleting" n={12} title="Deleting your data">
     <ul>
       <li>
         <strong>Unlink Battle.net</strong> on your <a href="/account/">Account</a> page: your Battle.net data is erased.
@@ -300,7 +315,7 @@ const articles = [
     </p>
   </Article>
 
-  <Article id="changes" n={12} title="Changes">
+  <Article id="changes" n={13} title="Changes">
     <p>
       If what we keep changes, this page and its date change with it, and anything significant gets announced in the
       Discord first.

@@ -68,44 +68,6 @@ code {
   font-size: 14px;
 }
 
-/* ——— Uploader command and the revealed token ——— */
-.code-block {
-  margin: 8px 0 18px;
-  padding: 12px 14px;
-  overflow-x: auto;
-  border: 1px solid var(--stone-2);
-  background: rgba(4, 8, 16, 0.62);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 12.5px;
-  color: var(--mist);
-  white-space: pre-wrap;
-  word-break: break-all;
-}
-.token-reveal {
-  margin: 14px 0;
-  padding: 14px;
-  border: 1px solid var(--gold-2);
-  background: rgba(10, 16, 29, 0.4);
-}
-.token-reveal-row {
-  display: flex;
-  gap: 10px;
-  margin-top: 8px;
-}
-.token-reveal-row input {
-  flex: 1;
-  min-width: 0;
-  padding: 10px 12px;
-  background: rgba(4, 8, 16, 0.62);
-  border: 1px solid var(--stone);
-  color: var(--ink);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 12.5px;
-}
-.token-reveal-row .btn-small {
-  flex: none;
-}
-
 /* ——— Recruits: checklist, votes and status alongside each applicant ——— */
 .recruit-checklist {
   display: flex;
@@ -151,9 +113,6 @@ code {
   }
   .sync-row select {
     width: 100%;
-  }
-  .token-reveal-row {
-    flex-direction: column;
   }
   .recruit-actions {
     align-items: stretch;

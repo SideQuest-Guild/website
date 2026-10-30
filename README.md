@@ -144,6 +144,26 @@ shows who is away.
 **Your data.** If you start keeping something new about members, add it to `/privacy/` and make `delete_account` in
 `api/src/sidequest_api/domain/members/services.py` remove it.
 
+## MCP access for officers
+
+Officers can let Claude Code, omp or any other MCP client work on the guild for them: look up members, read and
+post in channels, post announcements, and make, change or cancel events. Make a token on `/officers/` under
+**Claude / MCP access**, then run:
+
+```sh
+claude mcp add --transport http sidequest https://sidequest-guild.com/api/mcp --header "Authorization: Bearer <token>"
+```
+
+- The site shows the token once and keeps only a scrambled copy. Revoke it on the same page.
+- It works only while you are an officer. A few tools, such as the attendance report, need a Game Master.
+- No tool can hand out or take away a role with moderator powers, a role another app manages, or a role above the
+  bot's own.
+- Everything a token does shows in the log on `/officers/#log`, under your name.
+- The site calls Discord with the bot's token (`DISCORD_TOKEN`). Without it, the Discord tools say so and the rest
+  work.
+
+The code is in `api/src/sidequest_api/domain/mcp/`.
+
 ## Sign-in
 
 **Discord.** In the Discord Developer Portal, open the Game Master app, then OAuth2. Add the redirect

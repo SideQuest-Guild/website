@@ -33,6 +33,7 @@ import type {
   HeroLeaderboard,
   HeroProfile,
   HeroRow,
+  McpToken,
   Me,
   Recruiting,
   Signup,
@@ -549,6 +550,10 @@ export const EPGP_ROSTER: EpgpRosterMember[] = [
 
 export const EPGP_SYNC_TOKENS: EpgpSyncToken[] = [
   { id: "token-1", name: "Guide's laptop", created_at: inDays(-20), last_used_at: inDays(-2) },
+];
+
+export const MCP_TOKENS: McpToken[] = [
+  { id: "mcp-token-1", name: "Guide's laptop", created_at: inDays(-10), last_used_at: inDays(-1) },
 ];
 
 export function epgpImportResult(): EpgpImportResult {

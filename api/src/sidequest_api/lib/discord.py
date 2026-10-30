@@ -1,7 +1,9 @@
-"""Discord OAuth2 login + REST lookups for the member hub (not the bot's gateway connection).
+"""Discord OAuth2 login + bot REST lookups for the member hub and MCP tools (not the bot's gateway connection).
 
 The HTTP client is request-scoped and reads its transport from ``state[DISCORD_TRANSPORT_STATE_KEY]`` so tests can
 inject ``httpx.MockTransport`` instead of calling the real Discord API (``create_app(discord_transport=...)``).
+``fetch_*``/``exchange_code`` authenticate as the signed-in user (OAuth2 access token); the ``bot_*`` functions
+below authenticate as the guild bot (``DiscordSettings.TOKEN``), used by MCP tools to read/write Discord directly.
 """
 
 from collections.abc import AsyncIterator  # noqa: TC003 - provide_discord_client is a Litestar DI target
@@ -108,3 +110,119 @@ async def provide_discord_client(state: State) -> AsyncIterator[httpx.AsyncClien
     transport = state.get(DISCORD_TRANSPORT_STATE_KEY)
     async with httpx.AsyncClient(base_url=DISCORD_API_BASE, timeout=10.0, transport=transport) as client:
         yield client
+
+
+class DiscordApiError(Exception):
+    """A bot-authenticated Discord REST call failed. ``status_code`` is Discord's HTTP status."""
+
+    def __init__(self, status_code: int, message: str) -> None:
+        super().__init__(message)
+        self.status_code = status_code
+
+
+def _bot_headers(bot_token: str) -> dict[str, str]:
+    return {"Authorization": f"Bot {bot_token}"}
+
+
+async def _bot_request(
+    client: httpx.AsyncClient, bot_token: str, method: str, path: str, **kwargs: Any
+) -> httpx.Response:
+    response = await client.request(method, path, headers=_bot_headers(bot_token), **kwargs)
+    if response.status_code >= httpx.codes.BAD_REQUEST:
+        msg = f"Discord {method} {path} failed: {response.status_code} {response.text}"
+        raise DiscordApiError(response.status_code, msg)
+    return response
+
+
+async def bot_get_guild_member(
+    client: httpx.AsyncClient, bot_token: str, guild_id: int, user_id: int | str
+) -> dict[str, Any]:
+    """``GET /guilds/{guild_id}/members/{user_id}`` (bot auth). ``user_id="@me"`` gets the bot's own member."""
+    response = await _bot_request(client, bot_token, "GET", f"/guilds/{guild_id}/members/{user_id}")
+    result: dict[str, Any] = response.json()
+    return result
+
+
+async def bot_list_guild_roles(client: httpx.AsyncClient, bot_token: str, guild_id: int) -> list[dict[str, Any]]:
+    """``GET /guilds/{guild_id}/roles`` (bot auth): every role, with permissions/position/managed."""
+    response = await _bot_request(client, bot_token, "GET", f"/guilds/{guild_id}/roles")
+    result: list[dict[str, Any]] = response.json()
+    return result
+
+
+async def bot_list_guild_channels(client: httpx.AsyncClient, bot_token: str, guild_id: int) -> list[dict[str, Any]]:
+    """``GET /guilds/{guild_id}/channels`` (bot auth): every channel and category."""
+    response = await _bot_request(client, bot_token, "GET", f"/guilds/{guild_id}/channels")
+    result: list[dict[str, Any]] = response.json()
+    return result
+
+
+async def bot_get_channel_messages(
+    client: httpx.AsyncClient, bot_token: str, channel_id: int, *, limit: int
+) -> list[dict[str, Any]]:
+    """``GET /channels/{channel_id}/messages`` (bot auth), newest first, capped at ``limit``."""
+    response = await _bot_request(client, bot_token, "GET", f"/channels/{channel_id}/messages", params={"limit": limit})
+    result: list[dict[str, Any]] = response.json()
+    return result
+
+
+async def bot_send_channel_message(
+    client: httpx.AsyncClient,
+    bot_token: str,
+    channel_id: int,
+    *,
+    content: str | None = None,
+    embed: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """``POST /channels/{channel_id}/messages`` (bot auth).
+
+    Mentions are limited to users named in ``content`` (``@everyone``/``@here``/role mentions never ping,
+    matching the bot's own posting rules).
+    """
+    payload: dict[str, Any] = {"allowed_mentions": {"parse": ["users"]}}
+    if content is not None:
+        payload["content"] = content
+    if embed is not None:
+        payload["embeds"] = [embed]
+    response = await _bot_request(client, bot_token, "POST", f"/channels/{channel_id}/messages", json=payload)
+    result: dict[str, Any] = response.json()
+    return result
+
+
+async def bot_edit_channel_message(
+    client: httpx.AsyncClient, bot_token: str, channel_id: int, message_id: int, *, content: str
+) -> dict[str, Any]:
+    """``PATCH /channels/{channel_id}/messages/{message_id}`` (bot auth)."""
+    response = await _bot_request(
+        client,
+        bot_token,
+        "PATCH",
+        f"/channels/{channel_id}/messages/{message_id}",
+        json={"content": content, "allowed_mentions": {"parse": ["users"]}},
+    )
+    result: dict[str, Any] = response.json()
+    return result
+
+
+async def bot_get_guild_audit_log(
+    client: httpx.AsyncClient, bot_token: str, guild_id: int, *, limit: int
+) -> list[dict[str, Any]]:
+    """``GET /guilds/{guild_id}/audit-logs`` (bot auth), newest first, capped at ``limit``."""
+    response = await _bot_request(client, bot_token, "GET", f"/guilds/{guild_id}/audit-logs", params={"limit": limit})
+    result: dict[str, Any] = response.json()
+    entries: list[dict[str, Any]] = result.get("audit_log_entries", [])
+    return entries
+
+
+async def bot_add_guild_member_role(
+    client: httpx.AsyncClient, bot_token: str, guild_id: int, user_id: int, role_id: int
+) -> None:
+    """``PUT /guilds/{guild_id}/members/{user_id}/roles/{role_id}`` (bot auth)."""
+    await _bot_request(client, bot_token, "PUT", f"/guilds/{guild_id}/members/{user_id}/roles/{role_id}")
+
+
+async def bot_remove_guild_member_role(
+    client: httpx.AsyncClient, bot_token: str, guild_id: int, user_id: int, role_id: int
+) -> None:
+    """``DELETE /guilds/{guild_id}/members/{user_id}/roles/{role_id}`` (bot auth)."""
+    await _bot_request(client, bot_token, "DELETE", f"/guilds/{guild_id}/members/{user_id}/roles/{role_id}")

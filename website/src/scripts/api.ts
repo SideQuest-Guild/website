@@ -613,6 +613,13 @@ export type EpgpSyncTokens = { tokens: EpgpSyncToken[] };
 
 export type EpgpSyncTokenCreated = { id: string; name: string; token: string };
 
+/** `GET /api/me/mcp-tokens` row; the token itself is only ever sent once, on creation. */
+export type McpToken = { id: string; name: string; created_at: string; last_used_at: string | null };
+
+export type McpTokens = { tokens: McpToken[] };
+
+export type McpTokenCreated = { id: string; name: string; token: string };
+
 // ——— Guild app v2: the addon as the guild's all-round app (local://addon-contract-v2.md). ———
 
 /** One linked character on a `GuildRosterMember` row. */

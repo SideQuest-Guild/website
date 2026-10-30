@@ -10,6 +10,7 @@ import {
   GUILD_ROSTER,
   HEROES,
   LONG_TITLE,
+  MCP_TOKENS,
   MEMBER,
   OFFICER,
   ONLINE,
@@ -342,6 +343,35 @@ test.describe("officers", () => {
     await expect(page.locator("#tab-members")).toHaveAttribute("aria-selected", "true");
     await expect(page.locator("#officer-member-list [data-select-member]")).toHaveCount(3);
     await expect(page.locator("#member-detail-body")).toContainText(MEMBER.display_name);
+  });
+
+  test("creating an MCP token shows the plaintext once and the connect command", async ({ page, site }) => {
+    site.signIn(OFFICER);
+    await page.goto("/officers/#mcp");
+    await expect(page.locator("#tab-mcp")).toHaveAttribute("aria-selected", "true");
+    await expect(page.locator("#mcp-token-list")).toContainText(MCP_TOKENS[0]!.name);
+
+    await page.locator("#mcp-token-name").fill("My new laptop");
+    await page.locator("#mcp-token-create").click();
+
+    const reveal = page.locator("#mcp-token-reveal");
+    await expect(reveal).toBeVisible();
+    await expect(reveal.locator('input[aria-label="New MCP token"]')).toHaveValue(/^sqm_/);
+    await expect(reveal).toContainText("claude mcp add --transport http sidequest https://sidequest-guild.com/api/mcp");
+    await expect(reveal).toContainText("Authorization: Bearer sqm_");
+    await expect(page.locator("#mcp-token-list")).toContainText("My new laptop");
+  });
+
+  test("revoking an MCP token removes it from the list", async ({ page, site }) => {
+    site.signIn(OFFICER);
+    await page.goto("/officers/#mcp");
+    const row = page.locator(`[data-mcp-token-id="${MCP_TOKENS[0]!.id}"]`);
+    await expect(row).toBeVisible();
+
+    page.once("dialog", (dialog) => dialog.accept());
+    await row.locator("[data-revoke-mcp-token]").click();
+    await expect(row).toHaveCount(0);
+    await expect(page.locator("#mcp-token-list")).not.toContainText(MCP_TOKENS[0]!.name);
   });
 });
 

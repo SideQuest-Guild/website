@@ -2,7 +2,7 @@
 
 from typing import TYPE_CHECKING
 
-from litestar import Litestar, Router
+from litestar import Litestar, Router, asgi
 from litestar.datastructures import State
 from litestar.di import Provide
 from litestar.openapi import OpenAPIConfig
@@ -34,8 +34,10 @@ def create_app(
     ``discord_transport``/``battlenet_transport`` let tests mock the Discord and Battle.net APIs.
     """
     from advanced_alchemy.extensions.litestar import SQLAlchemyPlugin
+    from pydantic import ValidationError
 
     from sidequest_api.domain import GUILD_API_PATH, guild_controllers, public_routes
+    from sidequest_api.domain.mcp.server import MCP_MOUNT_PATH, build_mcp_mount
     from sidequest_api.lib.auth import API_KEY_HEADER, api_key_guard
     from sidequest_api.lib.battlenet import BATTLENET_TRANSPORT_STATE_KEY
     from sidequest_api.lib.db import build_alchemy_config
@@ -51,11 +53,25 @@ def create_app(
         provide_current_member,
     )
     from sidequest_api.lib.website import DEFAULT_WEBSITE_DIST, is_vite_dev_mode, website_routes, website_vite_plugin
+    from sidequest_common.settings import DiscordSettings
 
     install_calendar_log_redaction()
     db_settings = db_settings or DatabaseSettings()
     api_settings = api_settings or APISettings()
     web_settings = web_settings or WebSettings()
+    try:
+        bot_token = DiscordSettings().TOKEN.get_secret_value()
+    except ValidationError:  # DISCORD_TOKEN unset: the MCP Discord tools say so instead of the app failing to boot
+        bot_token = None
+    alchemy_config = build_alchemy_config(db_settings)
+    mcp_handler, mcp_lifespan = build_mcp_mount(
+        web_settings=web_settings,
+        session_maker=alchemy_config.create_session_maker(),
+        bot_token=bot_token,
+        guild_id=web_settings.GUILD_ID,
+        discord_transport=discord_transport,
+    )
+    mcp_mount = asgi(MCP_MOUNT_PATH, is_mount=True, copy_scope=True)(mcp_handler)
     guild_api = Router(
         path=GUILD_API_PATH,
         route_handlers=guild_controllers,
@@ -65,12 +81,13 @@ def create_app(
     website_handlers = [] if website_dev else website_routes(website_dist or DEFAULT_WEBSITE_DIST)
     website_plugins = [website_vite_plugin()] if website_dev else []
     return Litestar(
-        route_handlers=[guild_api, *public_routes, *website_handlers],
+        route_handlers=[guild_api, mcp_mount, *public_routes, *website_handlers],
         plugins=[
-            SQLAlchemyPlugin(config=build_alchemy_config(db_settings)),
+            SQLAlchemyPlugin(config=alchemy_config),
             PydanticPlugin(prefer_alias=True),
             *website_plugins,
         ],
+        lifespan=[mcp_lifespan],
         middleware=[build_session_config(web_settings).middleware],
         dependencies={
             "web_settings": Provide(lambda: web_settings, sync_to_thread=False),

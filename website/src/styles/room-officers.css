@@ -574,3 +574,9 @@
 .attendance-table td {
   color: var(--ink);
 }
+
+/* ——— MCP tokens (MCP tab); the shared token form and reveal styles are in citadel.css ——— */
+.row-pair > .mcp-token-main {
+  flex: 1;
+  min-width: 0;
+}
