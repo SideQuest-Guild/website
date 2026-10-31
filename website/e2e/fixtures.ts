@@ -38,6 +38,8 @@ import {
   GUILD_ANNOUNCEMENTS,
   GUILD_BANK,
   GUILD_CRAFTERS,
+  GUILD_DIRECTORY,
+  GUILD_MARKET,
   GUILD_NEWS,
   GUILD_ROSTER,
   HEROES,
@@ -576,6 +578,24 @@ export const test = base.extend<{ site: Site }>({
           return json(route, { detail: "Not signed in" }, 401);
         }
         return json(route, GUILD_CRAFTERS);
+      }
+      if (path === "/api/guild/directory" && method === "GET") {
+        if (!me?.is_guild_member) {
+          return json(route, { detail: "Not signed in" }, 401);
+        }
+        return json(route, GUILD_DIRECTORY);
+      }
+      if (path === "/api/guild/market" && method === "GET") {
+        if (!me?.is_guild_member) {
+          return json(route, { detail: "Not signed in" }, 401);
+        }
+        return json(route, GUILD_MARKET);
+      }
+      if (path === "/api/guild/stock" && method === "GET") {
+        if (!me?.is_guild_member) {
+          return json(route, { detail: "Not signed in" }, 401);
+        }
+        return json(route, { item_id: Number(url.searchParams.get("item_id")), item_name: null, rows: [] });
       }
       if (path === "/api/guild/news" && method === "GET") {
         return json(route, { items: GUILD_NEWS });

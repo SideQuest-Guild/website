@@ -706,6 +706,96 @@ export type GuildCrafterProfession = { profession: string; crafters: number };
 /** `GET /api/guild/crafters?q=&profession=` (member). */
 export type GuildCrafters = { results: GuildCrafterResult[]; professions: GuildCrafterProfession[] };
 
+/** One profession on a `GET /api/guild/directory` character row. */
+export type GuildDirectoryProfession = { name: string; skill: number; max_skill: number };
+
+/** One tracked reputation on a `GET /api/guild/directory` character row. */
+export type GuildDirectoryReputation = { faction_id: number; standing: number; value: number };
+
+/** One craft cooldown on a `GET /api/guild/directory` character row; `ready_at` in the past means ready now. */
+export type GuildDirectoryCooldown = { key: string; ready_at: string };
+
+/** When each directory section was last updated for a character; `null` means never shared. */
+export type GuildDirectoryFreshness = {
+  prof: string | null;
+  char: string | null;
+  cd: string | null;
+  market: string | null;
+  stock: string | null;
+};
+
+/** One character row of `GET /api/guild/directory` (member). */
+export type GuildDirectoryCharacter = {
+  character: string;
+  member_id: number | null;
+  member_name: string | null;
+  professions: GuildDirectoryProfession[];
+  level: number | null;
+  class: string | null;
+  race: string | null;
+  spec: string | null;
+  item_level: number | null;
+  attunements: string[];
+  reputations: GuildDirectoryReputation[];
+  cooldowns: GuildDirectoryCooldown[];
+  freshness: GuildDirectoryFreshness;
+};
+
+/** `GET /api/guild/directory` (member). */
+export type GuildDirectory = { characters: GuildDirectoryCharacter[] };
+
+/** One `sell` row of `GET /api/guild/market` (member). */
+export type GuildMarketSellRow = {
+  character: string;
+  member_name: string | null;
+  item_id: number;
+  item_name: string | null;
+  price: number | null;
+  qty: number;
+  crafted: boolean;
+};
+
+/** One `buy` row of `GET /api/guild/market` (member). */
+export type GuildMarketBuyRow = {
+  character: string;
+  member_name: string | null;
+  item_id: number;
+  item_name: string | null;
+  price: number | null;
+};
+
+/** One `requests` row of `GET /api/guild/market` (member). */
+export type GuildMarketRequestRow = {
+  id: string;
+  character: string;
+  member_name: string | null;
+  item_id: number;
+  item_name: string | null;
+  qty: number;
+  price: number | null;
+  note: string | null;
+  at: string;
+};
+
+/** `GET /api/guild/market` (member): everyone's sell/buy listings and open material requests. */
+export type GuildMarket = {
+  sell: GuildMarketSellRow[];
+  buy: GuildMarketBuyRow[];
+  requests: GuildMarketRequestRow[];
+};
+
+/** One character's holdings on `GET /api/guild/stock?item_id=` (member). */
+export type GuildStockRow = {
+  character: string;
+  member_name: string | null;
+  bags: number;
+  bank: number;
+  bank_at: string | null;
+};
+
+/** `GET /api/guild/stock?item_id=` (member): who holds the item, in bags or bank. */
+export type GuildStock = { item_id: number; item_name: string | null; rows: GuildStockRow[] };
+
 export type GuildNewsKind = "boss_kill" | "first_kill" | "loot" | "level" | "joined" | "announcement" | "badge";
 
 /** One row of `GET /api/guild/news`, newest first; mirrors the import string's `news` shape. */

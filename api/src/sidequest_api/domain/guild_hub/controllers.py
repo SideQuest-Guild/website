@@ -36,8 +36,11 @@ from sidequest_common.schemas import (
     GuildAnnouncementsPage,
     GuildBankPage,
     GuildCrafters,
+    GuildDirectory,
+    GuildMarket,
     GuildNewsPage,
     GuildRoster,
+    GuildStock,
     PendingAnnouncementsPage,
 )
 from sidequest_common.settings import WebSettings
@@ -95,6 +98,60 @@ class GuildHubController(Controller):
     ) -> GuildCrafters:
         del current_member
         return await guild_hub_service.get_crafters(q=q, profession=profession)
+
+    @get(
+        "/directory",
+        operation_id="GetGuildDirectory",
+        tags=["Guild hub"],
+        security=SECURITY_SESSION,
+        summary="Get the guild directory",
+        description=(
+            "Returns every character with directory data: professions and skill, character basics, attunements, "
+            "tracked reputations, craft cooldowns, and when each section was last updated."
+        ),
+        response_description="Every character's directory record.",
+        responses={401: NOT_SIGNED_IN, 403: NOT_A_MEMBER},
+    )
+    async def get_directory(
+        self, current_member: NamedDependency[Member], guild_hub_service: NamedDependency[GuildHubService]
+    ) -> GuildDirectory:
+        del current_member
+        return await guild_hub_service.get_directory()
+
+    @get(
+        "/market",
+        operation_id="GetGuildMarket",
+        tags=["Guild hub"],
+        security=SECURITY_SESSION,
+        summary="Get the guild market",
+        description="Returns everyone's sell/buy listings and open material requests, with item names and prices.",
+        response_description="The guild's sell/buy listings and requests.",
+        responses={401: NOT_SIGNED_IN, 403: NOT_A_MEMBER},
+    )
+    async def get_market(
+        self, current_member: NamedDependency[Member], guild_hub_service: NamedDependency[GuildHubService]
+    ) -> GuildMarket:
+        del current_member
+        return await guild_hub_service.get_market()
+
+    @get(
+        "/stock",
+        operation_id="GetGuildStock",
+        tags=["Guild hub"],
+        security=SECURITY_SESSION,
+        summary="Find who holds an item",
+        description="Returns which characters hold the given item in their bags or guild-relevant bank stock.",
+        response_description="Characters holding the item, with counts.",
+        responses={401: NOT_SIGNED_IN, 403: NOT_A_MEMBER},
+    )
+    async def get_stock(
+        self,
+        current_member: NamedDependency[Member],
+        guild_hub_service: NamedDependency[GuildHubService],
+        item_id: Annotated[int, Parameter(description="The item id to look up.")],
+    ) -> GuildStock:
+        del current_member
+        return await guild_hub_service.get_stock(item_id)
 
     @get(
         "/news",

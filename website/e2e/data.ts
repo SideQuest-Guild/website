@@ -29,6 +29,8 @@ import type {
   GuildBankRow,
   GuildCrafterProfession,
   GuildCrafterResult,
+  GuildDirectory,
+  GuildMarket,
   GuildNewsItem,
   GuildRoster,
   HeroLeaderboard,
@@ -675,6 +677,50 @@ const CRAFTER_PROFESSIONS: GuildCrafterProfession[] = [
 ];
 
 export const GUILD_CRAFTERS = { results: CRAFTER_RESULTS, professions: CRAFTER_PROFESSIONS };
+
+export const GUILD_DIRECTORY: GuildDirectory = {
+  characters: [
+    {
+      character: "Guideline-Whitemane",
+      member_id: 4,
+      member_name: "Quest Guide",
+      professions: [{ name: "Blacksmithing", skill: 150, max_skill: 300 }],
+      level: 60,
+      class: "PALADIN",
+      race: "Human",
+      spec: "Protection",
+      item_level: 58.2,
+      attunements: ["onyxia"],
+      reputations: [{ faction_id: 529, standing: 6, value: 4200 }],
+      cooldowns: [],
+      freshness: { prof: inDays(-1), char: inDays(-1), cd: null, market: null, stock: null },
+    },
+  ],
+};
+
+export const GUILD_MARKET: GuildMarket = {
+  sell: [
+    {
+      character: "Wanderalt-Whitemane",
+      member_name: "Wanderer",
+      item_id: 13510,
+      item_name: "Flask of the Titans",
+      price: 120000,
+      qty: 3,
+      crafted: true,
+    },
+  ],
+  buy: [
+    {
+      character: "Guideline-Whitemane",
+      member_name: "Quest Guide",
+      item_id: 2852,
+      item_name: "Heavy Grinding Stone",
+      price: 500,
+    },
+  ],
+  requests: [],
+};
 
 export const GUILD_NEWS: GuildNewsItem[] = [
   {

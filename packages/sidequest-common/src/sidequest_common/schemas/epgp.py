@@ -10,6 +10,13 @@ from uuid import UUID  # pydantic needs it at runtime
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from sidequest_common.schemas.directory import (
+    MAX_DIRECTORY_ENTRIES,
+    MAX_ITEM_NAMES,
+    MAX_RECIPE_NAMES,
+    DirectoryImportCounts,
+    ExportDirectoryEntry,
+)
 from sidequest_common.schemas.events import EventKind, SignupRole, SignupStatus, WowClass
 from sidequest_common.schemas.guild_hub import (
     MAX_ANNOUNCEMENTS_V2,
@@ -266,7 +273,8 @@ class ExportPayload(BaseModel):
     """The full decoded ``SQX1:`` payload, bounded per the contract.
 
     ``v: 2`` adds the guild-hub sections below; every v2 section is optional so a ``v: 1`` addon keeps working
-    unchanged.
+    unchanged. ``directory``/``item_names``/``recipe_names`` are additive on top of ``v: 2`` (see
+    ``sidequest_common.schemas.directory``): older sites ignore them, so the version number doesn't change.
     """
 
     v: int
@@ -286,6 +294,9 @@ class ExportPayload(BaseModel):
     announcements: list[ExportAnnouncement] = Field(default_factory=list, max_length=MAX_ANNOUNCEMENTS_V2)
     recruits: list[ExportRecruit] = Field(default_factory=list, max_length=MAX_RECRUITS_V2)
     member_notes: list[ExportMemberNote] = Field(default_factory=list, max_length=MAX_MEMBER_NOTES_V2)
+    directory: list[ExportDirectoryEntry] = Field(default_factory=list, max_length=MAX_DIRECTORY_ENTRIES)
+    item_names: dict[str, str] = Field(default_factory=dict, max_length=MAX_ITEM_NAMES)
+    recipe_names: dict[str, str] = Field(default_factory=dict, max_length=MAX_RECIPE_NAMES)
 
 
 # --- Site import (``SQI1:`` + base64 JSON): the outbound payload the game-import endpoint builds ------------------
@@ -408,6 +419,7 @@ class EpgpImportResult(BaseModel):
     announcements: AnnouncementImportCounts = Field(default_factory=AnnouncementImportCounts)
     recruits: RecruitImportCounts = Field(default_factory=RecruitImportCounts)
     member_notes: MemberNoteImportCounts = Field(default_factory=MemberNoteImportCounts)
+    directory: DirectoryImportCounts = Field(default_factory=DirectoryImportCounts)
 
 
 class EpgpRules(BaseModel):

@@ -4,6 +4,14 @@ from sidequest_common.models.addons import Addon
 from sidequest_common.models.audit import OfficerAudit
 from sidequest_common.models.away import MemberAwayRange
 from sidequest_common.models.badges import MemberBadge
+from sidequest_common.models.directory import (
+    CharacterDirectoryChar,
+    CharacterDirectoryCooldowns,
+    CharacterDirectoryMarket,
+    CharacterDirectorySection,
+    CharacterDirectoryStock,
+    ItemName,
+)
 from sidequest_common.models.discord_live import DiscordLiveStatus
 from sidequest_common.models.epgp import (
     Encounter,
@@ -49,6 +57,11 @@ from sidequest_common.models.role_resets import MemberRoleReset
 
 __all__ = (
     "Addon",
+    "CharacterDirectoryChar",
+    "CharacterDirectoryCooldowns",
+    "CharacterDirectoryMarket",
+    "CharacterDirectorySection",
+    "CharacterDirectoryStock",
     "CharacterProfession",
     "CharacterRecipeLink",
     "DiscordEventTombstone",
@@ -71,6 +84,7 @@ __all__ = (
     "GuildRecruit",
     "GuildRole",
     "GuildRosterSnapshot",
+    "ItemName",
     "LevelRole",
     "LootAward",
     "McpToken",
