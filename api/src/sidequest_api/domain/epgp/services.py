@@ -26,6 +26,11 @@ from sqlalchemy import delete, func, or_, select
 from sidequest_api.lib.discord import avatar_url
 from sidequest_api.lib.member_auth import is_officer
 from sidequest_common.models import (
+    CharacterDirectoryChar,
+    CharacterDirectoryCooldowns,
+    CharacterDirectoryMarket,
+    CharacterDirectorySection,
+    CharacterDirectoryStock,
     CharacterProfession,
     CharacterRecipeLink,
     Encounter,
@@ -40,6 +45,7 @@ from sidequest_common.models import (
     GuildNewsEvent,
     GuildRecruit,
     GuildRosterSnapshot,
+    ItemName,
     LootAward,
     Member,
     MemberBadge,
@@ -76,6 +82,13 @@ from sidequest_common.schemas import (
     CharacterSource,
     DeviceAuthorizationPollStatus,
     DeviceAuthorizationStatus,
+    DirCdSection,
+    DirCharSection,
+    DirectoryImportCounts,
+    DirectorySectionImportCounts,
+    DirMarketSection,
+    DirProfSection,
+    DirStockSection,
     EpgpAdjustmentCreate,
     EpgpCharacter,
     EpgpCharacterList,
@@ -106,6 +119,7 @@ from sidequest_common.schemas import (
     EpgpSyncTokenMe,
     EpgpSyncTokenSummary,
     EventKind,
+    ExportDirectoryEntry,
     ExportPayload,
     ExportRecruitVote,
     GameImportBadgeRef,
@@ -551,6 +565,8 @@ class EpgpService:
         announcement_counts = await self._import_announcements(payload.announcements)
         recruit_counts = await self._import_recruits(payload.recruits, character_cache)
         note_counts = await self._import_member_notes(payload.member_notes, character_cache)
+        await self._import_item_names(payload.item_names)
+        directory_counts = await self._import_directory(payload.directory, payload.recipe_names, character_cache)
 
         hand_off_event_id: UUID | None = None
         total_marked = 0
@@ -622,6 +638,7 @@ class EpgpService:
                     "announcements": announcement_counts.model_dump(),
                     "recruits": recruit_counts.model_dump(),
                     "member_notes": note_counts.model_dump(),
+                    "directory": directory_counts.model_dump(),
                 },
             )
         )
@@ -644,6 +661,7 @@ class EpgpService:
             announcements=announcement_counts,
             recruits=recruit_counts,
             member_notes=note_counts,
+            directory=directory_counts,
         )
 
     # --- Import v2: guild hub sections ------------------------------------------------------------------------
@@ -1002,6 +1020,277 @@ class EpgpService:
                 counts.voided += 1
             else:
                 counts.updated += 1
+        await self._session.flush()
+        return counts
+
+    # --- Import v2: guild directory (addon/docs/directory.md in the addon repo) ---------------------------------
+
+    async def _import_item_names(self, item_names: dict[str, str]) -> None:
+        """Upsert item id -> name. Names already stored for an id not present this time are kept."""
+        for item_id_str, name in item_names.items():
+            try:
+                item_id = int(item_id_str)
+            except ValueError:
+                continue
+            row = (
+                await self._session.execute(select(ItemName).where(ItemName.item_id == item_id))
+            ).scalar_one_or_none()
+            if row is None:
+                self._session.add(ItemName(item_id=item_id, name=name))
+            else:
+                row.name = name
+        await self._session.flush()
+
+    async def _directory_freshness(self, character_id: UUID, section: str) -> datetime | None:
+        return (
+            await self._session.execute(
+                select(CharacterDirectorySection.at).where(
+                    CharacterDirectorySection.character_id == character_id,
+                    CharacterDirectorySection.section == section,
+                )
+            )
+        ).scalar_one_or_none()
+
+    async def _mark_directory_fresh(self, character_id: UUID, section: str, at: datetime) -> None:
+        row = (
+            await self._session.execute(
+                select(CharacterDirectorySection).where(
+                    CharacterDirectorySection.character_id == character_id,
+                    CharacterDirectorySection.section == section,
+                )
+            )
+        ).scalar_one_or_none()
+        if row is None:
+            self._session.add(CharacterDirectorySection(character_id=character_id, section=section, at=at))
+        else:
+            row.at = at
+
+    async def _import_directory_prof(
+        self,
+        character: WowCharacter,
+        section: DirProfSection,
+        recipe_names: dict[str, str],
+        counts: DirectorySectionImportCounts,
+    ) -> None:
+        """Replace the character's professions wholesale from a ``prof`` section, skipping stale ``at``.
+
+        Recipe names come from the export's ``recipe_names``, falling back to whatever name is already stored for
+        that recipe id (the contract never includes names in ``prof.professions[].recipes``, only spell ids).
+        """
+        at = datetime.fromtimestamp(section.at, tz=UTC)
+        stored_at = await self._directory_freshness(character.id, "prof")
+        if stored_at is not None and stored_at >= at:
+            counts.skipped += 1
+            return
+        existing_rows = (
+            (
+                await self._session.execute(
+                    select(CharacterProfession).where(CharacterProfession.character_id == character.id)
+                )
+            )
+            .scalars()
+            .all()
+        )
+        existing_by_name = {row.profession: row for row in existing_rows}
+        if section.d is None:
+            for row in existing_rows:
+                await self._session.delete(row)
+            await self._mark_directory_fresh(character.id, "prof", at)
+            counts.updated += 1
+            return
+        seen_names: set[str] = set()
+        for prof_entry in section.d.professions:
+            seen_names.add(prof_entry.name)
+            row = existing_by_name.get(prof_entry.name)
+            is_new = row is None
+            row = row or CharacterProfession(character_id=character.id, profession=prof_entry.name)
+            row.skill = prof_entry.skill
+            row.max_skill = prof_entry.max_skill
+            row.scanned_at = at
+            if is_new:
+                self._session.add(row)
+                await self._session.flush()
+            await self._session.execute(delete(CharacterRecipeLink).where(CharacterRecipeLink.profession_id == row.id))
+            if prof_entry.recipes is None:
+                continue
+            for recipe_id in prof_entry.recipes:
+                recipe_row = (
+                    await self._session.execute(select(ProfessionRecipe).where(ProfessionRecipe.recipe_id == recipe_id))
+                ).scalar_one_or_none()
+                name = recipe_names.get(str(recipe_id))
+                if recipe_row is None:
+                    recipe_row = ProfessionRecipe(recipe_id=recipe_id, name=name or f"Recipe {recipe_id}", item_id=None)
+                    self._session.add(recipe_row)
+                    await self._session.flush()
+                elif name:
+                    recipe_row.name = name
+                self._session.add(CharacterRecipeLink(profession_id=row.id, recipe_id=recipe_row.id))
+        for name, row in existing_by_name.items():
+            if name not in seen_names:
+                await self._session.delete(row)
+        await self._mark_directory_fresh(character.id, "prof", at)
+        counts.updated += 1
+
+    async def _import_directory_char(
+        self, character: WowCharacter, section: DirCharSection, counts: DirectorySectionImportCounts
+    ) -> None:
+        """Upsert the character's ``char`` section row, skipping stale ``at``; ``d: None`` deletes it."""
+        at = datetime.fromtimestamp(section.at, tz=UTC)
+        stored_at = await self._directory_freshness(character.id, "char")
+        if stored_at is not None and stored_at >= at:
+            counts.skipped += 1
+            return
+        row = (
+            await self._session.execute(
+                select(CharacterDirectoryChar).where(CharacterDirectoryChar.character_id == character.id)
+            )
+        ).scalar_one_or_none()
+        if section.d is None:
+            if row is not None:
+                await self._session.delete(row)
+            await self._mark_directory_fresh(character.id, "char", at)
+            counts.updated += 1
+            return
+        d = section.d
+        if row is None:
+            row = CharacterDirectoryChar(
+                character_id=character.id, level=d.level, wow_class=d.wow_class.value, race=d.race
+            )
+            self._session.add(row)
+        row.level = d.level
+        row.wow_class = d.wow_class.value
+        row.race = d.race
+        row.spec = d.spec
+        row.item_level = d.item_level
+        row.attunements = list(d.attunements)
+        row.reputations = [reputation.model_dump() for reputation in d.reputations]
+        character.wow_class = d.wow_class.value
+        await self._mark_directory_fresh(character.id, "char", at)
+        counts.updated += 1
+
+    async def _import_directory_cd(
+        self, character: WowCharacter, section: DirCdSection, counts: DirectorySectionImportCounts
+    ) -> None:
+        """Upsert the character's ``cd`` section row, skipping stale ``at``; ``d: None`` deletes it."""
+        at = datetime.fromtimestamp(section.at, tz=UTC)
+        stored_at = await self._directory_freshness(character.id, "cd")
+        if stored_at is not None and stored_at >= at:
+            counts.skipped += 1
+            return
+        row = (
+            await self._session.execute(
+                select(CharacterDirectoryCooldowns).where(CharacterDirectoryCooldowns.character_id == character.id)
+            )
+        ).scalar_one_or_none()
+        if section.d is None:
+            if row is not None:
+                await self._session.delete(row)
+            await self._mark_directory_fresh(character.id, "cd", at)
+            counts.updated += 1
+            return
+        cooldowns = [{"key": c.key, "ready_at": c.ready_at} for c in section.d.cooldowns]
+        if row is None:
+            self._session.add(CharacterDirectoryCooldowns(character_id=character.id, cooldowns=cooldowns))
+        else:
+            row.cooldowns = cooldowns
+        await self._mark_directory_fresh(character.id, "cd", at)
+        counts.updated += 1
+
+    async def _import_directory_market(
+        self, character: WowCharacter, section: DirMarketSection, counts: DirectorySectionImportCounts
+    ) -> None:
+        """Upsert the character's ``market`` section row, skipping stale ``at``; ``d: None`` deletes it."""
+        at = datetime.fromtimestamp(section.at, tz=UTC)
+        stored_at = await self._directory_freshness(character.id, "market")
+        if stored_at is not None and stored_at >= at:
+            counts.skipped += 1
+            return
+        row = (
+            await self._session.execute(
+                select(CharacterDirectoryMarket).where(CharacterDirectoryMarket.character_id == character.id)
+            )
+        ).scalar_one_or_none()
+        if section.d is None:
+            if row is not None:
+                await self._session.delete(row)
+            await self._mark_directory_fresh(character.id, "market", at)
+            counts.updated += 1
+            return
+        d = section.d
+        sell = [item.model_dump() for item in d.sell]
+        buy = [item.model_dump() for item in d.buy]
+        requests = [item.model_dump() for item in d.requests]
+        if row is None:
+            self._session.add(
+                CharacterDirectoryMarket(character_id=character.id, sell=sell, buy=buy, requests=requests)
+            )
+        else:
+            row.sell = sell
+            row.buy = buy
+            row.requests = requests
+        await self._mark_directory_fresh(character.id, "market", at)
+        counts.updated += 1
+
+    async def _import_directory_stock(
+        self, character: WowCharacter, section: DirStockSection, counts: DirectorySectionImportCounts
+    ) -> None:
+        """Upsert the character's ``stock`` section row, skipping stale ``at``; ``d: None`` deletes it."""
+        at = datetime.fromtimestamp(section.at, tz=UTC)
+        stored_at = await self._directory_freshness(character.id, "stock")
+        if stored_at is not None and stored_at >= at:
+            counts.skipped += 1
+            return
+        row = (
+            await self._session.execute(
+                select(CharacterDirectoryStock).where(CharacterDirectoryStock.character_id == character.id)
+            )
+        ).scalar_one_or_none()
+        if section.d is None:
+            if row is not None:
+                await self._session.delete(row)
+            await self._mark_directory_fresh(character.id, "stock", at)
+            counts.updated += 1
+            return
+        d = section.d
+        bags = [list(pair) for pair in d.bags]
+        bank = [list(pair) for pair in d.bank]
+        bank_at = datetime.fromtimestamp(d.bank_at, tz=UTC) if d.bank_at is not None else None
+        if row is None:
+            self._session.add(CharacterDirectoryStock(character_id=character.id, bags=bags, bank=bank, bank_at=bank_at))
+        else:
+            row.bags = bags
+            row.bank = bank
+            row.bank_at = bank_at
+        await self._mark_directory_fresh(character.id, "stock", at)
+        counts.updated += 1
+
+    async def _import_directory(
+        self,
+        directory: list[ExportDirectoryEntry],
+        recipe_names: dict[str, str],
+        character_cache: dict[str, WowCharacter],
+    ) -> DirectoryImportCounts:
+        """Apply every character's directory record.
+
+        Professions land in the shared profession/recipe tables (so ``GET /api/guild/crafters`` picks them up
+        automatically); the rest get their own per-character row.
+        """
+        counts = DirectoryImportCounts()
+        for entry in directory:
+            sections = entry.sections
+            present = [s for s in (sections.prof, sections.char, sections.cd, sections.market, sections.stock) if s]
+            seen_at = datetime.fromtimestamp(max(s.at for s in present), tz=UTC) if present else datetime.now(UTC)
+            character = await self._get_or_create_character(character_cache, entry.character, None, seen_at)
+            if sections.prof is not None:
+                await self._import_directory_prof(character, sections.prof, recipe_names, counts.prof)
+            if sections.char is not None:
+                await self._import_directory_char(character, sections.char, counts.char)
+            if sections.cd is not None:
+                await self._import_directory_cd(character, sections.cd, counts.cd)
+            if sections.market is not None:
+                await self._import_directory_market(character, sections.market, counts.market)
+            if sections.stock is not None:
+                await self._import_directory_stock(character, sections.stock, counts.stock)
         await self._session.flush()
         return counts
 

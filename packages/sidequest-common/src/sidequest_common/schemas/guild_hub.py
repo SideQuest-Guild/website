@@ -23,7 +23,9 @@ GameClass = Annotated[WowClass, BeforeValidator(_lower_class)]
 """A class as the addon sends it: the game's uppercase token (``WARRIOR``), stored as the site's lowercase value."""
 
 MAX_ROSTER_MEMBERS = 1000
-MAX_PROFESSION_PAIRS = 400
+MAX_PROFESSION_PAIRS = 1000
+"""A 150-member guild with 2 primaries + 3 fixed secondaries (Cooking/Fishing/First Aid) each sends 750 pairs;
+1000 keeps headroom up to ``MAX_ROSTER_MEMBERS``."""
 MAX_RECIPES_PER_PROFESSION = 2000
 MAX_SIGNUPS_V2 = 500
 MAX_BANK_ENTRIES = 2000

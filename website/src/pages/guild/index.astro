@@ -6,9 +6,9 @@ import "../../styles/room-guild.css";
 
 <Room
   title="Guild · SideQuest"
-  description="The guild hall: SideQuest's roster, crafters directory, bank log and news feed."
+  description="The guild hall: SideQuest's roster, professions, crafters, market, bank log and news feed."
   heading="GUILD"
-  lede="Who's in the guild, who can craft what, what's moved through the bank, and what's happened lately."
+  lede="Who's in the guild, who can craft what, who's selling or buying materials, what's moved through the bank, and what's happened lately."
   art={greatHall}
   artPosition="50% 35%"
   current="guild"
@@ -39,8 +39,31 @@ import "../../styles/room-guild.css";
       >
         Crafters
       </button>
+      <button
+        type="button"
+        role="tab"
+        id="tab-professions"
+        aria-controls="panel-professions"
+        aria-selected="false"
+        tabindex="-1"
+      >
+        Professions
+      </button>
       <button type="button" role="tab" id="tab-bank" aria-controls="panel-bank" aria-selected="false" tabindex="-1">
         Bank
+      </button>
+      <button type="button" role="tab" id="tab-market" aria-controls="panel-market" aria-selected="false" tabindex="-1">
+        Market
+      </button>
+      <button
+        type="button"
+        role="tab"
+        id="tab-whohasit"
+        aria-controls="panel-whohasit"
+        aria-selected="false"
+        tabindex="-1"
+      >
+        Who has it
       </button>
       <button type="button" role="tab" id="tab-news" aria-controls="panel-news" aria-selected="false" tabindex="-1">
         News
@@ -105,11 +128,60 @@ import "../../styles/room-guild.css";
       </div>
     </section>
 
+    <section id="panel-professions" role="tabpanel" aria-labelledby="tab-professions" tabindex="0" hidden>
+      <div class="chamber">
+        <h2 class="chamber-title">Professions</h2>
+        <p class="aside">Every character's professions and skill, from the addon's directory.</p>
+        <div class="form-row guild-filters">
+          <div class="field">
+            <label for="professions-filter">Profession</label>
+            <select id="professions-filter">
+              <option value="">Any profession</option>
+            </select>
+          </div>
+        </div>
+        <p class="count" id="professions-count"></p>
+        <ul class="guild-professions-list" id="professions-list" aria-label="Characters and their professions"></ul>
+      </div>
+    </section>
+
     <section id="panel-bank" role="tabpanel" aria-labelledby="tab-bank" tabindex="0" hidden>
       <div class="chamber">
         <h2 class="chamber-title">Guild bank</h2>
         <dl class="guild-bank-totals" id="bank-totals"></dl>
         <ul class="guild-bank-list" id="bank-list" aria-label="Bank log"></ul>
+      </div>
+    </section>
+
+    <section id="panel-market" role="tabpanel" aria-labelledby="tab-market" tabindex="0" hidden>
+      <div class="chamber">
+        <h2 class="chamber-title">Market</h2>
+        <p class="aside">Everyone's sell/buy listings and open material requests, from the addon's directory.</p>
+        <h3 class="sub-title">Selling</h3>
+        <ul class="guild-market-list" id="market-sell-list" aria-label="Items for sale"></ul>
+        <h3 class="sub-title">Buying</h3>
+        <ul class="guild-market-list" id="market-buy-list" aria-label="Standing buy offers"></ul>
+        <h3 class="sub-title">Requests</h3>
+        <ul class="guild-market-list" id="market-request-list" aria-label="Open material requests"></ul>
+      </div>
+    </section>
+
+    <section id="panel-whohasit" role="tabpanel" aria-labelledby="tab-whohasit" tabindex="0" hidden>
+      <div class="chamber">
+        <h2 class="chamber-title">Who has it</h2>
+        <p class="aside">Look up an item by its id to see who holds it in bags or bank.</p>
+        <form class="form-row guild-filters" id="whohasit-form">
+          <div class="field">
+            <label for="whohasit-item-id">Item id</label>
+            <input id="whohasit-item-id" type="number" min="1" inputmode="numeric" placeholder="e.g. 14048" />
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn">
+              Look up
+            </button>
+          </div>
+        </form>
+        <ul class="guild-stock-list" id="whohasit-list" aria-label="Characters holding the item"></ul>
       </div>
     </section>
 
@@ -144,11 +216,18 @@ import "../../styles/room-guild.css";
     type GuildBankRow,
     type GuildCrafterResult,
     type GuildCrafters,
+    type GuildDirectory,
+    type GuildDirectoryCharacter,
+    type GuildMarket,
+    type GuildMarketBuyRow,
+    type GuildMarketRequestRow,
+    type GuildMarketSellRow,
     type GuildNews,
     type GuildNewsItem,
     type GuildRoster,
     type GuildRosterMember,
     type GuildRosterUnlinked,
+    type GuildStock,
     type Me,
   } from "../../scripts/api";
   import { onPage } from "../../scripts/page";
@@ -331,6 +410,55 @@ import "../../styles/room-guild.css";
           <span class="guild-news-when">${new Date(item.at).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</span>
         </li>`;
   }
+  function professionRow(character: GuildDirectoryCharacter, professionFilter: string): string {
+    const professions = (
+      professionFilter ? character.professions.filter((p) => p.name === professionFilter) : character.professions
+    )
+      .map((p) => `<span class="guild-profession-pair">${escapeHtml(p.name)} ${p.skill}/${p.max_skill}</span>`)
+      .join(" \u00b7 ");
+    return `
+        <li class="guild-professions-row">
+          <span class="guild-professions-name">${classSpan(character.class)} ${escapeHtml(character.member_name ?? character.character)}</span>
+          <span class="guild-professions-detail">${professions}</span>
+        </li>`;
+  }
+  function marketSellRow(row: GuildMarketSellRow): string {
+    const label = row.item_name ?? `Item ${row.item_id}`;
+    const price = row.price !== null ? copperToGold(row.price) : "Whisper me";
+    return `
+        <li class="guild-market-row">
+          <span class="guild-market-item">${escapeHtml(label)}${row.crafted ? " (crafted)" : ""}</span>
+          <span class="guild-market-detail">${row.qty}\u00d7 \u00b7 ${price}</span>
+          <span class="guild-market-who">${escapeHtml(row.member_name ?? row.character)}</span>
+        </li>`;
+  }
+  function marketBuyRow(row: GuildMarketBuyRow): string {
+    const label = row.item_name ?? `Item ${row.item_id}`;
+    const price = row.price !== null ? copperToGold(row.price) : "Whisper me";
+    return `
+        <li class="guild-market-row">
+          <span class="guild-market-item">${escapeHtml(label)}</span>
+          <span class="guild-market-detail">${price}</span>
+          <span class="guild-market-who">${escapeHtml(row.member_name ?? row.character)}</span>
+        </li>`;
+  }
+  function marketRequestRow(row: GuildMarketRequestRow): string {
+    const label = row.item_name ?? `Item ${row.item_id}`;
+    const price = row.price !== null ? copperToGold(row.price) : "Whisper me";
+    return `
+        <li class="guild-market-row">
+          <span class="guild-market-item">${escapeHtml(label)}</span>
+          <span class="guild-market-detail">${row.qty}\u00d7 \u00b7 ${price}${row.note ? ` \u00b7 ${escapeHtml(row.note)}` : ""}</span>
+          <span class="guild-market-who">${escapeHtml(row.member_name ?? row.character)}</span>
+        </li>`;
+  }
+  function stockRow(row: GuildStock["rows"][number]): string {
+    return `
+        <li class="guild-stock-row">
+          <span class="guild-stock-who">${escapeHtml(row.member_name ?? row.character)}</span>
+          <span class="guild-stock-detail">${row.bags} in bags \u00b7 ${row.bank} in bank</span>
+        </li>`;
+  }
   onPage("#guild-body", (signal) => {
     const statusEl = requireElement("guild-status");
     const gateEl = requireElement("guild-gate");
@@ -469,6 +597,98 @@ import "../../styles/room-guild.css";
       { signal },
     );
 
+    // ——— Professions ———
+    const professionsFilterEl = requireElement<HTMLSelectElement>("professions-filter");
+    const professionsCountEl = requireElement("professions-count");
+    const professionsListEl = requireElement("professions-list");
+    let directory: GuildDirectory | null = null;
+    let professionsLoaded = false;
+
+    function renderProfessions(): void {
+      if (!directory) {
+        return;
+      }
+      const filter = professionsFilterEl.value;
+      const rows = directory.characters.filter(
+        (c) => c.professions.length > 0 && (!filter || c.professions.some((p) => p.name === filter)),
+      );
+      professionsCountEl.textContent = `${rows.length} character${rows.length === 1 ? "" : "s"}`;
+      professionsListEl.innerHTML =
+        rows.length > 0
+          ? rows.map((c) => professionRow(c, filter)).join("")
+          : `<li class="ledger-empty">No one has shared professions yet.</li>`;
+    }
+
+    async function loadDirectory(): Promise<void> {
+      try {
+        directory = await apiFetch<GuildDirectory>("/api/guild/directory", { signal });
+        if (professionsFilterEl.options.length <= 1) {
+          const names = [...new Set(directory.characters.flatMap((c) => c.professions.map((p) => p.name)))].toSorted();
+          professionsFilterEl.innerHTML += names
+            .map((name) => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`)
+            .join("");
+        }
+        renderProfessions();
+      } catch (err) {
+        professionsListEl.innerHTML = `<li class="ledger-empty">${escapeHtml(statusMessage(err))}</li>`;
+      }
+    }
+    professionsFilterEl.addEventListener("change", renderProfessions, { signal });
+
+    // ——— Market ———
+    const marketSellListEl = requireElement("market-sell-list");
+    const marketBuyListEl = requireElement("market-buy-list");
+    const marketRequestListEl = requireElement("market-request-list");
+    let marketLoaded = false;
+
+    async function loadMarket(): Promise<void> {
+      try {
+        const data = await apiFetch<GuildMarket>("/api/guild/market", { signal });
+        marketSellListEl.innerHTML =
+          data.sell.length > 0
+            ? data.sell.map(marketSellRow).join("")
+            : `<li class="ledger-empty">No one is selling anything right now.</li>`;
+        marketBuyListEl.innerHTML =
+          data.buy.length > 0
+            ? data.buy.map(marketBuyRow).join("")
+            : `<li class="ledger-empty">No standing buy offers right now.</li>`;
+        marketRequestListEl.innerHTML =
+          data.requests.length > 0
+            ? data.requests.map(marketRequestRow).join("")
+            : `<li class="ledger-empty">No open requests right now.</li>`;
+      } catch (err) {
+        marketSellListEl.innerHTML = `<li class="ledger-empty">${escapeHtml(statusMessage(err))}</li>`;
+      }
+    }
+
+    // ——— Who has it ———
+    const whohasitFormEl = requireElement<HTMLFormElement>("whohasit-form");
+    const whohasitItemIdEl = requireElement<HTMLInputElement>("whohasit-item-id");
+    const whohasitListEl = requireElement("whohasit-list");
+
+    whohasitFormEl.addEventListener(
+      "submit",
+      async (event) => {
+        event.preventDefault();
+        const itemId = Number(whohasitItemIdEl.value);
+        if (!Number.isInteger(itemId) || itemId <= 0) {
+          return;
+        }
+        whohasitListEl.innerHTML = `<li class="ledger-empty">Searching\u2026</li>`;
+        try {
+          const data = await apiFetch<GuildStock>(`/api/guild/stock?item_id=${itemId}`, { signal });
+          const label = data.item_name ?? `Item ${data.item_id}`;
+          whohasitListEl.innerHTML =
+            data.rows.length > 0
+              ? `<li class="guild-stock-header">${escapeHtml(label)}</li>` + data.rows.map(stockRow).join("")
+              : `<li class="ledger-empty">No one is holding ${escapeHtml(label)}.</li>`;
+        } catch (err) {
+          whohasitListEl.innerHTML = `<li class="ledger-empty">${escapeHtml(statusMessage(err))}</li>`;
+        }
+      },
+      { signal },
+    );
+
     // ——— Bank ———
     const bankTotalsEl = requireElement("bank-totals");
     const bankListEl = requireElement("bank-list");
@@ -507,7 +727,7 @@ import "../../styles/room-guild.css";
     onFreshData("/api/guild/news", () => void loadNews());
 
     // ——— Tabs & gate ———
-    const VALID_TABS = new Set(["roster", "crafters", "bank", "news"]);
+    const VALID_TABS = new Set(["roster", "crafters", "professions", "bank", "market", "whohasit", "news"]);
 
     function showPanel(name: string): void {
       document.querySelectorAll<HTMLElement>('[role="tabpanel"]').forEach((panel) => {
@@ -519,6 +739,14 @@ import "../../styles/room-guild.css";
       if (name === "bank" && !bankLoaded) {
         bankLoaded = true;
         void loadBank();
+      }
+      if (name === "professions" && !professionsLoaded) {
+        professionsLoaded = true;
+        void loadDirectory();
+      }
+      if (name === "market" && !marketLoaded) {
+        marketLoaded = true;
+        void loadMarket();
       }
     }
 
@@ -540,7 +768,7 @@ import "../../styles/room-guild.css";
       if (!me || !me.is_guild_member) {
         gateEl.hidden = false;
         const next = encodeURIComponent(location.pathname + location.search);
-        gateMessage.innerHTML = `The guild hall is for members only. <a href="/auth/discord/login?next=${next}">Sign in with Discord</a> to see the roster, crafters, bank log and news.`;
+        gateMessage.innerHTML = `The guild hall is for members only. <a href="/auth/discord/login?next=${next}">Sign in with Discord</a> to see the roster, professions, crafters, market, bank log and news.`;
         statusEl.textContent = "";
         return;
       }

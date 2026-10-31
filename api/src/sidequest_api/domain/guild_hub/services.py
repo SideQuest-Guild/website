@@ -16,6 +16,11 @@ from litestar.exceptions import NotFoundException
 from sqlalchemy import func, or_, select
 
 from sidequest_common.models import (
+    CharacterDirectoryChar,
+    CharacterDirectoryCooldowns,
+    CharacterDirectoryMarket,
+    CharacterDirectorySection,
+    CharacterDirectoryStock,
     CharacterProfession,
     CharacterRecipeLink,
     GuildAnnouncement,
@@ -23,6 +28,7 @@ from sidequest_common.models import (
     GuildNewsEvent,
     GuildRecruit,
     GuildRosterSnapshot,
+    ItemName,
     Member,
     MemberNote,
     ProfessionRecipe,
@@ -48,12 +54,24 @@ from sidequest_common.schemas import (
     GuildCrafterResult,
     GuildCrafterRow,
     GuildCrafters,
+    GuildDirectory,
+    GuildDirectoryCharacter,
+    GuildDirectoryCooldown,
+    GuildDirectoryFreshness,
+    GuildDirectoryProfession,
+    GuildDirectoryReputation,
+    GuildMarket,
+    GuildMarketBuyRow,
+    GuildMarketRequestRow,
+    GuildMarketSellRow,
     GuildNewsItem,
     GuildNewsPage,
     GuildRoster,
     GuildRosterCharacter,
     GuildRosterMember,
     GuildRosterUnlinked,
+    GuildStock,
+    GuildStockRow,
     PendingAnnouncement,
     PendingAnnouncementsPage,
     RecruitChecklist,
@@ -224,6 +242,228 @@ class GuildHubService:
             GuildCrafterProfessionCount(profession=name, crafters=count) for name, count in profession_counts
         ]
         return GuildCrafters(results=results, professions=professions)
+
+    # --- Directory ---------------------------------------------------------------------------------------------
+
+    async def get_directory(self) -> GuildDirectory:
+        """Every character with directory data: professions, char basics, attunements, reputations, cooldowns.
+
+        Professions come from the shared ``CharacterProfession`` table (fed by both the legacy flat import and
+        the directory's ``prof`` section); ``char``/``cd`` come from their own per-character tables.
+        """
+        profession_rows = (
+            (await self._session.execute(select(CharacterProfession).order_by(CharacterProfession.profession)))
+            .scalars()
+            .all()
+        )
+        char_rows = (await self._session.execute(select(CharacterDirectoryChar))).scalars().all()
+        cd_rows = (await self._session.execute(select(CharacterDirectoryCooldowns))).scalars().all()
+        freshness_rows = (await self._session.execute(select(CharacterDirectorySection))).scalars().all()
+
+        professions_by_char: dict[UUID, list[GuildDirectoryProfession]] = {}
+        for row in profession_rows:
+            professions_by_char.setdefault(row.character_id, []).append(
+                GuildDirectoryProfession(name=row.profession, skill=row.skill, max_skill=row.max_skill)
+            )
+        char_by_id = {row.character_id: row for row in char_rows}
+        cd_by_id = {row.character_id: row for row in cd_rows}
+        freshness_by_char: dict[UUID, dict[str, datetime]] = {}
+        for row in freshness_rows:
+            freshness_by_char.setdefault(row.character_id, {})[row.section] = row.at
+
+        character_ids = set(professions_by_char) | set(char_by_id) | set(cd_by_id)
+        if not character_ids:
+            return GuildDirectory(characters=[])
+        characters = {
+            character.id: character
+            for character in (
+                await self._session.execute(select(WowCharacter).where(WowCharacter.id.in_(character_ids)))
+            )
+            .scalars()
+            .all()
+        }
+        member_ids = {c.member_id for c in characters.values() if c.member_id is not None}
+        members = (
+            {
+                member.id: member
+                for member in (await self._session.execute(select(Member).where(Member.id.in_(member_ids))))
+                .scalars()
+                .all()
+            }
+            if member_ids
+            else {}
+        )
+        rows: list[GuildDirectoryCharacter] = []
+        for character_id in character_ids:
+            character = characters.get(character_id)
+            if character is None:
+                continue
+            member = members.get(character.member_id) if character.member_id is not None else None
+            char_row = char_by_id.get(character_id)
+            cd_row = cd_by_id.get(character_id)
+            freshness = freshness_by_char.get(character_id, {})
+            rows.append(
+                GuildDirectoryCharacter(
+                    character=character.key,
+                    member_id=character.member_id,
+                    member_name=member.display_name if member else None,
+                    professions=sorted(professions_by_char.get(character_id, []), key=lambda p: p.name),
+                    level=char_row.level if char_row else None,
+                    wow_class=WowClass(char_row.wow_class) if char_row and char_row.wow_class else None,
+                    race=char_row.race if char_row else None,
+                    spec=char_row.spec if char_row else None,
+                    item_level=char_row.item_level if char_row else None,
+                    attunements=list(char_row.attunements) if char_row else [],
+                    reputations=[GuildDirectoryReputation(**r) for r in char_row.reputations] if char_row else [],
+                    cooldowns=[
+                        GuildDirectoryCooldown(key=c["key"], ready_at=datetime.fromtimestamp(c["ready_at"], tz=UTC))
+                        for c in (cd_row.cooldowns if cd_row else [])
+                    ],
+                    freshness=GuildDirectoryFreshness(
+                        prof=freshness.get("prof"),
+                        char=freshness.get("char"),
+                        cd=freshness.get("cd"),
+                        market=freshness.get("market"),
+                        stock=freshness.get("stock"),
+                    ),
+                )
+            )
+        rows.sort(key=lambda row: row.character.casefold())
+        return GuildDirectory(characters=rows)
+
+    # --- Market ---------------------------------------------------------------------------------------------
+
+    async def get_market(self) -> GuildMarket:
+        """Everyone's sell/buy listings and open material requests, newest requests first, with item names."""
+        rows = (await self._session.execute(select(CharacterDirectoryMarket))).scalars().all()
+        if not rows:
+            return GuildMarket(sell=[], buy=[], requests=[])
+        character_ids = {row.character_id for row in rows}
+        characters = {
+            c.id: c
+            for c in (await self._session.execute(select(WowCharacter).where(WowCharacter.id.in_(character_ids))))
+            .scalars()
+            .all()
+        }
+        member_ids = {c.member_id for c in characters.values() if c.member_id is not None}
+        members = (
+            {
+                m.id: m
+                for m in (await self._session.execute(select(Member).where(Member.id.in_(member_ids)))).scalars().all()
+            }
+            if member_ids
+            else {}
+        )
+        item_ids = {entry["item_id"] for row in rows for entry in (*row.sell, *row.buy, *row.requests)}
+        item_names = (
+            {
+                n.item_id: n.name
+                for n in (await self._session.execute(select(ItemName).where(ItemName.item_id.in_(item_ids))))
+                .scalars()
+                .all()
+            }
+            if item_ids
+            else {}
+        )
+        sell: list[GuildMarketSellRow] = []
+        buy: list[GuildMarketBuyRow] = []
+        requests: list[GuildMarketRequestRow] = []
+        for row in rows:
+            character = characters.get(row.character_id)
+            if character is None:
+                continue
+            member = members.get(character.member_id) if character.member_id is not None else None
+            member_name = member.display_name if member else None
+            sell.extend(
+                GuildMarketSellRow(
+                    character=character.key,
+                    member_name=member_name,
+                    item_id=entry["item_id"],
+                    item_name=item_names.get(entry["item_id"]),
+                    price=entry.get("price"),
+                    qty=entry["qty"],
+                    crafted=entry.get("crafted", False),
+                )
+                for entry in row.sell
+            )
+            buy.extend(
+                GuildMarketBuyRow(
+                    character=character.key,
+                    member_name=member_name,
+                    item_id=entry["item_id"],
+                    item_name=item_names.get(entry["item_id"]),
+                    price=entry.get("price"),
+                )
+                for entry in row.buy
+            )
+            requests.extend(
+                GuildMarketRequestRow(
+                    id=entry["id"],
+                    character=character.key,
+                    member_name=member_name,
+                    item_id=entry["item_id"],
+                    item_name=item_names.get(entry["item_id"]),
+                    qty=entry["qty"],
+                    price=entry.get("price"),
+                    note=entry.get("note"),
+                    at=datetime.fromtimestamp(entry["at"], tz=UTC),
+                )
+                for entry in row.requests
+            )
+        sell.sort(key=lambda r: (r.item_name or "").casefold())
+        buy.sort(key=lambda r: (r.item_name or "").casefold())
+        requests.sort(key=lambda r: r.at, reverse=True)
+        return GuildMarket(sell=sell, buy=buy, requests=requests)
+
+    # --- Stock ---------------------------------------------------------------------------------------------
+
+    async def get_stock(self, item_id: int) -> GuildStock:
+        """Who holds ``item_id`` in bags or bank, characters with none of it excluded."""
+        rows = (await self._session.execute(select(CharacterDirectoryStock))).scalars().all()
+        item_name_row = (
+            await self._session.execute(select(ItemName).where(ItemName.item_id == item_id))
+        ).scalar_one_or_none()
+        character_ids = {row.character_id for row in rows}
+        characters = (
+            {
+                c.id: c
+                for c in (await self._session.execute(select(WowCharacter).where(WowCharacter.id.in_(character_ids))))
+                .scalars()
+                .all()
+            }
+            if character_ids
+            else {}
+        )
+        member_ids = {c.member_id for c in characters.values() if c.member_id is not None}
+        members = (
+            {
+                m.id: m
+                for m in (await self._session.execute(select(Member).where(Member.id.in_(member_ids)))).scalars().all()
+            }
+            if member_ids
+            else {}
+        )
+        result_rows: list[GuildStockRow] = []
+        for row in rows:
+            bags_count = sum(count for stored_id, count in row.bags if stored_id == item_id)
+            bank_count = sum(count for stored_id, count in row.bank if stored_id == item_id)
+            if bags_count == 0 and bank_count == 0:
+                continue
+            character = characters.get(row.character_id)
+            if character is None:
+                continue
+            member = members.get(character.member_id) if character.member_id is not None else None
+            result_rows.append(
+                GuildStockRow(
+                    character=character.key,
+                    member_name=member.display_name if member else None,
+                    bags=bags_count,
+                    bank=bank_count,
+                    bank_at=row.bank_at,
+                )
+            )
+        result_rows.sort(key=lambda r: r.character.casefold())
+        return GuildStock(item_id=item_id, item_name=item_name_row.name if item_name_row else None, rows=result_rows)
 
     # --- News ------------------------------------------------------------------------------------------------
 
