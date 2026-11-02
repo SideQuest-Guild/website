@@ -330,7 +330,7 @@ from sidequest_common.schemas.signup_notices import (
     SignupNoticeResolution,
     SignupNoticesPage,
 )
-from sidequest_common.schemas.weekly_board import WeeklyBoardEvent
+from sidequest_common.schemas.weekly_board import BoardSignup, WeeklyBoardEvent, WeeklyBoardMessage
 
 __all__ = (
     "ADDON_ORIGIN_LABELS",
@@ -419,6 +419,7 @@ __all__ = (
     "BadgeSyncReport",
     "BankImportCounts",
     "BankKind",
+    "BoardSignup",
     "CalendarLink",
     "CaseAction",
     "CharacterSource",
@@ -656,6 +657,7 @@ __all__ = (
     "WalkInCandidate",
     "WalkInCreate",
     "WeeklyBoardEvent",
+    "WeeklyBoardMessage",
     "WowClass",
     "XPAwardResult",
     "event_ep",

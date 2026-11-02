@@ -16,6 +16,7 @@ from sqlalchemy import delete, select, update
 
 from sidequest_api.domain.event_series.materializer import materialize_all
 from sidequest_api.domain.events.services import EventsService
+from sidequest_api.domain.weekly_board.services import board_signups_for
 from sidequest_common.models import (
     DiscordEventTombstone,
     EventDiscordInterest,
@@ -27,6 +28,7 @@ from sidequest_common.models import (
 from sidequest_common.schemas import (
     EVENT_KIND_LABELS,
     ROLE_KINDS,
+    BoardSignup,
     DiscordEventPush,
     DiscordEventReconcile,
     DiscordEventState,
@@ -146,6 +148,7 @@ def _push_hash(
     starts_at: datetime,
     ends_at: datetime,
     needs_thread: bool,
+    board: tuple[int, int, list[BoardSignup]] | None,
 ) -> str:
     """Hash of everything a push changes on Discord, plus whether the event still needs its forum post.
 
@@ -155,20 +158,24 @@ def _push_hash(
     The trailing ``FORUM_SIGNUP_BUTTONS_MARKER`` isn't a real field: it only exists so every already-synced event
     gets pushed (and its forum starter post re-edited) once after this marker was added, which is how existing
     upcoming threads pick up the Going/Maybe/Can't buttons without anyone re-running sync by hand.
+
+    ``board`` (channel, message, sign-ups) is only hashed for an event with a weekly-board card, so any sign-up
+    change re-pushes it and the bot redraws the card; events without one keep the hashes they had before cards.
     """
-    payload = json.dumps(
-        [
-            action,
-            name,
-            description,
-            location,
-            starts_at.astimezone(UTC).isoformat(),
-            ends_at.astimezone(UTC).isoformat(),
-            needs_thread,
-            FORUM_SIGNUP_BUTTONS_MARKER,
-        ],
-        separators=(",", ":"),
-    )
+    fields: list[object] = [
+        action,
+        name,
+        description,
+        location,
+        starts_at.astimezone(UTC).isoformat(),
+        ends_at.astimezone(UTC).isoformat(),
+        needs_thread,
+        FORUM_SIGNUP_BUTTONS_MARKER,
+    ]
+    if board is not None:
+        channel_id, message_id, signups = board
+        fields.append([channel_id, message_id, [signup.model_dump(mode="json") for signup in signups]])
+    payload = json.dumps(fields, separators=(",", ":"))
     return hashlib.sha256(payload.encode()).hexdigest()
 
 
@@ -183,7 +190,12 @@ def _state_hash(state: DiscordEventState) -> str:
 
 
 def _desired_state(
-    event: GuildEvent, counts: EventCounts, web_base_url: str, *, forum_configured: bool
+    event: GuildEvent,
+    counts: EventCounts,
+    board_signups: list[BoardSignup],
+    web_base_url: str,
+    *,
+    forum_configured: bool,
 ) -> DiscordEventPush:
     footer = _build_footer(event, counts, web_base_url)
     description = _build_description(event, footer)
@@ -191,6 +203,13 @@ def _desired_state(
     location = (event.location or "World of Warcraft")[:100]
     ends_at = event.ends_at or (event.starts_at + DEFAULT_DURATION)
     action = _ACTION_BY_STATUS[event.status]
+    board_channel_id = event.discord_board_channel_id
+    board_message_id = event.discord_board_message_id
+    board = (
+        (board_channel_id, board_message_id, board_signups)
+        if board_channel_id is not None and board_message_id is not None
+        else None
+    )
     push_hash = _push_hash(
         action=action,
         name=name,
@@ -199,6 +218,7 @@ def _desired_state(
         starts_at=event.starts_at,
         ends_at=ends_at,
         needs_thread=forum_configured and action == "upsert" and event.discord_thread_id is None,
+        board=board,
     )
     return DiscordEventPush(
         event_id=event.id,
@@ -215,6 +235,9 @@ def _desired_state(
         ends_at=ends_at,
         signup_url=f"{web_base_url}{_SIGN_UP_PATH}{event.id}",
         push_hash=push_hash,
+        board_channel_id=board_channel_id if board is not None else None,
+        board_message_id=board_message_id if board is not None else None,
+        board_signups=board_signups if board is not None else [],
     )
 
 
@@ -253,9 +276,18 @@ class EventSyncService(EventsService):
         )
         events = list((await session.execute(select(GuildEvent))).scalars().all())
         counts = await self._counts_for([event.id for event in events])
+        board_signups = await board_signups_for(
+            session, [event.id for event in events if event.discord_board_message_id is not None]
+        )
         pushes = []
         for event in events:
-            push = _desired_state(event, counts[event.id], web_base_url, forum_configured=forum_id is not None)
+            push = _desired_state(
+                event,
+                counts[event.id],
+                board_signups.get(event.id, []),
+                web_base_url,
+                forum_configured=forum_id is not None,
+            )
             if push.push_hash == event.discord_pushed_hash:
                 continue
             linked = event.discord_event_id is not None

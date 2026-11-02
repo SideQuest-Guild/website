@@ -13,6 +13,7 @@ from uuid import UUID  # pydantic needs it at runtime
 from pydantic import BaseModel, Field
 
 from sidequest_common.schemas.events import EventCounts, EventKind
+from sidequest_common.schemas.weekly_board import BoardSignup
 
 
 class DiscordEventStatus(StrEnum):
@@ -63,6 +64,12 @@ class DiscordEventPush(BaseModel):
     ends_at: datetime = Field(description="Discord requires an end for external events.")
     signup_url: str
     push_hash: str
+    board_channel_id: int | None = Field(default=None, description="The channel of the event's weekly-board card.")
+    board_message_id: int | None = Field(default=None, description="The event's weekly-board card, if it has one.")
+    board_signups: list[BoardSignup] = Field(
+        default_factory=list,
+        description="Every sign-up, in sign-up order, for the weekly-board card; empty when there is no card.",
+    )
 
 
 class SignupActivity(BaseModel):

@@ -1,24 +1,25 @@
-"""This week's scheduled events, bot-key only. ``/api/guilds/{guild_id}/weekly-board/events``.
+"""This week's scheduled events and their Discord cards, bot-key only. ``/api/guilds/{guild_id}/weekly-board``.
 
 Every route 404s for any ``guild_id`` other than ``WebSettings.GUILD_ID`` (same rule as ``event_sync``/
 ``discord_live``). Scoped to a date range (not just "upcoming") so the bot's Monday-morning post can bound itself
-to exactly one week, and includes ``discord_thread_id`` (not in the public ``EventSummary``) so the post can link
-each event's forum thread.
+to exactly one week, and includes ``discord_thread_id`` (not in the public ``EventSummary``) so each card can link
+its forum thread. The bot then records each card's message so the event sync keeps its sign-up lists current.
 """
 
 from datetime import datetime
 from typing import Annotated
+from uuid import UUID
 
-from litestar import Controller, get
+from litestar import Controller, get, put
 from litestar.di import NamedDependency, Provide
 from litestar.exceptions import NotFoundException
 from litestar.openapi.datastructures import ResponseSpec
-from litestar.params import Parameter
+from litestar.params import JSONBody, Parameter
 
 from sidequest_api.domain.weekly_board.dependencies import provide_weekly_board_service
 from sidequest_api.domain.weekly_board.services import WeeklyBoardService
 from sidequest_api.lib.openapi import GuildIdPath
-from sidequest_common.schemas import WeeklyBoardEvent
+from sidequest_common.schemas import WeeklyBoardEvent, WeeklyBoardMessage
 from sidequest_common.settings import WebSettings
 
 
@@ -29,7 +30,7 @@ def _require_site_guild(guild_id: int, web_settings: WebSettings) -> None:
 
 
 class WeeklyBoardController(Controller):
-    """``/api/guilds/{guild_id}/weekly-board/events``: scheduled events starting within ``[start, end)``."""
+    """``/api/guilds/{guild_id}/weekly-board``: the week's scheduled events, and the card posted for each."""
 
     path = "/weekly-board"
     tags = ["Weekly board"]
@@ -41,7 +42,8 @@ class WeeklyBoardController(Controller):
         summary="List this week's scheduled events",
         description=(
             "Returns scheduled events starting in the given date range, soonest first, with each event's forum "
-            "thread ID if it has one. Returns 404 for any guild_id other than the SideQuest server."
+            "thread ID if it has one and every sign-up in sign-up order. Returns 404 for any guild_id other than "
+            "the SideQuest server."
         ),
         response_description="The events in the date range.",
         responses={404: ResponseSpec(None, description="This guild_id is not the SideQuest server.")},
@@ -55,5 +57,28 @@ class WeeklyBoardController(Controller):
         web_settings: NamedDependency[WebSettings],
     ) -> list[WeeklyBoardEvent]:
         _require_site_guild(guild_id, web_settings)
-        events = await weekly_board_service.list_week_events(start, end)
-        return [WeeklyBoardEvent.model_validate(event) for event in events]
+        return await weekly_board_service.list_week_events(start, end)
+
+    @put(
+        "/events/{event_id:uuid}/message",
+        operation_id="SetWeeklyBoardMessage",
+        status_code=204,
+        summary="Record an event's weekly board card",
+        description=(
+            "Records the Discord message the bot posted as this event's weekly board card, so later sign-up "
+            "changes reach it through the event sync. Returns 404 for any guild_id other than the SideQuest "
+            "server, or if the event doesn't exist."
+        ),
+        response_description="The card was recorded.",
+        responses={404: ResponseSpec(None, description="Not the SideQuest server, or no such event.")},
+    )
+    async def set_message(
+        self,
+        guild_id: GuildIdPath,
+        event_id: Annotated[UUID, Parameter(description="The site event's ID.")],
+        data: JSONBody[WeeklyBoardMessage],
+        weekly_board_service: NamedDependency[WeeklyBoardService],
+        web_settings: NamedDependency[WebSettings],
+    ) -> None:
+        _require_site_guild(guild_id, web_settings)
+        await weekly_board_service.set_board_message(event_id, data)

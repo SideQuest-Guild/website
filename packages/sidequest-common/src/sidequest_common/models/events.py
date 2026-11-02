@@ -76,6 +76,8 @@ class GuildEvent(UUIDAuditBase):
     to the ``EventSeries`` that materialized it; ``series_detached`` is set once an officer edits or deletes that
     one occurrence, so series-wide edits stop touching it. ``ep_override`` is the officer-set attendance EP; ``None``
     means the kind's preset (``EVENT_KIND_EP``), so retuning a preset reaches every event that kept it.
+    ``discord_board_channel_id``/``discord_board_message_id`` are the event's card on the bot's weekly board, whose
+    sign-up lists the sync keeps current.
     """
 
     __tablename__ = "guild_event"
@@ -98,6 +100,8 @@ class GuildEvent(UUIDAuditBase):
     discord_thread_id: Mapped[int | None] = mapped_column(BigInteger, unique=True, default=None)
     discord_pushed_hash: Mapped[str | None] = mapped_column(String(64), default=None)
     discord_seen_hash: Mapped[str | None] = mapped_column(String(64), default=None)
+    discord_board_channel_id: Mapped[int | None] = mapped_column(BigInteger, default=None)
+    discord_board_message_id: Mapped[int | None] = mapped_column(BigInteger, default=None)
     series_id: Mapped[UUID | None] = mapped_column(
         ForeignKey("event_series.id", ondelete="SET NULL"), index=True, default=None
     )
