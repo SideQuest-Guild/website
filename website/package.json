@@ -23,7 +23,7 @@
     "@astrojs/compiler-rs": "^0.5.2",
     "@playwright/test": "1.64.1",
     "@scalar/types": "0.26.0",
-    "@types/node": "^24.19.2",
+    "@types/node": "^26.6.5",
     "litestar-vite-plugin": "^0.32.0",
     "oxfmt": "^0.75.0",
     "oxlint": "^1.90.0",
