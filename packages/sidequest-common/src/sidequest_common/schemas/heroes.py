@@ -15,6 +15,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from sidequest_common.schemas.badges import EarnedBadge
 from sidequest_common.schemas.events import EventKind, WowClass
+from sidequest_common.schemas.stats import StatsHourCell
 
 
 class Season(BaseModel):
@@ -105,3 +106,57 @@ class HeroProfile(BaseModel):
     first_event_date: date | None
     recent_events: list[HeroRecentEvent]
     badges: list[EarnedBadge]
+
+
+class HeroXPSources(BaseModel):
+    """Breakdown of a member's lifetime XP by source. ``earlier`` is XP earned before per-source tracking started."""
+
+    chat: int
+    voice: int
+    events: int
+    groups: int
+    earlier: int = Field(description="``max(0, xp - (chat + voice + events + groups))``.")
+
+
+class HeroLevelReward(BaseModel):
+    """A level-role reward, with the role's current name."""
+
+    level: int
+    role_name: str
+
+
+class HeroDay(BaseModel):
+    """Activity on one America/Chicago calendar day."""
+
+    day: date
+    messages: int
+    voice_minutes: int
+
+
+class HeroActivity(BaseModel):
+    """``GET /api/heroes/{member_id}/activity``: MEE6-style stats for a member's Hall of Heroes profile."""
+
+    member_id: int
+    level: int
+    xp: int
+    xp_into_level: int
+    xp_for_next_level: int
+    xp_rank: int | None = Field(description="Rank among guild members by total XP, like `/rank`; `null` if unranked.")
+    ranked_members: int
+    next_reward: HeroLevelReward | None = Field(description="The lowest level-role reward above the current level.")
+    message_count: int = Field(description="Lifetime message count.")
+    voice_minutes: int = Field(description="All tracked voice minutes, lifetime.")
+    events_attended: int
+    groups_joined: int
+    messages_30d: int
+    voice_minutes_30d: int
+    chat_rank_30d: int | None = Field(description="Rank among members by 30-day messages; `null` if they sent none.")
+    voice_rank_30d: int | None = Field(
+        description="Rank among members by 30-day voice minutes; `null` if they had none."
+    )
+    current_streak_days: int = Field(description="Consecutive America/Chicago days with a message or voice minute.")
+    longest_streak_days: int
+    xp_sources: HeroXPSources
+    days: list[HeroDay] = Field(description="Last 30 days including today, oldest first, zero-filled.")
+    heatmap: list[StatsHourCell] = Field(description="Last 90 days, non-zero weekday/hour cells only.")
+    tracking_since: datetime | None

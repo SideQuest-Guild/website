@@ -19,6 +19,8 @@ from sidequest_common.schemas import (
     LevelRoleSchema,
     LevelRoleUpsert,
     MemberLevelSchema,
+    MessageBackfill,
+    MessageBackfillResult,
     RankSchema,
     SetXPRequest,
     VoiceXPRequest,
@@ -69,11 +71,12 @@ class LevelsController(Controller):
         status_code=HTTPStatus.OK,
         summary="Grant voice XP",
         description=(
-            "Gives each listed member XP for the minutes they spent in voice. The bot decides who counts: "
-            "members with someone else in the channel, not deafened, outside the AFK channel and no-XP channels "
-            "or roles. Returns nothing while leveling is off."
+            "Gives each XP-eligible listed member (user_ids) XP for the minutes they spent in voice, and records "
+            "those minutes for every member present under the stats voice rule (present_user_ids), even while "
+            "leveling is off. The bot decides who's XP-eligible: someone else in the channel, not deafened, "
+            "outside the AFK channel and no-XP channels or roles."
         ),
-        response_description="One result per member, with any level-up and level-role changes.",
+        response_description="One result per XP-eligible member, with any level-up and level-role changes.",
     )
     async def grant_voice_xp(
         self,
@@ -85,7 +88,34 @@ class LevelsController(Controller):
     ) -> list[XPGrantResult]:
         config = await guild_config_service.get_or_create_config(guild_id)
         level_roles = await level_role_service.list_for_guild(guild_id)
-        return await member_level_service.grant_voice(guild_id, data.user_ids, data.minutes, config, level_roles)
+        return await member_level_service.grant_voice(
+            guild_id,
+            data.user_ids,
+            data.present_user_ids,
+            minutes=data.minutes,
+            config=config,
+            level_roles=level_roles,
+        )
+
+    @put(
+        "/activity/messages",
+        operation_id="BackfillMessages",
+        status_code=HTTPStatus.OK,
+        summary="Backfill message counts",
+        description=(
+            "Stores message counts read once from Discord channel history, per member per UTC hour. Sets each "
+            "bucket's count to the higher of the existing and reported value, so replaying history is always "
+            "safe and never lowers a live count. Doesn't touch lifetime message counts or XP."
+        ),
+        response_description="How many buckets were touched.",
+    )
+    async def backfill_messages(
+        self,
+        guild_id: GuildIdPath,
+        data: JSONBody[MessageBackfill],
+        member_level_service: NamedDependency[MemberLevelService],
+    ) -> MessageBackfillResult:
+        return await member_level_service.backfill_messages(guild_id, data.buckets)
 
     @post(
         "/xp/activity",

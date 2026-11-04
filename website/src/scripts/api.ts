@@ -549,6 +549,113 @@ export type GroupLeaderboardRow = { member_id: number; display_name: string; gro
 /** `GET /api/groups/leaderboard` (public): members by counted groups joined, last 30 days and all time. */
 export type GroupLeaderboard = { month: GroupLeaderboardRow[]; all_time: GroupLeaderboardRow[] };
 
+export type StatsRange = "7d" | "30d" | "90d" | "all";
+
+export const STATS_RANGES: StatsRange[] = ["7d", "30d", "90d", "all"];
+
+export const STATS_RANGE_LABELS: Record<StatsRange, string> = {
+  "7d": "Last 7 days",
+  "30d": "Last 30 days",
+  "90d": "Last 90 days",
+  all: "All time",
+};
+
+/** Someone on a stats leaderboard or the "gone quiet" list; `member_id` is set when they have a site account. */
+export type StatsPerson = {
+  discord_id: string;
+  display_name: string;
+  avatar_url: string | null;
+  member_id: number | null;
+};
+
+/** One line on a guild stats leaderboard: `value` is messages, voice minutes, events, groups or XP depending on the
+ * list. */
+export type StatsLeader = { person: StatsPerson; value: number };
+
+/** `GET /api/stats` totals for one window, reused for both `totals` and the same-length `previous` window. */
+export type StatsTotals = {
+  active_members: number;
+  messages: number;
+  voice_minutes: number;
+  events_attended: number;
+  groups_joined: number;
+  xp_gained: number;
+};
+
+/** One bucket on the guild stats trend chart, oldest first, zero-filled across the window. */
+export type StatsTrendPoint = { start: string; messages: number; voice_minutes: number; active_members: number };
+
+/** One non-zero cell of a weekday/hour activity heatmap, America/Chicago. `weekday` 0 is Monday. Shared by the
+ * officers' guild-wide heatmap and a hero's own 90-day heatmap. */
+export type StatsHourCell = { weekday: number; hour: number; messages: number; voice_minutes: number };
+
+/** One member with no tracked message, voice or event activity in the last 30 days, on the officers' "Gone quiet"
+ * list. */
+export type StatsQuietMember = { person: StatsPerson; last_active_at: string | null; level: number };
+
+/** `GET /api/stats?range=7d|30d|90d|all` (officer): guild-wide activity totals, trend, heatmap and leaderboards. */
+export type GuildStats = {
+  range: StatsRange;
+  since: string | null;
+  /** Earliest tracked `member_activity_hour` row in the guild; `null` if tracking hasn't started. */
+  tracking_since: string | null;
+  totals: StatsTotals;
+  /** The same-length window right before `since`; `null` for `"all"`. */
+  previous: StatsTotals | null;
+  trend_bucket: "day" | "week";
+  trend: StatsTrendPoint[];
+  /** Non-zero cells only. */
+  heatmap: StatsHourCell[];
+  top_chatters: StatsLeader[];
+  top_voice: StatsLeader[];
+  top_events: StatsLeader[];
+  top_groups: StatsLeader[];
+  top_xp: StatsLeader[];
+  gone_quiet: StatsQuietMember[];
+};
+
+/** XP earned by source on a hero's activity profile; `earlier` is XP earned before tracking started (or from
+ * sources the breakdown doesn't cover), floored at zero. */
+export type HeroXPSources = { chat: number; voice: number; events: number; groups: number; earlier: number };
+
+/** The next level-role reward above a hero's current level, if the guild has one configured. */
+export type HeroLevelReward = { level: number; role_name: string };
+
+/** One day on a hero's last-30-days activity chart, oldest first, zero-filled. */
+export type HeroDay = { day: string; messages: number; voice_minutes: number };
+
+/** `GET /api/heroes/{member_id}/activity` (member, same gate as `GET /api/heroes/{id}`): the Hall of Heroes
+ * profile's MEE6-style stats section — level, XP bar, guild-wide rank, streaks, sources and activity charts. */
+export type HeroActivity = {
+  member_id: number;
+  level: number;
+  xp: number;
+  xp_into_level: number;
+  xp_for_next_level: number;
+  /** Guild-wide rank by total XP, like `/rank`; `null` if the member has no XP yet. */
+  xp_rank: number | null;
+  ranked_members: number;
+  next_reward: HeroLevelReward | null;
+  /** Lifetime message count. */
+  message_count: number;
+  /** All tracked voice minutes, lifetime. */
+  voice_minutes: number;
+  events_attended: number;
+  groups_joined: number;
+  messages_30d: number;
+  voice_minutes_30d: number;
+  /** Position among members by 30-day messages/voice; `null` if the member has none in the window. */
+  chat_rank_30d: number | null;
+  voice_rank_30d: number | null;
+  current_streak_days: number;
+  longest_streak_days: number;
+  xp_sources: HeroXPSources;
+  days: HeroDay[];
+  /** Last 90 days, non-zero cells only. */
+  heatmap: StatsHourCell[];
+  tracking_since: string | null;
+};
+
 export const CLASSES: CharClass[] = [
   "warrior",
   "paladin",

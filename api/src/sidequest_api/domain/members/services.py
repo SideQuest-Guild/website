@@ -17,6 +17,7 @@ from sidequest_common.models import (
     GroupSessionPair,
     McpToken,
     Member,
+    MemberActivityHour,
     MemberAwayRange,
     MemberLevel,
     MemberRoleReset,
@@ -107,6 +108,9 @@ class MembersService(SQLAlchemyAsyncRepositoryService[Member]):
 
         Also deletes the member's own MCP (Model Context Protocol) client tokens.
 
+        Also deletes the member's hourly activity counts (``MemberActivityHour``, keyed by Discord ID with no
+        FK): stats and the Hall of Heroes activity charts stop showing them.
+
         Also queues a ``MemberRoleReset`` outbox row (same transaction) so the bot's ``link_roles`` plugin strips
         every Discord role it can manage from ``member``, leaving them gated behind #sign-the-ledger again.
         """
@@ -125,6 +129,7 @@ class MembersService(SQLAlchemyAsyncRepositoryService[Member]):
         )
         await session.execute(delete(MemberAwayRange).where(MemberAwayRange.member_id == member.id))
         await session.execute(delete(MemberLevel).where(MemberLevel.user_id == member.discord_id))
+        await session.execute(delete(MemberActivityHour).where(MemberActivityHour.user_id == member.discord_id))
         await session.execute(delete(XPGrant).where(XPGrant.user_id == member.discord_id))
         await session.execute(delete(McpToken).where(McpToken.member_id == member.id))
         await session.execute(

@@ -14,6 +14,7 @@ import type {
   EventDetail,
   EventSummary,
   GuildAnnouncement,
+  GuildStats,
   HeroRow,
   Me,
   Recruiting,
@@ -45,6 +46,7 @@ import {
   GUILD_MARKET,
   GUILD_NEWS,
   GUILD_ROSTER,
+  GUILD_STATS,
   HEROES,
   LIVE,
   MCP_TOKENS,
@@ -56,6 +58,7 @@ import {
   eventDetail,
   gmMemberDetail,
   groupSessionDetail,
+  heroActivity,
   heroLeaderboard,
   heroProfile,
 } from "./data";
@@ -357,6 +360,20 @@ export const test = base.extend<{ site: Site }>({
         }
         const row = HEROES.find((h: HeroRow) => h.member_id === Number(heroMatch[1]));
         return row ? json(route, heroProfile(row)) : json(route, { detail: "No such member" }, 404);
+      }
+      const heroActivityMatch = /^\/api\/heroes\/(\d+)\/activity$/.exec(path);
+      if (heroActivityMatch && method === "GET") {
+        if (!me) {
+          return json(route, { detail: "Not signed in" }, 401);
+        }
+        const row = HEROES.find((h: HeroRow) => h.member_id === Number(heroActivityMatch[1]));
+        return row ? json(route, heroActivity(row)) : json(route, { detail: "No such member" }, 404);
+      }
+      if (path === "/api/stats" && method === "GET") {
+        if (!me?.is_officer) {
+          return json(route, { detail: "Officers only" }, 401);
+        }
+        return json(route, { ...GUILD_STATS, range: (url.searchParams.get("range") ?? "30d") as GuildStats["range"] });
       }
       if (path === "/api/groups/stats" && method === "GET") {
         if (!me?.is_officer) {

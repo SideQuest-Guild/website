@@ -9,6 +9,7 @@ const articles = [
   { id: "battle-net", title: "Linking Battle.net" },
   { id: "events", title: "Event sign-ups" },
   { id: "hall-of-heroes", title: "Hall of Heroes" },
+  { id: "activity-stats", title: "Activity stats" },
   { id: "group-voice", title: "Group voice channels" },
   { id: "epgp-sync", title: "SQL loot ledger" },
   { id: "guild-app", title: "The guild app" },
@@ -26,7 +27,7 @@ const articles = [
   description="What SideQuest's site and Discord bot keep about you, and how to delete it."
   heading="PRIVACY"
   lede="What this site and the guild's Discord bot keep about you, who else touches it, and how to make it go away."
-  effective="November 4, 2026"
+  effective="November 5, 2026"
   artPosition="12% 50%"
   articles={articles}
 >
@@ -160,7 +161,25 @@ const articles = [
     </p>
   </Article>
 
-  <Article id="group-voice" n={6} title="Group voice channels">
+  <Article id="activity-stats" n={6} title="Activity stats">
+    <p>
+      The bot keeps hourly counts per member: how many messages you sent (just the count, never the text), how many
+      minutes you spent in a voice channel with at least one other person outside the AFK channel, and how much XP you
+      earned. Past message counts were read once from the Discord channel history when this started; nothing further
+      back is kept.
+    </p>
+    <p>
+      Every signed-in member can see any member's level, message and voice totals, and activity charts on their{" "}
+      <a href="/heroes/member/?id=">Hall of Heroes</a> profile. Officers see guild-wide stats and leaderboards on the{" "}
+      <a href="/officers/">Officers page</a>.
+    </p>
+    <p>
+      Deleting your account (see <a href="#deleting">Deleting your data</a>) erases these counts along with the rest of
+      your site account.
+    </p>
+  </Article>
+
+  <Article id="group-voice" n={7} title="Group voice channels">
     <p>
       Clicking a button in the Discord <strong>#lfg</strong> channel spawns a voice channel for a dungeon, raid, world
       boss, leveling group, PvP or hangout. We keep who started it, what kind it is, the name and note they gave it (if
@@ -184,7 +203,7 @@ const articles = [
     </p>
   </Article>
 
-  <Article id="epgp-sync" n={7} title="SQL loot ledger">
+  <Article id="epgp-sync" n={8} title="SQL loot ledger">
     <p>
       SideQuest raids use an in-game addon, <strong>SideQuest</strong>, to track progression loot. Officers upload what
       it records to this site after a raid night: your character's name, realm and class; which raids you were present
@@ -207,7 +226,7 @@ const articles = [
     </p>
   </Article>
 
-  <Article id="guild-app" n={8} title="The guild app">
+  <Article id="guild-app" n={9} title="The guild app">
     <p>
       SideQuest's addon has grown into the guild's app, keeping everything on this site in step with the game. Officers
       sync the following with the same export/import strings used for raids and loot:
@@ -270,7 +289,7 @@ const articles = [
     </p>
   </Article>
 
-  <Article id="mcp-access" n={9} title="Officer MCP access">
+  <Article id="mcp-access" n={10} title="Officer MCP access">
     <p>
       Officers can create their own personal access tokens to connect Claude Code, omp, or another MCP (Model Context
       Protocol) client to the guild's tools from their own computer, for things like looking up a member, posting an
@@ -284,7 +303,7 @@ const articles = [
     </p>
   </Article>
 
-  <Article id="cookies" n={10} title="Cookies">
+  <Article id="cookies" n={11} title="Cookies">
     <ul>
       <li>
         <strong>sq_session</strong> keeps you signed in. It's encrypted, holds only your account number, can't be read
@@ -309,7 +328,7 @@ const articles = [
     <p>No analytics or advertising cookies. If you never sign in, you get no cookies at all.</p>
   </Article>
 
-  <Article id="bot" n={11} title="The guild bot">
+  <Article id="bot" n={12} title="The guild bot">
     <p>Inside the SideQuest Discord, the guild's bot keeps:</p>
     <ul>
       <li>
@@ -345,7 +364,7 @@ const articles = [
     </p>
   </Article>
 
-  <Article id="who-else" n={12} title="Who else handles it">
+  <Article id="who-else" n={13} title="Who else handles it">
     <ul>
       <li>
         <strong>Discord</strong> and <strong>Blizzard (Battle.net)</strong> run the sign-ins, under their own privacy
@@ -364,7 +383,7 @@ const articles = [
     <p>That's everyone. Nothing else is shared.</p>
   </Article>
 
-  <Article id="deleting" n={13} title="Deleting your data">
+  <Article id="deleting" n={14} title="Deleting your data">
     <ul>
       <li>
         <strong>Unlink Battle.net</strong> on your <a href="/account/">Account</a> page: your Battle.net data is erased.
@@ -387,7 +406,7 @@ const articles = [
     </p>
   </Article>
 
-  <Article id="changes" n={14} title="Changes">
+  <Article id="changes" n={15} title="Changes">
     <p>
       If what we keep changes, this page and its date change with it, and anything significant gets announced in the
       Discord first.

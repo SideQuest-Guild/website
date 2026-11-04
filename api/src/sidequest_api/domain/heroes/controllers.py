@@ -14,7 +14,7 @@ from litestar.params import Parameter
 from sidequest_api.domain.heroes.dependencies import provide_heroes_service
 from sidequest_api.domain.heroes.services import HeroesService
 from sidequest_api.lib.member_auth import provide_optional_member
-from sidequest_common.schemas import HeroLeaderboard, HeroProfile
+from sidequest_common.schemas import HeroActivity, HeroLeaderboard, HeroProfile
 
 
 class HeroesController(Controller):
@@ -68,3 +68,26 @@ class HeroesController(Controller):
     ) -> HeroProfile:
         del member_or_bot
         return await heroes_service.get_profile(member_id)
+
+    @get(
+        "/{member_id:int}/activity",
+        operation_id="GetHeroActivity",
+        summary="Get a hero's activity stats",
+        description=(
+            "Returns one member's MEE6-style activity stats for their Hall of Heroes profile: level/XP, ranks, "
+            "streaks, and daily/hourly charts. Requires a signed-in session or the bot's API key."
+        ),
+        response_description="The member's activity stats.",
+        responses={
+            401: ResponseSpec(None, description="You are not signed in and did not send a valid API key."),
+            404: ResponseSpec(None, description="No member with that ID."),
+        },
+    )
+    async def get_activity(
+        self,
+        member_id: Annotated[int, Parameter(description="The member's ID.")],
+        heroes_service: NamedDependency[HeroesService],
+        member_or_bot: NamedDependency[None],
+    ) -> HeroActivity:
+        del member_or_bot
+        return await heroes_service.get_activity(member_id)

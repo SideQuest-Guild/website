@@ -9,7 +9,8 @@ from advanced_alchemy.exceptions import IntegrityError
 from advanced_alchemy.repository import SQLAlchemyAsyncRepository
 from advanced_alchemy.service import SQLAlchemyAsyncRepositoryService
 from litestar.exceptions import HTTPException, NotFoundException
-from sqlalchemy import and_, func, or_, select
+from sqlalchemy import and_, case, func, or_, select
+from sqlalchemy.dialects import postgresql, sqlite
 
 from sidequest_common.leveling import level_for_xp, level_progress
 from sidequest_common.models import (
@@ -19,6 +20,7 @@ from sidequest_common.models import (
     GuildEvent,
     LevelRole,
     Member,
+    MemberActivityHour,
     MemberLevel,
     XPGrant,
 )
@@ -31,6 +33,8 @@ from sidequest_common.schemas import (
     XP_LOOKBACK_DAYS,
     LeaderboardEntry,
     LeaderboardPage,
+    MessageBackfillBucket,
+    MessageBackfillResult,
     RankSchema,
     XPAwardResult,
     XPGrantResult,
@@ -38,13 +42,61 @@ from sidequest_common.schemas import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Callable, Iterable
     from uuid import UUID
+
+    from sqlalchemy.ext.asyncio import AsyncSession
 
     from sidequest_common.models.guild import GuildConfig
 
 MIN_COUNTED_PEAK_SIZE = 2
 """A group pays XP only if two or more members were ever in it, matching the Party Animal badge."""
+
+
+def _hour_start(moment: datetime) -> datetime:
+    """``moment`` truncated to its UTC hour, for ``MemberActivityHour.hour_start``."""
+    return moment.astimezone(UTC).replace(minute=0, second=0, microsecond=0)
+
+
+def _activity_insert(session: AsyncSession) -> Callable[..., postgresql.Insert | sqlite.Insert]:
+    """The ``INSERT ... ON CONFLICT`` builder for ``session``'s dialect: Postgres in prod, SQLite in tests."""
+    dialect = session.bind.dialect.name if session.bind is not None else "sqlite"
+    return postgresql.insert if dialect == "postgresql" else sqlite.insert
+
+
+async def _bump_activity_hour(
+    session: AsyncSession,
+    guild_id: int,
+    user_id: int,
+    hour_start: datetime,
+    *,
+    messages: int = 0,
+    voice_minutes: int = 0,
+    chat_xp: int = 0,
+    voice_xp: int = 0,
+) -> None:
+    """Add to one member's hourly activity row, creating it at zero if it doesn't exist. Doesn't commit."""
+    if not (messages or voice_minutes or chat_xp or voice_xp):
+        return
+    stmt = _activity_insert(session)(MemberActivityHour).values(
+        guild_id=guild_id,
+        user_id=user_id,
+        hour_start=hour_start,
+        messages=messages,
+        voice_minutes=voice_minutes,
+        chat_xp=chat_xp,
+        voice_xp=voice_xp,
+    )
+    stmt = stmt.on_conflict_do_update(
+        index_elements=["guild_id", "user_id", "hour_start"],
+        set_={
+            "messages": MemberActivityHour.messages + messages,
+            "voice_minutes": MemberActivityHour.voice_minutes + voice_minutes,
+            "chat_xp": MemberActivityHour.chat_xp + chat_xp,
+            "voice_xp": MemberActivityHour.voice_xp + voice_xp,
+        },
+    )
+    await session.execute(stmt)
 
 
 def _add_xp(member: MemberLevel, amount: int, config: GuildConfig, level_roles: list[LevelRole]) -> XPAwardResult:
@@ -124,15 +176,21 @@ class MemberLevelService(SQLAlchemyAsyncRepositoryService[MemberLevel]):
     async def award_xp(
         self, guild_id: int, user_id: int, config: GuildConfig, level_roles: list[LevelRole]
     ) -> XPAwardResult:
-        """One message's worth of XP, honoring cooldown/enabled state and reporting level-role deltas."""
+        """One message's worth of XP, honoring cooldown/enabled state and reporting level-role deltas.
+
+        Every call adds one message to the current UTC hour's ``MemberActivityHour`` row, and the XP actually
+        awarded (zero while on cooldown or leveling is off), in the same transaction.
+        """
         await self.get_or_create(guild_id, user_id)
         member = await self._locked(guild_id, user_id)
         member.message_count += 1
         now = datetime.now(UTC)
+        hour = _hour_start(now)
         on_cooldown = (
             member.last_xp_at is not None and (now - member.last_xp_at).total_seconds() < config.xp_cooldown_seconds
         )
         if not config.leveling_enabled or on_cooldown:
+            await _bump_activity_hour(self.repository.session, guild_id, user_id, hour, messages=1)
             await self.repository.session.commit()
             return XPAwardResult(
                 awarded=False,
@@ -145,6 +203,7 @@ class MemberLevelService(SQLAlchemyAsyncRepositoryService[MemberLevel]):
 
         member.last_xp_at = now
         result = _add_xp(member, random.randint(config.xp_min, config.xp_max), config, level_roles)  # noqa: S311
+        await _bump_activity_hour(self.repository.session, guild_id, user_id, hour, messages=1, chat_xp=result.amount)
         await self.repository.session.commit()
         return result
 
@@ -167,21 +226,37 @@ class MemberLevelService(SQLAlchemyAsyncRepositoryService[MemberLevel]):
         self,
         guild_id: int,
         user_ids: Iterable[int],
+        present_user_ids: Iterable[int],
+        *,
         minutes: int,
         config: GuildConfig,
         level_roles: list[LevelRole],
     ) -> list[XPGrantResult]:
-        """``VOICE_XP_PER_MINUTE`` per minute to each member. The bot decides who counts as in voice."""
+        """``VOICE_XP_PER_MINUTE`` per minute to each XP-eligible member.
+
+        Records ``minutes`` of voice presence for every id in ``present_user_ids`` or ``user_ids`` (an old bot
+        sends only ``user_ids``), even when leveling is disabled; only XP-eligible members (``user_ids``) get
+        XP, and only while leveling is enabled.
+        """
+        session = self.repository.session
+        now = datetime.now(UTC)
+        hour = _hour_start(now)
+        present = sorted(set(user_ids) | set(present_user_ids))  # a fixed lock order, so two batches can't deadlock
+        for user_id in present:
+            await _bump_activity_hour(session, guild_id, user_id, hour, voice_minutes=minutes)
         if not config.leveling_enabled:
+            await session.commit()
             return []
         amount = VOICE_XP_PER_MINUTE * minutes
-        results = [
-            await self._grant(
-                guild_id, user_id, amount=amount, source=XPSource.VOICE, config=config, level_roles=level_roles
+        results: list[XPGrantResult] = []
+        for user_id in sorted(set(user_ids)):
+            results.append(
+                await self._grant(
+                    guild_id, user_id, amount=amount, source=XPSource.VOICE, config=config, level_roles=level_roles
+                )
             )
-            for user_id in sorted(set(user_ids))  # a fixed lock order, so two batches can't deadlock
-        ]
-        await self.repository.session.commit()
+            await _bump_activity_hour(session, guild_id, user_id, hour, voice_xp=amount)
+        await session.commit()
         return results
 
     async def sync_activity(
@@ -352,6 +427,38 @@ class MemberLevelService(SQLAlchemyAsyncRepositoryService[MemberLevel]):
             for i, row in enumerate(rows)
         ]
         return LeaderboardPage(entries=entries, total=total, limit=limit, offset=offset)
+
+    async def backfill_messages(self, guild_id: int, buckets: list[MessageBackfillBucket]) -> MessageBackfillResult:
+        """Message counts read once from Discord channel history.
+
+        Sets each bucket's ``messages`` to the higher of the existing and reported value (idempotent and safe to
+        replay), never lowers a live count, and never touches ``MemberLevel.message_count`` or XP.
+        """
+        if not buckets:
+            return MessageBackfillResult(buckets=0)
+        merged: dict[tuple[int, datetime], int] = {}
+        for bucket in buckets:
+            key = (bucket.user_id, _hour_start(bucket.hour_start))
+            merged[key] = max(merged.get(key, 0), bucket.messages)
+        session = self.repository.session
+        insert_fn = _activity_insert(session)
+        values = [
+            {"guild_id": guild_id, "user_id": user_id, "hour_start": hour, "messages": messages}
+            for (user_id, hour), messages in merged.items()
+        ]
+        stmt = insert_fn(MemberActivityHour).values(values)
+        stmt = stmt.on_conflict_do_update(
+            index_elements=["guild_id", "user_id", "hour_start"],
+            set_={
+                "messages": case(
+                    (stmt.excluded.messages > MemberActivityHour.messages, stmt.excluded.messages),
+                    else_=MemberActivityHour.messages,
+                )
+            },
+        )
+        await session.execute(stmt)
+        await session.commit()
+        return MessageBackfillResult(buckets=len(values))
 
 
 class LevelRoleRepository(SQLAlchemyAsyncRepository[LevelRole]):

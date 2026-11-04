@@ -58,6 +58,16 @@ import "../../styles/room-officers.css";
       <button
         type="button"
         role="tab"
+        id="tab-statistics"
+        aria-controls="panel-statistics"
+        aria-selected="false"
+        tabindex="-1"
+      >
+        Statistics
+      </button>
+      <button
+        type="button"
+        role="tab"
         id="tab-members"
         aria-controls="panel-members"
         aria-selected="false"
@@ -501,6 +511,83 @@ import "../../styles/room-officers.css";
       </div>
     </section>
 
+    <section id="panel-statistics" role="tabpanel" aria-labelledby="tab-statistics" tabindex="0" hidden>
+      <div class="chamber">
+        <h2 class="chamber-title">Guild activity</h2>
+        <p class="aside" id="stats-tracking-note"></p>
+        <div class="tabs" role="tablist" aria-label="Stats range" id="stats-range-tabs">
+          <button type="button" role="tab" data-range="7d" aria-selected="false" tabindex="-1">
+            Last 7 days
+          </button>
+          <button type="button" role="tab" data-range="30d" aria-selected="true" tabindex="0">
+            Last 30 days
+          </button>
+          <button type="button" role="tab" data-range="90d" aria-selected="false" tabindex="-1">
+            Last 90 days
+          </button>
+          <button type="button" role="tab" data-range="all" aria-selected="false" tabindex="-1">
+            All time
+          </button>
+        </div>
+        <div class="stats-kpi-grid" id="stats-kpi-grid"></div>
+        <h3 class="sub-title">Activity trend</h3>
+        <div
+          id="stats-trend-chart"
+          class="attendance-trend-chart"
+          role="img"
+          aria-label="Messages and voice hours trend"
+        ></div>
+        <h3 class="sub-title">Busy hours</h3>
+        <p class="aside">When members are active, by weekday and hour, America/Chicago.</p>
+        <div class="groups-heat-wrap">
+          <div class="groups-heat-grid" id="stats-heat-grid" role="img" aria-label="Activity heat grid"></div>
+        </div>
+      </div>
+
+      <div class="chamber">
+        <h2 class="chamber-title">Leaderboards</h2>
+        <div class="stats-leaderboard-grid">
+          <div>
+            <h3 class="sub-title">Top chatters</h3>
+            <ol class="groups-stat-list" id="stats-top-chatters" aria-label="Top chatters"></ol>
+          </div>
+          <div>
+            <h3 class="sub-title">Top voice</h3>
+            <ol class="groups-stat-list" id="stats-top-voice" aria-label="Top voice"></ol>
+          </div>
+          <div>
+            <h3 class="sub-title">Top events</h3>
+            <ol class="groups-stat-list" id="stats-top-events" aria-label="Top events"></ol>
+          </div>
+          <div>
+            <h3 class="sub-title">Top groups</h3>
+            <ol class="groups-stat-list" id="stats-top-groups" aria-label="Top groups"></ol>
+          </div>
+          <div>
+            <h3 class="sub-title">Top XP gained</h3>
+            <ol class="groups-stat-list" id="stats-top-xp" aria-label="Top XP gained"></ol>
+          </div>
+        </div>
+      </div>
+
+      <div class="chamber">
+        <h2 class="chamber-title">Gone quiet</h2>
+        <p class="aside">Roster members with no messages, voice or attended event in the last 30 days.</p>
+        <div class="attendance-table-wrap">
+          <table class="attendance-table" id="stats-quiet-table">
+            <thead>
+              <tr>
+                <th scope="col">Member</th>
+                <th scope="col">Level</th>
+                <th scope="col">Last active</th>
+              </tr>
+            </thead>
+            <tbody id="stats-quiet-rows"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
     <section id="panel-members" role="tabpanel" aria-labelledby="tab-members" tabindex="0" hidden>
       <div class="chamber-pair">
         <div class="chamber">
@@ -648,9 +735,18 @@ import "../../styles/room-officers.css";
     type McpToken,
     type McpTokenCreated,
     type McpTokens,
+    type GuildStats,
+    type StatsRange,
+    type StatsTotals,
+    type StatsTrendPoint,
+    type StatsHourCell,
+    type StatsLeader,
+    type StatsPerson,
+    type StatsQuietMember,
   } from "../../scripts/api";
   import { onPage } from "../../scripts/page";
   import { seriesRuleText, weekdayPhrase, WEEKDAY_SHORT_LABELS } from "../../scripts/series";
+  import { renderActivityChart as renderGroupedActivityChart } from "../../scripts/activity-chart";
 
   function avatarMarkup(name: string, avatarUrl: string | null, size: number): string {
     if (avatarUrl) {
@@ -931,6 +1027,59 @@ import "../../styles/room-officers.css";
 
   function hourLabel(hour: number): string {
     return hour === 0 ? "12a" : hour < 12 ? `${hour}a` : hour === 12 ? "12p" : `${hour - 12}p`;
+  }
+
+  function statsPersonName(p: StatsPerson): string {
+    return p.member_id !== null
+      ? `<a href="/heroes/member/?id=${p.member_id}">${escapeHtml(p.display_name)}</a>`
+      : escapeHtml(p.display_name);
+  }
+
+  function statsCount(n: number): string {
+    return n.toLocaleString();
+  }
+
+  function statsHours(mins: number): string {
+    return `${(mins / 60).toFixed(1)}h`;
+  }
+
+  function changeBadge(delta: number | null, format: (n: number) => string): string {
+    if (delta === null || delta === 0) {
+      return delta === 0 ? `<span class="stats-kpi-change stats-kpi-change-flat">±0</span>` : "";
+    }
+    const tone = delta > 0 ? "up" : "down";
+    const sign = delta > 0 ? "+" : "\u2212";
+    return `<span class="stats-kpi-change stats-kpi-change-${tone}">${sign}${format(Math.abs(delta))}</span>`;
+  }
+
+  function statsKpiTile(label: string, value: string, delta: number | null, format: (n: number) => string): string {
+    return `
+      <div class="stats-kpi-tile">
+        <span class="stats-kpi-label">${escapeHtml(label)}</span>
+        <span class="stats-kpi-value">${escapeHtml(value)}</span>
+        ${changeBadge(delta, format)}
+      </div>`;
+  }
+
+  function statsTotalsDiff(key: keyof StatsTotals, previous: StatsTotals | null, totals: StatsTotals): number | null {
+    return previous ? totals[key] - previous[key] : null;
+  }
+
+  function renderStatsLeaderboard(
+    el: HTMLElement,
+    leaders: StatsLeader[],
+    valueLabel: (value: number) => string,
+  ): void {
+    renderGroupList(
+      el,
+      leaders.map(
+        (l, i) => `
+      <li>
+        <span class="groups-stat-main"><span class="groups-stat-rank">#${i + 1}</span>${statsPersonName(l.person)}</span>
+        <span class="groups-stat-value">${valueLabel(l.value)}</span>
+      </li>`,
+      ),
+    );
   }
   onPage("#officers-body", (signal) => {
     const statusEl = requireElement("officers-status");
@@ -1874,6 +2023,143 @@ import "../../styles/room-officers.css";
       await Promise.all([loadGroupStats(), loadGroupSessions(true)]);
     }
 
+    // ——— Statistics (every officer) ———
+    const statsRangeTabsEl = requireElement("stats-range-tabs");
+    const statsTrackingNoteEl = requireElement("stats-tracking-note");
+    const statsKpiGridEl = requireElement("stats-kpi-grid");
+    const statsTrendChartEl = requireElement("stats-trend-chart");
+    const statsHeatGridEl = requireElement("stats-heat-grid");
+    const statsTopChattersEl = requireElement("stats-top-chatters");
+    const statsTopVoiceEl = requireElement("stats-top-voice");
+    const statsTopEventsEl = requireElement("stats-top-events");
+    const statsTopGroupsEl = requireElement("stats-top-groups");
+    const statsTopXpEl = requireElement("stats-top-xp");
+    const statsQuietRowsEl = requireElement("stats-quiet-rows");
+
+    let statsRange: StatsRange = "30d";
+    let statsLoaded = false;
+
+    function renderStatsKpis(totals: StatsTotals, previous: StatsTotals | null): void {
+      statsKpiGridEl.innerHTML = [
+        statsKpiTile(
+          "Active members",
+          String(totals.active_members),
+          statsTotalsDiff("active_members", previous, totals),
+          statsCount,
+        ),
+        statsKpiTile(
+          "Messages",
+          totals.messages.toLocaleString(),
+          statsTotalsDiff("messages", previous, totals),
+          statsCount,
+        ),
+        statsKpiTile(
+          "Voice hours",
+          statsHours(totals.voice_minutes),
+          statsTotalsDiff("voice_minutes", previous, totals),
+          statsHours,
+        ),
+        statsKpiTile(
+          "Events attended",
+          String(totals.events_attended),
+          statsTotalsDiff("events_attended", previous, totals),
+          statsCount,
+        ),
+        statsKpiTile(
+          "Groups joined",
+          String(totals.groups_joined),
+          statsTotalsDiff("groups_joined", previous, totals),
+          statsCount,
+        ),
+        statsKpiTile(
+          "XP gained",
+          totals.xp_gained.toLocaleString(),
+          statsTotalsDiff("xp_gained", previous, totals),
+          statsCount,
+        ),
+      ].join("");
+    }
+
+    function renderStatsTrendChart(points: StatsTrendPoint[]): void {
+      renderGroupedActivityChart(
+        statsTrendChartEl,
+        points.map((p) => ({ date: p.start, messages: p.messages, voice_minutes: p.voice_minutes })),
+        { emptyMessage: "No activity in this range yet.", dateFormat: shortDateFormat, maxLabels: 10 },
+      );
+    }
+
+    function renderStatsHeatmap(cells: StatsHourCell[]): void {
+      const max = Math.max(1, ...cells.map((c) => c.messages + c.voice_minutes));
+      const byCell = new Map(cells.map((c) => [`${c.weekday}-${c.hour}`, c]));
+      const gridCells: string[] = [`<span class="groups-heat-corner"></span>`];
+      for (let hour = 0; hour < 24; hour++) {
+        gridCells.push(`<span class="groups-heat-hour-label">${hour % 3 === 0 ? hourLabel(hour) : ""}</span>`);
+      }
+      for (let weekday = 0; weekday < 7; weekday++) {
+        gridCells.push(`<span class="groups-heat-row-label">${WEEKDAY_LABELS[weekday]}</span>`);
+        for (let hour = 0; hour < 24; hour++) {
+          const cell = byCell.get(`${weekday}-${hour}`);
+          const weight = cell ? cell.messages + cell.voice_minutes : 0;
+          const alpha = weight === 0 ? 0 : 0.15 + 0.85 * (weight / max);
+          const label = cell
+            ? `${WEEKDAY_LABELS[weekday]} ${hourLabel(hour)} \u2014 ${cell.messages} message${cell.messages === 1 ? "" : "s"}, ${cell.voice_minutes} voice min`
+            : `${WEEKDAY_LABELS[weekday]} ${hourLabel(hour)} \u2014 quiet`;
+          gridCells.push(
+            `<span class="groups-heat-cell" style="background:rgba(201,162,75,${alpha})" title="${escapeHtml(label)}" aria-label="${escapeHtml(label)}"></span>`,
+          );
+        }
+      }
+      statsHeatGridEl.innerHTML = gridCells.join("");
+    }
+
+    function renderGoneQuiet(members: StatsQuietMember[]): void {
+      statsQuietRowsEl.innerHTML =
+        members.length > 0
+          ? members
+              .map(
+                (m) => `
+      <tr>
+        <td>${avatarMarkup(m.person.display_name, m.person.avatar_url, 28)} ${statsPersonName(m.person)}</td>
+        <td>${m.level}</td>
+        <td>${m.last_active_at ? dateFormat.format(new Date(m.last_active_at)) : "Never active"}</td>
+      </tr>`,
+              )
+              .join("")
+          : `<tr><td colspan="3" class="aside">Nobody's gone quiet. Everyone's been active in the last 30 days.</td></tr>`;
+    }
+
+    async function loadStats(): Promise<void> {
+      statsKpiGridEl.innerHTML = `<p class="aside">Loading\u2026</p>`;
+      try {
+        const stats = await apiFetch<GuildStats>(`/api/stats?range=${statsRange}`, { signal });
+        statsTrackingNoteEl.textContent = stats.tracking_since
+          ? `Voice and message tracking started ${dateFormat.format(new Date(stats.tracking_since))}.`
+          : "Voice and message tracking hasn't started yet.";
+        renderStatsKpis(stats.totals, stats.previous);
+        renderStatsTrendChart(stats.trend);
+        renderStatsHeatmap(stats.heatmap);
+        renderStatsLeaderboard(
+          statsTopChattersEl,
+          stats.top_chatters,
+          (v) => `${v.toLocaleString()} message${v === 1 ? "" : "s"}`,
+        );
+        renderStatsLeaderboard(statsTopVoiceEl, stats.top_voice, (v) => statsHours(v));
+        renderStatsLeaderboard(statsTopEventsEl, stats.top_events, (v) => `${v} event${v === 1 ? "" : "s"}`);
+        renderStatsLeaderboard(statsTopGroupsEl, stats.top_groups, (v) => `${v} group${v === 1 ? "" : "s"}`);
+        renderStatsLeaderboard(statsTopXpEl, stats.top_xp, (v) => `${v.toLocaleString()} XP`);
+        renderGoneQuiet(stats.gone_quiet);
+      } catch (err) {
+        statsKpiGridEl.innerHTML = `<p class="status" data-tone="error">${escapeHtml(statusMessage(err))}</p>`;
+        statsTrendChartEl.innerHTML = "";
+        statsHeatGridEl.innerHTML = "";
+      }
+    }
+
+    setupTablist(statsRangeTabsEl, (tab) => {
+      statsRange = (tab.dataset.range ?? "30d") as StatsRange;
+      void loadStats();
+    });
+
     // ——— Members (Quest Masters only) ———
     const memberSearch = requireElement<HTMLInputElement>("m-search");
     const memberFilterTabsEl = requireElement("member-filter-tabs");
@@ -2632,6 +2918,7 @@ import "../../styles/room-officers.css";
       "attendance",
       "mcp",
       "groups",
+      "statistics",
       "members",
       "log",
       "moderation",
@@ -2663,6 +2950,9 @@ import "../../styles/room-officers.css";
       } else if (name === "groups" && !groupsLoaded) {
         groupsLoaded = true;
         void loadGroups();
+      } else if (name === "statistics" && !statsLoaded) {
+        statsLoaded = true;
+        void loadStats();
       }
     }
 

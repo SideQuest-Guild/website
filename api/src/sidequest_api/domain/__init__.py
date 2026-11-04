@@ -39,6 +39,7 @@ from sidequest_api.domain.recruiting.controllers import RecruitingController
 from sidequest_api.domain.role_menus.controllers import RoleMenusController
 from sidequest_api.domain.role_resets.controllers import RoleResetsController
 from sidequest_api.domain.signup_notices.controllers import SignupNoticesController
+from sidequest_api.domain.stats.controllers import StatsController
 from sidequest_api.domain.system.controllers import HealthController
 from sidequest_api.domain.weekly_board.controllers import WeeklyBoardController
 
@@ -89,4 +90,5 @@ public_routes = [
     McpTokensController,
     EpgpMemberNotesController,
     GroupStatsController,
+    StatsController,
 ]

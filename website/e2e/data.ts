@@ -37,6 +37,9 @@ import type {
   GuildMarket,
   GuildNewsItem,
   GuildRoster,
+  GuildStats,
+  HeroActivity,
+  HeroDay,
   HeroLeaderboard,
   HeroProfile,
   HeroRow,
@@ -44,6 +47,7 @@ import type {
   Me,
   Recruiting,
   Signup,
+  StatsPerson,
 } from "../src/scripts/api";
 
 const inDays = (days: number, hour = 20): string => {
@@ -377,6 +381,92 @@ export function heroProfile(row: HeroRow): HeroProfile {
     badges: [badge("first_steps", "First Steps", "Attended their first guild event.", "👣", 60)],
   };
 }
+
+export function heroActivity(row: HeroRow): HeroActivity {
+  const days: HeroDay[] = Array.from({ length: 30 }, (_, i) => ({
+    day: inDays(-(29 - i)).slice(0, 10),
+    messages: 5 + ((i * 3) % 12),
+    voice_minutes: (i % 4) * 15,
+  }));
+  return {
+    member_id: row.member_id,
+    level: row.chat_level,
+    xp: row.chat_level * 1000 + 250,
+    xp_into_level: 250,
+    xp_for_next_level: 1000,
+    xp_rank: row.rank,
+    ranked_members: HEROES.length,
+    next_reward: { level: row.chat_level + 5, role_name: "Chatterbox" },
+    message_count: 480,
+    voice_minutes: 2100,
+    events_attended: row.events_attended,
+    groups_joined: 12,
+    messages_30d: 140,
+    voice_minutes_30d: 360,
+    chat_rank_30d: row.rank,
+    voice_rank_30d: row.rank,
+    current_streak_days: 4,
+    longest_streak_days: 11,
+    xp_sources: { chat: 1200, voice: 900, events: row.events_attended * 50, groups: 300, earlier: 150 },
+    days,
+    heatmap: [
+      { weekday: 4, hour: 20, messages: 12, voice_minutes: 45 },
+      { weekday: 5, hour: 21, messages: 8, voice_minutes: 30 },
+    ],
+    tracking_since: inDays(-60),
+  };
+}
+
+// ——— Server stats (officer /officers/#statistics and hero profiles) ———
+const statsPerson = (discord: Me, memberId: number | null = null): StatsPerson => ({
+  discord_id: discord.discord_id,
+  display_name: discord.display_name,
+  avatar_url: null,
+  member_id: memberId,
+});
+
+export const GUILD_STATS: GuildStats = {
+  range: "30d",
+  since: inDays(-30).slice(0, 10),
+  tracking_since: inDays(-60).slice(0, 10),
+  totals: {
+    active_members: 3,
+    messages: 820,
+    voice_minutes: 2400,
+    events_attended: 18,
+    groups_joined: 14,
+    xp_gained: 3200,
+  },
+  previous: {
+    active_members: 2,
+    messages: 650,
+    voice_minutes: 2000,
+    events_attended: 14,
+    groups_joined: 9,
+    xp_gained: 2600,
+  },
+  trend_bucket: "day",
+  trend: Array.from({ length: 7 }, (_, i) => ({
+    start: inDays(-(6 - i)).slice(0, 10),
+    messages: 80 + i * 10,
+    voice_minutes: 200 + i * 20,
+    active_members: 2 + (i % 2),
+  })),
+  heatmap: [
+    { weekday: 4, hour: 20, messages: 60, voice_minutes: 180 },
+    { weekday: 5, hour: 21, messages: 40, voice_minutes: 120 },
+    { weekday: 6, hour: 15, messages: 10, voice_minutes: 30 },
+  ],
+  top_chatters: [
+    { person: statsPerson(GM, GM.id), value: 240 },
+    { person: statsPerson(OFFICER, OFFICER.id), value: 180 },
+  ],
+  top_voice: [{ person: statsPerson(GM, GM.id), value: 600 }],
+  top_events: [{ person: statsPerson(GM, GM.id), value: 18 }],
+  top_groups: [{ person: statsPerson(OFFICER, OFFICER.id), value: 7 }],
+  top_xp: [{ person: statsPerson(GM, GM.id), value: 1200 }],
+  gone_quiet: [{ person: statsPerson(MEMBER, MEMBER.id), last_active_at: inDays(-35), level: 6 }],
+};
 
 // ——— Group voice channel fixtures (#lfg) ———
 export const GROUP_STATS: GroupStats = {

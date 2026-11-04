@@ -410,6 +410,21 @@ test.describe("officers", () => {
     await expect(row).toHaveCount(0);
     await expect(page.locator("#mcp-token-list")).not.toContainText(MCP_TOKENS[0]!.name);
   });
+
+  test("members don't see the Statistics tab", async ({ page, site }) => {
+    site.signIn(MEMBER);
+    await page.goto("/officers/#statistics");
+    await expect(page.locator("#officers-gate")).toBeVisible();
+    await expect(page.locator("#tab-statistics")).toBeHidden();
+  });
+
+  test("officers see the Statistics tab with leaderboards", async ({ page, site }) => {
+    site.signIn(OFFICER);
+    await page.goto("/officers/#statistics");
+    await expect(page.locator("#tab-statistics")).toHaveAttribute("aria-selected", "true");
+    await expect(page.locator("#stats-kpi-grid")).toContainText("Messages");
+    await expect(page.locator("#stats-top-chatters")).toContainText(GM.display_name);
+  });
 });
 
 test.describe("ledger", () => {
@@ -625,6 +640,14 @@ test.describe("hall of heroes", () => {
     await expect(page.getByRole("heading", { level: 1, name: GM.display_name })).toBeVisible();
     await expect(page.locator("#hero-badge-case")).toContainText("First Steps");
     await expect(page.locator("#hero-recent-events")).toContainText(LONG_TITLE);
+  });
+
+  test("a hero's profile shows level, messages and voice hours from the Adventurer's Log", async ({ page, site }) => {
+    site.signIn(MEMBER);
+    await page.goto(`/heroes/member/?id=${GM.id}`);
+    await expect(page.locator("#hero-activity-level")).toContainText("Lv.");
+    await expect(page.locator("#hero-activity-tiles")).toContainText("Messages");
+    await expect(page.locator("#hero-activity-tiles")).toContainText("Voice hours");
   });
 
   test("an unknown member says so", async ({ page, site }) => {

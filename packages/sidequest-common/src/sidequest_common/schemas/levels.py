@@ -1,5 +1,6 @@
 """Leveling schemas, and how much XP each kind of activity is worth."""
 
+from datetime import datetime  # pydantic needs it at runtime
 from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -15,6 +16,8 @@ EVENT_XP_GRACE_HOURS = 24
 XP_LOOKBACK_DAYS = 30
 """Events and groups older than this never pay XP, so turning leveling on doesn't reward ancient history."""
 MAX_VOICE_XP_MEMBERS = 500
+MAX_BACKFILL_BUCKETS = 5000
+"""Buckets accepted per ``PUT /activity/messages`` call."""
 
 
 class XPSource(StrEnum):
@@ -53,8 +56,39 @@ class XPGrantResult(XPAwardResult):
 class VoiceXPRequest(BaseModel):
     """Body for ``POST /xp/voice``: members who spent ``minutes`` in voice, already filtered by the bot."""
 
-    user_ids: list[int] = Field(max_length=MAX_VOICE_XP_MEMBERS, description="Discord user IDs to award.")
+    user_ids: list[int] = Field(
+        default_factory=list, max_length=MAX_VOICE_XP_MEMBERS, description="Discord user IDs to award XP to."
+    )
+    present_user_ids: list[int] = Field(
+        default_factory=list,
+        max_length=MAX_VOICE_XP_MEMBERS,
+        description=(
+            "Discord user IDs present under the stats voice rule (any voice/stage channel but the AFK channel, "
+            "with at least two non-bot members), which may be a superset of user_ids. Their voice minutes are "
+            "recorded even when leveling is disabled or they aren't eligible for voice XP."
+        ),
+    )
     minutes: int = Field(default=1, ge=1, le=10, description="Minutes each member spent in voice since the last call.")
+
+
+class MessageBackfillBucket(BaseModel):
+    """One hour's message count for one member, read once from Discord channel history."""
+
+    user_id: int = Field(description="The member's Discord user ID.")
+    hour_start: datetime = Field(description="The UTC hour this count covers; normalized to the hour on save.")
+    messages: int = Field(ge=0, description="Messages sent in that hour.")
+
+
+class MessageBackfill(BaseModel):
+    """Body for ``PUT /activity/messages``: message counts read once from Discord channel history."""
+
+    buckets: list[MessageBackfillBucket] = Field(max_length=MAX_BACKFILL_BUCKETS)
+
+
+class MessageBackfillResult(BaseModel):
+    """Reply to ``PUT /activity/messages``."""
+
+    buckets: int = Field(description="How many (member, hour) buckets were touched.")
 
 
 class XPActivityReport(BaseModel):

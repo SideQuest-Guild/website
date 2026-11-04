@@ -7,7 +7,7 @@ defined once in ``sidequest_api.lib.attendance.attended_condition``; every stat 
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime, timedelta
 from typing import TYPE_CHECKING
 from zoneinfo import ZoneInfo
 
@@ -18,18 +18,37 @@ from sqlalchemy.ext.asyncio import AsyncSession  # noqa: TC002
 from sidequest_api.lib.attendance import attended_condition
 from sidequest_api.lib.discord import avatar_url
 from sidequest_common.leveling import level_progress
-from sidequest_common.models import EventSignup, GuildEvent, GuildRole, Member, MemberBadge, MemberLevel
+from sidequest_common.models import (
+    EventSignup,
+    GroupSession,
+    GroupSessionMember,
+    GuildEvent,
+    GuildRole,
+    LevelRole,
+    Member,
+    MemberActivityHour,
+    MemberBadge,
+    MemberLevel,
+    XPGrant,
+)
 from sidequest_common.schemas import (
     BADGES,
+    COUNTED_GROUP_MINUTES,
     EVENT_KIND_EP,
     SEASONS,
     EarnedBadge,
+    HeroActivity,
+    HeroDay,
     HeroLeaderboard,
+    HeroLevelReward,
     HeroProfile,
     HeroRecentEvent,
     HeroRow,
     HeroSeasonStats,
+    HeroXPSources,
+    StatsHourCell,
     WowClass,
+    XPSource,
     event_ep,
 )
 
@@ -39,6 +58,11 @@ if TYPE_CHECKING:
 
 RECENT_EVENTS_LIMIT = 5
 GUILD_TZ = ZoneInfo("America/Chicago")
+MIN_COUNTED_PEAK_SIZE = 2
+"""A group counts toward activity only once two or more members were ever present together, like group XP."""
+ACTIVITY_DAYS = 30
+"""Days shown on the profile's daily activity chart and used for the 30-day chat/voice ranks."""
+HEATMAP_DAYS = 90
 
 _WOW_CLASSES = tuple(cls.value for cls in WowClass)
 
@@ -64,6 +88,25 @@ def _season_window(season: str, now: datetime) -> tuple[datetime | None, datetim
 def _current_season() -> Season:
     """The season with no end date: the one currently running."""
     return SEASONS[-1]
+
+
+def _streaks(active_days: set[date], today: date) -> tuple[int, int]:
+    """``(current, longest)`` consecutive-day streaks of ``active_days``. Current counts back from ``today``."""
+    if not active_days:
+        return 0, 0
+    current = 0
+    day = today
+    while day in active_days:
+        current += 1
+        day -= timedelta(days=1)
+    longest = 0
+    run = 0
+    previous: date | None = None
+    for day in sorted(active_days):
+        run = run + 1 if previous is not None and day == previous + timedelta(days=1) else 1
+        longest = max(longest, run)
+        previous = day
+    return current, longest
 
 
 class HeroesService:
@@ -365,3 +408,205 @@ class HeroesService:
             recent_events=recent_events,
             badges=badges,
         )
+
+    async def get_activity(  # noqa: PLR0915 - one cohesive stats assembly, splitting hides the shared row/reference state
+        self, member_id: int, *, now: datetime | None = None
+    ) -> HeroActivity:
+        """MEE6-style stats for a member's Hall of Heroes profile: level/XP, ranks, streaks, charts."""
+        member = await self._session.get(Member, member_id)
+        if member is None:
+            msg = f"No member {member_id}"
+            raise NotFoundException(msg)
+        reference = now or datetime.now(UTC)
+        guild_id = self._web_settings.GUILD_ID
+        discord_id = member.discord_id
+
+        level = (
+            await self._session.execute(
+                select(MemberLevel).where(MemberLevel.guild_id == guild_id, MemberLevel.user_id == discord_id)
+            )
+        ).scalar_one_or_none()
+        xp = level.xp if level else 0
+        progress = level_progress(xp)
+
+        xp_rank = None
+        if xp > 0:
+            higher = (
+                await self._session.execute(
+                    select(func.count())
+                    .select_from(MemberLevel)
+                    .where(MemberLevel.guild_id == guild_id, MemberLevel.xp > xp)
+                )
+            ).scalar_one()
+            xp_rank = higher + 1
+        ranked_members = (
+            await self._session.execute(
+                select(func.count())
+                .select_from(MemberLevel)
+                .where(MemberLevel.guild_id == guild_id, MemberLevel.xp > 0)
+            )
+        ).scalar_one()
+
+        next_reward = None
+        reward_row = (
+            await self._session.execute(
+                select(LevelRole)
+                .where(LevelRole.guild_id == guild_id, LevelRole.level > progress.level)
+                .order_by(LevelRole.level.asc())
+                .limit(1)
+            )
+        ).scalar_one_or_none()
+        if reward_row is not None:
+            role = (
+                await self._session.execute(
+                    select(GuildRole).where(GuildRole.guild_id == guild_id, GuildRole.role_id == reward_row.role_id)
+                )
+            ).scalar_one_or_none()
+            role_name = role.name if role is not None else f"Role {reward_row.role_id}"
+            next_reward = HeroLevelReward(level=reward_row.level, role_name=role_name)
+
+        activity_rows = (
+            (
+                await self._session.execute(
+                    select(MemberActivityHour).where(
+                        MemberActivityHour.guild_id == guild_id, MemberActivityHour.user_id == discord_id
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+        voice_minutes = sum(row.voice_minutes for row in activity_rows)
+        chat_xp_total = sum(row.chat_xp for row in activity_rows)
+        voice_xp_total = sum(row.voice_xp for row in activity_rows)
+
+        cutoff_30d = reference - timedelta(days=ACTIVITY_DAYS)
+        messages_30d = sum(row.messages for row in activity_rows if row.hour_start >= cutoff_30d)
+        voice_minutes_30d = sum(row.voice_minutes for row in activity_rows if row.hour_start >= cutoff_30d)
+        chat_rank_30d = await self._rank_among_30d(guild_id, cutoff_30d, discord_id, by="messages")
+        voice_rank_30d = await self._rank_among_30d(guild_id, cutoff_30d, discord_id, by="voice_minutes")
+
+        active_days = {
+            row.hour_start.astimezone(GUILD_TZ).date()
+            for row in activity_rows
+            if row.messages > 0 or row.voice_minutes > 0
+        }
+        current_streak, longest_streak = _streaks(active_days, reference.astimezone(GUILD_TZ).date())
+
+        events_attended = (
+            await self._session.execute(
+                select(func.count())
+                .select_from(EventSignup)
+                .join(GuildEvent, GuildEvent.id == EventSignup.event_id)
+                .where(EventSignup.member_id == member_id, attended_condition(now=reference))
+            )
+        ).scalar_one()
+        groups_joined = (
+            await self._session.execute(
+                select(func.count())
+                .select_from(GroupSessionMember)
+                .join(GroupSession, GroupSession.id == GroupSessionMember.session_id)
+                .where(
+                    GroupSessionMember.discord_id == discord_id,
+                    GroupSession.ended_at.is_not(None),
+                    GroupSession.peak_size >= MIN_COUNTED_PEAK_SIZE,
+                    GroupSession.grouped_minutes >= COUNTED_GROUP_MINUTES,
+                    GroupSessionMember.minutes >= COUNTED_GROUP_MINUTES,
+                )
+            )
+        ).scalar_one()
+
+        grant_rows = (
+            await self._session.execute(
+                select(XPGrant.source, func.sum(XPGrant.amount))
+                .where(XPGrant.guild_id == guild_id, XPGrant.user_id == discord_id)
+                .group_by(XPGrant.source)
+            )
+        ).all()
+        grant_totals = {source: int(total) for source, total in grant_rows}
+        event_xp = grant_totals.get(XPSource.EVENT.value, 0)
+        group_xp = grant_totals.get(XPSource.GROUP.value, 0)
+        tracked = chat_xp_total + voice_xp_total + event_xp + group_xp
+        xp_sources = HeroXPSources(
+            chat=chat_xp_total, voice=voice_xp_total, events=event_xp, groups=group_xp, earlier=max(0, xp - tracked)
+        )
+
+        days: list[HeroDay] = []
+        today = reference.astimezone(GUILD_TZ).date()
+        daily: dict[object, dict[str, int]] = {}
+        for row in activity_rows:
+            local_date = row.hour_start.astimezone(GUILD_TZ).date()
+            if local_date < today - timedelta(days=ACTIVITY_DAYS - 1):
+                continue
+            entry = daily.setdefault(local_date, {"messages": 0, "voice_minutes": 0})
+            entry["messages"] += row.messages
+            entry["voice_minutes"] += row.voice_minutes
+        for offset in range(ACTIVITY_DAYS - 1, -1, -1):
+            day = today - timedelta(days=offset)
+            entry = daily.get(day, {"messages": 0, "voice_minutes": 0})
+            days.append(HeroDay(day=day, messages=entry["messages"], voice_minutes=entry["voice_minutes"]))
+
+        heatmap_cutoff = today - timedelta(days=HEATMAP_DAYS - 1)
+        hour_counts: dict[tuple[int, int], dict[str, int]] = {}
+        for row in activity_rows:
+            local = row.hour_start.astimezone(GUILD_TZ)
+            if local.date() < heatmap_cutoff:
+                continue
+            key = (local.weekday(), local.hour)
+            entry = hour_counts.setdefault(key, {"messages": 0, "voice_minutes": 0})
+            entry["messages"] += row.messages
+            entry["voice_minutes"] += row.voice_minutes
+        heatmap = sorted(
+            (
+                StatsHourCell(weekday=w, hour=h, messages=v["messages"], voice_minutes=v["voice_minutes"])
+                for (w, h), v in hour_counts.items()
+                if v["messages"] or v["voice_minutes"]
+            ),
+            key=lambda cell: (cell.weekday, cell.hour),
+        )
+
+        tracking_since = (
+            await self._session.execute(
+                select(func.min(MemberActivityHour.hour_start)).where(MemberActivityHour.guild_id == guild_id)
+            )
+        ).scalar_one_or_none()
+
+        return HeroActivity(
+            member_id=member_id,
+            level=progress.level,
+            xp=xp,
+            xp_into_level=progress.xp_into_level,
+            xp_for_next_level=progress.xp_for_next_level,
+            xp_rank=xp_rank,
+            ranked_members=ranked_members,
+            next_reward=next_reward,
+            message_count=level.message_count if level else 0,
+            voice_minutes=voice_minutes,
+            events_attended=events_attended,
+            groups_joined=groups_joined,
+            messages_30d=messages_30d,
+            voice_minutes_30d=voice_minutes_30d,
+            chat_rank_30d=chat_rank_30d,
+            voice_rank_30d=voice_rank_30d,
+            current_streak_days=current_streak,
+            longest_streak_days=longest_streak,
+            xp_sources=xp_sources,
+            days=days,
+            heatmap=heatmap,
+            tracking_since=tracking_since,
+        )
+
+    async def _rank_among_30d(self, guild_id: int, cutoff: datetime, discord_id: int, *, by: str) -> int | None:
+        """1-based rank among guild members by ``by`` (``"messages"`` or ``"voice_minutes"``) since ``cutoff``."""
+        column = MemberActivityHour.messages if by == "messages" else MemberActivityHour.voice_minutes
+        stmt = (
+            select(MemberActivityHour.user_id, func.sum(column))
+            .where(MemberActivityHour.guild_id == guild_id, MemberActivityHour.hour_start >= cutoff)
+            .group_by(MemberActivityHour.user_id)
+        )
+        totals = {int(user_id): int(total or 0) for user_id, total in (await self._session.execute(stmt)).all()}
+        value = totals.get(discord_id, 0)
+        if value <= 0:
+            return None
+        higher = sum(1 for other in totals.values() if other > value)
+        return higher + 1

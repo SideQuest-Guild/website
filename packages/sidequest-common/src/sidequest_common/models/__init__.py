@@ -1,5 +1,6 @@
 """ORM models. Importing this package registers every table on ``UUIDAuditBase.metadata``."""
 
+from sidequest_common.models.activity import MemberActivityHour
 from sidequest_common.models.addons import Addon
 from sidequest_common.models.audit import OfficerAudit
 from sidequest_common.models.away import MemberAwayRange
@@ -94,6 +95,7 @@ __all__ = (
     "LootAward",
     "McpToken",
     "Member",
+    "MemberActivityHour",
     "MemberAwayRange",
     "MemberBadge",
     "MemberLevel",

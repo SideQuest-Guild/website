@@ -135,6 +135,7 @@ TAG_GROUPS: dict[str, dict[str, str]] = {
         "Sync tokens": "Create sync tokens for the addon uploader. An officer must be signed in.",
         "Attendance": "Review events and mark who attended. An officer must be signed in.",
         "Group stats": "Group-voice stats and session browsing. An officer must be signed in.",
+        "Statistics": "Guild-wide activity totals, trend, heatmap, and leaderboards. An officer must be signed in.",
     },
     "Game Masters": {
         "GM console": "Member lookup, audit log, and case review for Game Masters. A Game Master must be signed in.",

@@ -27,11 +27,11 @@ flowchart LR
 | `/events/` | everyone | Upcoming and past events. Members also see who signed up, and can sign up themselves. |
 | `/raids/` | everyone | How raid nights, SQL loot and attendance work. |
 | `/ledger/` | everyone | Loot points for every raider, the loot rules, recent loot and boss kills. |
-| `/heroes/` | everyone (the rest is members) | The Hall of Heroes: a public "most grouped" board, plus Renown, raids attended, chat level and badges for each member. |
+| `/heroes/` | everyone (the rest is members) | The Hall of Heroes: a public "most grouped" board, plus Renown, raids attended, chat level and badges for each member. A member's profile also shows a MEE6-style activity section: level, XP bar, message and voice stats, streaks and activity charts. |
 | `/guild/` | members | The in-game roster, who can craft what, the guild bank log and guild news. |
 | `/addons/` | everyone | The addons the guild uses, with download links. |
 | `/account/` | anyone signed in | Link Battle.net, get a calendar link, mark away dates, or delete your account. |
-| `/officers/` | officers | Events, addons, recruiting, attendance and group voice stats. Game Masters also get members, the activity log and moderation. |
+| `/officers/` | officers | Events, addons, recruiting, attendance, group voice stats, and guild-wide activity stats and leaderboards. Game Masters also get members, the activity log and moderation. |
 | `/officers/sync/` | officers | Move a raid night from the addon to the site, and points back to the addon. |
 | `/rules/`, `/privacy/`, `/terms/` | everyone | Guild rules, what the site keeps about you, and the terms. |
 | `/api-reference/` | everyone | The same API reference below, styled like the rest of the site. |
