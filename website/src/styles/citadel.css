@@ -171,6 +171,10 @@ textarea {
   display: grid;
   gap: clamp(56px, 5.4vw, 92px);
   padding: clamp(28px, 2.6vw, 44px) 0 clamp(88px, 8vw, 140px);
+  /* Its own transition layer, so walking between rooms keeps the chambers over the painting. Without a name the
+     body rides in the root snapshot, and every named layer (the painting included) paints above the root: the
+     incoming painting washed over the chambers until the transition ended. */
+  view-transition-name: room-body;
 }
 
 /* ——— Chambers: the framed windows ———
@@ -724,6 +728,17 @@ textarea {
   ::view-transition-new(room-title) {
     animation: room-title-enter 0.6s 0.15s var(--ease) both;
   }
+  /* No morph between two rooms' bodies (their heights differ, so the group would stretch): the old one fades out
+     where it stood and the new one fades in over the settling painting. */
+  ::view-transition-group(room-body) {
+    animation: none;
+  }
+  ::view-transition-old(room-body) {
+    animation: room-body-leave 0.25s ease-in both;
+  }
+  ::view-transition-new(room-body) {
+    animation: room-body-enter 0.45s 0.1s var(--ease) both;
+  }
   @keyframes room-leave {
     to {
       opacity: 0;
@@ -748,6 +763,17 @@ textarea {
       opacity: 0;
       translate: 0 12px;
       filter: blur(3px);
+    }
+  }
+  @keyframes room-body-leave {
+    to {
+      opacity: 0;
+    }
+  }
+  @keyframes room-body-enter {
+    from {
+      opacity: 0;
+      translate: 0 10px;
     }
   }
 

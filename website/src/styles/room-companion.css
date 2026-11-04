@@ -49,6 +49,27 @@
   padding-top: 6px;
 }
 
+/* The addon Companion keeps: its tooltip (addon-tooltip.css) beside a short note. */
+.companion-addon {
+  display: grid;
+  grid-template-columns: minmax(0, 28rem) minmax(0, 1fr);
+  gap: clamp(24px, 3vw, 48px);
+  align-items: center;
+  margin-top: 18px;
+}
+.companion-addon-copy {
+  display: grid;
+  gap: 14px;
+}
+.companion-addon-copy .aside {
+  margin: 0;
+}
+
+@media (max-width: 900px) {
+  .companion-addon {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
 @media (max-width: 560px) {
   .platform-grid {
     grid-template-columns: minmax(0, 1fr);

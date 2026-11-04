@@ -1,8 +1,14 @@
 ---
+import { getImage } from "astro:assets";
 import Room from "../../layouts/Room.astro";
 import courierLoft from "../../../assets/rooms/courier-loft.webp";
+import guildCrest from "../../../assets/brand/sidequest-logo.png";
 import { COMPANION_RELEASES_URL, COMPANION_SOURCE_URL, DOCS_URL } from "../../config";
+import "../../styles/addon-tooltip.css";
 import "../../styles/room-companion.css";
+
+// The crest is the guild addon's inventory icon; the card is drawn client-side, so it gets the URL.
+const crest = await getImage({ src: guildCrest, width: 112, format: "webp" });
 ---
 
 <Room
@@ -31,6 +37,24 @@ import "../../styles/room-companion.css";
       <strong>Every member</strong> gets addon update checks and installs, Companion's own self-update, and a reminder
       before raids they're signed up for.
     </p>
+  </section>
+
+  <section class="chamber" aria-labelledby="h-companion-addon">
+    <h2 class="chamber-title" id="h-companion-addon">
+      The addon it keeps
+    </h2>
+    <div class="companion-addon">
+      <ul class="addon-rack" id="companion-addon-list" aria-live="polite" data-crest={crest.src}></ul>
+      <div class="companion-addon-copy">
+        <p class="aside">
+          Companion looks after the SideQuest addon: it checks for new versions and installs them for you, so the whole
+          guild raids on the same build. Prefer to do it by hand? Download it here instead.
+        </p>
+        <p class="aside">
+          Every addon the guild uses is racked in <a href="/addons/">the Armory</a>.
+        </p>
+      </div>
+    </div>
   </section>
 
   <section class="chamber" aria-labelledby="h-companion-download">
@@ -156,7 +180,8 @@ import "../../styles/room-companion.css";
 
 <script>
   import { COMPANION_RELEASES_API, COMPANION_RELEASES_URL } from "../../config";
-  import { escapeHtml, requireElement } from "../../scripts/api";
+  import { apiFetch, escapeHtml, requireElement, statusMessage, type Addon } from "../../scripts/api";
+  import { addonTooltip } from "../../scripts/addon-card";
   import { onPage } from "../../scripts/page";
 
   interface GithubAsset {
@@ -247,8 +272,22 @@ import "../../styles/room-companion.css";
     }
   }
 
+  async function loadAddon(): Promise<void> {
+    const list = requireElement("companion-addon-list");
+    try {
+      const guildAddons = (await apiFetch<Addon[]>("/api/addons")).filter((addon) => addon.origin === "guild");
+      list.innerHTML =
+        guildAddons.length > 0
+          ? guildAddons.map((addon) => addonTooltip(addon, list.dataset.crest)).join("")
+          : `<li class="aside">The addon isn't posted yet. It will be in <a href="/addons/">the Armory</a> once it's ready.</li>`;
+    } catch (err) {
+      list.innerHTML = `<li class="aside">${escapeHtml(statusMessage(err))} The addon is also in <a href="/addons/">the Armory</a>.</li>`;
+    }
+  }
+
   onPage("#companion-platform-list", (signal) => {
     highlightVisitorPlatform();
     void loadRelease(signal);
+    void loadAddon();
   });
 </script>

@@ -1,7 +1,15 @@
 ---
+import { getImage } from "astro:assets";
 import Room from "../../layouts/Room.astro";
+import Art from "../../components/Art.astro";
 import armory from "../../../assets/rooms/armory.webp";
+import courierLoft from "../../../assets/rooms/courier-loft.webp";
+import guildCrest from "../../../assets/brand/sidequest-logo.png";
+import "../../styles/addon-tooltip.css";
 import "../../styles/room-addons.css";
+
+// The crest is the guild addon's inventory icon; the cards are drawn client-side, so they get its URL.
+const crest = await getImage({ src: guildCrest, width: 112, format: "webp" });
 ---
 
 <Room
@@ -16,7 +24,33 @@ import "../../styles/room-addons.css";
     <h2 class="chamber-title" id="h-armory">
       The Armory
     </h2>
-    <ul class="tooltip-grid" id="addons-list" aria-live="polite"></ul>
+    <div class="armory-layout">
+      <ul class="addon-rack" id="addons-list" aria-live="polite" data-crest={crest.src}></ul>
+      <aside class="pairing" aria-labelledby="h-pairing">
+        <Art
+          src={courierLoft}
+          alt=""
+          class="pairing-art"
+          widths={[640, 960, 1280]}
+          sizes="(max-width: 900px) 100vw, 60vw"
+        />
+        <div class="pairing-copy">
+          <h3 class="pairing-title" id="h-pairing">
+            SideQuest Companion
+          </h3>
+          <p>
+            The guild's tray app for Windows, macOS and Linux. It checks for new versions of the addon and installs them
+            for you, keeps itself up to date, and reminds you before raids you've signed up for.
+          </p>
+          <p>Officers also get auto-sync: each raid record the addon saves is on this site within seconds.</p>
+          <div class="form-actions">
+            <a class="btn btn-small" href="/companion/">
+              Get Companion
+            </a>
+          </div>
+        </div>
+      </aside>
+    </div>
   </section>
 
   <noscript>
@@ -25,51 +59,25 @@ import "../../styles/room-addons.css";
 </Room>
 
 <script>
-  import {
-    apiFetch,
-    onFreshData,
-    escapeHtml,
-    requireElement,
-    statusMessage,
-    ADDON_ORIGIN_LABELS,
-    type Addon,
-  } from "../../scripts/api";
+  import { apiFetch, onFreshData, escapeHtml, requireElement, statusMessage, type Addon } from "../../scripts/api";
+  import { addonTooltip } from "../../scripts/addon-card";
   import { onPage } from "../../scripts/page";
-
-  function addonCard(addon: Addon): string {
-    const homepage = addon.homepage_url
-      ? `<a class="btn-quiet btn-small" href="${escapeHtml(addon.homepage_url)}">Homepage</a>`
-      : "";
-    const originClass = addon.origin === "guild" ? "tt-origin tt-origin-guild" : "tt-origin tt-origin-community";
-    return `
-      <li class="tooltip-card">
-        <p class="tt-name">${escapeHtml(addon.name)}</p>
-        <p class="${originClass}">${escapeHtml(ADDON_ORIGIN_LABELS[addon.origin])}</p>
-        <p class="tt-version">Version ${escapeHtml(addon.version)}</p>
-        <p class="tt-flavor">“${escapeHtml(addon.summary)}”</p>
-        <div class="form-actions">
-          <a class="btn btn-small" href="${escapeHtml(addon.download_url)}">Download</a>
-          ${homepage}
-        </div>
-      </li>`;
-  }
 
   function emptySlot(label: string, text: string): string {
     return `<li class="armory-empty"><p class="armory-empty-label">${escapeHtml(label)}</p><p>${escapeHtml(text)}</p></li>`;
-  }
-
-  /** Guild-made addons rack first, then community picks; each group keeps the API's name order. */
-  function sortedAddons(addons: Addon[]): Addon[] {
-    return addons.toSorted((a, b) => Number(b.origin === "guild") - Number(a.origin === "guild"));
   }
 
   async function loadAddons(): Promise<void> {
     const list = requireElement("addons-list");
     try {
       const addons = await apiFetch<Addon[]>("/api/addons");
+      // Guild-made addons rack first, then community picks; each group keeps the API's name order.
       list.innerHTML =
         addons.length > 0
-          ? sortedAddons(addons).map(addonCard).join("")
+          ? addons
+              .toSorted((a, b) => Number(b.origin === "guild") - Number(a.origin === "guild"))
+              .map((addon) => addonTooltip(addon, list.dataset.crest))
+              .join("")
           : emptySlot(
               "Empty",
               "The racks stand empty for now. The guild's addons will be posted here, and announced in the Discord, once they're ready.",

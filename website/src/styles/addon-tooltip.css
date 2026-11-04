@@ -1,0 +1,111 @@
+/* An addon as an item tooltip (scripts/addon-card.ts), on the Armory and on Companion's page.
+   Like the game's: a near-black plate with a silver double line whatever the quality, the quality colour only on
+   the name, white stat lines, flavor text in yellow. The guild crest sits beside it as the item's inventory icon.
+   Square corners and no shadows, like every other frame (DESIGN.md): the depth is the double line. */
+
+.addon-rack {
+  display: grid;
+  gap: clamp(28px, 3vw, 40px);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.addon-item {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr);
+  gap: 18px 14px;
+  align-items: start;
+}
+.addon-item-plain {
+  grid-template-columns: minmax(0, 1fr);
+}
+.addon-item > .tooltip-card,
+.addon-item > .addon-actions {
+  grid-column: -2;
+}
+
+.tt-icon {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  aspect-ratio: 1;
+  padding: 4px;
+  border: 1px solid rgba(196, 205, 221, 0.5);
+  outline: 1px solid rgba(3, 6, 12, 0.9);
+  outline-offset: -2px;
+  background: radial-gradient(circle at 50% 35%, #1d2c50, #080d19 75%);
+}
+.tt-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.tooltip-card {
+  display: grid;
+  gap: 5px;
+  padding: 14px 18px 18px;
+  border: 1px solid rgba(196, 205, 221, 0.42);
+  outline: 1px solid rgba(3, 6, 12, 0.9);
+  outline-offset: -2px;
+  background: linear-gradient(180deg, rgba(17, 26, 48, 0.97), rgba(6, 9, 19, 0.97));
+  font-size: clamp(15px, 1vw, 17px);
+  line-height: 1.35;
+}
+.tooltip-card p {
+  margin: 0;
+}
+.tt-name {
+  margin-bottom: 2px;
+  font-family: var(--display);
+  font-size: clamp(21px, 1.45vw, 25px);
+  line-height: 1.15;
+  letter-spacing: 0.01em;
+  color: var(--q-epic);
+  text-wrap: balance;
+}
+.tt-origin-guild {
+  color: var(--gold);
+}
+.tt-origin-community {
+  color: var(--mist-2);
+}
+.tt-line {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 2px 16px;
+  color: var(--ink);
+  font-variant-numeric: lining-nums tabular-nums;
+}
+.tt-flavor {
+  padding-top: 6px;
+  font-style: italic;
+  line-height: 1.45;
+  color: var(--flavor);
+  text-wrap: pretty;
+}
+
+.addon-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+@media (max-width: 560px) {
+  .addon-item {
+    grid-template-columns: 44px minmax(0, 1fr);
+    column-gap: 10px;
+  }
+  .addon-item-plain {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .tt-icon {
+    width: 44px;
+    padding: 3px;
+  }
+  .addon-item > .addon-actions {
+    grid-column: 1 / -1;
+  }
+}
