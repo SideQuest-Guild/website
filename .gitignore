@@ -13,3 +13,6 @@ dist/
 
 # Local-only operator notes (prod access); this repo is public.
 ops.local.md
+
+# The Cloudflare `cf` CLI's local cache (account id and name).
+.cloudflare/
