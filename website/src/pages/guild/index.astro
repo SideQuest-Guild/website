@@ -479,7 +479,9 @@ import "../../styles/room-guild.css";
     async function loadRoster(): Promise<void> {
       try {
         roster = await apiFetch<GuildRoster>("/api/guild/roster", { signal });
-        rosterUpdatedEl.textContent = `Last updated ${new Date(roster.taken_at).toLocaleString()}.`;
+        rosterUpdatedEl.textContent = roster.taken_at
+          ? `Last updated ${new Date(roster.taken_at).toLocaleString()}.`
+          : "Not synced from the game yet.";
         const ranks = [...new Set(roster.members.map((m) => m.rank).filter((r): r is string => r !== null))].toSorted();
         rosterRankEl.innerHTML =
           `<option value="">Any rank</option>` +

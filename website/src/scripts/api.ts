@@ -901,8 +901,12 @@ export type GuildRosterUnlinked = {
   last_seen_at: string | null;
 };
 
-/** `GET /api/guild/roster` (member). */
-export type GuildRoster = { taken_at: string; members: GuildRosterMember[]; unlinked: GuildRosterUnlinked[] };
+/** `GET /api/guild/roster` (member). `taken_at` is null until the addon has synced a roster. */
+export type GuildRoster = {
+  taken_at: string | null;
+  members: GuildRosterMember[];
+  unlinked: GuildRosterUnlinked[];
+};
 
 /** One crafter on a `GET /api/guild/crafters` recipe result, or the `crafters` count on a profession summary. */
 export type GuildCrafter = {
