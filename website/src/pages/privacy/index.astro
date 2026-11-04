@@ -26,7 +26,7 @@ const articles = [
   description="What SideQuest's site and Discord bot keep about you, and how to delete it."
   heading="PRIVACY"
   lede="What this site and the guild's Discord bot keep about you, who else touches it, and how to make it go away."
-  effective="October 29, 2026"
+  effective="November 3, 2026"
   artPosition="12% 50%"
   articles={articles}
 >
@@ -334,6 +334,12 @@ const articles = [
       name, status and avatar — pulled live from Discord's own public server widget, not stored. Avatars load directly
       from Discord's CDN. Signed-out visitors only see a total online count, never names.
     </p>
+    <p>
+      Guild masters can ask the bot for help by @-mentioning it, for example to set up a channel or a role. The bot
+      sends their request, the message they replied to (with its author's display name and Discord ID), and the server's
+      channel, role and member names to an AI service to work out a plan. The bot changes nothing until a guild master
+      approves the plan, and keeps no copy of the request; approved plans are noted in the officers' log channel.
+    </p>
   </Article>
 
   <Article id="who-else" n={12} title="Who else handles it">
@@ -346,6 +352,10 @@ const articles = [
         <strong>Cloudflare</strong> sits in front of the site, and <strong>Cabotage</strong> hosts it on Amazon Web
         Services in the US. Like any website, they see standard request details such as your IP address in order to
         deliver and protect it.
+      </li>
+      <li>
+        <strong>OpenRouter</strong>, and the AI company whose model it routes to, read what goes into a guild master's
+        request to the bot (see <a href="#bot">The guild bot</a>) in order to answer it.
       </li>
     </ul>
     <p>That's everyone. Nothing else is shared.</p>
