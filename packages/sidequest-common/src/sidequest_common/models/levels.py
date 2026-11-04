@@ -1,10 +1,11 @@
-"""Member XP and level reward roles."""
+"""Member XP, the ledger of one-off XP grants, and level reward roles."""
 
 from datetime import datetime  # SQLAlchemy resolves Mapped[] annotations at runtime
+from uuid import UUID  # SQLAlchemy resolves Mapped[] annotations at runtime
 
 from advanced_alchemy.base import UUIDAuditBase
-from advanced_alchemy.types import DateTimeUTC
-from sqlalchemy import BigInteger, Index, Integer, UniqueConstraint
+from advanced_alchemy.types import GUID, DateTimeUTC
+from sqlalchemy import BigInteger, Index, Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 
@@ -39,3 +40,23 @@ class LevelRole(UUIDAuditBase):
     guild_id: Mapped[int] = mapped_column(BigInteger, index=True)
     level: Mapped[int] = mapped_column(Integer)
     role_id: Mapped[int] = mapped_column(BigInteger)
+
+
+class XPGrant(UUIDAuditBase):
+    """One one-off XP grant, so attending an event or finishing a group pays out once per member.
+
+    ``source`` is an ``XPSource`` value (``event`` or ``group``) and ``source_id`` the event's or group session's id.
+    Rows are kept after the event or session is deleted, so a re-synced grant can't pay twice.
+    """
+
+    __tablename__ = "xp_grant"
+    __table_args__ = (
+        UniqueConstraint("guild_id", "user_id", "source", "source_id", name="uq_xp_grant_once"),
+        {"comment": "XP paid once per member for an attended event or a finished LFG group."},
+    )
+
+    guild_id: Mapped[int] = mapped_column(BigInteger, index=True)
+    user_id: Mapped[int] = mapped_column(BigInteger, index=True)
+    source: Mapped[str] = mapped_column(String(10))
+    source_id: Mapped[UUID] = mapped_column(GUID)
+    amount: Mapped[int] = mapped_column(Integer)

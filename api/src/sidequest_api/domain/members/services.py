@@ -21,6 +21,7 @@ from sidequest_common.models import (
     MemberLevel,
     MemberRoleReset,
     OfficerAudit,
+    XPGrant,
 )
 
 SIGNUP_NOTICE_LIMIT = 25
@@ -124,6 +125,7 @@ class MembersService(SQLAlchemyAsyncRepositoryService[Member]):
         )
         await session.execute(delete(MemberAwayRange).where(MemberAwayRange.member_id == member.id))
         await session.execute(delete(MemberLevel).where(MemberLevel.user_id == member.discord_id))
+        await session.execute(delete(XPGrant).where(XPGrant.user_id == member.discord_id))
         await session.execute(delete(McpToken).where(McpToken.member_id == member.id))
         await session.execute(
             update(OfficerAudit).where(OfficerAudit.actor_member_id == member.id).values(actor_member_id=None)

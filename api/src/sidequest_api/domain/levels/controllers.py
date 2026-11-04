@@ -5,6 +5,7 @@ from typing import Annotated
 
 from litestar import Controller, delete, get, post, put
 from litestar.di import NamedDependency, Provide
+from litestar.exceptions import NotFoundException
 from litestar.openapi.datastructures import ResponseSpec
 from litestar.params import JSONBody, Parameter
 
@@ -20,8 +21,12 @@ from sidequest_common.schemas import (
     MemberLevelSchema,
     RankSchema,
     SetXPRequest,
+    VoiceXPRequest,
+    XPActivityReport,
     XPAwardResult,
+    XPGrantResult,
 )
+from sidequest_common.settings import WebSettings
 
 
 class LevelsController(Controller):
@@ -57,6 +62,58 @@ class LevelsController(Controller):
         config = await guild_config_service.get_or_create_config(guild_id)
         level_roles = await level_role_service.list_for_guild(guild_id)
         return await member_level_service.award_xp(guild_id, user_id, config, level_roles)
+
+    @post(
+        "/xp/voice",
+        operation_id="GrantVoiceXP",
+        status_code=HTTPStatus.OK,
+        summary="Grant voice XP",
+        description=(
+            "Gives each listed member XP for the minutes they spent in voice. The bot decides who counts: "
+            "members with someone else in the channel, not deafened, outside the AFK channel and no-XP channels "
+            "or roles. Returns nothing while leveling is off."
+        ),
+        response_description="One result per member, with any level-up and level-role changes.",
+    )
+    async def grant_voice_xp(
+        self,
+        guild_id: GuildIdPath,
+        data: JSONBody[VoiceXPRequest],
+        guild_config_service: NamedDependency[GuildConfigService],
+        member_level_service: NamedDependency[MemberLevelService],
+        level_role_service: NamedDependency[LevelRoleService],
+    ) -> list[XPGrantResult]:
+        config = await guild_config_service.get_or_create_config(guild_id)
+        level_roles = await level_role_service.list_for_guild(guild_id)
+        return await member_level_service.grant_voice(guild_id, data.user_ids, data.minutes, config, level_roles)
+
+    @post(
+        "/xp/activity",
+        operation_id="SyncActivityXP",
+        status_code=HTTPStatus.OK,
+        summary="Pay event and group XP",
+        description=(
+            "Pays XP once per member for each guild event they attended and each #lfg group they spent ten or "
+            "more minutes in, from the last 30 days. Safe to poll: anything already paid is skipped. Returns 404 "
+            "for any guild_id other than the SideQuest server, since events and groups belong to it."
+        ),
+        response_description="The XP paid by this call, with any level-up and level-role changes.",
+        responses={404: ResponseSpec(None, description="This guild_id is not the SideQuest server.")},
+    )
+    async def sync_activity_xp(
+        self,
+        guild_id: GuildIdPath,
+        guild_config_service: NamedDependency[GuildConfigService],
+        member_level_service: NamedDependency[MemberLevelService],
+        level_role_service: NamedDependency[LevelRoleService],
+        web_settings: NamedDependency[WebSettings],
+    ) -> XPActivityReport:
+        if guild_id != web_settings.GUILD_ID:
+            msg = f"No guild {guild_id}"
+            raise NotFoundException(msg)
+        config = await guild_config_service.get_or_create_config(guild_id)
+        level_roles = await level_role_service.list_for_guild(guild_id)
+        return XPActivityReport(grants=await member_level_service.sync_activity(guild_id, config, level_roles))
 
     @put(
         "/members/{user_id:int}/xp",

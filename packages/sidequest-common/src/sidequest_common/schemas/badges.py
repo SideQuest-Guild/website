@@ -67,7 +67,7 @@ BADGE_LIST: tuple[BadgeDefinition, ...] = (
     BadgeDefinition(
         id="chatterbox",
         name="Chatterbox",
-        description="Reached chat level 10.",
+        description="Reached level 10.",
         icon="💬",
         color=0x3FC7EB,
     ),

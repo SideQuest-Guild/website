@@ -26,7 +26,7 @@ const articles = [
   description="What SideQuest's site and Discord bot keep about you, and how to delete it."
   heading="PRIVACY"
   lede="What this site and the guild's Discord bot keep about you, who else touches it, and how to make it go away."
-  effective="November 3, 2026"
+  effective="November 4, 2026"
   artPosition="12% 50%"
   articles={articles}
 >
@@ -41,8 +41,7 @@ const articles = [
       <li>No ads, no analytics, no trackers. We never sell or share your data with anyone for marketing.</li>
       <li>
         Unlinking Battle.net erases your Battle.net data. Deleting your account erases your site account, every event
-        sign-up, and your Discord chat XP. Both are on your <a href="/account/">Account</a> page and take effect
-        immediately.
+        sign-up, and your Discord XP. Both are on your <a href="/account/">Account</a> page and take effect immediately.
       </li>
     </ul>
     <p>"We" means SideQuest's officers, who run this site for the guild.</p>
@@ -141,7 +140,7 @@ const articles = [
   <Article id="hall-of-heroes" n={5} title="Hall of Heroes">
     <p>
       The <a href="/heroes/">Hall of Heroes</a> is a leaderboard for signed-in guild members only: your events and raids
-      attended, Renown, attendance rate and chat level are shown there next to every other member's, ranked against each
+      attended, Renown, attendance rate and level are shown there next to every other member's, ranked against each
       other for the current season, the last month, and all time.
     </p>
     <p>
@@ -313,7 +312,11 @@ const articles = [
   <Article id="bot" n={11} title="The guild bot">
     <p>Inside the SideQuest Discord, the guild's bot keeps:</p>
     <ul>
-      <li>Your chat XP and level, erased if you delete your site account</li>
+      <li>
+        Your XP and level, earned by chatting, by time in voice with other members (the bot checks who's in voice once a
+        minute and keeps only the XP), and for each event you attend and #lfg group you stay in, with a note of which
+        events and groups have paid you so none pays twice. All of it is erased if you delete your site account.
+      </li>
       <li>
         Moderation records (warnings, timeouts, kicks and bans, including the bot's own automatic ones), with the reason
         and which officer acted
@@ -325,9 +328,9 @@ const articles = [
       <li>How many people are online and in each voice channel, as numbers only, never names</li>
     </ul>
     <p>
-      These belong to your Discord account in the server, not your site account, except chat XP: deleting your site
-      account erases it right away. Moderation records are kept to keep the guild safe, and guild masters can read them,
-      and correct a reason, on this site.
+      These belong to your Discord account in the server, not your site account, except XP: deleting your site account
+      erases it right away. Moderation records are kept to keep the guild safe, and guild masters can read them, and
+      correct a reason, on this site.
     </p>
     <p>
       Separately, once you're signed in, the site also shows which SideQuest members are currently online in Discord —
@@ -368,7 +371,7 @@ const articles = [
       </li>
       <li>
         <strong>Delete my account</strong> on the same page: your site account, every event sign-up and attendance mark,
-        your voice-minute records, your calendar link, your away dates, and your Discord chat XP are erased, and you're
+        your voice-minute records, your calendar link, your away dates, and your Discord XP are erased, and you're
         signed out. Your group-voice minutes and who you grouped with are erased too; the group sessions themselves and
         any still-retained chat transcript (auto-purged after 30 days) are kept as shared records, the same as
         moderation cases. Moderation records stay. The bot strips every Discord role it can manage from you within a
