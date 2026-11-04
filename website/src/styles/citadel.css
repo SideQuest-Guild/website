@@ -97,7 +97,6 @@ textarea {
   background-repeat: no-repeat;
   -webkit-mask-image: linear-gradient(to bottom, #000 34%, rgba(0, 0, 0, 0.6) 66%, transparent);
   mask-image: linear-gradient(to bottom, #000 34%, rgba(0, 0, 0, 0.6) 66%, transparent);
-  view-transition-name: room-art;
 }
 /* Night scrims: one across the top so the nav reads, one pooled under the title. Neither is a box. */
 .room-head::before,
@@ -171,10 +170,6 @@ textarea {
   display: grid;
   gap: clamp(56px, 5.4vw, 92px);
   padding: clamp(28px, 2.6vw, 44px) 0 clamp(88px, 8vw, 140px);
-  /* Its own transition layer, so walking between rooms keeps the chambers over the painting. Without a name the
-     body rides in the root snapshot, and every named layer (the painting included) paints above the root: the
-     incoming painting washed over the chambers until the transition ended. */
-  view-transition-name: room-body;
 }
 
 /* ——— Chambers: the framed windows ———
@@ -738,27 +733,24 @@ textarea {
 }
 
 /* ——— Walking between rooms ———
-   Links swap the page in place (Astro's ClientRouter, scripts/page.ts) inside a view transition: the painting
-   dissolves from one room into the next while the nav holds still. The cross-document rule below covers the few
-   full page loads (returning from sign-in). Browsers without view transitions get the router's plain fade. */
+   Links swap the page in place (Astro's ClientRouter, scripts/page.ts) inside a view transition: the whole room,
+   painting and chambers together, fades through the night into the next while the nav holds still and the title
+   lifts in. The cross-document rule below covers the few full page loads (returning from sign-in). Browsers without
+   view transitions get the router's plain fade.
+   Only small, viewport-sized things get their own transition layer (nav, title). A named layer always paints above
+   the root snapshot, so a named painting washed over the chambers mid-transition; and a named page body is captured
+   at a capped size and drawn squashed when the page is taller than the screen. */
 @media (prefers-reduced-motion: no-preference) {
   @view-transition {
     navigation: auto;
   }
-  ::view-transition-old(root),
+  /* The old room goes dark quickly and the new one comes up out of the night, rather than both overlapping at half
+     strength (two pages of chambers and text on top of each other read as a glitch). */
+  ::view-transition-old(root) {
+    animation: room-fade-out 0.2s ease-in both;
+  }
   ::view-transition-new(root) {
-    animation-duration: 0.45s;
-    animation-timing-function: var(--ease);
-  }
-  ::view-transition-group(room-art) {
-    animation-duration: 0.7s;
-    animation-timing-function: var(--ease);
-  }
-  ::view-transition-old(room-art) {
-    animation: room-leave 0.7s var(--ease) both;
-  }
-  ::view-transition-new(room-art) {
-    animation: room-enter 0.7s var(--ease) both;
+    animation: room-fade-in 0.4s 0.1s var(--ease) both;
   }
   ::view-transition-old(room-title) {
     animation: room-title-leave 0.3s ease-in both;
@@ -766,28 +758,14 @@ textarea {
   ::view-transition-new(room-title) {
     animation: room-title-enter 0.6s 0.15s var(--ease) both;
   }
-  /* No morph between two rooms' bodies (their heights differ, so the group would stretch): the old one fades out
-     where it stood and the new one fades in over the settling painting. */
-  ::view-transition-group(room-body) {
-    animation: none;
-  }
-  ::view-transition-old(room-body) {
-    animation: room-body-leave 0.25s ease-in both;
-  }
-  ::view-transition-new(room-body) {
-    animation: room-body-enter 0.45s 0.1s var(--ease) both;
-  }
-  @keyframes room-leave {
+  @keyframes room-fade-out {
     to {
       opacity: 0;
-      scale: 1.06;
-      filter: blur(4px);
     }
   }
-  @keyframes room-enter {
+  @keyframes room-fade-in {
     from {
       opacity: 0;
-      scale: 1.03;
     }
   }
   @keyframes room-title-leave {
@@ -801,17 +779,6 @@ textarea {
       opacity: 0;
       translate: 0 12px;
       filter: blur(3px);
-    }
-  }
-  @keyframes room-body-leave {
-    to {
-      opacity: 0;
-    }
-  }
-  @keyframes room-body-enter {
-    from {
-      opacity: 0;
-      translate: 0 10px;
     }
   }
 
