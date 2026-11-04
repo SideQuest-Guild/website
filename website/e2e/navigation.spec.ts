@@ -99,7 +99,8 @@ test("every destination is reachable from the bar", async ({ page, site }) => {
   await expect(page).toHaveURL("/addons/");
 
   await navToAccount(page, "Your account");
-  await expect(page).toHaveURL("/account/");
+  // Like the officers console, the account page now names its open tab in the hash (#profile by default).
+  await expect(page).toHaveURL(/\/account\/(#[\w-]+)?$/);
 
   await navToAccount(page, "Officers");
   // Like the guild page, the officers console names its open tab in the hash (#events by default).

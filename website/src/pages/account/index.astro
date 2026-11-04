@@ -1,6 +1,7 @@
 ---
 import JoinPlaque from "../../components/JoinPlaque.astro";
 import Room from "../../layouts/Room.astro";
+import AdventurersLog from "../../components/AdventurersLog.astro";
 import ledgerChamber from "../../../assets/rooms/ledger-chamber.webp";
 import { DISCORD_INVITE } from "../../config";
 import "../../styles/room-account.css";
@@ -44,172 +45,233 @@ import "../../styles/room-account.css";
   </div>
 
   <div id="account-signed-in" hidden>
-    <section class="chamber" aria-labelledby="h-sheet">
-      <h2 class="chamber-title" id="h-sheet">
-        Character Sheet
-      </h2>
-      <div class="sheet">
-        <span class="sheet-portrait">
-          <img id="account-avatar" alt="" width="96" height="96" hidden />
-        </span>
-        <div class="sheet-info">
-          <p class="sheet-name" id="account-name"></p>
-          <p class="sheet-rank" id="account-role"></p>
-          <p class="sheet-roster" id="account-roster"></p>
-        </div>
-      </div>
-
-      <h3>Linked accounts</h3>
-      <dl class="links" aria-label="Linked accounts">
-        <div>
-          <dt>Discord</dt>
-          <dd id="account-discord"></dd>
-        </div>
-        <div>
-          <dt>Battle.net</dt>
-          <dd>
-            <span id="bnet-linked" hidden>
-              <span id="bnet-tag"></span> · officers use it to check the guild roster.
-            </span>
-            <span id="bnet-unlinked">Not linked. Link it so officers can match you to your characters in game.</span>
-          </dd>
-        </div>
-      </dl>
-      <div class="form-actions">
-        <a class="btn" id="bnet-link" href="/auth/battlenet/link">
-          Link Battle.net
-        </a>
-        <button type="button" class="btn-quiet" id="bnet-unlink-btn" hidden>
-          Unlink Battle.net
-        </button>
-        <button type="button" class="btn-quiet" id="sign-out-btn">
-          Sign out
-        </button>
-      </div>
-    </section>
-
-    <section class="chamber" aria-labelledby="calendar-title">
-      <h2 class="chamber-title" id="calendar-title">
-        Calendar
-      </h2>
-      <p class="aside">
-        Subscribe once and new events show up on their own. Anyone with this link can see the guild's events and your
-        sign-ups, so keep it to yourself.
-      </p>
-      <div class="calendar-link-row">
-        <input type="text" id="calendar-url" readonly aria-label="Your private calendar link" />
-        <button type="button" class="btn-quiet btn-small" id="calendar-copy-btn">
-          Copy
-        </button>
-      </div>
-      <div class="form-actions">
-        <a class="btn" id="calendar-google" target="_blank" rel="noopener noreferrer">
-          Add to Google Calendar
-        </a>
-        <a class="btn" id="calendar-apple">
-          Add to Apple Calendar
-        </a>
-        <button type="button" class="btn-quiet" id="calendar-rotate-btn">
-          Make a new link
-        </button>
-      </div>
-    </section>
-
-    <section class="chamber" aria-labelledby="companion-title">
-      <h2 class="chamber-title" id="companion-title">
+    <div class="tabs" role="tablist" aria-label="Account">
+      <button type="button" role="tab" id="tab-profile" aria-controls="panel-profile" aria-selected="true" tabindex="0">
+        Profile
+      </button>
+      <button type="button" role="tab" id="tab-stats" aria-controls="panel-stats" aria-selected="false" tabindex="-1">
+        Stats
+      </button>
+      <button
+        type="button"
+        role="tab"
+        id="tab-characters"
+        aria-controls="panel-characters"
+        aria-selected="false"
+        tabindex="-1"
+      >
+        Characters
+      </button>
+      <button
+        type="button"
+        role="tab"
+        id="tab-schedule"
+        aria-controls="panel-schedule"
+        aria-selected="false"
+        tabindex="-1"
+      >
+        Schedule
+      </button>
+      <button
+        type="button"
+        role="tab"
+        id="tab-companion"
+        aria-controls="panel-companion"
+        aria-selected="false"
+        tabindex="-1"
+      >
         Companion
-      </h2>
-      <p class="aside">
-        <a href="/companion/">SideQuest Companion</a> sits in your system tray on Windows, macOS or Linux and shows your
-        updates and raid reminders; officers can also sync the addon's raid record from it. Choose{" "}
-        <strong>Sign in with sidequest-guild.com</strong> in the app, then{" "}
-        <a href="/companion/authorize/">approve it there</a>. Sign-ins you've approved are listed here.
-      </p>
-      <ul class="item-list companion-list" id="companion-token-list" aria-label="Companion sign-ins"></ul>
-    </section>
-
-    <section class="chamber" aria-labelledby="away-title">
-      <h2 class="chamber-title" id="away-title">
-        Away
-      </h2>
-      <p>Mark the dates you'll be away so officers and raid leads know not to expect you at those events.</p>
-      <ul class="away-list" id="away-list"></ul>
-      <form id="away-form" class="away-form">
-        <label>
-          From
-          <input type="date" id="away-start" required />
-        </label>
-        <label>
-          To
-          <input type="date" id="away-end" required />
-        </label>
-        <label class="away-note-label">
-          Note (optional)
-          <input type="text" id="away-note" maxlength="100" placeholder="e.g. Family trip" />
-        </label>
-        <button type="submit" class="btn-quiet">
-          Add
-        </button>
-      </form>
-    </section>
-
-    <section class="chamber" aria-labelledby="characters-title">
-      <h2 class="chamber-title" id="characters-title">
-        Your Characters
-      </h2>
-      <p>Link your characters so officers can match the SideQuest addon's raid record to your EP/GP balance.</p>
-      <ul class="char-list" id="char-list"></ul>
-      <form id="char-form" class="char-form">
-        <label>
-          Name
-          <input type="text" id="char-name" maxlength="24" required />
-        </label>
-        <label>
-          Realm
-          <input type="text" id="char-realm" maxlength="40" placeholder="Whitemane" />
-        </label>
-        <label>
-          Class (optional)
-          <select id="char-class">
-            <option value="">Unknown</option>
-          </select>
-        </label>
-        <button type="submit" class="btn-quiet">
-          Add
-        </button>
-      </form>
-    </section>
-
-    <section class="chamber danger-zone" aria-labelledby="account-data-title">
-      <h2 class="chamber-title" id="account-data-title">
+      </button>
+      <button type="button" role="tab" id="tab-danger" aria-controls="panel-danger" aria-selected="false" tabindex="-1">
         Danger Zone
-      </h2>
-      <p class="chamber-intro">
-        Deleting your account erases your SideQuest profile, every event sign-up, and your Discord XP right away, and
-        signs you out. <strong>It also removes you from the guild on Discord:</strong> the bot takes away your roles and
-        puts you back behind #sign-the-ledger, so the guild channels disappear until you sign in again and a Quest
-        Master confirms you. Moderation records in the Discord stay; ask an officer about those.{" "}
-        <a href="/privacy/#deleting">Privacy</a> has the full list.
-      </p>
-      <div class="form-actions danger-actions">
-        <button type="button" class="btn-quiet btn-doom" id="delete-account-btn" aria-controls="delete-confirm">
-          Delete my account
-        </button>
+      </button>
+    </div>
+
+    <section id="panel-profile" role="tabpanel" aria-labelledby="tab-profile" tabindex="0">
+      <div class="chamber" aria-labelledby="h-sheet">
+        <h2 class="chamber-title" id="h-sheet">
+          Character Sheet
+        </h2>
+        <div class="sheet">
+          <span class="sheet-portrait">
+            <img id="account-avatar" alt="" width="96" height="96" hidden />
+          </span>
+          <div class="sheet-info">
+            <p class="sheet-name" id="account-name"></p>
+            <p class="sheet-rank" id="account-role"></p>
+            <p class="sheet-roster" id="account-roster"></p>
+          </div>
+        </div>
+
+        <h3>Linked accounts</h3>
+        <dl class="links" aria-label="Linked accounts">
+          <div>
+            <dt>Discord</dt>
+            <dd id="account-discord"></dd>
+          </div>
+          <div>
+            <dt>Battle.net</dt>
+            <dd>
+              <span id="bnet-linked" hidden>
+                <span id="bnet-tag"></span> · officers use it to check the guild roster.
+              </span>
+              <span id="bnet-unlinked">Not linked. Link it so officers can match you to your characters in game.</span>
+            </dd>
+          </div>
+        </dl>
+        <div class="form-actions">
+          <a class="btn" id="bnet-link" href="/auth/battlenet/link">
+            Link Battle.net
+          </a>
+          <button type="button" class="btn-quiet" id="bnet-unlink-btn" hidden>
+            Unlink Battle.net
+          </button>
+          <button type="button" class="btn-quiet" id="sign-out-btn">
+            Sign out
+          </button>
+        </div>
       </div>
-      <div class="danger-confirm" id="delete-confirm" role="group" aria-labelledby="delete-confirm-title" hidden>
-        <p class="danger-confirm-title" id="delete-confirm-title">
-          Delete everything? This can't be undone.
+    </section>
+
+    <section id="panel-stats" role="tabpanel" aria-labelledby="tab-stats" tabindex="0" hidden>
+      <AdventurersLog own />
+      <p class="aside" id="stats-profile-link" hidden>
+        <a id="stats-profile-link-anchor" href="">
+          View your public Hall of Heroes profile &rarr;
+        </a>
+      </p>
+    </section>
+
+    <section id="panel-characters" role="tabpanel" aria-labelledby="tab-characters" tabindex="0" hidden>
+      <div class="chamber" aria-labelledby="characters-title">
+        <h2 class="chamber-title" id="characters-title">
+          Your Characters
+        </h2>
+        <p>Link your characters so officers can match the SideQuest addon's raid record to your EP/GP balance.</p>
+        <ul class="char-list" id="char-list"></ul>
+        <form id="char-form" class="char-form">
+          <label>
+            Name
+            <input type="text" id="char-name" maxlength="24" required />
+          </label>
+          <label>
+            Realm
+            <input type="text" id="char-realm" maxlength="40" placeholder="Whitemane" />
+          </label>
+          <label>
+            Class (optional)
+            <select id="char-class">
+              <option value="">Unknown</option>
+            </select>
+          </label>
+          <button type="submit" class="btn-quiet">
+            Add
+          </button>
+        </form>
+      </div>
+    </section>
+
+    <section id="panel-schedule" role="tabpanel" aria-labelledby="tab-schedule" tabindex="0" hidden>
+      <div class="chamber" aria-labelledby="calendar-title">
+        <h2 class="chamber-title" id="calendar-title">
+          Calendar
+        </h2>
+        <p class="aside">
+          Subscribe once and new events show up on their own. Anyone with this link can see the guild's events and your
+          sign-ups, so keep it to yourself.
         </p>
-        <p class="danger-confirm-body">
-          Your profile, sign-ups and XP are erased, and you lose your Discord roles and guild channels.
+        <div class="calendar-link-row">
+          <input type="text" id="calendar-url" readonly aria-label="Your private calendar link" />
+          <button type="button" class="btn-quiet btn-small" id="calendar-copy-btn">
+            Copy
+          </button>
+        </div>
+        <div class="form-actions">
+          <a class="btn" id="calendar-google" target="_blank" rel="noopener noreferrer">
+            Add to Google Calendar
+          </a>
+          <a class="btn" id="calendar-apple">
+            Add to Apple Calendar
+          </a>
+          <button type="button" class="btn-quiet" id="calendar-rotate-btn">
+            Make a new link
+          </button>
+        </div>
+      </div>
+
+      <div class="chamber" aria-labelledby="away-title">
+        <h2 class="chamber-title" id="away-title">
+          Away
+        </h2>
+        <p>Mark the dates you'll be away so officers and raid leads know not to expect you at those events.</p>
+        <ul class="away-list" id="away-list"></ul>
+        <form id="away-form" class="away-form">
+          <label>
+            From
+            <input type="date" id="away-start" required />
+          </label>
+          <label>
+            To
+            <input type="date" id="away-end" required />
+          </label>
+          <label class="away-note-label">
+            Note (optional)
+            <input type="text" id="away-note" maxlength="100" placeholder="e.g. Family trip" />
+          </label>
+          <button type="submit" class="btn-quiet">
+            Add
+          </button>
+        </form>
+      </div>
+    </section>
+
+    <section id="panel-companion" role="tabpanel" aria-labelledby="tab-companion" tabindex="0" hidden>
+      <div class="chamber" aria-labelledby="companion-title">
+        <h2 class="chamber-title" id="companion-title">
+          Companion
+        </h2>
+        <p class="aside">
+          <a href="/companion/">SideQuest Companion</a> sits in your system tray on Windows, macOS or Linux and shows
+          your updates and raid reminders; officers can also sync the addon's raid record from it. Choose{" "}
+          <strong>Sign in with sidequest-guild.com</strong> in the app, then{" "}
+          <a href="/companion/authorize/">approve it there</a>. Sign-ins you've approved are listed here.
+        </p>
+        <ul class="item-list companion-list" id="companion-token-list" aria-label="Companion sign-ins"></ul>
+      </div>
+    </section>
+
+    <section id="panel-danger" role="tabpanel" aria-labelledby="tab-danger" tabindex="0" hidden>
+      <div class="chamber danger-zone" aria-labelledby="account-data-title">
+        <h2 class="chamber-title" id="account-data-title">
+          Danger Zone
+        </h2>
+        <p class="chamber-intro">
+          Deleting your account erases your SideQuest profile, every event sign-up, and your Discord XP right away, and
+          signs you out. <strong>It also removes you from the guild on Discord:</strong> the bot takes away your roles
+          and puts you back behind #sign-the-ledger, so the guild channels disappear until you sign in again and a Quest
+          Master confirms you. Moderation records in the Discord stay; ask an officer about those.{" "}
+          <a href="/privacy/#deleting">Privacy</a> has the full list.
         </p>
         <div class="form-actions danger-actions">
-          <button type="button" class="btn-quiet" id="delete-account-cancel">
-            Keep my account
+          <button type="button" class="btn-quiet btn-doom" id="delete-account-btn" aria-controls="delete-confirm">
+            Delete my account
           </button>
-          <button type="button" class="btn btn-doom btn-doom-solid" id="delete-account-confirm">
-            Yes, delete my account
-          </button>
+        </div>
+        <div class="danger-confirm" id="delete-confirm" role="group" aria-labelledby="delete-confirm-title" hidden>
+          <p class="danger-confirm-title" id="delete-confirm-title">
+            Delete everything? This can't be undone.
+          </p>
+          <p class="danger-confirm-body">
+            Your profile, sign-ups and XP are erased, and you lose your Discord roles and guild channels.
+          </p>
+          <div class="form-actions danger-actions">
+            <button type="button" class="btn-quiet" id="delete-account-cancel">
+              Keep my account
+            </button>
+            <button type="button" class="btn btn-doom btn-doom-solid" id="delete-account-confirm">
+              Yes, delete my account
+            </button>
+          </div>
         </div>
       </div>
     </section>
@@ -238,9 +300,11 @@ import "../../styles/room-account.css";
     type EpgpCharacters,
     type EpgpSyncToken,
     type EpgpSyncTokens,
+    type HeroActivity,
     type Me,
   } from "../../scripts/api";
   import { onPage } from "../../scripts/page";
+  import { renderAdventurersLog, requireLogElement } from "../../scripts/adventurers-log";
 
   /** `is_gm` isn't on `Me` yet; read it defensively so the rank line is ready the day it ships. */
   function rankLabel(me: Me): string {
@@ -280,7 +344,51 @@ import "../../styles/room-account.css";
         </button>
       </li>`;
   }
-  onPage("#account-status", () => {
+
+  function parseHash(): { tab: string } {
+    return { tab: location.hash.slice(1) };
+  }
+
+  // Roving-tabindex tablist, matching the officer console's pattern (no GM-only tabs here).
+  function setupTablist(container: HTMLElement, onActivate: (tab: HTMLButtonElement) => void) {
+    const allTabs = (): HTMLButtonElement[] =>
+      Array.from(container.querySelectorAll<HTMLButtonElement>('[role="tab"]'));
+    function select(tab: HTMLButtonElement, { focus = false }: { focus?: boolean } = {}): void {
+      for (const t of allTabs()) {
+        const selected = t === tab;
+        t.setAttribute("aria-selected", String(selected));
+        t.tabIndex = selected ? 0 : -1;
+      }
+      if (focus) {
+        tab.focus();
+      }
+      onActivate(tab);
+    }
+    for (const tab of allTabs()) {
+      tab.addEventListener("click", () => select(tab));
+      tab.addEventListener("keydown", (ev) => {
+        const visible = allTabs();
+        const i = visible.indexOf(tab);
+        let next = -1;
+        if (ev.key === "ArrowRight") {
+          next = (i + 1) % visible.length;
+        } else if (ev.key === "ArrowLeft") {
+          next = (i - 1 + visible.length) % visible.length;
+        } else if (ev.key === "Home") {
+          next = 0;
+        } else if (ev.key === "End") {
+          next = visible.length - 1;
+        } else {
+          return;
+        }
+        ev.preventDefault();
+        select(visible[next]!, { focus: true });
+      });
+    }
+    return { select };
+  }
+
+  onPage("#account-status", (signal) => {
     const ERROR_MESSAGES: Record<string, string> = {
       state: "That sign-in took too long or was opened twice. Try again.",
       oauth_not_configured: "Discord sign-in isn't set up yet.",
@@ -333,6 +441,84 @@ import "../../styles/room-account.css";
     const charNameInput = requireElement<HTMLInputElement>("char-name");
     const charRealmInput = requireElement<HTMLInputElement>("char-realm");
     const charClassSelect = requireElement<HTMLSelectElement>("char-class");
+    const statsProfileLink = requireElement("stats-profile-link");
+    const statsProfileLinkAnchor = requireElement<HTMLAnchorElement>("stats-profile-link-anchor");
+    const logRoot = requireLogElement(document, "data-adventurers-log");
+    const logStatusEl = requireLogElement(logRoot, "data-log-status");
+    const logBodyEl = requireLogElement(logRoot, "data-log-body");
+    let currentMe: Me | null = null;
+    let statsLoaded = false;
+
+    async function loadStats(): Promise<void> {
+      if (!currentMe) {
+        return;
+      }
+      logRoot.hidden = false;
+      logStatusEl.textContent = "Loading…";
+      logBodyEl.hidden = true;
+      statsProfileLink.hidden = true;
+      try {
+        const activity = await apiFetch<HeroActivity>(`/api/heroes/${currentMe.id}/activity`, { signal });
+        logBodyEl.hidden = false;
+        renderAdventurersLog(
+          logRoot,
+          { display_name: currentMe.display_name, avatar_url: currentMe.avatar_url, wow_class: null },
+          activity,
+        );
+        logStatusEl.textContent = "";
+        statsProfileLinkAnchor.href = `/heroes/member/?id=${currentMe.id}`;
+        statsProfileLink.hidden = false;
+      } catch (err) {
+        logStatusEl.textContent = statusMessage(err);
+        logBodyEl.hidden = true;
+      }
+    }
+
+    // ——— Tabs ———
+    const VALID_TABS = new Set(["profile", "stats", "characters", "schedule", "companion", "danger"]);
+
+    function showPanel(name: string): void {
+      document.querySelectorAll<HTMLElement>('[role="tabpanel"]').forEach((panel) => {
+        panel.hidden = panel.id !== `panel-${name}`;
+      });
+      if (location.hash.slice(1) !== name) {
+        history.replaceState(null, "", `#${name}`);
+      }
+      if (name === "stats" && !statsLoaded) {
+        statsLoaded = true;
+        void loadStats();
+      }
+    }
+
+    function initialTabName(): string {
+      const { tab: requested } = parseHash();
+      return VALID_TABS.has(requested) ? requested : "profile";
+    }
+
+    let tablist: { select: (tab: HTMLButtonElement, opts?: { focus?: boolean }) => void } | null = null;
+
+    function initTabs(): void {
+      if (tablist) {
+        return;
+      }
+      const tabsEl = signedIn.querySelector<HTMLElement>('[role="tablist"]')!;
+      tablist = setupTablist(tabsEl, (tab) => showPanel(tab.id.slice(4)));
+      tablist.select(requireElement<HTMLButtonElement>(`tab-${initialTabName()}`));
+      window.addEventListener(
+        "hashchange",
+        () => {
+          const { tab: name } = parseHash();
+          if (!VALID_TABS.has(name)) {
+            return;
+          }
+          const tab = document.getElementById(`tab-${name}`) as HTMLButtonElement | null;
+          if (tab && tablist) {
+            tablist.select(tab);
+          }
+        },
+        { signal },
+      );
+    }
 
     function show(target: HTMLElement): void {
       for (const el of [signedOut, notMember, signedIn]) {
@@ -456,10 +642,12 @@ import "../../styles/room-account.css";
       }
 
       if (!me) {
+        currentMe = null;
         show(signedOut);
         return;
       }
       if (!me.is_guild_member) {
+        currentMe = null;
         notMemberText.textContent = `Signed in as ${me.username}, but you're not in the SideQuest Discord yet.`;
         show(notMember);
         return;
@@ -480,7 +668,9 @@ import "../../styles/room-account.css";
       bnetUnlinked.hidden = linked;
       bnetLink.hidden = linked;
       bnetUnlinkBtn.hidden = !linked;
+      currentMe = me;
       show(signedIn);
+      initTabs();
       await renderCalendar();
       await renderCompanionTokens();
       await renderAway();
@@ -687,6 +877,7 @@ import "../../styles/room-account.css";
         button.disabled = false;
       }
     });
+
     showRedirectError();
     render();
   });

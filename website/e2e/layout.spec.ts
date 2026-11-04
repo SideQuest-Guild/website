@@ -18,6 +18,7 @@ const PAGES = [
   { name: "ledger", path: "/ledger/" },
   { name: "guild", path: "/guild/" },
   { name: "account", path: "/account/" },
+  { name: "account stats", path: "/account/#stats" },
   { name: "officers", path: "/officers/#members" },
   { name: "officers attendance", path: "/officers/#attendance" },
   { name: "officers mcp", path: "/officers/#mcp" },

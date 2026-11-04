@@ -544,33 +544,6 @@
   color: var(--mist);
   cursor: pointer;
 }
-.attendance-trend-chart {
-  margin: 12px 0 20px;
-}
-.chart-legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 14px;
-  margin-top: 4px;
-  font-size: 12px;
-  color: var(--mist-2);
-}
-.chart-legend-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-.chart-legend-dot {
-  width: 9px;
-  height: 9px;
-  flex: none;
-}
-.chart-legend-messages {
-  background: var(--gold-2);
-}
-.chart-legend-voice {
-  background: var(--royal-2);
-}
 .attendance-table-wrap {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -673,38 +646,6 @@
   font-family: var(--display);
   font-size: 12px;
   color: var(--gold);
-}
-.groups-heat-wrap {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  margin-top: 12px;
-  overflow-x: auto;
-}
-.groups-heat-grid {
-  display: grid;
-  grid-template-columns: 32px repeat(24, minmax(16px, 1fr));
-  grid-auto-rows: 16px;
-  gap: 2px;
-  min-width: 560px;
-}
-.groups-heat-corner {
-  background: transparent;
-}
-.groups-heat-hour-label,
-.groups-heat-row-label {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 9px;
-  letter-spacing: 0.02em;
-  color: var(--mist-2);
-  white-space: nowrap;
-}
-.groups-heat-row-label {
-  justify-content: flex-start;
-}
-.groups-heat-cell {
-  border: 1px solid var(--stone-2);
 }
 .groups-session-row {
   cursor: pointer;

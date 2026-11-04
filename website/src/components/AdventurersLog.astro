@@ -1,0 +1,72 @@
+---
+// The Adventurer's Log: a MEE6-style activity section (level ring, lifetime/30-day tiles, streaks, XP-by-source
+// bar, a last-30-days chart and a weekday/hour heat grid) for one person. Mount it on any page — the Hall of Heroes
+// profile, or a signed-in member's own Account Stats tab — and fill it in with `renderAdventurersLog` from
+// `scripts/adventurers-log.ts`. Elements are addressed by `data-log-*` hooks on this root, not page-global ids, so
+// the same markup and script work no matter where it's mounted.
+import "../styles/activity.css";
+
+interface Props {
+  /** The member's own view (Account), so headings speak to "you" instead of "they". */
+  own?: boolean;
+}
+
+const { own = false } = Astro.props;
+---
+
+<section class="chamber" data-adventurers-log aria-labelledby="h-adventurers-log" hidden>
+  <h2 class="chamber-title" id="h-adventurers-log">
+    Adventurer's Log
+  </h2>
+  <p class="status" data-log-status role="status" aria-live="polite"></p>
+
+  <div data-log-body hidden>
+    <div class="hero-level-card">
+      <span class="hero-level-ring" data-log-portrait>
+        <svg class="hero-level-ring-svg" viewBox="0 0 80 80" aria-hidden="true">
+          <circle class="hero-level-ring-track" cx="40" cy="40" r="35"></circle>
+          <circle class="hero-level-ring-fill" data-log-ring-fill cx="40" cy="40" r="35"></circle>
+        </svg>
+        <span class="hero-level-avatar-inner">
+          <img data-log-avatar alt="" width="60" height="60" hidden />
+          <span class="hero-avatar-empty" data-log-avatar-fallback aria-hidden="true" hidden></span>
+        </span>
+      </span>
+      <div class="hero-level-info">
+        <p class="hero-level-big" data-log-level></p>
+        <div class="level-bar-row">
+          <div class="level-bar level-bar-big">
+            <div class="level-bar-fill" data-log-level-fill></div>
+          </div>
+          <span class="level-bar-label" data-log-level-label></span>
+        </div>
+        <div class="hero-level-chips">
+          <span class="hero-level-chip" data-log-rank></span>
+          <span class="hero-level-chip hero-level-chip-reward" data-log-reward></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="hero-activity-tiles" data-log-tiles></div>
+
+    <div class="hero-streak" data-log-streak></div>
+
+    <h3 class="sub-title">XP by source</h3>
+    <div class="xp-source-bar" data-log-xp-bar role="img" aria-label="XP by source"></div>
+    <ul class="xp-source-legend" data-log-xp-legend></ul>
+
+    <h3 class="sub-title">Last 30 days</h3>
+    <div
+      data-log-chart
+      class="attendance-trend-chart"
+      role="img"
+      aria-label="Last 30 days of messages and voice hours"
+    ></div>
+
+    <h3 class="sub-title">{own ? "When you're around" : "When they're around"}</h3>
+    <p class="aside">By weekday and hour, America/Chicago, last 90 days.</p>
+    <div class="groups-heat-wrap">
+      <div class="groups-heat-grid" data-log-heat-grid role="img" aria-label="Activity heat grid"></div>
+    </div>
+  </div>
+</section>

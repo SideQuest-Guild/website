@@ -262,7 +262,7 @@ test.describe("account", () => {
 
   test("shows the calendar link and Google/Apple subscribe links, and rotation replaces it", async ({ page, site }) => {
     site.signIn(MEMBER);
-    await page.goto("/account/");
+    await page.goto("/account/#schedule");
     const urlInput = page.locator("#calendar-url");
     await expect(urlInput).toHaveValue(/\/api\/calendar\/mock-calendar-token\.ics$/);
     await expect(page.locator("#calendar-google")).toHaveAttribute(
@@ -285,7 +285,7 @@ test.describe("account", () => {
         deletes.push(request.url());
       }
     });
-    await page.goto("/account/");
+    await page.goto("/account/#danger");
     const confirm = page.locator("#delete-confirm");
     await expect(page.locator(".danger-zone")).toContainText("removes you from the guild on Discord");
 
@@ -305,7 +305,7 @@ test.describe("account", () => {
 
   test("adding and removing an away range calls the API and updates the list", async ({ page, site }) => {
     site.signIn(MEMBER);
-    await page.goto("/account/");
+    await page.goto("/account/#schedule");
     await expect(page.locator("#away-list")).toContainText("No away dates marked.");
 
     await page.locator("#away-start").fill("2026-11-10");
@@ -326,7 +326,7 @@ test.describe("account", () => {
 
   test("adding and removing a character calls the API and updates the list", async ({ page, site }) => {
     site.signIn(MEMBER);
-    await page.goto("/account/");
+    await page.goto("/account/#characters");
     await expect(page.locator("#char-list")).toContainText("No characters linked yet.");
 
     await page.locator("#char-name").fill("Testerton");
@@ -345,7 +345,7 @@ test.describe("account", () => {
 
   test("lists Companion sign-ins and revoking one calls the API and updates the list", async ({ page, site }) => {
     site.signIn(MEMBER);
-    await page.goto("/account/");
+    await page.goto("/account/#companion");
     const item = page.locator("#companion-token-list .companion-row");
     await expect(item).toHaveCount(1);
     await expect(item).toContainText("Guide's laptop");
@@ -353,6 +353,23 @@ test.describe("account", () => {
     page.once("dialog", (dialog) => dialog.accept());
     await item.locator("[data-revoke-companion-token]").click();
     await expect(page.locator("#companion-token-list")).toContainText("No Companion sign-ins yet.");
+  });
+
+  test("the Stats tab shows the member's own level and voice hours, and #companion lands on Companion", async ({
+    page,
+    site,
+  }) => {
+    site.signIn(MEMBER);
+    const memberHero = HEROES.find((h) => h.member_id === MEMBER.id)!;
+
+    await page.goto("/account/#stats");
+    await expect(page.locator("#tab-stats")).toHaveAttribute("aria-selected", "true");
+    await expect(page.locator("[data-log-level]")).toHaveText(`Lv. ${memberHero.chat_level}`);
+    await expect(page.locator("[data-log-tiles]")).toContainText("35.0h");
+
+    await page.goto("/account/#companion");
+    await expect(page.locator("#tab-companion")).toHaveAttribute("aria-selected", "true");
+    await expect(page.locator("#panel-companion")).toBeVisible();
   });
 });
 
@@ -645,9 +662,9 @@ test.describe("hall of heroes", () => {
   test("a hero's profile shows level, messages and voice hours from the Adventurer's Log", async ({ page, site }) => {
     site.signIn(MEMBER);
     await page.goto(`/heroes/member/?id=${GM.id}`);
-    await expect(page.locator("#hero-activity-level")).toContainText("Lv.");
-    await expect(page.locator("#hero-activity-tiles")).toContainText("Messages");
-    await expect(page.locator("#hero-activity-tiles")).toContainText("Voice hours");
+    await expect(page.locator("[data-log-level]")).toContainText("Lv.");
+    await expect(page.locator("[data-log-tiles]")).toContainText("Messages");
+    await expect(page.locator("[data-log-tiles]")).toContainText("Voice hours");
   });
 
   test("an unknown member says so", async ({ page, site }) => {
