@@ -33,8 +33,9 @@ const PAGES = [
   { name: "not found", path: "/no-such-page/", nav: false },
 ];
 
-// Text and controls a visitor reads or taps; decorative layers may bleed past the edge on purpose.
-const CONTENT = "h1, h2, h3, p, li, a, button, input, select, textarea, label, img, .chamber";
+// Text and controls a visitor reads or taps; decorative layers may bleed past the edge on purpose. A page's tab row
+// (`.tabs-scroll`) must fit, but the tabs inside it scroll sideways on phones by design.
+const CONTENT = "h1, h2, h3, p, li, a, button, input, select, textarea, label, img, .chamber, .tabs-scroll";
 
 type Offender = { what: string; left: number; right: number };
 
@@ -45,7 +46,13 @@ async function offScreen(page: Page): Promise<{ width: number; scrollWidth: numb
     for (const el of document.querySelectorAll<HTMLElement>(selector)) {
       const rect = el.getBoundingClientRect();
       const style = getComputedStyle(el);
-      if (rect.width === 0 || rect.height === 0 || style.visibility === "hidden" || el.closest("[hidden], .sr-only")) {
+      if (
+        rect.width === 0 ||
+        rect.height === 0 ||
+        style.visibility === "hidden" ||
+        el.closest("[hidden], .sr-only") ||
+        el.parentElement?.closest(".tabs-scroll")
+      ) {
         continue;
       }
       if (rect.left < -1 || rect.right > width + 1) {

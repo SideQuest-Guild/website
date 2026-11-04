@@ -23,7 +23,7 @@ import "../../styles/activity.css";
   </div>
 
   <div id="officers-body" hidden>
-    <div class="tabs" role="tablist" aria-label="Officer console">
+    <div class="tabs tabs-scroll" role="tablist" aria-label="Officer console">
       <button type="button" role="tab" id="tab-events" aria-controls="panel-events" aria-selected="true" tabindex="0">
         Events
       </button>
@@ -746,6 +746,7 @@ import "../../styles/activity.css";
     type StatsQuietMember,
   } from "../../scripts/api";
   import { onPage } from "../../scripts/page";
+  import { setupTablist } from "../../scripts/tablist";
   import { seriesRuleText, weekdayPhrase, WEEKDAY_SHORT_LABELS } from "../../scripts/series";
   import { renderActivityChart as renderGroupedActivityChart } from "../../scripts/activity-chart";
 
@@ -756,50 +757,6 @@ import "../../styles/activity.css";
     const initial = escapeHtml(name.trim().charAt(0).toUpperCase() || "?");
     const fontSize = Math.round(size * 0.45);
     return `<span class="avatar" style="width:${size}px;height:${size}px;font-size:${fontSize}px" aria-hidden="true">${initial}</span>`;
-  }
-  // Generic roving-tabindex tablist: click or arrow-key between the visible tabs, Home/End jump to the ends.
-  function setupTablist(
-    container: HTMLElement,
-    onActivate: (tab: HTMLButtonElement) => void,
-  ): { select: (tab: HTMLButtonElement, opts?: { focus?: boolean }) => void } {
-    const allTabs = (): HTMLButtonElement[] =>
-      Array.from(container.querySelectorAll<HTMLButtonElement>('[role="tab"]'));
-
-    function select(tab: HTMLButtonElement, { focus = false }: { focus?: boolean } = {}): void {
-      for (const t of allTabs()) {
-        const selected = t === tab;
-        t.setAttribute("aria-selected", String(selected));
-        t.tabIndex = selected ? 0 : -1;
-      }
-      if (focus) {
-        tab.focus();
-      }
-      onActivate(tab);
-    }
-
-    for (const tab of allTabs()) {
-      tab.addEventListener("click", () => select(tab));
-      tab.addEventListener("keydown", (ev) => {
-        const visible = allTabs().filter((t) => !t.hidden);
-        const i = visible.indexOf(tab);
-        let next = -1;
-        if (ev.key === "ArrowRight") {
-          next = (i + 1) % visible.length;
-        } else if (ev.key === "ArrowLeft") {
-          next = (i - 1 + visible.length) % visible.length;
-        } else if (ev.key === "Home") {
-          next = 0;
-        } else if (ev.key === "End") {
-          next = visible.length - 1;
-        } else {
-          return;
-        }
-        ev.preventDefault();
-        select(visible[next], { focus: true });
-      });
-    }
-
-    return { select };
   }
   function pad(n: number): string {
     return String(n).padStart(2, "0");

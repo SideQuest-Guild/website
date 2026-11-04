@@ -469,6 +469,44 @@ textarea {
   border-color: var(--gold-2);
   background: linear-gradient(180deg, var(--royal-2), var(--royal));
 }
+/* A page's own tab bar (Account, Guild, Officers): one row that scrolls sideways on narrow screens instead of
+   stacking four rows of tabs above the content. Centred while it fits (the flexible ends), start-aligned once it
+   overflows so the first tab is never cut off; the ends fade so a cut-off tab reads as "more this way". The chosen
+   tab is scrolled into the middle by scripts/tablist.ts. */
+@media (max-width: 900px) {
+  .tabs-scroll {
+    position: relative;
+    /* Exactly its parent's width: without width 0 the unwrapped row's length would widen the grid item around it
+       (and the page) instead of scrolling. */
+    width: 0;
+    min-width: 100%;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    padding-inline: 16px;
+    scroll-padding-inline: 16px;
+    scrollbar-width: none;
+    -webkit-mask-image: linear-gradient(to right, transparent, #000 16px, #000 calc(100% - 16px), transparent);
+    mask-image: linear-gradient(to right, transparent, #000 16px, #000 calc(100% - 16px), transparent);
+  }
+  .tabs-scroll::-webkit-scrollbar {
+    display: none;
+  }
+  .tabs-scroll::before,
+  .tabs-scroll::after {
+    content: "";
+    flex: 1 0 0;
+  }
+  .tabs-scroll > * {
+    flex: none;
+  }
+}
+@media (max-width: 900px) and (prefers-reduced-motion: no-preference) {
+  .tabs-scroll {
+    scroll-behavior: smooth;
+  }
+}
 
 /* ——— Buttons ——— */
 .btn,

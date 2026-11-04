@@ -25,7 +25,7 @@ import "../../styles/room-guild.css";
   </div>
 
   <div id="guild-body" hidden>
-    <div class="tabs" role="tablist" aria-label="Guild hall">
+    <div class="tabs tabs-scroll" role="tablist" aria-label="Guild hall">
       <button type="button" role="tab" id="tab-roster" aria-controls="panel-roster" aria-selected="true" tabindex="0">
         Roster
       </button>
@@ -231,6 +231,7 @@ import "../../styles/room-guild.css";
     type Me,
   } from "../../scripts/api";
   import { onPage } from "../../scripts/page";
+  import { setupTablist } from "../../scripts/tablist";
 
   const BANK_KIND_LABELS: Record<GuildBankKind, string> = {
     deposit: "Deposited",
@@ -268,45 +269,6 @@ import "../../styles/room-guild.css";
 
   function parseHash(): { tab: string } {
     return { tab: location.hash.slice(1) };
-  }
-
-  // Roving-tabindex tablist, matching the officer console's pattern (no GM-only tabs here).
-  function setupTablist(container: HTMLElement, onActivate: (tab: HTMLButtonElement) => void) {
-    const allTabs = (): HTMLButtonElement[] =>
-      Array.from(container.querySelectorAll<HTMLButtonElement>('[role="tab"]'));
-    function select(tab: HTMLButtonElement, { focus = false }: { focus?: boolean } = {}): void {
-      for (const t of allTabs()) {
-        const selected = t === tab;
-        t.setAttribute("aria-selected", String(selected));
-        t.tabIndex = selected ? 0 : -1;
-      }
-      if (focus) {
-        tab.focus();
-      }
-      onActivate(tab);
-    }
-    for (const tab of allTabs()) {
-      tab.addEventListener("click", () => select(tab));
-      tab.addEventListener("keydown", (ev) => {
-        const visible = allTabs();
-        const i = visible.indexOf(tab);
-        let next = -1;
-        if (ev.key === "ArrowRight") {
-          next = (i + 1) % visible.length;
-        } else if (ev.key === "ArrowLeft") {
-          next = (i - 1 + visible.length) % visible.length;
-        } else if (ev.key === "Home") {
-          next = 0;
-        } else if (ev.key === "End") {
-          next = visible.length - 1;
-        } else {
-          return;
-        }
-        ev.preventDefault();
-        select(visible[next]!, { focus: true });
-      });
-    }
-    return { select };
   }
 
   function memberMainClass(m: GuildRosterMember): string | null {
