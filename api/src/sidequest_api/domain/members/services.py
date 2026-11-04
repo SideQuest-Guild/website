@@ -6,13 +6,15 @@ from typing import Any
 from advanced_alchemy.repository import SQLAlchemyAsyncRepository
 from advanced_alchemy.service import SQLAlchemyAsyncRepositoryService
 from litestar.exceptions import NotFoundException
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, or_, select, update
 
 from sidequest_api.lib.battlenet import BattleNetOAuthError
 from sidequest_common.models import (
     EventSignup,
     EventSignupActivity,
     EventVoicePresence,
+    GroupSessionMember,
+    GroupSessionPair,
     McpToken,
     Member,
     MemberAwayRange,
@@ -96,6 +98,12 @@ class MembersService(SQLAlchemyAsyncRepositoryService[Member]):
         ``actor_name`` snapshot. Moderation records (``ModCase``) are kept. The member row's ``calendar_token``
         goes with it, so the old calendar link 404s right away.
 
+        Also deletes the member's group-voice presence (``GroupSessionMember``/``GroupSessionPair``, both keyed
+        by Discord ID with no FK): once gone, group stats and the leaderboard fall back to "Unknown" for them
+        with no site link. The group sessions themselves, and their ``GroupSessionTranscript`` chat logs, are
+        kept like ``ModCase`` (moderation/stats history, purged on their own retention schedule); only the
+        member's own minutes and pairings are erased.
+
         Also deletes the member's own MCP (Model Context Protocol) client tokens.
 
         Also queues a ``MemberRoleReset`` outbox row (same transaction) so the bot's ``link_roles`` plugin strips
@@ -105,6 +113,15 @@ class MembersService(SQLAlchemyAsyncRepositoryService[Member]):
         await session.execute(delete(EventSignup).where(EventSignup.member_id == member.id))
         await session.execute(delete(EventSignupActivity).where(EventSignupActivity.discord_id == member.discord_id))
         await session.execute(delete(EventVoicePresence).where(EventVoicePresence.discord_id == member.discord_id))
+        await session.execute(delete(GroupSessionMember).where(GroupSessionMember.discord_id == member.discord_id))
+        await session.execute(
+            delete(GroupSessionPair).where(
+                or_(
+                    GroupSessionPair.discord_id_a == member.discord_id,
+                    GroupSessionPair.discord_id_b == member.discord_id,
+                )
+            )
+        )
         await session.execute(delete(MemberAwayRange).where(MemberAwayRange.member_id == member.id))
         await session.execute(delete(MemberLevel).where(MemberLevel.user_id == member.discord_id))
         await session.execute(delete(McpToken).where(McpToken.member_id == member.id))

@@ -35,6 +35,9 @@ import {
   EPGP_SYNC_TOKENS,
   EVENTS,
   GM_MEMBERS,
+  GROUP_LEADERBOARD,
+  GROUP_SESSIONS,
+  GROUP_STATS,
   GUILD_ANNOUNCEMENTS,
   GUILD_BANK,
   GUILD_CRAFTERS,
@@ -52,6 +55,7 @@ import {
   epgpImportResult,
   eventDetail,
   gmMemberDetail,
+  groupSessionDetail,
   heroLeaderboard,
   heroProfile,
 } from "./data";
@@ -353,6 +357,33 @@ export const test = base.extend<{ site: Site }>({
         }
         const row = HEROES.find((h: HeroRow) => h.member_id === Number(heroMatch[1]));
         return row ? json(route, heroProfile(row)) : json(route, { detail: "No such member" }, 404);
+      }
+      if (path === "/api/groups/stats" && method === "GET") {
+        if (!me?.is_officer) {
+          return json(route, { detail: "Officers only" }, 401);
+        }
+        return json(route, { ...GROUP_STATS, days: Number(url.searchParams.get("days") ?? "30") });
+      }
+      if (path === "/api/groups/sessions" && method === "GET") {
+        if (!me?.is_officer) {
+          return json(route, { detail: "Officers only" }, 401);
+        }
+        const before = url.searchParams.get("before");
+        const limit = Number(url.searchParams.get("limit") ?? "50");
+        const sorted = GROUP_SESSIONS.toSorted((a, b) => b.started_at.localeCompare(a.started_at));
+        const filtered = before ? sorted.filter((s) => s.started_at < before) : sorted;
+        return json(route, filtered.slice(0, limit));
+      }
+      const groupSessionMatch = /^\/api\/groups\/sessions\/([^/]+)$/.exec(path);
+      if (groupSessionMatch && method === "GET") {
+        if (!me?.is_officer) {
+          return json(route, { detail: "Officers only" }, 401);
+        }
+        const session = GROUP_SESSIONS.find((s) => s.id === groupSessionMatch[1]);
+        return session ? json(route, groupSessionDetail(session)) : json(route, { detail: "No such session" }, 404);
+      }
+      if (path === "/api/groups/leaderboard" && method === "GET") {
+        return json(route, GROUP_LEADERBOARD);
       }
       if (path === "/api/epgp/standings" && method === "GET") {
         return json(route, { generated_at: new Date().toISOString(), rules: EPGP_RULES, rows: EPGP_STANDINGS });

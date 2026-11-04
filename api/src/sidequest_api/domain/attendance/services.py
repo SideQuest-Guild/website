@@ -19,6 +19,7 @@ from sidequest_api.lib.attendance import (
 from sidequest_api.lib.discord import avatar_url
 from sidequest_common.models import EventSignup, EventVoicePresence, GuildEvent, Member
 from sidequest_common.schemas import (
+    ROLE_KINDS,
     AttendanceDetail,
     AttendanceEventSummary,
     AttendanceMark,
@@ -41,7 +42,7 @@ if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
 PAST_EVENT_LIMIT = 50
-_ROLE_KIND_VALUES = {"raid", "dungeon"}
+_ROLE_KIND_VALUES = {kind.value for kind in ROLE_KINDS}
 _ALL_TIME_START = datetime(2020, 1, 1, tzinfo=UTC)
 
 

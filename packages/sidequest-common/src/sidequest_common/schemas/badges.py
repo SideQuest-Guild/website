@@ -78,6 +78,20 @@ BADGE_LIST: tuple[BadgeDefinition, ...] = (
         icon="🌟",
         color=0xFF8C2A,
     ),
+    BadgeDefinition(
+        id="party_animal",
+        name="Party Animal",
+        description="Grouped up from #lfg 50 times (ten minutes or more with at least one other member).",
+        icon="🎉",
+        color=0x5FD38D,
+    ),
+    BadgeDefinition(
+        id="party_leader",
+        name="Party Leader",
+        description="Started 25 groups from #lfg that others joined.",
+        icon="🚩",
+        color=0xE0533D,
+    ),
 )
 
 BADGES: dict[str, BadgeDefinition] = {badge.id: badge for badge in BADGE_LIST}

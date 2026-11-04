@@ -58,6 +58,26 @@ import "../../styles/room-heroes.css";
     </section>
   </div>
 
+  <!-- Public: no sign-in needed, unlike the leaderboard above. -->
+  <section class="chamber" id="groups-board-section" aria-labelledby="h-groups-board">
+    <h2 class="chamber-title" id="h-groups-board">
+      Most grouped
+    </h2>
+    <p class="aside">
+      Members who've spent the most time grouped up in <strong>#lfg</strong> voice channels. Only members with a site
+      account appear here.
+    </p>
+    <div class="tabs" role="tablist" aria-label="Range" id="groups-board-tabs">
+      <button type="button" role="tab" data-range="month" aria-selected="true" tabindex="0">
+        This month
+      </button>
+      <button type="button" role="tab" data-range="all_time" aria-selected="false" tabindex="-1">
+        All time
+      </button>
+    </div>
+    <ol class="groups-board-list" id="groups-board-list" aria-live="polite"></ol>
+  </section>
+
   <noscript>
     <p class="aside">Enable JavaScript to view the Hall of Heroes.</p>
   </noscript>
@@ -75,6 +95,8 @@ import "../../styles/room-heroes.css";
     SEASONS,
     BADGE_INFO,
     badgeIconId,
+    type GroupLeaderboard,
+    type GroupLeaderboardRow,
     type HeroLeaderboard,
     type HeroRow,
     type Me,
@@ -142,6 +164,20 @@ import "../../styles/room-heroes.css";
     </a>`;
   }
 
+  function groupsBoardRow(row: GroupLeaderboardRow, rank: number): string {
+    return `
+    <li class="groups-board-row">
+      <span class="hero-rank${rank <= 3 ? ` rank-${rank === 1 ? "gold" : rank === 2 ? "silver" : "bronze"}` : ""}">${rank}</span>
+      <a class="hero-name" href="/heroes/member/?id=${row.member_id}">
+        <span class="hero-display-name">${escapeHtml(row.display_name)}</span>
+      </a>
+      <span class="hero-stats-group">
+        <span class="hero-stat hero-stat-ep">${row.groups}<small>Groups</small></span>
+        <span class="hero-stat">${row.minutes}<small>Minutes</small></span>
+      </span>
+    </li>`;
+  }
+
   onPage("#heroes-body", (signal) => {
     const statusEl = requireElement("heroes-status");
     const gateEl = requireElement("heroes-gate");
@@ -151,6 +187,8 @@ import "../../styles/room-heroes.css";
     const seasonTabsEl = requireElement("season-tabs");
     const sortTabsEl = requireElement("sort-tabs");
     const boardEl = requireElement("leaderboard");
+    const groupsBoardTabsEl = requireElement("groups-board-tabs");
+    const groupsBoardListEl = requireElement("groups-board-list");
 
     // Season One hasn't started yet at launch: default to All time until it has, per SEASONS[0].starts_at.
     const seasonOneStarted = Date.now() >= new Date(SEASONS[0]!.starts_at).getTime();
@@ -229,7 +267,45 @@ import "../../styles/room-heroes.css";
       );
     }
 
+    // ——— Public "most grouped" board: no sign-in needed, unlike the leaderboard above. ———
+    let groupsBoardRange: "month" | "all_time" = "month";
+
+    async function loadGroupsBoard(): Promise<void> {
+      groupsBoardListEl.innerHTML = `<p class="aside">Loading…</p>`;
+      try {
+        const board = await apiFetch<GroupLeaderboard>("/api/groups/leaderboard", { signal });
+        const boardRows = groupsBoardRange === "month" ? board.month : board.all_time;
+        groupsBoardListEl.innerHTML =
+          boardRows.length > 0
+            ? boardRows.map((row, i) => groupsBoardRow(row, i + 1)).join("")
+            : `<p class="hero-empty aside">No one's grouped up in #lfg yet.</p>`;
+      } catch (err) {
+        groupsBoardListEl.innerHTML = `<p class="status" data-tone="error">${escapeHtml(statusMessage(err))}</p>`;
+      }
+    }
+
+    for (const btn of groupsBoardTabsEl.querySelectorAll<HTMLButtonElement>("button")) {
+      btn.addEventListener(
+        "click",
+        () => {
+          const next = btn.dataset.range as "month" | "all_time" | undefined;
+          if (!next || next === groupsBoardRange) {
+            return;
+          }
+          groupsBoardRange = next;
+          for (const other of groupsBoardTabsEl.querySelectorAll<HTMLButtonElement>("button")) {
+            const active = other === btn;
+            other.setAttribute("aria-selected", String(active));
+            other.tabIndex = active ? 0 : -1;
+          }
+          void loadGroupsBoard();
+        },
+        { signal },
+      );
+    }
+
     async function init(): Promise<void> {
+      void loadGroupsBoard();
       let me: Me | null = null;
       try {
         me = await fetchMe();

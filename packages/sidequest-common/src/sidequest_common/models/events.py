@@ -13,8 +13,8 @@ from advanced_alchemy.types import DateTimeUTC, JsonB
 from sqlalchemy import BigInteger, Boolean, Date, ForeignKey, Integer, String, Text, Time, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-EVENT_KINDS = ("raid", "dungeon", "leveling", "pvp", "social", "transmog", "other")
-ROLE_KINDS = ("raid", "dungeon")
+EVENT_KINDS = ("raid", "dungeon", "world_boss", "leveling", "pvp", "social", "transmog", "other")
+ROLE_KINDS = ("raid", "dungeon", "world_boss")
 EVENT_STATUSES = ("scheduled", "cancelled", "completed")
 SIGNUP_ROLES = ("tank", "healer", "dps")
 SIGNUP_STATUSES = ("signed", "tentative", "absent")
@@ -83,7 +83,7 @@ class GuildEvent(UUIDAuditBase):
     __tablename__ = "guild_event"
     __table_args__ = (
         UniqueConstraint("series_id", "occurrence_date", name="uq_guild_event_series_occurrence"),
-        {"comment": "Scheduled guild events (raids, dungeons, leveling, pvp, social, transmog, other)."},
+        {"comment": "Scheduled guild events (raids, dungeons, world bosses, leveling, pvp, social, transmog, other)."},
     )
 
     kind: Mapped[str] = mapped_column(String(20), default="other")

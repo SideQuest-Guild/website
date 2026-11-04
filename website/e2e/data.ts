@@ -25,6 +25,10 @@ import type {
   EventSummary,
   GmMember,
   GmMemberDetail,
+  GroupLeaderboard,
+  GroupSessionDetail,
+  GroupSessionSummary,
+  GroupStats,
   GuildAnnouncement,
   GuildBankRow,
   GuildCrafterProfession,
@@ -373,6 +377,143 @@ export function heroProfile(row: HeroRow): HeroProfile {
     badges: [badge("first_steps", "First Steps", "Attended their first guild event.", "👣", 60)],
   };
 }
+
+// ——— Group voice channel fixtures (#lfg) ———
+export const GROUP_STATS: GroupStats = {
+  days: 30,
+  sessions_total: 14,
+  sessions_counted: 9,
+  grouped_minutes: 540,
+  by_kind: [
+    { kind: "dungeon", sessions: 5, minutes: 220 },
+    { kind: "raid", sessions: 2, minutes: 180 },
+    { kind: "world_boss", sessions: 1, minutes: 40 },
+    { kind: "social", sessions: 1, minutes: 100 },
+  ],
+  top_instances: [
+    { kind: "dungeon", name: "Deadmines", sessions: 3 },
+    { kind: "raid", name: "Molten Core", sessions: 2 },
+  ],
+  most_grouped: [
+    { person: { discord_id: GM.discord_id, display_name: GM.display_name, member_id: GM.id }, value: 240, sessions: 7 },
+    {
+      person: { discord_id: OFFICER.discord_id, display_name: OFFICER.display_name, member_id: OFFICER.id },
+      value: 180,
+      sessions: 5,
+    },
+  ],
+  most_social: [
+    {
+      person: { discord_id: MEMBER.discord_id, display_name: MEMBER.display_name, member_id: MEMBER.id },
+      value: 4,
+      sessions: 6,
+    },
+  ],
+  best_duos: [
+    {
+      a: { discord_id: GM.discord_id, display_name: GM.display_name, member_id: GM.id },
+      b: { discord_id: OFFICER.discord_id, display_name: OFFICER.display_name, member_id: OFFICER.id },
+      minutes: 160,
+      sessions: 4,
+    },
+  ],
+  most_led: [
+    { person: { discord_id: GM.discord_id, display_name: GM.display_name, member_id: GM.id }, value: 6, sessions: 6 },
+  ],
+  busy_hours: [
+    { weekday: 4, hour: 20, sessions: 5 },
+    { weekday: 5, hour: 21, sessions: 3 },
+    { weekday: 6, hour: 15, sessions: 1 },
+  ],
+};
+
+export const GROUP_SESSIONS: GroupSessionSummary[] = [
+  {
+    id: "aaaaaaaa-1111-4111-8111-111111111111",
+    kind: "dungeon",
+    name: "Deadmines",
+    channel_name: "dungeon-deadmines",
+    creator: { discord_id: GM.discord_id, display_name: GM.display_name, member_id: GM.id },
+    event_id: null,
+    started_at: inDays(-2, 19),
+    ended_at: inDays(-2, 20),
+    end_reason: "owner",
+    peak_size: 5,
+    grouped_minutes: 45,
+    counted: true,
+    has_transcript: true,
+  },
+  {
+    id: "aaaaaaaa-2222-4111-8111-111111111111",
+    kind: "raid",
+    name: null,
+    channel_name: "raid-3",
+    creator: { discord_id: OFFICER.discord_id, display_name: OFFICER.display_name, member_id: OFFICER.id },
+    event_id: null,
+    started_at: inDays(-5, 20),
+    ended_at: inDays(-5, 22),
+    end_reason: "empty",
+    peak_size: 18,
+    grouped_minutes: 110,
+    counted: true,
+    has_transcript: true,
+  },
+  {
+    id: "aaaaaaaa-3333-4111-8111-111111111111",
+    kind: "social",
+    name: null,
+    channel_name: "hangout-1",
+    creator: { discord_id: MEMBER.discord_id, display_name: MEMBER.display_name, member_id: MEMBER.id },
+    event_id: null,
+    started_at: inDays(-1, 18),
+    ended_at: null,
+    end_reason: null,
+    peak_size: 2,
+    grouped_minutes: 5,
+    counted: false,
+    has_transcript: false,
+  },
+];
+
+export function groupSessionDetail(session: GroupSessionSummary): GroupSessionDetail {
+  return {
+    ...session,
+    note: session.kind === "dungeon" ? "Need one more for the last boss" : null,
+    needs: session.kind === "dungeon" ? ["healer"] : [],
+    members: [
+      { person: session.creator, value: session.grouped_minutes, sessions: 1 },
+      {
+        person: { discord_id: MEMBER.discord_id, display_name: MEMBER.display_name, member_id: MEMBER.id },
+        value: 30,
+        sessions: 1,
+      },
+    ],
+    transcript: session.has_transcript
+      ? [
+          {
+            author_discord_id: session.creator.discord_id,
+            author_name: session.creator.display_name,
+            content: "Ready when you are",
+            created_at: session.started_at,
+            attachments: [],
+          },
+        ]
+      : null,
+    transcript_expires_at: session.has_transcript ? inDays(28) : null,
+  };
+}
+
+export const GROUP_LEADERBOARD: GroupLeaderboard = {
+  month: [
+    { member_id: GM.id, display_name: GM.display_name, groups: 7, minutes: 240 },
+    { member_id: OFFICER.id, display_name: OFFICER.display_name, groups: 5, minutes: 180 },
+  ],
+  all_time: [
+    { member_id: GM.id, display_name: GM.display_name, groups: 40, minutes: 1800 },
+    { member_id: OFFICER.id, display_name: OFFICER.display_name, groups: 22, minutes: 900 },
+    { member_id: MEMBER.id, display_name: MEMBER.display_name, groups: 6, minutes: 150 },
+  ],
+};
 
 // ——— EPGP loot system fixtures ———
 export const EPGP_RULES: EpgpRules = {

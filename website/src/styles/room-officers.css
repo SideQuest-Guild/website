@@ -580,3 +580,117 @@
   flex: 1;
   min-width: 0;
 }
+
+/* ——— Group voice stats (Groups tab) ——— */
+#groups-window-tabs {
+  margin-top: 18px;
+}
+.groups-headline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: clamp(16px, 2.4vw, 32px);
+  margin: 18px 0 8px;
+}
+.groups-headline-stat {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 2px;
+  font-size: var(--caps);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--mist-2);
+}
+.groups-headline-stat strong {
+  font-family: var(--display);
+  font-size: 28px;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--gold);
+}
+.groups-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: clamp(16px, 2vw, 28px);
+  margin-top: 20px;
+}
+.groups-stat-list {
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.groups-stat-list > li {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--stone-2);
+  font-size: 14px;
+}
+.groups-stat-list > li:last-child {
+  border-bottom: none;
+}
+.groups-stat-value {
+  flex-shrink: 0;
+  color: var(--mist-2);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.groups-heat-wrap {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  margin-top: 12px;
+  overflow-x: auto;
+}
+.groups-heat-grid {
+  display: grid;
+  grid-template-columns: 32px repeat(24, minmax(16px, 1fr));
+  grid-auto-rows: 16px;
+  gap: 2px;
+  min-width: 560px;
+}
+.groups-heat-corner {
+  background: transparent;
+}
+.groups-heat-hour-label,
+.groups-heat-row-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  letter-spacing: 0.02em;
+  color: var(--mist-2);
+  white-space: nowrap;
+}
+.groups-heat-row-label {
+  justify-content: flex-start;
+}
+.groups-heat-cell {
+  border: 1px solid var(--stone-2);
+}
+.groups-session-row {
+  cursor: pointer;
+}
+.groups-session-row:hover,
+.groups-session-row:focus-visible {
+  background: linear-gradient(90deg, rgba(46, 74, 133, 0.42), rgba(46, 74, 133, 0.08));
+}
+.groups-session-row[aria-current="true"] {
+  background: linear-gradient(90deg, rgba(46, 74, 133, 0.42), rgba(46, 74, 133, 0.08));
+}
+#groups-sessions-table th,
+#groups-sessions-table td {
+  padding: 6px 8px;
+  font-size: 13px;
+}
+#groups-sessions-table td:first-child {
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 560px) {
+  .groups-stat-grid {
+    grid-template-columns: 1fr;
+  }
+}

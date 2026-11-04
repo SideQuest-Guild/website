@@ -27,11 +27,11 @@ flowchart LR
 | `/events/` | everyone | Upcoming and past events. Members also see who signed up, and can sign up themselves. |
 | `/raids/` | everyone | How raid nights, SQL loot and attendance work. |
 | `/ledger/` | everyone | Loot points for every raider, the loot rules, recent loot and boss kills. |
-| `/heroes/` | members | The Hall of Heroes: Renown, raids attended, chat level and badges for each member. |
+| `/heroes/` | everyone (the rest is members) | The Hall of Heroes: a public "most grouped" board, plus Renown, raids attended, chat level and badges for each member. |
 | `/guild/` | members | The in-game roster, who can craft what, the guild bank log and guild news. |
 | `/addons/` | everyone | The addons the guild uses, with download links. |
 | `/account/` | anyone signed in | Link Battle.net, get a calendar link, mark away dates, or delete your account. |
-| `/officers/` | officers | Events, addons, recruiting and attendance. Game Masters also get members, the activity log and moderation. |
+| `/officers/` | officers | Events, addons, recruiting, attendance and group voice stats. Game Masters also get members, the activity log and moderation. |
 | `/officers/sync/` | officers | Move a raid night from the addon to the site, and points back to the addon. |
 | `/rules/`, `/privacy/`, `/terms/` | everyone | Guild rules, what the site keeps about you, and the terms. |
 | `/api-reference/` | everyone | The same API reference below, styled like the rest of the site. |
@@ -112,8 +112,8 @@ and Can't buttons, so members can sign up from either place. Edits on the site r
 and edits in Discord reach the site at once. A repeating event keeps its next 14 days filled in as ordinary events,
 each with its own sign-ups.
 
-**Two kinds of points.** *Renown* is for the Hall of Heroes. Each event is worth some: a raid 10, a dungeon 5,
-leveling and PvP 3, anything else 2, and an officer can change it for one event. *EP and GP* are the SQL loot
+**Two kinds of points.** *Renown* is for the Hall of Heroes. Each event is worth some: a raid 10, a dungeon or world
+boss 5, leveling and PvP 3, anything else 2, and an officer can change it for one event. *EP and GP* are the SQL loot
 points. The addon records them and the site shows them on `/ledger/`. In the code and the API, Renown is still
 called `ep`. The loot rules and prices are in `schemas/epgp.py`.
 
@@ -134,6 +134,8 @@ ticked already. Every number about who came (Hall of Heroes, badges, Renown, the
 | Founding Member | Be on the guild roster before launch. |
 | Chatterbox | Reach chat level 10. |
 | Top Helper | Come to the most dungeons and leveling groups last month. It moves to the next winner each month. |
+| Party Animal | Group up from `#lfg` 50 times, ten minutes or more with at least one other member. |
+| Party Leader | Start 25 groups from `#lfg` that others joined. |
 
 **Discord roles from the site.** Signing in gives *Signed the Ledger*, and linking Battle.net gives *Battle-Tagged*.
 New people who haven't signed in get *At the Gate*. When a Game Master confirms someone on the in-game roster, they
@@ -144,6 +146,16 @@ a role with moderator powers or one above its own.
 they signed up for. Anyone with the link can read it, so "Make a new link" on `/account/` turns the old one off.
 Members can also mark dates they'll be away. The bot gives them *Away on a Quest* for those days, and the raid chart
 shows who is away.
+
+**Groups and `#lfg` voice channels.** A locked `#lfg` channel in Discord has one button per kind of group: Dungeon,
+Raid, World Boss, Leveling, PvP and Hangout. Clicking one makes a voice channel right away, and a live card in
+`#lfg` shows who's in it. The owner can rename it, set a player cap, lock it, hand it off or end it from buttons in
+its own text chat. A channel that sits empty, or that nobody joins, goes away by itself after two minutes. The bot
+reports each group to the API: who started it, what kind, who was in it and for how long, and who grouped with whom.
+Officers see it all on `/officers/#groups`: most grouped, best duos, busiest hours, what gets run most, and a list of
+groups with their chat (kept 30 days for moderation, then deleted). Everyone sees a "most grouped" board on
+`/heroes/`, and the *Party Animal* and *Party Leader* badges come from it too. The Discord side is
+`plugins/group_finder.py` in the bot repo; the API side is `api/src/sidequest_api/domain/groups/`.
 
 **Your data.** If you start keeping something new about members, add it to `/privacy/` and make `delete_account` in
 `api/src/sidequest_api/domain/members/services.py` remove it.

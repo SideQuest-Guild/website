@@ -103,6 +103,7 @@ TAG_GROUPS: dict[str, dict[str, str]] = {
         "Guild news": "Guild news and posted announcements. Anyone may read them.",
         "Discord status": "The guild's live Discord voice and member counts. Anyone may read them.",
         "Calendar feed": "A member's private calendar feed. Anyone with the feed link can read it; no sign-in needed.",
+        "Group leaderboard": "The public group-voice leaderboard: members by groups joined. Anyone may read it.",
     },
     "Members": {
         "My account": "The signed-in member's own profile. A member must be signed in.",
@@ -133,6 +134,7 @@ TAG_GROUPS: dict[str, dict[str, str]] = {
         "Loot administration": "Manage SQL standings, characters, and roster entries. An officer must be signed in.",
         "Sync tokens": "Create sync tokens for the addon uploader. An officer must be signed in.",
         "Attendance": "Review events and mark who attended. An officer must be signed in.",
+        "Group stats": "Group-voice stats and session browsing. An officer must be signed in.",
     },
     "Game Masters": {
         "GM console": "Member lookup, audit log, and case review for Game Masters. A Game Master must be signed in.",
@@ -166,6 +168,7 @@ TAG_GROUPS: dict[str, dict[str, str]] = {
         "Attendance voice": "Voice-channel minutes per running event. Called by the bot with its shared key.",
         "Badges": "Badge role state and pending announcements. Called by the bot with its shared key.",
         "Guild announcements": "The bot's queue of guild announcements still to post. Called by the bot.",
+        "Group voice": "Group voice channel session lifecycle, spawned from the #lfg panel. Called by the bot.",
     },
 }
 

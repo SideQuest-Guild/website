@@ -15,13 +15,23 @@ export type Me = {
   roster_confirmed: boolean;
 };
 
-export type EventKind = "raid" | "dungeon" | "leveling" | "pvp" | "social" | "transmog" | "other";
+export type EventKind = "raid" | "dungeon" | "world_boss" | "leveling" | "pvp" | "social" | "transmog" | "other";
 
-export const EVENT_KINDS: EventKind[] = ["raid", "dungeon", "leveling", "pvp", "social", "transmog", "other"];
+export const EVENT_KINDS: EventKind[] = [
+  "raid",
+  "dungeon",
+  "world_boss",
+  "leveling",
+  "pvp",
+  "social",
+  "transmog",
+  "other",
+];
 
 export const EVENT_KIND_LABELS: Record<EventKind, string> = {
   raid: "Raid",
   dungeon: "Dungeon",
+  world_boss: "World Boss",
   leveling: "Leveling",
   pvp: "PvP",
   social: "Social",
@@ -33,6 +43,7 @@ export const EVENT_KIND_LABELS: Record<EventKind, string> = {
 export const EVENT_KIND_EP: Record<EventKind, number> = {
   raid: 10,
   dungeon: 5,
+  world_boss: 5,
   leveling: 3,
   pvp: 3,
   social: 2,
@@ -44,7 +55,7 @@ export const EVENT_KIND_EP: Record<EventKind, number> = {
 export const MAX_EVENT_EP = 50;
 
 /** Kinds whose sign-ups require character, class and role. */
-export const ROLE_KINDS: EventKind[] = ["raid", "dungeon"];
+export const ROLE_KINDS: EventKind[] = ["raid", "dungeon", "world_boss"];
 
 export type Role = "tank" | "healer" | "dps";
 export type SignupStatus = "signed" | "tentative" | "absent";
@@ -428,12 +439,115 @@ export const BADGE_INFO: Record<string, { name: string }> = {
   founding_member: { name: "Founding Member" },
   chatterbox: { name: "Chatterbox" },
   top_helper: { name: "Top Helper" },
+  party_animal: { name: "Party Animal" },
+  party_leader: { name: "Party Leader" },
 };
 
 /** Badge id -> the `Sprites.astro` symbol id for its gold sigil (e.g. `raid_veteran` -> `i-badge-raid-veteran`). */
 export function badgeIconId(id: string): string {
   return `i-badge-${id.replaceAll("_", "-")}`;
 }
+
+// ——— Group voice channels (#lfg): GET /api/groups/stats, /api/groups/sessions[/{id}], /api/groups/leaderboard.
+// Mirrors sidequest_common.schemas.groups; snowflakes are strings on the wire.
+
+/** The kinds the `#lfg` panel offers. Mirrors `GROUP_KINDS`/`GROUP_KIND_LABELS` in sidequest_common; `social` is
+ * labeled "Hangout" here, unlike `EVENT_KIND_LABELS`' "Social". */
+export type GroupKind = "dungeon" | "raid" | "world_boss" | "leveling" | "pvp" | "social";
+
+export const GROUP_KINDS: GroupKind[] = ["dungeon", "raid", "world_boss", "leveling", "pvp", "social"];
+
+export const GROUP_KIND_LABELS: Record<GroupKind, string> = {
+  dungeon: "Dungeon",
+  raid: "Raid",
+  world_boss: "World Boss",
+  leveling: "Leveling",
+  pvp: "PvP",
+  social: "Hangout",
+};
+
+/** Looks up a group's kind label, falling back to the event kind label for any kind groups never actually use. */
+export function groupKindLabel(kind: EventKind): string {
+  return (GROUP_KIND_LABELS as Record<string, string>)[kind] ?? EVENT_KIND_LABELS[kind];
+}
+
+export type GroupEndReason = "empty" | "unjoined" | "owner" | "lost";
+
+/** Someone on a stats list. `member_id` is set when they have a site account (links to their profile). */
+export type GroupPerson = { discord_id: string; display_name: string; member_id: number | null };
+
+/** One person's line on a stats list: `value` is minutes, groups, or partners depending on the list. */
+export type GroupPersonStat = { person: GroupPerson; value: number; sessions: number };
+
+/** Two people who grouped together. */
+export type GroupDuoStat = { a: GroupPerson; b: GroupPerson; minutes: number; sessions: number };
+
+/** Counted sessions and member-minutes for one kind. */
+export type GroupKindStat = { kind: EventKind; sessions: number; minutes: number };
+
+/** How often a named group (an instance, usually) was run. */
+export type GroupInstanceStat = { kind: EventKind; name: string; sessions: number };
+
+/** Counted sessions that started in one weekday/hour slot, America/Chicago. `weekday` 0 is Monday. */
+export type GroupHourStat = { weekday: number; hour: number; sessions: number };
+
+/** `GET /api/groups/stats` (officer): who groups, with whom, and what, over the last `days` days. Only counted
+ * sessions feed the lists; `sessions_total` includes the rest. Lists hold at most ten lines each. */
+export type GroupStats = {
+  days: number;
+  sessions_total: number;
+  sessions_counted: number;
+  grouped_minutes: number;
+  by_kind: GroupKindStat[];
+  top_instances: GroupInstanceStat[];
+  most_grouped: GroupPersonStat[];
+  most_social: GroupPersonStat[];
+  best_duos: GroupDuoStat[];
+  most_led: GroupPersonStat[];
+  busy_hours: GroupHourStat[];
+};
+
+/** One message from a group channel's text chat. */
+export type GroupTranscriptMessage = {
+  author_discord_id: string;
+  author_name: string;
+  content: string;
+  created_at: string;
+  attachments: string[];
+};
+
+/** One line on `GET /api/groups/sessions` (officer). */
+export type GroupSessionSummary = {
+  id: string;
+  kind: EventKind;
+  name: string | null;
+  channel_name: string;
+  creator: GroupPerson;
+  event_id: string | null;
+  started_at: string;
+  ended_at: string | null;
+  end_reason: GroupEndReason | null;
+  peak_size: number;
+  grouped_minutes: number;
+  counted: boolean;
+  has_transcript: boolean;
+};
+
+/** `GET /api/groups/sessions/{id}` (officer): one session with who was in it and its chat, if still kept.
+ * `transcript` is `null` once purged or past `transcript_expires_at`. */
+export type GroupSessionDetail = GroupSessionSummary & {
+  note: string | null;
+  needs: Role[];
+  members: GroupPersonStat[];
+  transcript: GroupTranscriptMessage[] | null;
+  transcript_expires_at: string | null;
+};
+
+/** One line on the public "most grouped" board. Only members with a site account appear. */
+export type GroupLeaderboardRow = { member_id: number; display_name: string; groups: number; minutes: number };
+
+/** `GET /api/groups/leaderboard` (public): members by counted groups joined, last 30 days and all time. */
+export type GroupLeaderboard = { month: GroupLeaderboardRow[]; all_time: GroupLeaderboardRow[] };
 
 export const CLASSES: CharClass[] = [
   "warrior",

@@ -52,6 +52,9 @@ import "../../styles/room-officers.css";
       <button type="button" role="tab" id="tab-mcp" aria-controls="panel-mcp" aria-selected="false" tabindex="-1">
         MCP
       </button>
+      <button type="button" role="tab" id="tab-groups" aria-controls="panel-groups" aria-selected="false" tabindex="-1">
+        Groups
+      </button>
       <button
         type="button"
         role="tab"
@@ -411,6 +414,93 @@ import "../../styles/room-officers.css";
       </div>
     </section>
 
+    <section id="panel-groups" role="tabpanel" aria-labelledby="tab-groups" tabindex="0" hidden>
+      <div class="chamber">
+        <h2 class="chamber-title">Group voice stats</h2>
+        <p class="aside">
+          Stats from the #lfg voice channels: who groups, with whom, and what they run. A group counts once two or more
+          people spent ten minutes or more in it together.
+        </p>
+        <div class="tabs" role="tablist" aria-label="Stats window" id="groups-window-tabs">
+          <button type="button" role="tab" data-days="7" aria-selected="false" tabindex="-1">
+            Last 7 days
+          </button>
+          <button type="button" role="tab" data-days="30" aria-selected="true" tabindex="0">
+            Last 30 days
+          </button>
+          <button type="button" role="tab" data-days="90" aria-selected="false" tabindex="-1">
+            Last 90 days
+          </button>
+        </div>
+        <div class="groups-headline" id="groups-headline"></div>
+        <div class="groups-stat-grid">
+          <div>
+            <h3 class="sub-title">Most grouped</h3>
+            <ol class="groups-stat-list" id="groups-most-grouped" aria-label="Most grouped"></ol>
+          </div>
+          <div>
+            <h3 class="sub-title">Most social</h3>
+            <ol class="groups-stat-list" id="groups-most-social" aria-label="Most social"></ol>
+          </div>
+          <div>
+            <h3 class="sub-title">Best duos</h3>
+            <ol class="groups-stat-list" id="groups-best-duos" aria-label="Best duos"></ol>
+          </div>
+          <div>
+            <h3 class="sub-title">Most led</h3>
+            <ol class="groups-stat-list" id="groups-most-led" aria-label="Most led"></ol>
+          </div>
+          <div>
+            <h3 class="sub-title">Top instances</h3>
+            <ol class="groups-stat-list" id="groups-top-instances" aria-label="Top instances"></ol>
+          </div>
+          <div>
+            <h3 class="sub-title">By kind</h3>
+            <ol class="groups-stat-list" id="groups-by-kind" aria-label="By kind"></ol>
+          </div>
+        </div>
+        <h3 class="sub-title">Busy hours</h3>
+        <p class="aside">When groups start, by weekday and hour, America/Chicago.</p>
+        <div class="groups-heat-wrap">
+          <div class="groups-heat-grid" id="groups-heat-grid" role="img" aria-label="Busy hours heat grid"></div>
+        </div>
+      </div>
+
+      <div class="chamber-pair">
+        <div class="chamber">
+          <h2 class="chamber-title">Recent sessions</h2>
+          <div class="attendance-table-wrap">
+            <table class="attendance-table" id="groups-sessions-table">
+              <thead>
+                <tr>
+                  <th scope="col">Channel</th>
+                  <th scope="col">Kind</th>
+                  <th scope="col">Creator</th>
+                  <th scope="col">Start</th>
+                  <th scope="col">Length</th>
+                  <th scope="col">Peak</th>
+                  <th scope="col">Counted</th>
+                </tr>
+              </thead>
+              <tbody id="groups-sessions-rows"></tbody>
+            </table>
+          </div>
+          <p class="chamber-note">
+            <button type="button" class="btn-quiet" id="groups-sessions-load-more" hidden>
+              Load older
+            </button>
+          </p>
+        </div>
+        <div class="chamber">
+          <h2 class="chamber-title">Session detail</h2>
+          <p class="member-detail-empty" id="groups-session-detail-empty">
+            Select a session to see who was in it.
+          </p>
+          <div id="groups-session-detail-body" hidden></div>
+        </div>
+      </div>
+    </section>
+
     <section id="panel-members" role="tabpanel" aria-labelledby="tab-members" tabindex="0" hidden>
       <div class="chamber-pair">
         <div class="chamber">
@@ -513,6 +603,7 @@ import "../../styles/room-officers.css";
     EVENT_KINDS,
     EVENT_KIND_EP,
     EVENT_KIND_LABELS,
+    groupKindLabel,
     MAX_EVENT_EP,
     ROLE_KINDS,
     ADDON_ORIGIN_LABELS,
@@ -521,6 +612,15 @@ import "../../styles/room-officers.css";
     type Addon,
     type AddonOrigin,
     type EventKind,
+    type GroupDuoStat,
+    type GroupHourStat,
+    type GroupKindStat,
+    type GroupInstanceStat,
+    type GroupPerson,
+    type GroupPersonStat,
+    type GroupSessionDetail,
+    type GroupSessionSummary,
+    type GroupStats,
     type EventSeriesSummary,
     type EventSummary,
     type GmCase,
@@ -810,6 +910,28 @@ import "../../styles/room-officers.css";
       });
     });
   }
+
+  function groupPersonName(p: GroupPerson): string {
+    return p.member_id !== null
+      ? `<a href="/heroes/member/?id=${p.member_id}">${escapeHtml(p.display_name)}</a>`
+      : escapeHtml(p.display_name);
+  }
+
+  function renderGroupList(el: HTMLElement, items: string[]): void {
+    el.innerHTML = items.length > 0 ? items.join("") : `<li class="quest-empty">Nothing yet.</li>`;
+  }
+
+  function groupSessionLength(s: GroupSessionSummary): string {
+    if (!s.ended_at) {
+      return "Live";
+    }
+    const minutes = Math.round((new Date(s.ended_at).getTime() - new Date(s.started_at).getTime()) / 60000);
+    return minutes >= 60 ? `${Math.floor(minutes / 60)}h ${minutes % 60}m` : `${minutes}m`;
+  }
+
+  function hourLabel(hour: number): string {
+    return hour === 0 ? "12a" : hour < 12 ? `${hour}a` : hour === 12 ? "12p" : `${hour - 12}p`;
+  }
   onPage("#officers-body", (signal) => {
     const statusEl = requireElement("officers-status");
     const gateEl = requireElement("officers-gate");
@@ -818,6 +940,7 @@ import "../../styles/room-officers.css";
     const dayFormat = new Intl.DateTimeFormat(undefined, { weekday: "short", month: "short", day: "numeric" });
     const timeFormat = new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" });
     const dateFormat = new Intl.DateTimeFormat(undefined, { dateStyle: "medium" });
+    const shortDateFormat = new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" });
 
     // ——— Events ———
     const eventForm = requireElement<HTMLFormElement>("event-form");
@@ -1074,7 +1197,7 @@ import "../../styles/room-officers.css";
       const kind = eventKind.value as EventKind;
       const location = eventLocation.value.trim();
       if (ROLE_KINDS.includes(kind) && location.length === 0) {
-        eventFormStatus.textContent = "Location is required for raids and dungeons.";
+        eventFormStatus.textContent = "Location is required for raids, dungeons and world bosses.";
         eventLocation.focus();
         return;
       }
@@ -1509,6 +1632,247 @@ import "../../styles/room-officers.css";
       },
       { signal },
     );
+
+    // ——— Group voice stats (Groups tab) ———
+    const groupsWindowTabsEl = requireElement("groups-window-tabs");
+    const groupsHeadlineEl = requireElement("groups-headline");
+    const groupsMostGroupedEl = requireElement("groups-most-grouped");
+    const groupsMostSocialEl = requireElement("groups-most-social");
+    const groupsBestDuosEl = requireElement("groups-best-duos");
+    const groupsMostLedEl = requireElement("groups-most-led");
+    const groupsTopInstancesEl = requireElement("groups-top-instances");
+    const groupsByKindEl = requireElement("groups-by-kind");
+    const groupsHeatGridEl = requireElement("groups-heat-grid");
+    const groupsSessionsRowsEl = requireElement("groups-sessions-rows");
+    const groupsSessionsLoadMoreBtn = requireElement<HTMLButtonElement>("groups-sessions-load-more");
+    const groupsSessionDetailEmptyEl = requireElement("groups-session-detail-empty");
+    const groupsSessionDetailBodyEl = requireElement("groups-session-detail-body");
+
+    let groupsDays = 30;
+    let groupsLoaded = false;
+    let groupsSessions: GroupSessionSummary[] = [];
+    let groupsSessionsBefore: string | null = null;
+    let selectedGroupSessionId: string | null = null;
+
+    const WEEKDAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+    function renderBusyHours(hours: GroupHourStat[]): void {
+      const max = Math.max(1, ...hours.map((h) => h.sessions));
+      const byCell = new Map(hours.map((h) => [`${h.weekday}-${h.hour}`, h.sessions]));
+      const cells: string[] = [`<span class="groups-heat-corner"></span>`];
+      for (let hour = 0; hour < 24; hour++) {
+        cells.push(`<span class="groups-heat-hour-label">${hour % 3 === 0 ? hourLabel(hour) : ""}</span>`);
+      }
+      for (let weekday = 0; weekday < 7; weekday++) {
+        cells.push(`<span class="groups-heat-row-label">${WEEKDAY_LABELS[weekday]}</span>`);
+        for (let hour = 0; hour < 24; hour++) {
+          const sessions = byCell.get(`${weekday}-${hour}`) ?? 0;
+          const alpha = sessions === 0 ? 0 : 0.15 + 0.85 * (sessions / max);
+          const label = `${WEEKDAY_LABELS[weekday]} ${hourLabel(hour)} — ${sessions} group${sessions === 1 ? "" : "s"}`;
+          cells.push(
+            `<span class="groups-heat-cell" style="background:rgba(201,162,75,${alpha})" title="${escapeHtml(label)}" aria-label="${escapeHtml(label)}"></span>`,
+          );
+        }
+      }
+      groupsHeatGridEl.innerHTML = cells.join("");
+    }
+
+    async function loadGroupStats(): Promise<void> {
+      try {
+        const stats = await apiFetch<GroupStats>(`/api/groups/stats?days=${groupsDays}`, { signal });
+        const hours = Math.round(stats.grouped_minutes / 60);
+        groupsHeadlineEl.innerHTML = `
+          <span class="groups-headline-stat"><strong>${stats.sessions_total}</strong>groups</span>
+          <span class="groups-headline-stat"><strong>${stats.sessions_counted}</strong>counted</span>
+          <span class="groups-headline-stat"><strong>${hours}</strong>hours grouped</span>
+        `;
+        renderGroupList(
+          groupsMostGroupedEl,
+          stats.most_grouped.map(
+            (s: GroupPersonStat) =>
+              `<li>${groupPersonName(s.person)}<span class="groups-stat-value">${s.value} min · ${s.sessions} group${s.sessions === 1 ? "" : "s"}</span></li>`,
+          ),
+        );
+        renderGroupList(
+          groupsMostSocialEl,
+          stats.most_social.map(
+            (s: GroupPersonStat) =>
+              `<li>${groupPersonName(s.person)}<span class="groups-stat-value">${s.value} partner${s.value === 1 ? "" : "s"} · ${s.sessions} group${s.sessions === 1 ? "" : "s"}</span></li>`,
+          ),
+        );
+        renderGroupList(
+          groupsBestDuosEl,
+          stats.best_duos.map(
+            (s: GroupDuoStat) =>
+              `<li>${groupPersonName(s.a)} &amp; ${groupPersonName(s.b)}<span class="groups-stat-value">${s.minutes} min · ${s.sessions} group${s.sessions === 1 ? "" : "s"}</span></li>`,
+          ),
+        );
+        renderGroupList(
+          groupsMostLedEl,
+          stats.most_led.map(
+            (s: GroupPersonStat) =>
+              `<li>${groupPersonName(s.person)}<span class="groups-stat-value">${s.value} group${s.value === 1 ? "" : "s"} led</span></li>`,
+          ),
+        );
+        renderGroupList(
+          groupsTopInstancesEl,
+          stats.top_instances.map(
+            (s: GroupInstanceStat) =>
+              `<li>${escapeHtml(s.name)}<span class="groups-stat-value">${escapeHtml(groupKindLabel(s.kind))} · ${s.sessions} run${s.sessions === 1 ? "" : "s"}</span></li>`,
+          ),
+        );
+        renderGroupList(
+          groupsByKindEl,
+          stats.by_kind.map(
+            (s: GroupKindStat) =>
+              `<li>${escapeHtml(groupKindLabel(s.kind))}<span class="groups-stat-value">${s.sessions} group${s.sessions === 1 ? "" : "s"} · ${s.minutes} min</span></li>`,
+          ),
+        );
+        renderBusyHours(stats.busy_hours);
+      } catch (err) {
+        groupsHeadlineEl.innerHTML = `<p class="status" data-tone="error">${escapeHtml(statusMessage(err))}</p>`;
+      }
+    }
+
+    function renderGroupSessionRows(): void {
+      groupsSessionsRowsEl.innerHTML =
+        groupsSessions.length > 0
+          ? groupsSessions
+              .map(
+                (s) => `
+      <tr class="groups-session-row" data-session-id="${s.id}" tabindex="0" aria-current="${s.id === selectedGroupSessionId}">
+        <td>${escapeHtml(s.name ?? s.channel_name)}</td>
+        <td>${escapeHtml(groupKindLabel(s.kind))}</td>
+        <td>${groupPersonName(s.creator)}</td>
+        <td>${shortDateFormat.format(new Date(s.started_at))}</td>
+        <td>${groupSessionLength(s)}</td>
+        <td>${s.peak_size}</td>
+        <td>${s.counted ? "Yes" : "No"}</td>
+      </tr>`,
+              )
+              .join("")
+          : `<tr><td colspan="7" class="aside">No sessions in this window.</td></tr>`;
+    }
+
+    async function loadGroupSessions(reset: boolean): Promise<void> {
+      if (reset) {
+        groupsSessions = [];
+        groupsSessionsBefore = null;
+        groupsSessionsRowsEl.innerHTML = `<tr><td colspan="7" class="aside">Loading…</td></tr>`;
+      }
+      const params = new URLSearchParams({ limit: "50" });
+      if (groupsSessionsBefore) {
+        params.set("before", groupsSessionsBefore);
+      }
+      try {
+        const page = await apiFetch<GroupSessionSummary[]>(`/api/groups/sessions?${params.toString()}`, { signal });
+        groupsSessions = reset ? page : [...groupsSessions, ...page];
+        groupsSessionsBefore = page.length === 50 ? (page[page.length - 1]?.started_at ?? null) : null;
+        groupsSessionsLoadMoreBtn.hidden = groupsSessionsBefore === null;
+        renderGroupSessionRows();
+      } catch (err) {
+        groupsSessionsRowsEl.innerHTML = `<tr><td colspan="7" class="status" data-tone="error">${escapeHtml(statusMessage(err))}</td></tr>`;
+        groupsSessionsLoadMoreBtn.hidden = true;
+      }
+    }
+
+    function renderGroupSessionDetail(detail: GroupSessionDetail): void {
+      const needsText = detail.needs.length > 0 ? detail.needs.map((r) => capitalize(r)).join(", ") : "";
+      const transcript = (() => {
+        if (detail.transcript === null) {
+          return detail.transcript_expires_at
+            ? `<p class="aside">Chat kept until ${dateFormat.format(new Date(detail.transcript_expires_at))}.</p>`
+            : `<p class="aside">Chat deleted after 30 days.</p>`;
+        }
+        if (detail.transcript.length === 0) {
+          return `<p class="aside">No messages.</p>`;
+        }
+        return `<ul class="log-list">${detail.transcript
+          .map(
+            (m) => `
+      <li class="log-entry">
+        <span class="log-entry-body">
+          <span class="log-entry-summary">${escapeHtml(m.author_name)}</span>
+          <span class="log-entry-detail">“${escapeHtml(m.content)}”</span>
+        </span>
+        <span class="log-entry-when">${timeFormat.format(new Date(m.created_at))}</span>
+      </li>`,
+          )
+          .join("")}</ul>`;
+      })();
+      groupsSessionDetailBodyEl.innerHTML = `
+        <div class="member-detail-head">
+          <div>
+            <p class="member-detail-name">${escapeHtml(detail.name ?? detail.channel_name)}</p>
+            <p class="member-detail-sub">${escapeHtml(groupKindLabel(detail.kind))} · started by ${groupPersonName(detail.creator)}</p>
+          </div>
+        </div>
+        ${detail.note ? `<p class="aside">${escapeHtml(detail.note)}</p>` : ""}
+        ${needsText ? `<p class="aside">Needed ${escapeHtml(needsText)}.</p>` : ""}
+        <h3 class="sub-title">Members <span class="count">${detail.members.length}</span></h3>
+        <ol class="groups-stat-list">${
+          detail.members
+            .map(
+              (m: GroupPersonStat) =>
+                `<li>${groupPersonName(m.person)}<span class="groups-stat-value">${m.value} min</span></li>`,
+            )
+            .join("") || `<li class="quest-empty">No presence recorded.</li>`
+        }</ol>
+        <h3 class="sub-title">Chat</h3>
+        ${transcript}
+      `;
+    }
+
+    async function selectGroupSession(id: string): Promise<void> {
+      selectedGroupSessionId = id;
+      renderGroupSessionRows();
+      groupsSessionDetailEmptyEl.hidden = true;
+      groupsSessionDetailBodyEl.hidden = false;
+      groupsSessionDetailBodyEl.innerHTML = `<p class="aside">Loading…</p>`;
+      try {
+        const detail = await apiFetch<GroupSessionDetail>(`/api/groups/sessions/${id}`, { signal });
+        renderGroupSessionDetail(detail);
+      } catch (err) {
+        groupsSessionDetailBodyEl.innerHTML = `<p class="status" data-tone="error">${escapeHtml(statusMessage(err))}</p>`;
+      }
+    }
+
+    groupsSessionsRowsEl.addEventListener(
+      "click",
+      (event) => {
+        const row = (event.target as HTMLElement).closest<HTMLTableRowElement>("[data-session-id]");
+        if (row?.dataset.sessionId) {
+          void selectGroupSession(row.dataset.sessionId);
+        }
+      },
+      { signal },
+    );
+
+    groupsSessionsRowsEl.addEventListener(
+      "keydown",
+      (event) => {
+        if (event.key !== "Enter" && event.key !== " ") {
+          return;
+        }
+        const row = (event.target as HTMLElement).closest<HTMLTableRowElement>("[data-session-id]");
+        if (row?.dataset.sessionId) {
+          event.preventDefault();
+          void selectGroupSession(row.dataset.sessionId);
+        }
+      },
+      { signal },
+    );
+
+    groupsSessionsLoadMoreBtn.addEventListener("click", () => void loadGroupSessions(false), { signal });
+
+    setupTablist(groupsWindowTabsEl, (tab) => {
+      groupsDays = Number(tab.dataset.days ?? "30");
+      void loadGroupStats();
+    });
+
+    async function loadGroups(): Promise<void> {
+      await Promise.all([loadGroupStats(), loadGroupSessions(true)]);
+    }
 
     // ——— Members (Quest Masters only) ———
     const memberSearch = requireElement<HTMLInputElement>("m-search");
@@ -2261,7 +2625,17 @@ import "../../styles/room-officers.css";
     }
 
     // ——— Tabs & gate ———
-    const VALID_TABS = ["events", "addons", "recruiting", "attendance", "mcp", "members", "log", "moderation"] as const;
+    const VALID_TABS = [
+      "events",
+      "addons",
+      "recruiting",
+      "attendance",
+      "mcp",
+      "groups",
+      "members",
+      "log",
+      "moderation",
+    ] as const;
     const GM_TABS = new Set(["members", "log", "moderation"]);
 
     let isGm = false;
@@ -2286,6 +2660,9 @@ import "../../styles/room-officers.css";
       } else if (name === "attendance" && !attendanceLoaded) {
         attendanceLoaded = true;
         void loadAttendance();
+      } else if (name === "groups" && !groupsLoaded) {
+        groupsLoaded = true;
+        void loadGroups();
       }
     }
 

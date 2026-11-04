@@ -77,3 +77,11 @@ class GuildConfig(UUIDAuditBase):
     # WoW: Forever news feed
     forever_feed_channel_id: Mapped[int | None] = mapped_column(BigInteger, default=None)
     """Where the bot posts WoW: Forever blue posts and Wowhead news; officers set it."""
+
+    # Group voice channels (LFG)
+    lfg_channel_id: Mapped[int | None] = mapped_column(BigInteger, default=None)
+    """The ``#lfg`` panel channel; group voice channels spawn in its category. Officers set it."""
+    lfg_panel_message_id: Mapped[int | None] = mapped_column(BigInteger, default=None)
+    """The bot's pinned spawn panel in ``lfg_channel_id``, so a restart edits it instead of posting another."""
+    lfg_ping_role_ids: Mapped[dict[str, int]] = mapped_column(JsonB, default=dict)
+    """Opt-in role to ping per group kind (``EventKind`` value -> role id), when the creator ticks the ping box."""

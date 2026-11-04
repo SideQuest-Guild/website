@@ -15,10 +15,11 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class EventKind(StrEnum):
-    """What kind of guild event this is. ``raid``/``dungeon`` are "role kinds": sign-ups need character/class/role."""
+    """What kind of guild event this is. ``ROLE_KINDS`` sign-ups need character/class/role."""
 
     RAID = "raid"
     DUNGEON = "dungeon"
+    WORLD_BOSS = "world_boss"
     LEVELING = "leveling"
     PVP = "pvp"
     SOCIAL = "social"
@@ -26,11 +27,12 @@ class EventKind(StrEnum):
     OTHER = "other"
 
 
-ROLE_KINDS = (EventKind.RAID, EventKind.DUNGEON)
+ROLE_KINDS = (EventKind.RAID, EventKind.DUNGEON, EventKind.WORLD_BOSS)
 
 EVENT_KIND_LABELS: dict[EventKind, str] = {
     EventKind.RAID: "Raid",
     EventKind.DUNGEON: "Dungeon",
+    EventKind.WORLD_BOSS: "World Boss",
     EventKind.LEVELING: "Leveling",
     EventKind.PVP: "PvP",
     EventKind.SOCIAL: "Social",
@@ -41,6 +43,7 @@ EVENT_KIND_LABELS: dict[EventKind, str] = {
 EVENT_KIND_EP: dict[EventKind, int] = {
     EventKind.RAID: 10,
     EventKind.DUNGEON: 5,
+    EventKind.WORLD_BOSS: 5,
     EventKind.LEVELING: 3,
     EventKind.PVP: 3,
     EventKind.SOCIAL: 2,

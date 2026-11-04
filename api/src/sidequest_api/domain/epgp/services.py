@@ -73,6 +73,7 @@ from sidequest_common.schemas import (
     MAX_IMPORT_BYTES,
     MIN_GP,
     OS_PERCENT,
+    ROLE_KINDS,
     TRIAL_DAYS,
     WEEKLY_RESET_HOUR_UTC,
     WEEKLY_RESET_WEEKDAY,
@@ -177,7 +178,7 @@ IMPORT_PREFIX = "SQI1:"
 _EXPORT_STRING_RE = re.compile(r"SQX1:([A-Za-z0-9+/=]+)")
 _GAME_IMPORT_WINDOW_BEFORE = timedelta(hours=6)
 _GAME_IMPORT_WINDOW_AFTER = timedelta(days=14)
-_ROLE_KINDS = ("raid", "dungeon")
+_ROLE_KINDS = tuple(kind.value for kind in ROLE_KINDS)
 _TOKEN_ALPHABET = string.ascii_letters + string.digits + "-_"
 _TOKEN_PREFIX = "sqs_"  # noqa: S105 - not a password, a public token format prefix
 _TOKEN_RANDOM_LENGTH = 40

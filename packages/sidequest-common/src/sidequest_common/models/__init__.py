@@ -33,6 +33,7 @@ from sidequest_common.models.events import (
     EventVoicePresence,
     GuildEvent,
 )
+from sidequest_common.models.groups import GroupSession, GroupSessionMember, GroupSessionPair, GroupSessionTranscript
 from sidequest_common.models.guild import GuildConfig
 from sidequest_common.models.guild_hub import (
     CharacterProfession,
@@ -76,6 +77,10 @@ __all__ = (
     "EventSignup",
     "EventSignupActivity",
     "EventVoicePresence",
+    "GroupSession",
+    "GroupSessionMember",
+    "GroupSessionPair",
+    "GroupSessionTranscript",
     "GuildAnnouncement",
     "GuildBankLogEntry",
     "GuildConfig",

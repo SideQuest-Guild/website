@@ -56,6 +56,10 @@ class GuildConfigSchema(BaseModel):
 
     forever_feed_channel_id: int | None = None
 
+    lfg_channel_id: int | None = None
+    lfg_panel_message_id: int | None = None
+    lfg_ping_role_ids: dict[str, int] = Field(default_factory=dict)
+
 
 class GuildConfigUpdate(BaseModel):
     """Partial update. Only fields present in the request body change (``exclude_unset``).
@@ -113,6 +117,10 @@ class GuildConfigUpdate(BaseModel):
     announcement_channel_id: int | None = None
 
     forever_feed_channel_id: int | None = None
+
+    lfg_channel_id: int | None = None
+    lfg_panel_message_id: int | None = None
+    lfg_ping_role_ids: dict[str, int] | None = None
 
     @model_validator(mode="after")
     def _xp_range(self) -> GuildConfigUpdate:

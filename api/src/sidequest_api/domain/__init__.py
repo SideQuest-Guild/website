@@ -20,6 +20,7 @@ from sidequest_api.domain.event_series.controllers import EventSeriesController
 from sidequest_api.domain.event_sync.controllers import EventSyncController
 from sidequest_api.domain.events.controllers import EventsController
 from sidequest_api.domain.gm.controllers import GmController
+from sidequest_api.domain.groups.controllers import GroupStatsController, GroupVoiceController
 from sidequest_api.domain.guild_hub.controllers import (
     EpgpMemberNotesController,
     EpgpRecruitsController,
@@ -60,6 +61,7 @@ guild_controllers = [
     AwayNowController,
     AttendanceVoiceController,
     BadgesController,
+    GroupVoiceController,
     GuildAnnouncementsBotController,
 ]
 
@@ -86,4 +88,5 @@ public_routes = [
     EpgpRecruitsController,
     McpTokensController,
     EpgpMemberNotesController,
+    GroupStatsController,
 ]

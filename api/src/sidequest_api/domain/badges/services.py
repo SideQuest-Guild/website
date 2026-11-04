@@ -11,11 +11,19 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession  # noqa: TC002
 
 from sidequest_api.lib.attendance import attended_condition
-from sidequest_common.models import EventSignup, GuildEvent, Member, MemberBadge, MemberLevel
+from sidequest_common.models import (
+    EventSignup,
+    GroupSession,
+    GroupSessionMember,
+    GuildEvent,
+    Member,
+    MemberBadge,
+    MemberLevel,
+)
 from sidequest_common.schemas import BADGES, BadgeRoleState, PendingBadgeAnnouncement
 from sidequest_common.schemas.badges import (
     CHATTERBOX_LEVEL,
@@ -24,12 +32,15 @@ from sidequest_common.schemas.badges import (
     RAID_REGULAR_THRESHOLD,
     RAID_VETERAN_THRESHOLD,
 )
+from sidequest_common.schemas.groups import COUNTED_GROUP_MINUTES, PARTY_ANIMAL_THRESHOLD, PARTY_LEADER_THRESHOLD
 
 GUILD_TZ = ZoneInfo("America/Chicago")
 FOUNDING_MEMBER_CUTOFF = datetime.fromisoformat(FOUNDING_MEMBER_CUTOFF_ISO)
 DECEMBER = 12
 JANUARY = 1
 _DUNGEON_LEVELING_KINDS = ("dungeon", "leveling")
+_MIN_COUNTED_PEAK_SIZE = 2
+"""A group session counts toward party_animal/party_leader only once two or more members were ever present."""
 
 
 def _month_key(when: datetime) -> tuple[int, int]:
@@ -150,6 +161,42 @@ class BadgeService:
         winners = sorted(member_id for member_id, count in counts.items() if count == best)
         return winners[0]
 
+    async def _party_animal_counts(self, members: list[Member]) -> dict[int, int]:
+        """Member id -> count of counted group sessions (all time) where they spent 10+ minutes."""
+        discord_ids = [member.discord_id for member in members]
+        if not discord_ids:
+            return {}
+        statement = (
+            select(GroupSessionMember.discord_id, func.count(GroupSessionMember.id))
+            .join(GroupSession, GroupSessionMember.session_id == GroupSession.id)
+            .where(
+                GroupSessionMember.discord_id.in_(discord_ids),
+                GroupSessionMember.minutes >= COUNTED_GROUP_MINUTES,
+                GroupSession.peak_size >= _MIN_COUNTED_PEAK_SIZE,
+                GroupSession.grouped_minutes >= COUNTED_GROUP_MINUTES,
+            )
+            .group_by(GroupSessionMember.discord_id)
+        )
+        by_discord_id = dict((await self._session.execute(statement)).tuples().all())
+        return {member.id: by_discord_id.get(member.discord_id, 0) for member in members}
+
+    async def _party_leader_counts(self, members: list[Member]) -> dict[int, int]:
+        """Member id -> count of counted group sessions (all time) they created."""
+        discord_ids = [member.discord_id for member in members]
+        if not discord_ids:
+            return {}
+        statement = (
+            select(GroupSession.creator_discord_id, func.count(GroupSession.id))
+            .where(
+                GroupSession.creator_discord_id.in_(discord_ids),
+                GroupSession.peak_size >= _MIN_COUNTED_PEAK_SIZE,
+                GroupSession.grouped_minutes >= COUNTED_GROUP_MINUTES,
+            )
+            .group_by(GroupSession.creator_discord_id)
+        )
+        by_discord_id = dict((await self._session.execute(statement)).tuples().all())
+        return {member.id: by_discord_id.get(member.discord_id, 0) for member in members}
+
     async def _award_permanent(self, member_id: int, badge_id: str, *, now: datetime) -> None:
         existing = (
             await self._session.execute(
@@ -173,6 +220,38 @@ class BadgeService:
             await self._session.flush()
         self._session.add(MemberBadge(member_id=winner, badge_id="top_helper", earned_at=now, announced_at=None))
 
+    async def _award_permanent_badges(
+        self,
+        member: Member,
+        *,
+        attendance: dict[int, dict[str, int]],
+        perfect_month_members: set[int],
+        level_by_discord_id: dict[int, int],
+        party_animal_counts: dict[int, int],
+        party_leader_counts: dict[int, int],
+        now: datetime,
+    ) -> None:
+        """Award every threshold-based permanent badge one member currently qualifies for."""
+        counts = attendance.get(member.id, {"events": 0, "raids": 0})
+        if counts["events"] >= 1:
+            await self._award_permanent(member.id, "first_steps", now=now)
+        if counts["raids"] >= 1:
+            await self._award_permanent(member.id, "first_raid", now=now)
+        if counts["raids"] >= RAID_REGULAR_THRESHOLD:
+            await self._award_permanent(member.id, "raid_regular", now=now)
+        if counts["raids"] >= RAID_VETERAN_THRESHOLD:
+            await self._award_permanent(member.id, "raid_veteran", now=now)
+        if member.id in perfect_month_members:
+            await self._award_permanent(member.id, "perfect_month", now=now)
+        if member.roster_confirmed_at is not None and member.roster_confirmed_at < FOUNDING_MEMBER_CUTOFF:
+            await self._award_permanent(member.id, "founding_member", now=now)
+        if level_by_discord_id.get(member.discord_id, 0) >= CHATTERBOX_LEVEL:
+            await self._award_permanent(member.id, "chatterbox", now=now)
+        if party_animal_counts.get(member.id, 0) >= PARTY_ANIMAL_THRESHOLD:
+            await self._award_permanent(member.id, "party_animal", now=now)
+        if party_leader_counts.get(member.id, 0) >= PARTY_LEADER_THRESHOLD:
+            await self._award_permanent(member.id, "party_leader", now=now)
+
     async def sync(
         self, *, guild_id: int, now: datetime | None = None
     ) -> tuple[list[BadgeRoleState], list[PendingBadgeAnnouncement]]:
@@ -184,6 +263,8 @@ class BadgeService:
         attendance = await self._attendance_counts(member_ids, now=reference)
         perfect_month_members = await self._perfect_month_members(member_ids, now=reference)
         top_helper_winner = await self._top_helper_winner(member_ids, now=reference)
+        party_animal_counts = await self._party_animal_counts(members)
+        party_leader_counts = await self._party_leader_counts(members)
 
         level_rows = (
             (
@@ -197,21 +278,15 @@ class BadgeService:
         level_by_discord_id = dict(level_rows)
 
         for member in members:
-            counts = attendance.get(member.id, {"events": 0, "raids": 0})
-            if counts["events"] >= 1:
-                await self._award_permanent(member.id, "first_steps", now=reference)
-            if counts["raids"] >= 1:
-                await self._award_permanent(member.id, "first_raid", now=reference)
-            if counts["raids"] >= RAID_REGULAR_THRESHOLD:
-                await self._award_permanent(member.id, "raid_regular", now=reference)
-            if counts["raids"] >= RAID_VETERAN_THRESHOLD:
-                await self._award_permanent(member.id, "raid_veteran", now=reference)
-            if member.id in perfect_month_members:
-                await self._award_permanent(member.id, "perfect_month", now=reference)
-            if member.roster_confirmed_at is not None and member.roster_confirmed_at < FOUNDING_MEMBER_CUTOFF:
-                await self._award_permanent(member.id, "founding_member", now=reference)
-            if level_by_discord_id.get(member.discord_id, 0) >= CHATTERBOX_LEVEL:
-                await self._award_permanent(member.id, "chatterbox", now=reference)
+            await self._award_permanent_badges(
+                member,
+                attendance=attendance,
+                perfect_month_members=perfect_month_members,
+                level_by_discord_id=level_by_discord_id,
+                party_animal_counts=party_animal_counts,
+                party_leader_counts=party_leader_counts,
+                now=reference,
+            )
 
         await self._sync_top_helper(top_helper_winner, now=reference)
         await self._session.commit()
