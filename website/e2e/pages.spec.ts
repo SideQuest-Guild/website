@@ -491,6 +491,7 @@ test.describe("items", () => {
     await page.goto(`/items/detail/?id=${ITEMS[0]!.item_id}`);
     await expect(page.locator(".item-detail-name")).toHaveText("Glory of the Defender");
     await expect(page.locator("#item-loot-list")).toContainText("Quest Guide");
+    await expect(page.locator(".item-loot-price")).toContainText("125 GP main spec");
   });
 
   test("an unknown item says so plainly", async ({ page, site }) => {

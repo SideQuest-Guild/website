@@ -336,10 +336,12 @@ from sidequest_common.schemas.heroes import (
 from sidequest_common.schemas.items import (
     ITEM_SEARCH_MIN_LENGTH,
     ITEM_SEARCH_PAGE_SIZE,
+    ItemLootPrice,
     ItemQuality,
     ItemSchema,
     ItemSearchPage,
     ItemSearchResult,
+    sql_price,
 )
 from sidequest_common.schemas.levels import (
     EVENT_XP,
@@ -704,6 +706,7 @@ __all__ = (
     "HeroXPSources",
     "ImportAttendanceResult",
     "ImportCounts",
+    "ItemLootPrice",
     "ItemQuality",
     "ItemSchema",
     "ItemSearchPage",
@@ -801,4 +804,5 @@ __all__ = (
     "XPGrantResult",
     "XPSource",
     "event_ep",
+    "sql_price",
 )

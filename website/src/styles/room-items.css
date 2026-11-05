@@ -120,6 +120,14 @@
   border-top: 1px solid var(--stone-2);
   color: var(--gold);
 }
+.item-loot-price {
+  margin: 6px 0 0;
+  color: var(--ink);
+}
+.item-loot-price strong {
+  color: var(--gold);
+  font-weight: inherit;
+}
 .item-wowhead-link {
   margin-top: 18px;
 }

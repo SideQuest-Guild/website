@@ -1076,6 +1076,9 @@ export type ItemSummary = {
 /** `GET /api/items?q=&page=&quality=&slot=` (public): `q` min 3 chars. 50 results per page, 20 pages max. */
 export type ItemSearch = { page: number; page_count: number; results: ItemSummary[] };
 
+/** What SQL charges for an item before an officer's choices; `null` when the loot rules don't price its slot. */
+export type ItemLootPrice = { main_spec: number; off_spec: number; chase: number };
+
 /** `GET /api/items/{item_id}` (public): the full item sheet, tooltip lines in game order. 404 unknown item. */
 export type Item = ItemSummary & {
   item_class: string;
@@ -1084,6 +1087,7 @@ export type Item = ItemSummary & {
   is_equippable: boolean;
   icon_url: string | null;
   tooltip: string[];
+  loot_price: ItemLootPrice | null;
 };
 
 export type GuildNewsKind = "boss_kill" | "first_kill" | "loot" | "level" | "joined" | "announcement" | "badge";

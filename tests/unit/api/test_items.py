@@ -6,6 +6,7 @@ import pytest
 from litestar.testing import AsyncTestClient
 
 from sidequest_api.app import create_app
+from sidequest_common.schemas import ItemLootPrice, sql_price
 from sidequest_common.settings import APISettings, DatabaseSettings, WebSettings
 from tests.conftest import TEST_API_KEY
 from tests.unit.api.fake_battlenet import PATCH, THUNDERFURY, battlenet, forget_battlenet_state, transport
@@ -140,3 +141,25 @@ async def test_the_same_search_is_answered_from_cache(items_client: AsyncTestCli
 )
 async def test_search_rejects_bad_parameters(items_client: AsyncTestClient, params: dict) -> None:
     assert (await items_client.get("/api/items", params=params)).status_code == 400
+
+
+async def test_an_item_carries_its_sql_price(items_client: AsyncTestClient) -> None:
+    body = (await items_client.get("/api/items/19019")).json()
+
+    assert body["loot_price"] == {"main_spec": 200, "off_spec": 20, "chase": 300}
+
+
+@pytest.mark.parametrize(
+    ("inventory_type", "quality", "price"),
+    [
+        ("TWOHWEAPON", "EPIC", ItemLootPrice(main_spec=200, off_spec=20, chase=300)),
+        ("HAND", "EPIC", ItemLootPrice(main_spec=75, off_spec=8, chase=113)),
+        ("CLOAK", "RARE", ItemLootPrice(main_spec=55, off_spec=6, chase=83)),
+        ("NON_EQUIP", "LEGENDARY", ItemLootPrice(main_spec=300, off_spec=30, chase=300)),
+        ("WEAPON", "LEGENDARY", ItemLootPrice(main_spec=300, off_spec=30, chase=300)),
+        ("BODY", "EPIC", None),
+        ("NON_EQUIP", "EPIC", None),
+    ],
+)
+def test_sql_price_follows_the_loot_rules(inventory_type: str, quality: str, price: ItemLootPrice | None) -> None:
+    assert sql_price(inventory_type, quality) == price

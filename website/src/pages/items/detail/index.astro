@@ -96,10 +96,23 @@ import "../../../styles/room-items.css";
         </div>
       </div>
       ${tooltipLines ? `<div class="item-tooltip-lines">${tooltipLines}</div>` : ""}
-      <p class="item-sell-price">Sells for ${copperToGold(item.sell_price)}</p>`;
+      <p class="item-sell-price">Sells for ${copperToGold(item.sell_price)}</p>
+      ${lootPrice(item)}`;
     requireElement<HTMLAnchorElement>("item-wowhead-link").href =
       `https://www.wowhead.com/forever/item=${item.item_id}`;
     refreshWowheadLinks();
+  }
+
+  function lootPrice(item: Item): string {
+    const price = item.loot_price;
+    if (!price) {
+      return "";
+    }
+    return `
+      <p class="item-loot-price">
+        SQL price if it drops in a raid: <strong>${price.main_spec} GP</strong> main spec \u00b7
+        ${price.off_spec} GP off spec \u00b7 ${price.chase} GP if officers call it a chase item
+      </p>`;
   }
 
   function lootRow(item: EpgpLootItem): string {

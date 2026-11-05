@@ -1059,6 +1059,7 @@ export const ITEMS: Item[] = [
     is_equippable: true,
     icon_url: null,
     tooltip: ["Binds when picked up", "Unique", "+96 Stamina", "+64 Critical Strike", "Requires Level 80"],
+    loot_price: { main_spec: 125, off_spec: 13, chase: 188 },
   },
   {
     item_id: 29179,
@@ -1075,6 +1076,7 @@ export const ITEMS: Item[] = [
     is_equippable: true,
     icon_url: null,
     tooltip: ["Binds when picked up", "+22 Intellect", "+18 Spirit", "Requires Level 70"],
+    loot_price: { main_spec: 55, off_spec: 6, chase: 83 },
   },
   {
     item_id: 29176,
@@ -1091,6 +1093,7 @@ export const ITEMS: Item[] = [
     is_equippable: true,
     icon_url: null,
     tooltip: ["Binds when picked up", "Unique", "+14 Stamina", "Requires Level 68"],
+    loot_price: { main_spec: 55, off_spec: 6, chase: 83 },
   },
   {
     item_id: 13510,
@@ -1107,6 +1110,7 @@ export const ITEMS: Item[] = [
     is_equippable: false,
     icon_url: null,
     tooltip: ["Use: Increases total health by 2000 for 2 hours.", "Requires Level 55"],
+    loot_price: null,
   },
   {
     item_id: 2852,
@@ -1123,6 +1127,7 @@ export const ITEMS: Item[] = [
     is_equippable: false,
     icon_url: null,
     tooltip: ['"Used by blacksmiths to sharpen weapons."'],
+    loot_price: null,
   },
   {
     item_id: 2589,
@@ -1139,6 +1144,7 @@ export const ITEMS: Item[] = [
     is_equippable: false,
     icon_url: null,
     tooltip: ['"Harvested from Linen Cloth bolts."'],
+    loot_price: null,
   },
   {
     item_id: 19019,
@@ -1155,6 +1161,7 @@ export const ITEMS: Item[] = [
     is_equippable: true,
     icon_url: null,
     tooltip: ["Binds when picked up", "Unique", "+10 Agility", "+10 Stamina", "Requires Level 60"],
+    loot_price: { main_spec: 300, off_spec: 30, chase: 300 },
   },
 ];
 
