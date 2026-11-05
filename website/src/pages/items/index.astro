@@ -1,0 +1,193 @@
+---
+import Room from "../../layouts/Room.astro";
+import armory from "../../../assets/rooms/armory.webp";
+import { ITEM_QUALITIES, ITEM_SLOTS, capitalize, qualityClass } from "../../scripts/api";
+import "../../styles/room-items.css";
+---
+
+<Room
+  title="Items · SideQuest"
+  description="Search any World of Warcraft: Forever item for its stats and tooltip, and see who in SideQuest has looted it."
+  heading="ITEMS"
+  lede="Search the vault for any item: its stats, its tooltip, and who in the guild has already looted it."
+  art={armory}
+  artPosition="50% 42%"
+  current="items"
+>
+  <section class="chamber" aria-labelledby="h-search">
+    <h2 class="chamber-title" id="h-search">
+      Search
+    </h2>
+    <form id="item-search-form">
+      <div class="form-row">
+        <div class="field">
+          <label for="item-query">Item name</label>
+          <input id="item-query" type="search" placeholder="e.g. Thunderfury" maxlength="100" />
+        </div>
+        <div class="field">
+          <label for="item-slot">Slot</label>
+          <select id="item-slot">
+            <option value="">Any slot</option>
+            {ITEM_SLOTS.map((slot) => (
+              <option value={slot.key}>{slot.label}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+      <fieldset class="item-quality-filter">
+        <legend>Quality</legend>
+        <div class="item-quality-options">
+          {ITEM_QUALITIES.map((q) => (
+            <label class:list={["item-quality-check", `q-${qualityClass(q)}`]}>
+              <input type="checkbox" value={q} />
+              {capitalize(qualityClass(q))}
+            </label>
+          ))}
+        </div>
+      </fieldset>
+      <p class="aside">
+        Search matches whole words, not partial ones — "bless" finds "Blessed" but typing just part of a word won't — so
+        search when you're ready to, not as you type.
+      </p>
+      <button type="submit" class="btn">
+        Search
+      </button>
+    </form>
+  </section>
+
+  <section class="chamber" aria-labelledby="h-results">
+    <h2 class="chamber-title" id="h-results">
+      Results
+    </h2>
+    <p class="status" id="item-status" role="status" aria-live="polite">
+      Type an item's name to search.
+    </p>
+    <ul class="item-results" id="item-results" aria-label="Items found"></ul>
+    <div class="item-pager" id="item-pager" hidden>
+      <button type="button" class="btn-quiet btn-small" id="item-prev">
+        Previous
+      </button>
+      <span class="item-page-label" id="item-page-label"></span>
+      <button type="button" class="btn-quiet btn-small" id="item-next">
+        Next
+      </button>
+    </div>
+  </section>
+
+  <noscript>
+    <p class="aside">Enable JavaScript to search items.</p>
+  </noscript>
+</Room>
+
+<script>
+  import {
+    apiFetch,
+    ApiError,
+    escapeHtml,
+    qualityClass,
+    requireElement,
+    statusMessage,
+    type ItemSearch,
+    type ItemSummary,
+  } from "../../scripts/api";
+  import { itemLink, loadWowheadTooltips, refreshWowheadLinks } from "../../scripts/items";
+  import { onPage } from "../../scripts/page";
+
+  function itemRow(item: ItemSummary): string {
+    const requires = item.required_level > 0 ? ` \u00b7 Requires level ${item.required_level}` : "";
+    return `
+      <li class="item-row">
+        <span class="item-row-name">${itemLink(item.item_id, item.name, qualityClass(item.quality))}</span>
+        <span class="item-row-meta">${escapeHtml(item.inventory_type_name)} \u00b7 Item level ${item.item_level}${requires}</span>
+      </li>`;
+  }
+
+  onPage("#item-search-form", (signal) => {
+    const form = requireElement<HTMLFormElement>("item-search-form");
+    const queryEl = requireElement<HTMLInputElement>("item-query");
+    const slotEl = requireElement<HTMLSelectElement>("item-slot");
+    const statusEl = requireElement("item-status");
+    const resultsEl = requireElement("item-results");
+    const pagerEl = requireElement("item-pager");
+    const pageLabelEl = requireElement("item-page-label");
+    const prevBtn = requireElement<HTMLButtonElement>("item-prev");
+    const nextBtn = requireElement<HTMLButtonElement>("item-next");
+
+    let page = 1;
+
+    async function search(): Promise<void> {
+      const q = queryEl.value.trim();
+      resultsEl.innerHTML = "";
+      pagerEl.hidden = true;
+      if (q.length === 0) {
+        statusEl.textContent = "Type an item's name to search.";
+        return;
+      }
+      if (q.length < 3) {
+        statusEl.textContent = "Keep typing \u2014 item search needs at least 3 letters.";
+        return;
+      }
+      statusEl.textContent = "Searching\u2026";
+      const params = new URLSearchParams({ q, page: String(page) });
+      if (slotEl.value) {
+        params.set("slot", slotEl.value);
+      }
+      for (const check of form.querySelectorAll<HTMLInputElement>('input[type="checkbox"]:checked')) {
+        params.append("quality", check.value);
+      }
+      try {
+        const data = await apiFetch<ItemSearch>(`/api/items?${params}`, { signal });
+        if (data.results.length === 0) {
+          statusEl.textContent = "No items matched that search.";
+          return;
+        }
+        statusEl.textContent = "";
+        resultsEl.innerHTML = data.results.map(itemRow).join("");
+        refreshWowheadLinks();
+        pagerEl.hidden = data.page_count <= 1;
+        pageLabelEl.textContent = `Page ${data.page} of ${data.page_count}`;
+        prevBtn.disabled = data.page <= 1;
+        nextBtn.disabled = data.page >= data.page_count;
+      } catch (err) {
+        statusEl.textContent =
+          err instanceof ApiError && err.status === 503
+            ? "Battle.net isn't answering right now, so item search is offline. Try again soon."
+            : statusMessage(err);
+      }
+    }
+
+    form.addEventListener(
+      "submit",
+      (event) => {
+        event.preventDefault();
+        page = 1;
+        void search();
+      },
+      { signal },
+    );
+    prevBtn.addEventListener(
+      "click",
+      () => {
+        page = Math.max(1, page - 1);
+        void search();
+      },
+      { signal },
+    );
+    nextBtn.addEventListener(
+      "click",
+      () => {
+        page += 1;
+        void search();
+      },
+      { signal },
+    );
+
+    void loadWowheadTooltips();
+
+    const seedQuery = new URLSearchParams(location.search).get("q");
+    if (seedQuery) {
+      queryEl.value = seedQuery;
+      void search();
+    }
+  });
+</script>

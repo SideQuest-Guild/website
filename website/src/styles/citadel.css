@@ -24,10 +24,12 @@
   --c-mage: #3fc7eb;
   --c-warlock: #9d9ef5;
   --c-druid: #ff8c2a;
+  --q-poor: #9d9d9d;
   --q-common: #f2efe9;
   --q-uncommon: #4fdc2e;
   --q-rare: #4a9df2;
   --q-epic: #b673f5;
+  --q-legendary: #ff8000;
   --flavor: #ffd36a;
   --corner: 26px;
 }
@@ -344,6 +346,36 @@ textarea {
 }
 .cls-druid {
   color: var(--c-druid);
+}
+/* An item name linking to /items/detail/ and, once wow.zamimg.com's script loads, a Wowhead hover tooltip
+   (see privacy#who-else). Undecorated like the game's own item links; an underline on hover is the only tell.
+   Comes before the .q-* rules below so a quality class on the same element wins the color (same specificity,
+   source order breaks the tie). */
+.item-link {
+  color: inherit;
+  text-decoration: none;
+}
+.item-link:hover,
+.item-link:focus-visible {
+  text-decoration: underline;
+}
+.q-poor {
+  color: var(--q-poor);
+}
+.q-common {
+  color: var(--q-common);
+}
+.q-uncommon {
+  color: var(--q-uncommon);
+}
+.q-rare {
+  color: var(--q-rare);
+}
+.q-epic {
+  color: var(--q-epic);
+}
+.q-legendary {
+  color: var(--q-legendary);
 }
 
 /* ——— Quest log: event lists ——— */

@@ -10,6 +10,7 @@ import {
   GUILD_ANNOUNCEMENTS,
   GUILD_ROSTER,
   HEROES,
+  ITEMS,
   LONG_TITLE,
   MCP_TOKENS,
   MEMBER,
@@ -459,6 +460,44 @@ test.describe("ledger", () => {
     site.signIn(MEMBER);
     await page.goto("/ledger/");
     await expect(page.locator(".ledger-table tr.is-you")).toContainText("Wanderer");
+  });
+});
+
+test.describe("items", () => {
+  test("searching lists matching items that link to their detail page", async ({ page, site }) => {
+    site.signIn(null);
+    await page.goto("/items/");
+    await page.locator("#item-query").fill("Glory of the Defender");
+    await page.locator("#item-search-form button[type=submit]").click();
+    const result = page.locator("#item-results .item-row a.item-link");
+    await expect(result).toHaveText("Glory of the Defender");
+    await expect(result).toHaveAttribute("href", `/items/detail/?id=${ITEMS[0]!.item_id}`);
+    await result.click();
+    await expect(page).toHaveURL(`/items/detail/?id=${ITEMS[0]!.item_id}`);
+    await expect(page.locator(".item-detail-name")).toHaveText("Glory of the Defender");
+  });
+
+  test("too short a query asks for more letters instead of searching", async ({ page, site }) => {
+    site.signIn(null);
+    await page.goto("/items/");
+    await page.locator("#item-query").fill("gl");
+    await page.locator("#item-search-form button[type=submit]").click();
+    await expect(page.locator("#item-status")).toContainText("at least 3 letters");
+    await expect(page.locator("#item-results")).toBeEmpty();
+  });
+
+  test("an item page shows who in the guild has looted it", async ({ page, site }) => {
+    site.signIn(null);
+    await page.goto(`/items/detail/?id=${ITEMS[0]!.item_id}`);
+    await expect(page.locator(".item-detail-name")).toHaveText("Glory of the Defender");
+    await expect(page.locator("#item-loot-list")).toContainText("Quest Guide");
+  });
+
+  test("an unknown item says so plainly", async ({ page, site }) => {
+    site.signIn(null);
+    await page.goto("/items/detail/?id=999999999");
+    await expect(page.locator("#item-detail-status")).toContainText("no such item");
+    await expect(page.locator("#item-detail-content")).toBeHidden();
   });
 });
 

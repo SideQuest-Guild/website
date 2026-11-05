@@ -1,0 +1,175 @@
+/* The Armory: item search and one item's own page. Search reuses citadel.css's chamber/form-row/field primitives;
+   the detail page's card borrows addon-tooltip.css's tooltip-card/tt-icon frame (the game's own item-card look) but
+   keeps its own name/line classes, since tt-name hard-codes epic purple and an item's name needs its real quality
+   color from the global .q-* classes (citadel.css). */
+
+/* ——— Shared with other rooms' pages, which don't share a stylesheet with this one ——— */
+.ledger-empty {
+  text-align: center;
+  color: var(--mist-2);
+}
+
+/* ——— Search form ——— */
+.item-quality-filter {
+  margin: 18px 0 0;
+  padding: 0;
+  border: 0;
+}
+.item-quality-filter legend {
+  padding: 0 0 8px;
+  font-weight: 500;
+  font-size: var(--caps);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--mist-2);
+}
+.item-quality-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+}
+.item-quality-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--body);
+}
+
+/* ——— Results ——— */
+.item-results {
+  display: grid;
+  gap: 0;
+  margin: 18px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.item-results > li + li {
+  border-top: 1px solid var(--stone-2);
+}
+.item-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 16px;
+  padding: 10px 4px;
+}
+.item-row-name {
+  font-family: var(--serif);
+  font-size: 17px;
+}
+.item-row-meta {
+  color: var(--mist-2);
+  font-size: 13px;
+}
+.item-pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 18px;
+}
+.item-page-label {
+  color: var(--mist-2);
+  font-size: 13px;
+}
+
+/* ——— Item detail card ——— */
+.item-detail-head {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr);
+  gap: 14px;
+  align-items: center;
+}
+.item-icon-placeholder {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  color: var(--mist-2);
+  font-size: 11px;
+  text-align: center;
+}
+.item-detail-name {
+  margin: 0 0 2px;
+  font-family: var(--display);
+  font-size: clamp(21px, 2vw, 27px);
+  line-height: 1.15;
+  letter-spacing: 0.01em;
+  text-wrap: balance;
+}
+.item-detail-meta {
+  margin: 0;
+  color: var(--mist-2);
+  font-size: 13px;
+}
+.item-tooltip-lines {
+  display: grid;
+  gap: 2px;
+  margin: 10px 0 0;
+  padding: 10px 0 0;
+  border-top: 1px solid var(--stone-2);
+  color: var(--ink);
+}
+.item-tooltip-line {
+  margin: 0;
+}
+.item-sell-price {
+  margin: 10px 0 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--stone-2);
+  color: var(--gold);
+}
+.item-wowhead-link {
+  margin-top: 18px;
+}
+
+/* ——— Who got it ——— */
+.item-loot-list {
+  display: grid;
+  gap: 0;
+  margin: 18px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.item-loot-list > li + li {
+  border-top: 1px solid var(--stone-2);
+}
+.item-loot-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr) auto;
+  align-items: center;
+  gap: 4px 18px;
+  padding: 10px 4px;
+}
+.item-loot-who {
+  color: var(--ink);
+}
+.item-loot-meta {
+  color: var(--mist-2);
+  font-size: 13px;
+}
+.item-loot-when {
+  color: var(--mist-2);
+  font-size: 13px;
+  text-align: right;
+}
+@media (max-width: 560px) {
+  .item-loot-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "who when"
+      "meta meta";
+    row-gap: 4px;
+  }
+  .item-loot-who {
+    grid-area: who;
+  }
+  .item-loot-when {
+    grid-area: when;
+    text-align: right;
+  }
+  .item-loot-meta {
+    grid-area: meta;
+  }
+}

@@ -30,6 +30,7 @@ flowchart LR
 | `/heroes/` | everyone (the rest is members) | The Hall of Heroes: a public "most grouped" board, plus Renown, raids attended, chat level and badges for each member. A member's profile also shows a MEE6-style activity section: level, XP bar, message and voice stats, streaks and activity charts. |
 | `/guild/` | members | The in-game roster, who can craft what, the guild bank log and guild news. |
 | `/addons/` | everyone | The addons the guild uses, with download links. |
+| `/items/` | everyone | Find an item, see its tooltip, and who in the guild has already looted it. |
 | `/account/` | anyone signed in | Link Battle.net, get a calendar link, mark away dates, or delete your account. |
 | `/officers/` | officers | Events, addons, recruiting, attendance, group voice stats, and guild-wide activity stats and leaderboards. Game Masters also get members, the activity log and moderation. |
 | `/officers/sync/` | officers | Move a raid night from the addon to the site, and points back to the addon. |
@@ -163,7 +164,8 @@ groups with their chat (kept 30 days for moderation, then deleted). Everyone see
 ## MCP access for officers
 
 Officers can let Claude Code, omp or any other MCP client work on the guild for them: look up members, read and
-post in channels, post announcements, and make, change or cancel events. Make a token on `/officers/` under
+post in channels, post announcements, make, change or cancel events, and look up game items and who in the guild
+looted them. Make a token on `/officers/` under
 **Claude / MCP access**, then run:
 
 ```sh

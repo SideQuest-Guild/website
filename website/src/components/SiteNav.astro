@@ -14,6 +14,7 @@ interface Props {
     | "heroes"
     | "guild"
     | "rules"
+    | "items"
     | "addons"
     | "officers"
     | "account"
@@ -24,7 +25,7 @@ interface Props {
 
 const { current, hero = false } = Astro.props;
 const raidsCurrent = current === "raids" || current === "ledger";
-const guildCurrent = current === "guild" || current === "heroes" || current === "rules";
+const guildCurrent = current === "guild" || current === "heroes" || current === "rules" || current === "items";
 const accountCurrent = current === "account" || current === "officers";
 
 type NavEntry = { href: string; icon: string; name: string; desc: string; members?: boolean; external?: boolean };
@@ -59,6 +60,12 @@ const guildEntries: NavEntry[] = [
     name: "Roster and crafters",
     desc: "The roster, crafters directory, bank log and news.",
     members: true,
+  },
+  {
+    href: "/items/",
+    icon: "i-nav-items",
+    name: "Item lookup",
+    desc: "Search any item and see who in the guild got it.",
   },
   { href: "/#how-we-play", icon: "i-nav-play", name: "How we play", desc: "The journey and the raid, our own way." },
   {

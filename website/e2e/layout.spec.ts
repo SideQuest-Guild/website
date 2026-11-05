@@ -3,7 +3,7 @@
 // of each is attached to the report for a human look.
 import type { Page } from "@playwright/test";
 
-import { DEVICE_AUTH_USER_CODE, EVENTS, GM, HEROES } from "./data";
+import { DEVICE_AUTH_USER_CODE, EVENTS, GM, HEROES, ITEMS } from "./data";
 import { expect, test } from "./fixtures";
 
 const PAGES = [
@@ -17,6 +17,8 @@ const PAGES = [
   { name: "raids", path: "/raids/" },
   { name: "ledger", path: "/ledger/" },
   { name: "guild", path: "/guild/" },
+  { name: "items", path: "/items/" },
+  { name: "item", path: `/items/detail/?id=${ITEMS[0]?.item_id}` },
   { name: "account", path: "/account/" },
   { name: "account stats", path: "/account/#stats" },
   { name: "officers", path: "/officers/#members" },

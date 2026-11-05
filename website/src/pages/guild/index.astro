@@ -204,6 +204,7 @@ import "../../styles/room-guild.css";
     ApiError,
     capitalize,
     classLabel,
+    copperToGold,
     escapeHtml,
     fetchMe,
     normalizeClass,
@@ -230,6 +231,7 @@ import "../../styles/room-guild.css";
     type GuildStock,
     type Me,
   } from "../../scripts/api";
+  import { itemLink, loadWowheadTooltips, refreshWowheadLinks } from "../../scripts/items";
   import { onPage } from "../../scripts/page";
   import { setupTablist } from "../../scripts/tablist";
 
@@ -256,15 +258,6 @@ import "../../styles/room-guild.css";
   function classSpan(cls: string | null): string {
     const normalized = normalizeClass(cls);
     return `<span class="${normalized ? `cls-${normalized}` : ""}">${escapeHtml(classLabel(cls))}</span>`;
-  }
-
-  function copperToGold(copper: number): string {
-    const sign = copper < 0 ? "-" : "";
-    const abs = Math.abs(copper);
-    const gold = Math.floor(abs / 10000);
-    const silver = Math.floor((abs % 10000) / 100);
-    const bronze = abs % 100;
-    return `${sign}${gold}g ${silver}s ${bronze}c`;
   }
 
   function parseHash(): { tab: string } {
@@ -344,7 +337,7 @@ import "../../styles/room-guild.css";
       .join("");
     return `
         <li class="guild-crafter-recipe">
-          <h3 class="sub-title">${escapeHtml(result.recipe_name)}</h3>
+          <h3 class="sub-title">${result.item_id !== null ? itemLink(result.item_id, result.recipe_name) : escapeHtml(result.recipe_name)}</h3>
           <ul class="guild-crafter-rows">${crafters}</ul>
         </li>`;
   }
@@ -353,7 +346,7 @@ import "../../styles/room-guild.css";
       row.kind === "deposit_money" || row.kind === "withdraw_money"
         ? copperToGold(row.money)
         : row.item_name
-          ? `${row.count ?? 1}\u00d7 ${escapeHtml(row.item_name)}`
+          ? `${row.count ?? 1}\u00d7 ${row.item_id !== null ? itemLink(row.item_id, row.item_name) : escapeHtml(row.item_name)}`
           : "";
     const who = row.member_name ?? row.character;
     return `
@@ -385,31 +378,31 @@ import "../../styles/room-guild.css";
         </li>`;
   }
   function marketSellRow(row: GuildMarketSellRow): string {
-    const label = row.item_name ?? `Item ${row.item_id}`;
+    const label = row.item_name ? itemLink(row.item_id, row.item_name) : `Item ${row.item_id}`;
     const price = row.price !== null ? copperToGold(row.price) : "Whisper me";
     return `
         <li class="guild-market-row">
-          <span class="guild-market-item">${escapeHtml(label)}${row.crafted ? " (crafted)" : ""}</span>
+          <span class="guild-market-item">${label}${row.crafted ? " (crafted)" : ""}</span>
           <span class="guild-market-detail">${row.qty}\u00d7 \u00b7 ${price}</span>
           <span class="guild-market-who">${escapeHtml(row.member_name ?? row.character)}</span>
         </li>`;
   }
   function marketBuyRow(row: GuildMarketBuyRow): string {
-    const label = row.item_name ?? `Item ${row.item_id}`;
+    const label = row.item_name ? itemLink(row.item_id, row.item_name) : `Item ${row.item_id}`;
     const price = row.price !== null ? copperToGold(row.price) : "Whisper me";
     return `
         <li class="guild-market-row">
-          <span class="guild-market-item">${escapeHtml(label)}</span>
+          <span class="guild-market-item">${label}</span>
           <span class="guild-market-detail">${price}</span>
           <span class="guild-market-who">${escapeHtml(row.member_name ?? row.character)}</span>
         </li>`;
   }
   function marketRequestRow(row: GuildMarketRequestRow): string {
-    const label = row.item_name ?? `Item ${row.item_id}`;
+    const label = row.item_name ? itemLink(row.item_id, row.item_name) : `Item ${row.item_id}`;
     const price = row.price !== null ? copperToGold(row.price) : "Whisper me";
     return `
         <li class="guild-market-row">
-          <span class="guild-market-item">${escapeHtml(label)}</span>
+          <span class="guild-market-item">${label}</span>
           <span class="guild-market-detail">${row.qty}\u00d7 \u00b7 ${price}${row.note ? ` \u00b7 ${escapeHtml(row.note)}` : ""}</span>
           <span class="guild-market-who">${escapeHtml(row.member_name ?? row.character)}</span>
         </li>`;
@@ -530,6 +523,7 @@ import "../../styles/room-guild.css";
           data.results.length > 0
             ? data.results.map(crafterRow).join("")
             : `<li class="ledger-empty">No crafters found for that search.</li>`;
+        refreshWowheadLinks();
       } catch (err) {
         crafterResultsEl.innerHTML = `<li class="ledger-empty">${escapeHtml(statusMessage(err))}</li>`;
       }
@@ -620,6 +614,7 @@ import "../../styles/room-guild.css";
           data.requests.length > 0
             ? data.requests.map(marketRequestRow).join("")
             : `<li class="ledger-empty">No open requests right now.</li>`;
+        refreshWowheadLinks();
       } catch (err) {
         marketSellListEl.innerHTML = `<li class="ledger-empty">${escapeHtml(statusMessage(err))}</li>`;
       }
@@ -669,6 +664,7 @@ import "../../styles/room-guild.css";
           data.rows.length > 0
             ? data.rows.map(bankRow).join("")
             : `<li class="ledger-empty">No bank activity recorded yet.</li>`;
+        refreshWowheadLinks();
       } catch (err) {
         bankListEl.innerHTML = `<li class="ledger-empty">${escapeHtml(statusMessage(err))}</li>`;
       }
@@ -736,6 +732,7 @@ import "../../styles/room-guild.css";
         statusEl.textContent = "";
         return;
       }
+      void loadWowheadTooltips();
       bodyEl.hidden = false;
       const tabsEl = bodyEl.querySelector<HTMLElement>('[role="tablist"]')!;
       const tablist = setupTablist(tabsEl, (tab) => showPanel(tab.id.slice(4)));

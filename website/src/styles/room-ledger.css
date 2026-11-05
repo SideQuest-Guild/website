@@ -136,18 +136,6 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.loot-item.q-common {
-  color: var(--q-common);
-}
-.loot-item.q-uncommon {
-  color: var(--q-uncommon);
-}
-.loot-item.q-rare {
-  color: var(--q-rare);
-}
-.loot-item.q-epic {
-  color: var(--q-epic);
-}
 .loot-winner {
   color: var(--ink);
 }

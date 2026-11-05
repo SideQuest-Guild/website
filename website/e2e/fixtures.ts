@@ -16,6 +16,7 @@ import type {
   GuildAnnouncement,
   GuildStats,
   HeroRow,
+  Item,
   Me,
   Recruiting,
 } from "../src/scripts/api";
@@ -48,6 +49,7 @@ import {
   GUILD_ROSTER,
   GUILD_STATS,
   HEROES,
+  ITEMS,
   LIVE,
   MCP_TOKENS,
   ONLINE,
@@ -61,6 +63,7 @@ import {
   heroActivity,
   heroLeaderboard,
   heroProfile,
+  itemSearch,
 } from "./data";
 
 type Site = {
@@ -406,7 +409,31 @@ export const test = base.extend<{ site: Site }>({
         return json(route, { generated_at: new Date().toISOString(), rules: EPGP_RULES, rows: EPGP_STANDINGS });
       }
       if (path === "/api/epgp/loot" && method === "GET") {
-        return json(route, { items: EPGP_LOOT });
+        const itemId = url.searchParams.get("item_id");
+        const limit = Number(url.searchParams.get("limit") ?? 0) || undefined;
+        const items = itemId ? EPGP_LOOT.filter((item) => item.item_id === Number(itemId)) : EPGP_LOOT;
+        return json(route, { items: limit ? items.slice(0, limit) : items });
+      }
+      if (path === "/api/items" && method === "GET") {
+        const q = url.searchParams.get("q") ?? "";
+        if (q.length < 3 || q.length > 100) {
+          return json(route, { detail: "q must be 3-100 characters" }, 400);
+        }
+        const qualities = url.searchParams.getAll("quality");
+        const slot = url.searchParams.get("slot");
+        const page = Number(url.searchParams.get("page") ?? 1);
+        const matches = ITEMS.filter(
+          (item) =>
+            item.name.toLowerCase().includes(q.toLowerCase()) &&
+            (qualities.length === 0 || qualities.includes(item.quality)) &&
+            (!slot || item.inventory_type === slot),
+        );
+        return json(route, itemSearch(matches, page));
+      }
+      const itemMatch = /^\/api\/items\/(\d+)$/.exec(path);
+      if (itemMatch && method === "GET") {
+        const item: Item | undefined = ITEMS.find((candidate) => candidate.item_id === Number(itemMatch[1]));
+        return item ? json(route, item) : json(route, { detail: "No such item" }, 404);
       }
       if (path === "/api/epgp/progression" && method === "GET") {
         return json(route, { instances: EPGP_PROGRESSION });

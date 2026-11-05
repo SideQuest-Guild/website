@@ -1021,6 +1021,71 @@ export type GuildStockRow = {
 /** `GET /api/guild/stock?item_id=` (member): who holds the item, in bags or bank. */
 export type GuildStock = { item_id: number; item_name: string | null; rows: GuildStockRow[] };
 
+// ——— Item catalog: GET /api/items[?q=&page=&quality=&slot=], GET /api/items/{id}. Battle.net-backed, so a 503
+// means Battle.net itself is down/unconfigured; mirrors `sidequest_common.schemas.items` (once it exists there).
+
+/** Battle.net's quality constant, as `ItemSchema.quality` and the `quality` query filter use it. */
+export type ItemQuality = "POOR" | "COMMON" | "UNCOMMON" | "RARE" | "EPIC" | "LEGENDARY";
+
+export const ITEM_QUALITIES: ItemQuality[] = ["POOR", "COMMON", "UNCOMMON", "RARE", "EPIC", "LEGENDARY"];
+
+/** Lowercases a Battle.net quality constant to match the `q-*` color classes (`citadel.css`). */
+export function qualityClass(quality: string): string {
+  return quality.toLowerCase();
+}
+
+/** The inventory-type constants `GET /api/items` accepts as `slot`, with plain-word labels for the search form's
+ * slot picker. Covers the slots gear actually fills; omits the rarer ones (ammo, tabard, bag) nobody searches for. */
+export const ITEM_SLOTS: { key: string; label: string }[] = [
+  { key: "HEAD", label: "Head" },
+  { key: "NECK", label: "Neck" },
+  { key: "SHOULDER", label: "Shoulder" },
+  { key: "CHEST", label: "Chest" },
+  { key: "ROBE", label: "Chest (robe)" },
+  { key: "WAIST", label: "Waist" },
+  { key: "LEGS", label: "Legs" },
+  { key: "FEET", label: "Feet" },
+  { key: "WRIST", label: "Wrist" },
+  { key: "HAND", label: "Hands" },
+  { key: "FINGER", label: "Ring" },
+  { key: "TRINKET", label: "Trinket" },
+  { key: "CLOAK", label: "Cloak" },
+  { key: "HOLDABLE", label: "Off-hand" },
+  { key: "SHIELD", label: "Shield" },
+  { key: "WEAPON", label: "One-hand weapon" },
+  { key: "WEAPONMAINHAND", label: "Main-hand weapon" },
+  { key: "WEAPONOFFHAND", label: "Off-hand weapon" },
+  { key: "TWOHWEAPON", label: "Two-hand weapon" },
+  { key: "RANGED", label: "Ranged" },
+  { key: "THROWN", label: "Thrown" },
+  { key: "RELIC", label: "Relic" },
+];
+
+/** One `GET /api/items` search result row. */
+export type ItemSummary = {
+  item_id: number;
+  name: string;
+  quality: ItemQuality;
+  quality_name: string;
+  inventory_type: string;
+  inventory_type_name: string;
+  item_level: number;
+  required_level: number;
+};
+
+/** `GET /api/items?q=&page=&quality=&slot=` (public): `q` min 3 chars. 50 results per page, 20 pages max. */
+export type ItemSearch = { page: number; page_count: number; results: ItemSummary[] };
+
+/** `GET /api/items/{item_id}` (public): the full item sheet, tooltip lines in game order. 404 unknown item. */
+export type Item = ItemSummary & {
+  item_class: string;
+  item_subclass: string;
+  sell_price: number;
+  is_equippable: boolean;
+  icon_url: string | null;
+  tooltip: string[];
+};
+
 export type GuildNewsKind = "boss_kill" | "first_kill" | "loot" | "level" | "joined" | "announcement" | "badge";
 
 /** One row of `GET /api/guild/news`, newest first; mirrors the import string's `news` shape. */
@@ -1258,6 +1323,16 @@ export function escapeHtml(input: string): string {
 /** Uppercases the first letter only, for enum values like `"tank"` -> `"Tank"`. */
 export function capitalize(input: string): string {
   return input.length > 0 ? input.charAt(0).toUpperCase() + input.slice(1) : input;
+}
+
+/** Formats copper into `"Ng Ns Nc"`, used by the guild bank/market and item sell prices. */
+export function copperToGold(copper: number): string {
+  const sign = copper < 0 ? "-" : "";
+  const abs = Math.abs(copper);
+  const gold = Math.floor(abs / 10000);
+  const silver = Math.floor((abs % 10000) / 100);
+  const bronze = abs % 100;
+  return `${sign}${gold}g ${silver}s ${bronze}c`;
 }
 
 /** Looks up a required element by id, throwing early with a clear message if the markup drifts. */

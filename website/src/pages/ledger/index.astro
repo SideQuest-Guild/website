@@ -84,6 +84,7 @@ import "../../styles/room-ledger.css";
     type EpgpProgression,
     type Me,
   } from "../../scripts/api";
+  import { itemLink, loadWowheadTooltips, refreshWowheadLinks } from "../../scripts/items";
   import { onPage } from "../../scripts/page";
 
   const RESPONSE_LABELS: Record<string, string> = {
@@ -205,7 +206,7 @@ import "../../styles/room-ledger.css";
     const winner = escapeHtml(item.member_name ?? item.character);
     return `
       <li class="loot-row${item.voided ? " is-voided" : ""}">
-        <span class="loot-item q-${quality}">${escapeHtml(item.item_name)}</span>
+        <span class="loot-item">${itemLink(item.item_id, item.item_name, quality)}</span>
         <span class="loot-winner">${winner}</span>
         <span class="loot-meta">${escapeHtml(RESPONSE_LABELS[item.response] ?? item.response)} \u00b7 ${item.gp} GP${where ? ` \u00b7 ${escapeHtml(where)}` : ""}</span>
         <span class="loot-when">${new Date(item.at).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</span>
@@ -219,6 +220,7 @@ import "../../styles/room-ledger.css";
       live.length > 0
         ? live.map(lootRow).join("")
         : `<li class="ledger-empty">No raids recorded yet. Loot shows up here once an officer syncs a raid night.</li>`;
+    refreshWowheadLinks();
   }
 
   function progressionCard(instance: EpgpProgressionInstance): string {
@@ -284,6 +286,7 @@ import "../../styles/room-ledger.css";
     onFreshData("/api/epgp/standings", () => void loadStandings());
     onFreshData("/api/epgp/loot", () => void loadLoot());
     onFreshData("/api/epgp/progression", () => void loadProgression());
+    void loadWowheadTooltips();
 
     async function init(): Promise<void> {
       let me: Me | null = null;

@@ -1,0 +1,162 @@
+---
+import Room from "../../../layouts/Room.astro";
+import armory from "../../../../assets/rooms/armory.webp";
+import "../../../styles/addon-tooltip.css";
+import "../../../styles/room-items.css";
+---
+
+<Room
+  title="Item · SideQuest"
+  description="An item's stats, tooltip and who in SideQuest has looted it."
+  heading="ITEM"
+  art={armory}
+  artPosition="50% 42%"
+  current="items"
+>
+  <!-- Ask for the item (and who got it) with the HTML, not after the page script loads; the URLs match init()
+       below. -->
+  <script is:inline slot="head">
+    const itemId = new URLSearchParams(location.search).get("id");
+    if (itemId) {
+      for (const href of [`/api/items/${itemId}`, `/api/epgp/loot?item_id=${itemId}&limit=50`]) {
+        const link = document.createElement("link");
+        Object.assign(link, { rel: "preload", as: "fetch", href, crossOrigin: "anonymous" });
+        document.head.append(link);
+      }
+    }
+  </script>
+
+  <p class="status" id="item-detail-status" role="status" aria-live="polite"></p>
+
+  <div id="item-detail-content" hidden>
+    <section class="chamber" aria-labelledby="h-item">
+      <h2 class="chamber-title" id="h-item">
+        Item
+      </h2>
+      <div class="tooltip-card" id="item-tooltip-card"></div>
+      <p class="item-wowhead-link">
+        <!-- Wowhead's script puts its icon on every wowhead.com link; saying it's already there keeps it off the button. -->
+        <a id="item-wowhead-link" href="#" target="_blank" rel="noreferrer" data-astro-reload data-wh-icon-added="true">
+          View on Wowhead
+        </a>
+      </p>
+    </section>
+
+    <section class="chamber" aria-labelledby="h-who-got-it">
+      <h2 class="chamber-title" id="h-who-got-it">
+        Who got it
+      </h2>
+      <ul class="item-loot-list" id="item-loot-list" aria-label="Who has looted this item"></ul>
+    </section>
+  </div>
+
+  <noscript>
+    <p class="aside">Enable JavaScript to view this item.</p>
+  </noscript>
+</Room>
+
+<script>
+  import {
+    apiFetch,
+    ApiError,
+    copperToGold,
+    escapeHtml,
+    qualityClass,
+    requireElement,
+    statusMessage,
+    type EpgpLootItem,
+    type EpgpLootPage,
+    type Item,
+  } from "../../../scripts/api";
+  import { loadWowheadTooltips, refreshWowheadLinks } from "../../../scripts/items";
+  import { onPage } from "../../../scripts/page";
+
+  const RESPONSE_LABELS: Record<string, string> = {
+    ms: "Main spec",
+    os: "Off spec",
+    alt: "Alt fill",
+    council: "Council",
+    de: "Disenchanted",
+    bank: "Banked",
+  };
+
+  function renderItem(item: Item): void {
+    const cls = qualityClass(item.quality);
+    const icon = item.icon_url
+      ? `<img src="${escapeHtml(item.icon_url)}" alt="" width="56" height="56" />`
+      : `<span class="item-icon-placeholder">No icon</span>`;
+    const requires = item.required_level > 0 ? ` \u00b7 Requires level ${item.required_level}` : "";
+    const tooltipLines = item.tooltip.map((line) => `<p class="item-tooltip-line">${escapeHtml(line)}</p>`).join("");
+    requireElement("item-tooltip-card").innerHTML = `
+      <div class="item-detail-head">
+        <span class="tt-icon">${icon}</span>
+        <div>
+          <p class="item-detail-name q-${cls}">${escapeHtml(item.name)}</p>
+          <p class="item-detail-meta">${escapeHtml(item.item_class)} \u2013 ${escapeHtml(item.item_subclass)} \u00b7 ${escapeHtml(item.inventory_type_name)} \u00b7 Item level ${item.item_level}${requires}</p>
+        </div>
+      </div>
+      ${tooltipLines ? `<div class="item-tooltip-lines">${tooltipLines}</div>` : ""}
+      <p class="item-sell-price">Sells for ${copperToGold(item.sell_price)}</p>`;
+    requireElement<HTMLAnchorElement>("item-wowhead-link").href =
+      `https://www.wowhead.com/forever/item=${item.item_id}`;
+    refreshWowheadLinks();
+  }
+
+  function lootRow(item: EpgpLootItem): string {
+    const who = escapeHtml(item.member_name ?? item.character);
+    const where = [item.instance_name, item.encounter_name].filter(Boolean).join(" \u2013 ");
+    return `
+      <li class="item-loot-row${item.voided ? " is-voided" : ""}">
+        <span class="item-loot-who">${who}</span>
+        <span class="item-loot-meta">${escapeHtml(RESPONSE_LABELS[item.response] ?? item.response)} \u00b7 ${item.gp} GP${where ? ` \u00b7 ${escapeHtml(where)}` : ""}</span>
+        <span class="item-loot-when">${new Date(item.at).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}</span>
+      </li>`;
+  }
+
+  function renderLoot(items: EpgpLootItem[]): void {
+    const list = requireElement("item-loot-list");
+    const live = items.filter((item) => !item.voided);
+    list.innerHTML =
+      live.length > 0
+        ? live.map(lootRow).join("")
+        : `<li class="ledger-empty">Nobody in the guild has looted this yet.</li>`;
+  }
+
+  onPage("#item-detail-status", (signal) => {
+    const statusEl = requireElement("item-detail-status");
+    const contentEl = requireElement("item-detail-content");
+
+    async function init(): Promise<void> {
+      const itemId = new URLSearchParams(location.search).get("id");
+      if (!itemId) {
+        statusEl.textContent = "No item was given.";
+        return;
+      }
+      statusEl.textContent = "Loading\u2026";
+      void loadWowheadTooltips();
+      try {
+        const item = await apiFetch<Item>(`/api/items/${itemId}`, { signal });
+        renderItem(item);
+        contentEl.hidden = false;
+        statusEl.textContent = "";
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 404) {
+          statusEl.textContent = "There's no such item.";
+        } else if (err instanceof ApiError && err.status === 503) {
+          statusEl.textContent = "Battle.net isn't answering right now, so this item can't be shown. Try again soon.";
+        } else {
+          statusEl.textContent = statusMessage(err);
+        }
+        return;
+      }
+      try {
+        const loot = await apiFetch<EpgpLootPage>(`/api/epgp/loot?item_id=${itemId}&limit=50`, { signal });
+        renderLoot(loot.items);
+      } catch (err) {
+        requireElement("item-loot-list").innerHTML = `<li class="ledger-empty">${escapeHtml(statusMessage(err))}</li>`;
+      }
+    }
+
+    void init();
+  });
+</script>
