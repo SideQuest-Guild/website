@@ -70,7 +70,7 @@ const crest = await getImage({ src: guildCrest, width: 112, format: "webp" });
           Windows<span class="platform-arch">Intel / AMD</span>
         </p>
         <p class="platform-meta" data-platform-meta>
-          .zip
+          Installer (.exe)
         </p>
         <div class="form-actions">
           <a class="btn btn-small" data-platform-link href={COMPANION_RELEASES_URL}>
@@ -83,7 +83,7 @@ const crest = await getImage({ src: guildCrest, width: 112, format: "webp" });
           Windows<span class="platform-arch">ARM</span>
         </p>
         <p class="platform-meta" data-platform-meta>
-          .zip
+          Installer (.exe)
         </p>
         <div class="form-actions">
           <a class="btn btn-small" data-platform-link href={COMPANION_RELEASES_URL}>
@@ -160,9 +160,11 @@ const crest = await getImage({ src: guildCrest, width: 112, format: "webp" });
       <code>xattr -d com.apple.quarantine "SideQuest Companion.app"</code> once, then launch it normally from then on.
     </p>
     <p class="aside">
-      <strong>Windows:</strong> unzip and run <code>sidequest-companion.exe</code>. SmartScreen will warn about an
-      unrecognized app the first time; click <strong>More info</strong>, then <strong>Run anyway</strong>. This isn't a
-      sign the file is unsafe. See <a href="#h-companion-verify">Verify your download</a> above to check it yourself.
+      <strong>Windows:</strong> run the setup file. SmartScreen will warn about an unrecognized app the first time;
+      click <strong>More info</strong>, then <strong>Run anyway</strong>. This isn't a sign the file is unsafe. See{" "}
+      <a href="#h-companion-verify">Verify your download</a> above to check it yourself. Setup installs the app for you
+      alone (no admin needed), adds it to the Start menu, and closes and replaces an older version if one is running.
+      Remove it from <strong>Settings → Apps</strong>.
     </p>
     <p class="aside">
       <strong>Linux:</strong> untar anywhere, then run <code>sidequest-companion</code>. The tarball also has a{" "}
@@ -195,12 +197,15 @@ const crest = await getImage({ src: guildCrest, width: 112, format: "webp" });
 
   type PlatformOs = "windows" | "macos" | "linux";
 
-  /** Maps each download card's `data-platform` id to the suffix its release asset's filename ends with. */
-  const PLATFORM_SUFFIXES: Record<string, string> = {
-    "windows-x86_64": "-windows-x86_64.zip",
-    "windows-aarch64": "-windows-aarch64.zip",
-    "macos-universal": "-macos-universal.zip",
-    "linux-x86_64": "-linux-x86_64.tar.gz",
+  /**
+   * Maps each download card's `data-platform` id to the suffixes its release asset's filename may end with, best
+   * first. Windows prefers the installer; releases before it only had the zip.
+   */
+  const PLATFORM_SUFFIXES: Record<string, string[]> = {
+    "windows-x86_64": ["-windows-x86_64-setup.exe", "-windows-x86_64.zip"],
+    "windows-aarch64": ["-windows-aarch64-setup.exe", "-windows-aarch64.zip"],
+    "macos-universal": ["-macos-universal.zip"],
+    "linux-x86_64": ["-linux-x86_64.tar.gz"],
   };
 
   function osForPlatform(id: string): PlatformOs {
@@ -253,8 +258,10 @@ const crest = await getImage({ src: guildCrest, width: 112, format: "webp" });
       }
       const release = (await response.json()) as GithubRelease;
       versionEl.innerHTML = `SideQuest Companion ${escapeHtml(release.tag_name)}. See <a href="${escapeHtml(COMPANION_RELEASES_URL)}">everything in this release</a>.`;
-      for (const [id, suffix] of Object.entries(PLATFORM_SUFFIXES)) {
-        const asset = release.assets.find((a) => a.name.endsWith(suffix));
+      for (const [id, suffixes] of Object.entries(PLATFORM_SUFFIXES)) {
+        const asset = suffixes
+          .map((suffix) => release.assets.find((a) => a.name.endsWith(suffix)))
+          .find((found) => found !== undefined);
         if (!asset) {
           continue;
         }
