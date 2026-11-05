@@ -13,16 +13,19 @@ from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
+from litestar.exceptions import HTTPException
 from mcp.server.mcpserver.exceptions import ToolError
 from sqlalchemy import select
 
 from sidequest_api.domain.attendance.services import AttendanceService
 from sidequest_api.domain.away.services import AwayService, today_chicago
+from sidequest_api.domain.epgp.services import EpgpService
 from sidequest_api.domain.events.services import EventsService
 from sidequest_api.domain.guild_hub.services import GuildHubService
 from sidequest_api.domain.heroes.services import HeroesService
+from sidequest_api.domain.items.services import ItemsService, search_items
 from sidequest_api.domain.mcp.auth import require_gm
-from sidequest_api.domain.mcp.context import get_context, require_bot_token
+from sidequest_api.domain.mcp.context import get_context, require_bot_token, require_game_data
 from sidequest_api.domain.members.services import MembersService
 from sidequest_api.lib import discord as discord_lib
 from sidequest_api.lib.discord import avatar_url
@@ -30,12 +33,15 @@ from sidequest_api.lib.mcp_role_guard import bot_top_role_position, grant_block_
 from sidequest_api.lib.officer_audit import record_officer_audit
 from sidequest_common.models import GuildRole, Member, MemberAwayRange
 from sidequest_common.schemas import (
+    ITEM_SEARCH_MIN_LENGTH,
     AttendanceRange,
     EventCreate,
     EventKind,
     EventStatus,
     EventUpdate,
     GuildAnnouncementCreate,
+    ItemQuality,
+    ItemSchema,
 )
 
 if TYPE_CHECKING:
@@ -44,6 +50,8 @@ if TYPE_CHECKING:
 MAX_MESSAGE_LIMIT = 50
 MAX_AUDIT_LIMIT = 50
 AUDIT_SUMMARY_MAX = 300
+ITEM_LOOT_LIMIT = 50
+MAX_ITEM_SEARCH_PAGE = 20
 
 
 async def _role_names(ctx: Any, role_ids: list[int]) -> dict[int, str]:
@@ -167,6 +175,52 @@ async def away_this_week() -> list[dict[str, Any]]:
         }
         for member, away in rows
     ]
+
+
+async def search_game_items(query: str, quality: list[str] | None = None, page: int = 1) -> dict[str, Any]:
+    """Search game items by name: whole words only, so ``bless`` finds Blessed but ``thund`` finds nothing.
+
+    Battle.net matches English word stems. ``quality`` keeps only these qualities, such as ``["EPIC", "LEGENDARY"]``.
+    Returns up to 50 matches a page (id, name, quality, slot, item level, required level) and the page count.
+    """
+    ctx = get_context()
+    game_data = require_game_data(ctx)
+    query = query.strip()
+    if len(query) < ITEM_SEARCH_MIN_LENGTH:
+        msg = f"Search with at least {ITEM_SEARCH_MIN_LENGTH} letters"
+        raise ToolError(msg)
+    if not 1 <= page <= MAX_ITEM_SEARCH_PAGE:
+        msg = f"page must be 1 to {MAX_ITEM_SEARCH_PAGE}; Battle.net stops at 1,000 results"
+        raise ToolError(msg)
+    try:
+        qualities = tuple(sorted({ItemQuality(value.upper()) for value in quality or ()}))
+    except ValueError as error:
+        msg = f"Unknown quality; use one of {', '.join(ItemQuality)}"
+        raise ToolError(msg) from error
+    try:
+        found = await search_items(game_data, query, page=page, qualities=qualities, slot=None)
+    except HTTPException as error:
+        raise ToolError(error.detail) from error
+    return found.model_dump(mode="json")
+
+
+async def get_game_item(item_id: int) -> dict[str, Any]:
+    """One game item by id: quality, slot, levels and tooltip lines, plus every time the guild looted it.
+
+    ``looted`` lists the latest 50 loot awards of the item: when, which character and member, GP charged, the boss,
+    and whether the award was voided.
+    """
+    ctx = get_context()
+    game_data = require_game_data(ctx)
+    try:
+        item = await ItemsService(session=ctx.session).get_item(item_id, game_data)
+    except HTTPException as error:
+        raise ToolError(error.detail) from error
+    loot = await EpgpService(ctx.session).get_loot(limit=ITEM_LOOT_LIMIT, item_id=item_id)
+    return {
+        **ItemSchema.model_validate(item).model_dump(mode="json"),
+        "looted": [award.model_dump(mode="json") for award in loot.items],
+    }
 
 
 async def list_channels() -> list[dict[str, Any]]:
@@ -465,6 +519,8 @@ _READ_TOOLS = (
     list_events,
     get_event,
     away_this_week,
+    search_game_items,
+    get_game_item,
     list_channels,
     list_roles,
     read_messages,

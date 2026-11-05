@@ -682,6 +682,19 @@ async def test_real_addon_fixture_imports_successfully_and_is_idempotent(
     assert second_body["awards"]["new"] == 0
 
 
+async def test_loot_can_be_filtered_to_one_item(member_client: AsyncTestClient, discord_state: dict) -> None:
+    await _login_officer(member_client, discord_state, discord_id=6702)
+    await member_client.post("/api/epgp/imports", json={"payload": (FIXTURES_DIR / "export_v1.txt").read_text()})
+    every = (await member_client.get("/api/epgp/loot")).json()["items"]
+    item_ids = {item["item_id"] for item in every}
+    assert len(item_ids) == 2
+    wanted = min(item_ids)
+
+    filtered = (await member_client.get("/api/epgp/loot", params={"item_id": wanted})).json()["items"]
+
+    assert [item["item_id"] for item in filtered] == [wanted]
+
+
 # --- device authorizations: browser sign-in for SideQuest Companion ------------------------------------------
 
 

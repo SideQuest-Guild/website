@@ -20,6 +20,7 @@ from sidequest_api.domain.mcp.auth import McpAuthError, authenticate
 from sidequest_api.domain.mcp.context import McpRequestContext, current_context
 from sidequest_api.domain.mcp.tools import register_tools
 from sidequest_api.lib.discord import DISCORD_API_BASE
+from sidequest_api.lib.game_data import GAME_DATA_STATE_KEY
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
@@ -113,6 +114,8 @@ def build_mcp_mount(
                         discord_client=discord_client,
                         bot_token=bot_token,
                         guild_id=guild_id,
+                        # The app-wide Battle.net client, opened by the app's lifespan (``lib/game_data.py``).
+                        game_data=scope["litestar_app"].state.get(GAME_DATA_STATE_KEY),
                     )
                 )
                 try:

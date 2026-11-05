@@ -16,6 +16,7 @@ from mcp.server.mcpserver.exceptions import ToolError
 if TYPE_CHECKING:
     import httpx
     from sqlalchemy.ext.asyncio import AsyncSession
+    from wow import AsyncClient
 
     from sidequest_common.models import Member
     from sidequest_common.settings import WebSettings
@@ -24,7 +25,7 @@ if TYPE_CHECKING:
 class McpRequestContext:
     """Everything a tool function needs for the request it's running inside."""
 
-    __slots__ = ("actor", "bot_token", "discord_client", "guild_id", "session", "web_settings")
+    __slots__ = ("actor", "bot_token", "discord_client", "game_data", "guild_id", "session", "web_settings")
 
     def __init__(
         self,
@@ -35,6 +36,7 @@ class McpRequestContext:
         discord_client: httpx.AsyncClient,
         bot_token: str | None,
         guild_id: int,
+        game_data: AsyncClient | None = None,
     ) -> None:
         self.session = session
         self.actor = actor
@@ -42,6 +44,7 @@ class McpRequestContext:
         self.discord_client = discord_client
         self.bot_token = bot_token
         self.guild_id = guild_id
+        self.game_data = game_data
 
 
 current_context: ContextVar[McpRequestContext] = ContextVar("mcp_request_context")
@@ -61,3 +64,11 @@ def require_bot_token(ctx: McpRequestContext) -> str:
         msg = "Discord isn't configured on this server (DISCORD_TOKEN is unset), so this tool is unavailable."
         raise ToolError(msg)
     return ctx.bot_token
+
+
+def require_game_data(ctx: McpRequestContext) -> AsyncClient:
+    """``ctx.game_data``, or a clear error if Battle.net isn't configured (``WEB_BATTLENET_CLIENT_ID`` unset)."""
+    if ctx.game_data is None:
+        msg = "Battle.net isn't configured on this server (WEB_BATTLENET_CLIENT_ID is unset), so this tool can't run."
+        raise ToolError(msg)
+    return ctx.game_data

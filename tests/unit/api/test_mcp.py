@@ -16,9 +16,10 @@ from sqlalchemy import select
 
 from sidequest_api.app import create_app
 from sidequest_api.domain.members.services import MembersService
-from sidequest_common.models import McpToken, Member, OfficerAudit
+from sidequest_common.models import LootAward, McpToken, Member, OfficerAudit
 from sidequest_common.settings import APISettings, DatabaseSettings, WebSettings
 from tests.conftest import GUILD_ID, TEST_API_KEY
+from tests.unit.api.fake_battlenet import THUNDERFURY, battlenet, forget_battlenet_state, transport
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -372,3 +373,94 @@ async def test_discord_tool_fails_clearly_when_bot_token_unset(
     body = response.json()["result"]
     assert body["isError"] is True
     assert "isn't configured" in body["content"][0]["text"].lower()
+
+
+# --- Game items ------------------------------------------------------------------------------------------------
+
+__all__ = ("battlenet", "forget_battlenet_state")  # fixtures, used by name
+
+
+def _items_app(database_url: str, battlenet: dict | None) -> Litestar:
+    """An app whose Battle.net is ``battlenet``'s fake, or not configured at all when it's ``None``."""
+    credentials = {"BATTLENET_CLIENT_ID": "bnet-id", "BATTLENET_CLIENT_SECRET": "bnet-secret"} if battlenet else {}
+    settings = WebSettings(
+        _env_file=None, GUILD_ID=GUILD_ID, OFFICER_ROLE_IDS=[OFFICER_ROLE_ID], COOKIE_SECURE=False, **credentials
+    )
+    return create_app(
+        DatabaseSettings(URL=database_url),
+        APISettings(KEY=TEST_API_KEY),
+        settings,
+        game_data_transport=transport(battlenet) if battlenet else None,
+    )
+
+
+async def test_officers_search_game_items(
+    database_url: str, battlenet: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    _member_id, token = await _seed_member(db_sessionmaker, roles=[OFFICER_ROLE_ID])
+    async with AsyncTestClient(app=_items_app(database_url, battlenet)) as client:
+        response = await _call_tool(client, token, "search_game_items", {"query": "thunder", "quality": ["epic"]})
+
+    result = response.json()["result"]
+    assert result["isError"] is False
+    assert [hit["name"] for hit in result["structuredContent"]["results"]] == [THUNDERFURY]
+    assert battlenet["requests"][-1].url.params["quality.type"] == "EPIC"
+
+
+async def test_a_game_item_lists_who_looted_it(
+    database_url: str, battlenet: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    _member_id, token = await _seed_member(db_sessionmaker, roles=[OFFICER_ROLE_ID])
+    async with db_sessionmaker() as session:
+        session.add(
+            LootAward(
+                external_id="loot-1",
+                item_id=19019,
+                item_name=THUNDERFURY,
+                quality=5,
+                inv_type="INVTYPE_WEAPON",
+                response="ms",
+                gp=500,
+                at=datetime(2026, 11, 5, 3, 0, tzinfo=UTC),
+                officer="Zach",
+            )
+        )
+        await session.commit()
+    async with AsyncTestClient(app=_items_app(database_url, battlenet)) as client:
+        response = await _call_tool(client, token, "get_game_item", {"item_id": 19019})
+
+    item = response.json()["result"]["structuredContent"]
+    assert (item["name"], item["quality"]) == (THUNDERFURY, "EPIC")
+    assert [(award["gp"], award["response"]) for award in item["looted"]] == [(500, "ms")]
+
+
+@pytest.mark.parametrize(
+    ("arguments", "message"),
+    [({"query": "th"}, "at least 3 letters"), ({"query": "thunder", "quality": ["shiny"]}, "unknown quality")],
+)
+async def test_game_item_search_explains_bad_arguments(
+    database_url: str,
+    battlenet: dict,
+    db_sessionmaker: async_sessionmaker[AsyncSession],
+    arguments: dict,
+    message: str,
+) -> None:
+    _member_id, token = await _seed_member(db_sessionmaker, roles=[OFFICER_ROLE_ID])
+    async with AsyncTestClient(app=_items_app(database_url, battlenet)) as client:
+        response = await _call_tool(client, token, "search_game_items", arguments)
+
+    result = response.json()["result"]
+    assert result["isError"] is True
+    assert message in result["content"][0]["text"].lower()
+
+
+async def test_game_item_tools_say_when_battlenet_is_not_configured(
+    database_url: str, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    _member_id, token = await _seed_member(db_sessionmaker, roles=[OFFICER_ROLE_ID])
+    async with AsyncTestClient(app=_items_app(database_url, None)) as client:
+        response = await _call_tool(client, token, "get_game_item", {"item_id": 19019})
+
+    result = response.json()["result"]
+    assert result["isError"] is True
+    assert "battle.net isn't configured" in result["content"][0]["text"].lower()

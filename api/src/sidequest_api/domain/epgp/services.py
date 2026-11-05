@@ -1465,11 +1465,12 @@ class EpgpService:
         rows = (await self._session.execute(statement)).scalars().all()
         return EpgpLedgerPage(entries=[await self._to_ledger_row(row, now=now) for row in rows])
 
-    async def get_loot(self, *, limit: int) -> EpgpLootPage:
-        """Loot awards newest first."""
-        rows = (
-            (await self._session.execute(select(LootAward).order_by(LootAward.at.desc()).limit(limit))).scalars().all()
-        )
+    async def get_loot(self, *, limit: int, item_id: int | None = None) -> EpgpLootPage:
+        """Loot awards newest first; only awards of ``item_id`` when it is given."""
+        statement = select(LootAward).order_by(LootAward.at.desc()).limit(limit)
+        if item_id is not None:
+            statement = statement.where(LootAward.item_id == item_id)
+        rows = (await self._session.execute(statement)).scalars().all()
         items: list[EpgpLootRow] = []
         for row in rows:
             character = await self._session.get(WowCharacter, row.character_id) if row.character_id else None

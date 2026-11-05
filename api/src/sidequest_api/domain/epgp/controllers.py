@@ -139,7 +139,7 @@ class EpgpController(Controller):
         operation_id="GetEpgpLoot",
         tags=["Loot ledger"],
         summary="Get loot awards",
-        description="Returns loot awards, newest first.",
+        description="Returns loot awards, newest first. With `item_id`, returns only the awards of that item.",
         response_description="A page of loot awards.",
     )
     async def get_loot(
@@ -148,8 +148,11 @@ class EpgpController(Controller):
         limit: Annotated[int, QueryParameter(ge=1, le=MAX_LOOT_LIMIT, description="Max awards to return.")] = (
             DEFAULT_LOOT_LIMIT
         ),
+        item_id: Annotated[
+            int | None, QueryParameter(gt=0, description="Only return awards of this item, by its game ID.")
+        ] = None,
     ) -> EpgpLootPage:
-        return await epgp_service.get_loot(limit=limit)
+        return await epgp_service.get_loot(limit=limit, item_id=item_id)
 
     @get(
         "/progression",
