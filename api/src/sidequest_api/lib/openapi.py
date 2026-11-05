@@ -104,6 +104,7 @@ TAG_GROUPS: dict[str, dict[str, str]] = {
         "Discord status": "The guild's live Discord voice and member counts. Anyone may read them.",
         "Calendar feed": "A member's private calendar feed. Anyone with the feed link can read it; no sign-in needed.",
         "Group leaderboard": "The public group-voice leaderboard: members by groups joined. Anyone may read it.",
+        "Items": "Game items from Battle.net: one item's details, and item search. Anyone may read them.",
     },
     "Members": {
         "My account": "The signed-in member's own profile. A member must be signed in.",

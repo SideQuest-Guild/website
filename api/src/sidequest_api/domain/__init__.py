@@ -30,6 +30,7 @@ from sidequest_api.domain.guild_hub.controllers import (
 from sidequest_api.domain.guild_roles.controllers import GuildRolesController
 from sidequest_api.domain.guilds.controllers import GuildConfigController
 from sidequest_api.domain.heroes.controllers import HeroesController
+from sidequest_api.domain.items.controllers import ItemsController
 from sidequest_api.domain.levels.controllers import LevelsController
 from sidequest_api.domain.mcp.controllers import McpTokensController
 from sidequest_api.domain.member_links.controllers import MemberLinksController
@@ -91,4 +92,5 @@ public_routes = [
     EpgpMemberNotesController,
     GroupStatsController,
     StatsController,
+    ItemsController,
 ]

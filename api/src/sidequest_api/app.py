@@ -26,13 +26,15 @@ def create_app(
     website_dist: Path | None = None,
     discord_transport: httpx.BaseTransport | None = None,
     battlenet_transport: httpx.BaseTransport | None = None,
+    game_data_transport: httpx.AsyncBaseTransport | None = None,
 ) -> Litestar:
     """Build the app. Settings default to the environment; tests pass their own. Schema comes from migrations.
 
     Routes: ``/api/guilds/{guild_id}/...`` (bot, requires ``X-API-Key``), ``/health``, ``/schema`` (OpenAPI docs),
     ``/auth`` (Discord sign-in, Battle.net linking), ``/api/me``, ``/api/members``, ``/api/events``, ``/api/addons``
     (member hub), and the website at ``/`` (``website_dist`` defaults to the repo's ``website/dist``).
-    ``discord_transport``/``battlenet_transport`` let tests mock the Discord and Battle.net APIs.
+    ``discord_transport``/``battlenet_transport``/``game_data_transport`` let tests mock the Discord API, Battle.net
+    sign-in and Battle.net game data.
     """
     from advanced_alchemy.extensions.litestar import SQLAlchemyPlugin
     from pydantic import ValidationError
@@ -43,6 +45,7 @@ def create_app(
     from sidequest_api.lib.battlenet import BATTLENET_TRANSPORT_STATE_KEY
     from sidequest_api.lib.db import build_alchemy_config
     from sidequest_api.lib.discord import DISCORD_TRANSPORT_STATE_KEY
+    from sidequest_api.lib.game_data import game_data_lifespan
     from sidequest_api.lib.logging import install_calendar_log_redaction
     from sidequest_api.lib.member_auth import (
         build_session_config,
@@ -95,7 +98,7 @@ def create_app(
             PydanticPlugin(prefer_alias=True),
             *website_plugins,
         ],
-        lifespan=[mcp_lifespan],
+        lifespan=[mcp_lifespan, game_data_lifespan(web_settings, game_data_transport)],
         middleware=[build_session_config(web_settings).middleware],
         dependencies={
             "web_settings": Provide(lambda: web_settings, sync_to_thread=False),

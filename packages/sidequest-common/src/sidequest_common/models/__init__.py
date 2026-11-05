@@ -49,6 +49,7 @@ from sidequest_common.models.guild_hub import (
     RecruitVote,
 )
 from sidequest_common.models.guild_roles import GuildRole
+from sidequest_common.models.items import BattlenetItem
 from sidequest_common.models.levels import LevelRole, MemberLevel, XPGrant
 from sidequest_common.models.mcp import McpToken
 from sidequest_common.models.members import Member
@@ -59,6 +60,7 @@ from sidequest_common.models.role_resets import MemberRoleReset
 
 __all__ = (
     "Addon",
+    "BattlenetItem",
     "CharacterDirectoryChar",
     "CharacterDirectoryCooldowns",
     "CharacterDirectoryMarket",

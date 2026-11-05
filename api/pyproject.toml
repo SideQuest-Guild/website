@@ -16,6 +16,7 @@ dependencies = [
     "litestar-vite>=0.32,<0.33",
     "httpx>=0.28",
     "mcp>=2.3,<3",
+    "wow>=0.1.0",
 ]
 
 [project.scripts]

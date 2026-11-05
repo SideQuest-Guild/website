@@ -333,6 +333,14 @@ from sidequest_common.schemas.heroes import (
     HeroXPSources,
     Season,
 )
+from sidequest_common.schemas.items import (
+    ITEM_SEARCH_MIN_LENGTH,
+    ITEM_SEARCH_PAGE_SIZE,
+    ItemQuality,
+    ItemSchema,
+    ItemSearchPage,
+    ItemSearchResult,
+)
 from sidequest_common.schemas.levels import (
     EVENT_XP,
     EVENT_XP_GRACE_HOURS,
@@ -424,6 +432,8 @@ __all__ = (
     "GROUP_TRANSCRIPT_RETENTION_DAYS",
     "GROUP_XP",
     "INACTIVE_AFTER_DAYS",
+    "ITEM_SEARCH_MIN_LENGTH",
+    "ITEM_SEARCH_PAGE_SIZE",
     "LEFT_GUILD_AFTER_DAYS",
     "LEGENDARY_GP",
     "LEVEL_MILESTONE_STEP",
@@ -694,6 +704,10 @@ __all__ = (
     "HeroXPSources",
     "ImportAttendanceResult",
     "ImportCounts",
+    "ItemQuality",
+    "ItemSchema",
+    "ItemSearchPage",
+    "ItemSearchResult",
     "LeaderboardEntry",
     "LeaderboardPage",
     "LedgerKind",
