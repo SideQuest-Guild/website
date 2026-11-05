@@ -15,6 +15,7 @@ from sidequest_common.models import (
     EventVoicePresence,
     GroupSessionMember,
     GroupSessionPair,
+    ItemWish,
     McpToken,
     Member,
     MemberActivityHour,
@@ -106,7 +107,7 @@ class MembersService(SQLAlchemyAsyncRepositoryService[Member]):
         kept like ``ModCase`` (moderation/stats history, purged on their own retention schedule); only the
         member's own minutes and pairings are erased.
 
-        Also deletes the member's own MCP (Model Context Protocol) client tokens.
+        Also deletes the member's own MCP (Model Context Protocol) client tokens, and their item wishlist.
 
         Also deletes the member's hourly activity counts (``MemberActivityHour``, keyed by Discord ID with no
         FK): stats and the Hall of Heroes activity charts stop showing them.
@@ -132,6 +133,7 @@ class MembersService(SQLAlchemyAsyncRepositoryService[Member]):
         await session.execute(delete(MemberActivityHour).where(MemberActivityHour.user_id == member.discord_id))
         await session.execute(delete(XPGrant).where(XPGrant.user_id == member.discord_id))
         await session.execute(delete(McpToken).where(McpToken.member_id == member.id))
+        await session.execute(delete(ItemWish).where(ItemWish.member_id == member.id))
         await session.execute(
             update(OfficerAudit).where(OfficerAudit.actor_member_id == member.id).values(actor_member_id=None)
         )

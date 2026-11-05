@@ -21,6 +21,7 @@ const PAGES = [
   { name: "item", path: `/items/detail/?id=${ITEMS[0]?.item_id}` },
   { name: "account", path: "/account/" },
   { name: "account stats", path: "/account/#stats" },
+  { name: "account wishlist", path: "/account/#wishlist" },
   { name: "officers", path: "/officers/#members" },
   { name: "officers attendance", path: "/officers/#attendance" },
   { name: "officers mcp", path: "/officers/#mcp" },

@@ -112,6 +112,7 @@ TAG_GROUPS: dict[str, dict[str, str]] = {
         "My away dates": "A signed-in member's own away dates. A member must be signed in.",
         "My calendar": "A signed-in member's own private calendar link. A member must be signed in.",
         "My characters": "A signed-in member's own claimed characters. A member must be signed in.",
+        "My wishlist": "The items a signed-in member wants from raids. A member must be signed in.",
         "Discord presence": "Who is online in the guild's Discord right now. A member must be signed in.",
         "Hall of Heroes": "The guild's season leaderboard and member profiles. A member must be signed in.",
         "Guild hub": "Roster, crafters, and bank browsing for signed-in members. A member must be signed in.",
@@ -137,6 +138,7 @@ TAG_GROUPS: dict[str, dict[str, str]] = {
         "Attendance": "Review events and mark who attended. An officer must be signed in.",
         "Group stats": "Group-voice stats and session browsing. An officer must be signed in.",
         "Statistics": "Guild-wide activity totals, trend, heatmap, and leaderboards. An officer must be signed in.",
+        "Wishlists": "Who wants an item, next to their loot points. An officer must be signed in.",
     },
     "Game Masters": {
         "GM console": "Member lookup, audit log, and case review for Game Masters. A Game Master must be signed in.",

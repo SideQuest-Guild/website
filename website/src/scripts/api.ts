@@ -1090,6 +1090,35 @@ export type Item = ItemSummary & {
   loot_price: ItemLootPrice | null;
 };
 
+// ——— Item wishlist: GET/PUT/DELETE /api/me/wishlist[/{item_id}], GET /api/items/{item_id}/wishers (officer). A
+// wish never changes the loot rules or the SQL addon; it only lets officers see who wants an item next.
+
+/** One row of `GET/PUT /api/me/wishlist[/{item_id}]`, newest first: the signed-in member's own wishlist. */
+export type ItemWish = {
+  item_id: number;
+  name: string;
+  quality: ItemQuality;
+  inventory_type_name: string;
+  note: string | null;
+  added_at: string;
+};
+
+/** `PUT /api/me/wishlist/{item_id}` body: adds the item, or changes the note if it's already on the list. */
+export type ItemWishUpdate = { note?: string | null };
+
+/** One row of `GET /api/items/{item_id}/wishers` (officer only), highest priority first. `ep`/`gp` are after
+ * decay; `pr` is `ep / gp`. */
+export type ItemWisher = {
+  member_id: number;
+  member_name: string;
+  note: string | null;
+  added_at: string;
+  ep: number;
+  gp: number;
+  pr: number;
+  trial: boolean;
+};
+
 export type GuildNewsKind = "boss_kill" | "first_kill" | "loot" | "level" | "joined" | "announcement" | "badge";
 
 /** One row of `GET /api/guild/news`, newest first; mirrors the import string's `news` shape. */

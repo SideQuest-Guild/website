@@ -344,6 +344,29 @@ test.describe("account", () => {
     await expect(page.locator("#char-list")).toContainText("No characters linked yet.");
   });
 
+  test("adding an item to the wishlist with a note shows it on the account Wishlist tab, and removing it there works", async ({
+    page,
+    site,
+  }) => {
+    site.signIn(MEMBER);
+    await page.goto(`/items/detail/?id=${ITEMS[0]!.item_id}`);
+    await expect(page.locator("#wishlist-member")).toBeVisible();
+    await page.locator("#wishlist-note").fill("For my hunter off-spec");
+    await page.locator("#wishlist-save-btn").click();
+    await expect(page.locator("#wishlist-status")).toContainText("Added to your wishlist.");
+    await expect(page.locator("#wishlist-remove-btn")).toBeVisible();
+
+    await page.goto("/account/#wishlist");
+    const item = page.locator(".wish-item");
+    await expect(item).toHaveCount(1);
+    await expect(item).toContainText("Glory of the Defender");
+    await expect(item).toContainText("For my hunter off-spec");
+
+    await item.locator(".wish-delete-btn").click();
+    await expect(page.locator(".wish-item")).toHaveCount(0);
+    await expect(page.locator("#wish-list")).toContainText("No wishes yet.");
+  });
+
   test("lists Companion sign-ins and revoking one calls the API and updates the list", async ({ page, site }) => {
     site.signIn(MEMBER);
     await page.goto("/account/#companion");
@@ -499,6 +522,34 @@ test.describe("items", () => {
     await page.goto("/items/detail/?id=999999999");
     await expect(page.locator("#item-detail-status")).toContainText("no such item");
     await expect(page.locator("#item-detail-content")).toBeHidden();
+  });
+
+  test("an officer sees who wants the item, highest priority first", async ({ page, site }) => {
+    site.signIn(OFFICER);
+    await page.goto(`/items/detail/?id=${ITEMS[0]!.item_id}`);
+    const rows = page.locator("#item-wishers-list .item-wisher-row");
+    await expect(rows).toHaveCount(2);
+    await expect(rows.first()).toContainText("Wanderer");
+    await expect(rows.first()).toContainText("120.0 EP");
+    await expect(rows.first()).toContainText("0.800 PR");
+    await expect(rows.nth(1)).toContainText("Freshface");
+    await expect(rows.nth(1)).toContainText("Trial");
+  });
+
+  test("a signed-out visitor sees the sign-in line and no wishers request is made", async ({ page, site }) => {
+    site.signIn(null);
+    const requests: string[] = [];
+    page.on("request", (request) => {
+      if (request.url().includes("/wishers")) {
+        requests.push(request.url());
+      }
+    });
+    await page.goto(`/items/detail/?id=${ITEMS[0]!.item_id}`);
+    await expect(page.locator(".item-detail-name")).toHaveText("Glory of the Defender");
+    await expect(page.locator("#wishlist-signed-out")).toContainText("Sign in with Discord");
+    await expect(page.locator("#wishlist-member")).toBeHidden();
+    await expect(page.locator("#wishers-section")).toBeHidden();
+    expect(requests).toHaveLength(0);
   });
 });
 

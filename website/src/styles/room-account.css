@@ -296,6 +296,43 @@
   flex: none;
 }
 
+/* ——— Wishlist: same tidy-list shape as Away/Characters, but no add form (adding happens on an item's page) ——— */
+.wish-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--stone-2);
+}
+.wish-item {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--stone-2);
+}
+.wish-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.wish-main .item-meta {
+  font-size: var(--body);
+  color: var(--mist-2);
+}
+.wish-note {
+  font-size: var(--body);
+  color: var(--mist-2);
+}
+.wish-note::before {
+  content: "\00b7";
+  margin-right: 0.6em;
+  color: var(--stone);
+}
+.wish-item .wish-delete-btn {
+  margin-left: auto;
+}
+
 @media (max-width: 560px) {
   .sheet {
     gap: 16px;
@@ -348,6 +385,14 @@
   .char-form {
     flex-direction: column;
     align-items: stretch;
+  }
+  .wish-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+  .wish-item .wish-delete-btn {
+    margin-left: 0;
   }
 }
 

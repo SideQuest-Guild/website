@@ -45,6 +45,7 @@ import type {
   HeroRow,
   Item,
   ItemSearch,
+  ItemWisher,
   McpToken,
   Me,
   Recruiting,
@@ -1183,3 +1184,29 @@ export function itemSearch(items: Item[], page: number): ItemSearch {
     })),
   };
 }
+
+// Item wishlist (GET/PUT/DELETE /api/me/wishlist[/{item_id}], GET /api/items/{item_id}/wishers): who wants
+// ITEMS[0] (Glory of the Defender), highest priority first, reusing EPGP_STANDINGS' EP/GP so the numbers agree
+// with the Ledger. The member's own wishlist starts empty; a test adds to it through the API.
+export const ITEM_WISHERS: ItemWisher[] = [
+  {
+    member_id: 7,
+    member_name: "Wanderer",
+    note: "For my hunter off-spec",
+    added_at: inDays(-2),
+    ep: 120.0,
+    gp: 150.0,
+    pr: 0.8,
+    trial: false,
+  },
+  {
+    member_id: 9,
+    member_name: "Freshface",
+    note: null,
+    added_at: inDays(-1),
+    ep: 25.0,
+    gp: 100.0,
+    pr: 0.25,
+    trial: true,
+  },
+];

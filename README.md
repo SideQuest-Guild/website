@@ -30,7 +30,7 @@ flowchart LR
 | `/heroes/` | everyone (the rest is members) | The Hall of Heroes: a public "most grouped" board, plus Renown, raids attended, chat level and badges for each member. A member's profile also shows a MEE6-style activity section: level, XP bar, message and voice stats, streaks and activity charts. |
 | `/guild/` | members | The in-game roster, who can craft what, the guild bank log and guild news. |
 | `/addons/` | everyone | The addons the guild uses, with download links. |
-| `/items/` | everyone | Find an item, see its tooltip, and who in the guild has already looted it. |
+| `/items/` | everyone | Find an item, see its tooltip, and who in the guild has already looted it. Members can keep a wishlist with a note; officers see who wants it next to their loot points. |
 | `/account/` | anyone signed in | Link Battle.net, get a calendar link, mark away dates, or delete your account. |
 | `/officers/` | officers | Events, addons, recruiting, attendance, group voice stats, and guild-wide activity stats and leaderboards. Game Masters also get members, the activity log and moderation. |
 | `/officers/sync/` | officers | Move a raid night from the addon to the site, and points back to the addon. |

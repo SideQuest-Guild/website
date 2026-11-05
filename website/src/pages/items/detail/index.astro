@@ -42,6 +42,39 @@ import "../../../styles/room-items.css";
       </p>
     </section>
 
+    <section class="chamber" aria-labelledby="h-wishlist">
+      <h2 class="chamber-title" id="h-wishlist">
+        Want this?
+      </h2>
+      <p class="aside">
+        Wishing for an item doesn't change the loot rules or the SQL addon. It just lets officers see who wants it next
+        to their EP/GP when it drops.
+      </p>
+      <p class="aside" id="wishlist-signed-out" hidden></p>
+      <div id="wishlist-member" hidden>
+        <p class="status" id="wishlist-status" role="status" aria-live="polite"></p>
+        <form id="wishlist-form" class="wishlist-form">
+          <label>
+            Note (optional)
+            <input type="text" id="wishlist-note" maxlength="200" placeholder="e.g. for my tank off-spec" />
+          </label>
+          <button type="submit" class="btn-quiet" id="wishlist-save-btn">
+            Add to wishlist
+          </button>
+          <button type="button" class="btn-quiet btn-danger" id="wishlist-remove-btn" hidden>
+            Remove
+          </button>
+        </form>
+      </div>
+    </section>
+
+    <section class="chamber" aria-labelledby="h-wishers" id="wishers-section" hidden>
+      <h2 class="chamber-title" id="h-wishers">
+        Who wants it
+      </h2>
+      <ul class="item-wishers-list" id="item-wishers-list" aria-label="Who wants this item"></ul>
+    </section>
+
     <section class="chamber" aria-labelledby="h-who-got-it">
       <h2 class="chamber-title" id="h-who-got-it">
         Who got it
@@ -61,12 +94,16 @@ import "../../../styles/room-items.css";
     ApiError,
     copperToGold,
     escapeHtml,
+    fetchMe,
     qualityClass,
     requireElement,
     statusMessage,
     type EpgpLootItem,
     type EpgpLootPage,
     type Item,
+    type ItemWish,
+    type ItemWisher,
+    type Me,
   } from "../../../scripts/api";
   import { loadWowheadTooltips, refreshWowheadLinks } from "../../../scripts/items";
   import { onPage } from "../../../scripts/page";
@@ -135,20 +172,133 @@ import "../../../styles/room-items.css";
         : `<li class="ledger-empty">Nobody in the guild has looted this yet.</li>`;
   }
 
+  function wisherRow(wisher: ItemWisher): string {
+    const trial = wisher.trial ? `<span class="trial-tag">Trial</span>` : "";
+    return `
+      <li class="item-wisher-row">
+        <span class="item-wisher-who">${escapeHtml(wisher.member_name)}${trial}</span>
+        <span class="item-wisher-meta">
+          ${wisher.ep.toFixed(1)} EP \u00b7 ${wisher.gp.toFixed(1)} GP \u00b7 ${wisher.pr.toFixed(3)} PR
+        </span>
+        ${wisher.note ? `<span class="item-wisher-note">${escapeHtml(wisher.note)}</span>` : ""}
+      </li>`;
+  }
+
+  function renderWishers(wishers: ItemWisher[]): void {
+    const list = requireElement("item-wishers-list");
+    list.innerHTML =
+      wishers.length > 0
+        ? wishers.map(wisherRow).join("")
+        : `<li class="ledger-empty">Nobody has wished for this yet.</li>`;
+  }
+
   onPage("#item-detail-status", (signal) => {
     const statusEl = requireElement("item-detail-status");
     const contentEl = requireElement("item-detail-content");
+    const wishlistSignedOut = requireElement("wishlist-signed-out");
+    const wishlistMember = requireElement("wishlist-member");
+    const wishlistStatusEl = requireElement("wishlist-status");
+    const wishlistForm = requireElement<HTMLFormElement>("wishlist-form");
+    const wishlistNoteInput = requireElement<HTMLInputElement>("wishlist-note");
+    const wishlistSaveBtn = requireElement<HTMLButtonElement>("wishlist-save-btn");
+    const wishlistRemoveBtn = requireElement<HTMLButtonElement>("wishlist-remove-btn");
+    const wishersSection = requireElement("wishers-section");
+    let itemId = "";
+    let onList = false;
+
+    function applyWish(wish: ItemWish | null): void {
+      onList = wish !== null;
+      wishlistNoteInput.value = wish?.note ?? "";
+      wishlistSaveBtn.textContent = onList ? "Save note" : "Add to wishlist";
+      wishlistRemoveBtn.hidden = !onList;
+    }
+
+    async function initWishlist(me: Me | null): Promise<void> {
+      if (!me || !me.is_guild_member) {
+        wishlistMember.hidden = true;
+        const next = encodeURIComponent(location.pathname + location.search);
+        wishlistSignedOut.innerHTML = `<a href="/auth/discord/login?next=${next}">Sign in with Discord</a> to keep a wishlist.`;
+        wishlistSignedOut.hidden = false;
+        return;
+      }
+      wishlistSignedOut.hidden = true;
+      wishlistMember.hidden = false;
+      try {
+        const wishes = await apiFetch<ItemWish[]>("/api/me/wishlist", { signal });
+        applyWish(wishes.find((wish) => wish.item_id === Number(itemId)) ?? null);
+      } catch (err) {
+        wishlistStatusEl.dataset.tone = "error";
+        wishlistStatusEl.textContent = statusMessage(err);
+      }
+    }
+
+    async function initWishers(me: Me | null): Promise<void> {
+      if (!me?.is_officer) {
+        return;
+      }
+      wishersSection.hidden = false;
+      try {
+        const wishers = await apiFetch<ItemWisher[]>(`/api/items/${itemId}/wishers`, { signal });
+        renderWishers(wishers);
+      } catch (err) {
+        requireElement("item-wishers-list").innerHTML =
+          `<li class="ledger-empty">${escapeHtml(statusMessage(err))}</li>`;
+      }
+    }
+
+    wishlistForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      wishlistSaveBtn.disabled = true;
+      try {
+        const wishes = await apiFetch<ItemWish[]>(`/api/me/wishlist/${itemId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ note: wishlistNoteInput.value.trim() || null }),
+          signal,
+        });
+        const wasOnList = onList;
+        applyWish(wishes.find((wish) => wish.item_id === Number(itemId)) ?? null);
+        wishlistStatusEl.dataset.tone = "";
+        wishlistStatusEl.textContent = wasOnList ? "Note saved." : "Added to your wishlist.";
+      } catch (err) {
+        wishlistStatusEl.dataset.tone = "error";
+        if (err instanceof ApiError && err.status === 503) {
+          wishlistStatusEl.textContent =
+            "Battle.net isn't answering right now, so your wishlist can't be updated. Try again soon.";
+        } else {
+          wishlistStatusEl.textContent = statusMessage(err);
+        }
+      } finally {
+        wishlistSaveBtn.disabled = false;
+      }
+    });
+
+    wishlistRemoveBtn.addEventListener("click", async () => {
+      wishlistRemoveBtn.disabled = true;
+      try {
+        await apiFetch(`/api/me/wishlist/${itemId}`, { method: "DELETE", signal });
+        applyWish(null);
+        wishlistStatusEl.dataset.tone = "";
+        wishlistStatusEl.textContent = "Removed from your wishlist.";
+      } catch (err) {
+        wishlistStatusEl.dataset.tone = "error";
+        wishlistStatusEl.textContent = statusMessage(err);
+      } finally {
+        wishlistRemoveBtn.disabled = false;
+      }
+    });
 
     async function init(): Promise<void> {
-      const itemId = new URLSearchParams(location.search).get("id");
-      if (!itemId) {
+      const id = new URLSearchParams(location.search).get("id");
+      if (!id) {
         statusEl.textContent = "No item was given.";
         return;
       }
+      itemId = id;
       statusEl.textContent = "Loading\u2026";
       void loadWowheadTooltips();
       try {
-        const item = await apiFetch<Item>(`/api/items/${itemId}`, { signal });
+        const item = await apiFetch<Item>(`/api/items/${id}`, { signal });
         renderItem(item);
         contentEl.hidden = false;
         statusEl.textContent = "";
@@ -163,11 +313,14 @@ import "../../../styles/room-items.css";
         return;
       }
       try {
-        const loot = await apiFetch<EpgpLootPage>(`/api/epgp/loot?item_id=${itemId}&limit=50`, { signal });
+        const loot = await apiFetch<EpgpLootPage>(`/api/epgp/loot?item_id=${id}&limit=50`, { signal });
         renderLoot(loot.items);
       } catch (err) {
         requireElement("item-loot-list").innerHTML = `<li class="ledger-empty">${escapeHtml(statusMessage(err))}</li>`;
       }
+      const me = await fetchMe().catch(() => null);
+      await initWishlist(me);
+      await initWishers(me);
     }
 
     void init();

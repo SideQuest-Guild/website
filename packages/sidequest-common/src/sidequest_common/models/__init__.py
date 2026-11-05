@@ -49,7 +49,7 @@ from sidequest_common.models.guild_hub import (
     RecruitVote,
 )
 from sidequest_common.models.guild_roles import GuildRole
-from sidequest_common.models.items import BattlenetItem
+from sidequest_common.models.items import BattlenetItem, ItemWish
 from sidequest_common.models.levels import LevelRole, MemberLevel, XPGrant
 from sidequest_common.models.mcp import McpToken
 from sidequest_common.models.members import Member
@@ -93,6 +93,7 @@ __all__ = (
     "GuildRole",
     "GuildRosterSnapshot",
     "ItemName",
+    "ItemWish",
     "LevelRole",
     "LootAward",
     "McpToken",

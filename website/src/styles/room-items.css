@@ -181,3 +181,93 @@
     grid-area: meta;
   }
 }
+
+/* ——— Want this?: a note field and two buttons, same shape as Account's Away/Characters forms ——— */
+.wishlist-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px 16px;
+  margin-top: 14px;
+}
+.wishlist-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1 1 220px;
+  min-width: 180px;
+  font-weight: 500;
+  font-size: var(--caps);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--mist);
+}
+.wishlist-form input {
+  min-height: 46px;
+  padding: 10px 12px;
+  background: rgba(4, 8, 16, 0.62);
+  border: 1px solid var(--stone);
+  font: inherit;
+  font-size: var(--body);
+  color: var(--ink);
+  color-scheme: dark;
+}
+.wishlist-form input:hover {
+  border-color: rgba(168, 132, 73, 0.6);
+}
+.wishlist-form input:focus-visible {
+  outline: none;
+  border-color: var(--gold);
+  background: rgba(4, 8, 16, 0.8);
+}
+.wishlist-form button {
+  flex: none;
+}
+
+/* ——— Who wants it: same row shape as Who got it, plus a trial tag and an EP/GP/PR line ——— */
+.trial-tag {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 8px;
+  border: 1px solid var(--gold-2);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+.item-wishers-list {
+  display: grid;
+  gap: 0;
+  margin: 18px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.item-wishers-list > li + li {
+  border-top: 1px solid var(--stone-2);
+}
+.item-wisher-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) minmax(0, 1.6fr);
+  align-items: center;
+  gap: 4px 18px;
+  padding: 10px 4px;
+}
+.item-wisher-who {
+  color: var(--ink);
+}
+.item-wisher-meta {
+  color: var(--mist-2);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+.item-wisher-note {
+  color: var(--mist-2);
+  font-size: 13px;
+  font-style: italic;
+}
+@media (max-width: 560px) {
+  .item-wisher-row {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 4px;
+  }
+}

@@ -1,5 +1,6 @@
-"""Item schemas: game items from Battle.net, for item pages and item search."""
+"""Item schemas: game items from Battle.net for item pages and item search, and members' wishlists."""
 
+from datetime import datetime  # pydantic needs it at runtime
 from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field
@@ -8,6 +9,8 @@ from sidequest_common.schemas.epgp import CHASE_MULTIPLIER, GP_BY_INVTYPE, LEGEN
 
 ITEM_SEARCH_PAGE_SIZE = 50
 ITEM_SEARCH_MIN_LENGTH = 3
+MAX_ITEM_WISHES = 50
+ITEM_WISH_NOTE_MAX = 200
 
 # Battle.net's slot constants are the addon's ``INVTYPE_*`` names without the prefix, except this one.
 _INVTYPE_BY_BATTLENET_SLOT = {"TWOHWEAPON": "INVTYPE_2HWEAPON"}
@@ -98,3 +101,35 @@ class ItemSearchPage(BaseModel):
     page: int = Field(description="This page's number, starting at 1.")
     page_count: int = Field(description="How many pages the search has.")
     results: list[ItemSearchResult]
+
+
+class ItemWishUpdate(BaseModel):
+    """Body for ``PUT /api/me/wishlist/{item_id}`` (member): add the item, or change its note."""
+
+    note: str | None = Field(
+        default=None, max_length=ITEM_WISH_NOTE_MAX, description="Why, or for which spec. Officers see it."
+    )
+
+
+class ItemWishSchema(BaseModel):
+    """One item on the signed-in member's wishlist, as ``GET /api/me/wishlist`` returns it."""
+
+    item_id: int = Field(description="The item's game ID.")
+    name: str
+    quality: str = Field(description="Battle.net's quality constant, such as `EPIC`.")
+    inventory_type_name: str = Field(description="The slot as the game shows it, such as `Two-Hand`.")
+    note: str | None
+    added_at: datetime
+
+
+class ItemWisher(BaseModel):
+    """A member who wants an item, with their loot points, as ``GET /api/items/{item_id}/wishers`` returns them."""
+
+    member_id: int
+    member_name: str
+    note: str | None
+    added_at: datetime
+    ep: float = Field(description="Effort points (EP, shown as Renown on the site), after decay.")
+    gp: float = Field(description="Gear points (GP), after decay.")
+    pr: float = Field(description="Priority: EP divided by GP. The list is highest first.")
+    trial: bool = Field(description="Whether the member is on trial.")

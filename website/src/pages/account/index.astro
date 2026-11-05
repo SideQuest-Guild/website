@@ -75,6 +75,16 @@ import "../../styles/room-account.css";
       <button
         type="button"
         role="tab"
+        id="tab-wishlist"
+        aria-controls="panel-wishlist"
+        aria-selected="false"
+        tabindex="-1"
+      >
+        Wishlist
+      </button>
+      <button
+        type="button"
+        role="tab"
         id="tab-companion"
         aria-controls="panel-companion"
         aria-selected="false"
@@ -225,6 +235,19 @@ import "../../styles/room-account.css";
       </div>
     </section>
 
+    <section id="panel-wishlist" role="tabpanel" aria-labelledby="tab-wishlist" tabindex="0" hidden>
+      <div class="chamber" aria-labelledby="wishlist-title">
+        <h2 class="chamber-title" id="wishlist-title">
+          Wishlist
+        </h2>
+        <p class="aside">
+          Wishing for an item doesn't change the loot rules or the SQL addon. It just lets officers see who wants it
+          next to their EP/GP when it drops.
+        </p>
+        <ul class="wish-list" id="wish-list" aria-label="Your wishlist"></ul>
+      </div>
+    </section>
+
     <section id="panel-companion" role="tabpanel" aria-labelledby="tab-companion" tabindex="0" hidden>
       <div class="chamber" aria-labelledby="companion-title">
         <h2 class="chamber-title" id="companion-title">
@@ -292,6 +315,7 @@ import "../../styles/room-account.css";
     escapeHtml,
     fetchMe,
     normalizeClass,
+    qualityClass,
     requireElement,
     statusMessage,
     type AwayRange,
@@ -301,8 +325,10 @@ import "../../styles/room-account.css";
     type EpgpSyncToken,
     type EpgpSyncTokens,
     type HeroActivity,
+    type ItemWish,
     type Me,
   } from "../../scripts/api";
+  import { itemLink, loadWowheadTooltips, refreshWowheadLinks } from "../../scripts/items";
   import { onPage } from "../../scripts/page";
   import { setupTablist } from "../../scripts/tablist";
   import { renderAdventurersLog, requireLogElement } from "../../scripts/adventurers-log";
@@ -328,6 +354,26 @@ import "../../styles/room-account.css";
     return range.start_date === range.end_date
       ? formatAwayDate(range.start_date)
       : `${formatAwayDate(range.start_date)} \u2013 ${formatAwayDate(range.end_date)}`;
+  }
+
+  function wishRow(wish: ItemWish): string {
+    const link = itemLink(wish.item_id, wish.name, qualityClass(wish.quality));
+    return `
+      <li class="wish-item" data-item-id="${wish.item_id}">
+        <span class="wish-main">
+          ${link}
+          <span class="item-meta">${escapeHtml(wish.inventory_type_name)}</span>
+        </span>
+        ${wish.note ? `<span class="wish-note">${escapeHtml(wish.note)}</span>` : ""}
+        <button
+          type="button"
+          class="btn-quiet wish-delete-btn"
+          data-item-id="${wish.item_id}"
+          aria-label="Remove from wishlist"
+        >
+          Remove
+        </button>
+      </li>`;
   }
 
   function companionTokenRow(token: EpgpSyncToken): string {
@@ -403,6 +449,7 @@ import "../../styles/room-account.css";
     const charNameInput = requireElement<HTMLInputElement>("char-name");
     const charRealmInput = requireElement<HTMLInputElement>("char-realm");
     const charClassSelect = requireElement<HTMLSelectElement>("char-class");
+    const wishList = requireElement("wish-list");
     const statsProfileLink = requireElement("stats-profile-link");
     const statsProfileLinkAnchor = requireElement<HTMLAnchorElement>("stats-profile-link-anchor");
     const logRoot = requireLogElement(document, "data-adventurers-log");
@@ -410,6 +457,7 @@ import "../../styles/room-account.css";
     const logBodyEl = requireLogElement(logRoot, "data-log-body");
     let currentMe: Me | null = null;
     let statsLoaded = false;
+    let wishlistLoaded = false;
 
     async function loadStats(): Promise<void> {
       if (!currentMe) {
@@ -437,7 +485,7 @@ import "../../styles/room-account.css";
     }
 
     // ——— Tabs ———
-    const VALID_TABS = new Set(["profile", "stats", "characters", "schedule", "companion", "danger"]);
+    const VALID_TABS = new Set(["profile", "stats", "characters", "schedule", "wishlist", "companion", "danger"]);
 
     function showPanel(name: string): void {
       document.querySelectorAll<HTMLElement>('[role="tabpanel"]').forEach((panel) => {
@@ -449,6 +497,11 @@ import "../../styles/room-account.css";
       if (name === "stats" && !statsLoaded) {
         statsLoaded = true;
         void loadStats();
+      }
+      if (name === "wishlist" && !wishlistLoaded) {
+        wishlistLoaded = true;
+        void loadWowheadTooltips();
+        void renderWishlist();
       }
     }
 
@@ -592,6 +645,19 @@ import "../../styles/room-account.css";
         renderCharacterList(data.characters);
       } catch {
         charList.innerHTML = '<li class="away-empty">Couldn\u2019t load your characters.</li>';
+      }
+    }
+
+    async function renderWishlist(): Promise<void> {
+      try {
+        const wishes = await apiFetch<ItemWish[]>("/api/me/wishlist");
+        wishList.innerHTML =
+          wishes.length > 0
+            ? wishes.map(wishRow).join("")
+            : '<li class="away-empty">No wishes yet. Find items on <a href="/items/">Items</a>.</li>';
+        refreshWowheadLinks();
+      } catch {
+        wishList.innerHTML = '<li class="away-empty">Couldn\u2019t load your wishlist.</li>';
       }
     }
 
@@ -814,6 +880,22 @@ import "../../styles/room-account.css";
       try {
         await apiFetch(`/api/me/characters/${button.dataset.id}`, { method: "DELETE" });
         await renderCharacters();
+      } catch (err) {
+        statusEl.dataset.tone = "error";
+        statusEl.textContent = statusMessage(err);
+        button.disabled = false;
+      }
+    });
+
+    wishList.addEventListener("click", async (event) => {
+      const button = (event.target as HTMLElement).closest<HTMLButtonElement>(".wish-delete-btn");
+      if (!button?.dataset.itemId) {
+        return;
+      }
+      button.disabled = true;
+      try {
+        await apiFetch(`/api/me/wishlist/${button.dataset.itemId}`, { method: "DELETE" });
+        await renderWishlist();
       } catch (err) {
         statusEl.dataset.tone = "error";
         statusEl.textContent = statusMessage(err);

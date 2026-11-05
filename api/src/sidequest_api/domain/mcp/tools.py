@@ -24,6 +24,7 @@ from sidequest_api.domain.events.services import EventsService
 from sidequest_api.domain.guild_hub.services import GuildHubService
 from sidequest_api.domain.heroes.services import HeroesService
 from sidequest_api.domain.items.services import ItemsService, search_items
+from sidequest_api.domain.items.wishlist import WishlistService
 from sidequest_api.domain.mcp.auth import require_gm
 from sidequest_api.domain.mcp.context import get_context, require_bot_token, require_game_data
 from sidequest_api.domain.members.services import MembersService
@@ -205,10 +206,11 @@ async def search_game_items(query: str, quality: list[str] | None = None, page: 
 
 
 async def get_game_item(item_id: int) -> dict[str, Any]:
-    """One game item by id: quality, slot, levels and tooltip lines, plus every time the guild looted it.
+    """One game item by id: its details and SQL price, who wants it, and every time the guild looted it.
 
-    ``looted`` lists the latest 50 loot awards of the item: when, which character and member, GP charged, the boss,
-    and whether the award was voided.
+    ``wanted_by`` lists members with the item on their wishlist, highest loot priority (EP/GP) first, with their
+    note. ``looted`` lists the latest 50 loot awards of the item: when, which character and member, GP charged, the
+    boss, and whether the award was voided.
     """
     ctx = get_context()
     game_data = require_game_data(ctx)
@@ -217,8 +219,10 @@ async def get_game_item(item_id: int) -> dict[str, Any]:
     except HTTPException as error:
         raise ToolError(error.detail) from error
     loot = await EpgpService(ctx.session).get_loot(limit=ITEM_LOOT_LIMIT, item_id=item_id)
+    wishers = await WishlistService(ctx.session).wishers(item_id)
     return {
         **ItemSchema.model_validate(item).model_dump(mode="json"),
+        "wanted_by": [wisher.model_dump(mode="json") for wisher in wishers],
         "looted": [award.model_dump(mode="json") for award in loot.items],
     }
 

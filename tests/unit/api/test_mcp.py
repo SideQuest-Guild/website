@@ -16,7 +16,7 @@ from sqlalchemy import select
 
 from sidequest_api.app import create_app
 from sidequest_api.domain.members.services import MembersService
-from sidequest_common.models import LootAward, McpToken, Member, OfficerAudit
+from sidequest_common.models import ItemWish, LootAward, McpToken, Member, OfficerAudit
 from sidequest_common.settings import APISettings, DatabaseSettings, WebSettings
 from tests.conftest import GUILD_ID, TEST_API_KEY
 from tests.unit.api.fake_battlenet import THUNDERFURY, battlenet, forget_battlenet_state, transport
@@ -407,10 +407,10 @@ async def test_officers_search_game_items(
     assert battlenet["requests"][-1].url.params["quality.type"] == "EPIC"
 
 
-async def test_a_game_item_lists_who_looted_it(
+async def test_a_game_item_lists_who_wants_and_who_looted_it(
     database_url: str, battlenet: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
 ) -> None:
-    _member_id, token = await _seed_member(db_sessionmaker, roles=[OFFICER_ROLE_ID])
+    member_id, token = await _seed_member(db_sessionmaker, roles=[OFFICER_ROLE_ID])
     async with db_sessionmaker() as session:
         session.add(
             LootAward(
@@ -425,12 +425,14 @@ async def test_a_game_item_lists_who_looted_it(
                 officer="Zach",
             )
         )
+        session.add(ItemWish(member_id=member_id, item_id=19019, note="BiS"))
         await session.commit()
     async with AsyncTestClient(app=_items_app(database_url, battlenet)) as client:
         response = await _call_tool(client, token, "get_game_item", {"item_id": 19019})
 
     item = response.json()["result"]["structuredContent"]
     assert (item["name"], item["quality"]) == (THUNDERFURY, "EPIC")
+    assert [(wisher["member_id"], wisher["note"]) for wisher in item["wanted_by"]] == [(member_id, "BiS")]
     assert [(award["gp"], award["response"]) for award in item["looted"]] == [(500, "ms")]
 
 

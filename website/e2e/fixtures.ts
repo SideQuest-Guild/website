@@ -17,6 +17,8 @@ import type {
   GuildStats,
   HeroRow,
   Item,
+  ItemWish,
+  ItemWishUpdate,
   Me,
   Recruiting,
 } from "../src/scripts/api";
@@ -49,6 +51,7 @@ import {
   GUILD_ROSTER,
   GUILD_STATS,
   HEROES,
+  ITEM_WISHERS,
   ITEMS,
   LIVE,
   MCP_TOKENS,
@@ -193,6 +196,7 @@ export const test = base.extend<{ site: Site }>({
     );
     let guildAnnouncements = GUILD_ANNOUNCEMENTS.map((a) => Object.assign({}, a));
     let myCharacters: EpgpCharacter[] = [];
+    let myWishlist: ItemWish[] = [];
     let nextCharacterId = 100;
     const unmocked: string[] = [];
     const errors: string[] = [];
@@ -434,6 +438,17 @@ export const test = base.extend<{ site: Site }>({
       if (itemMatch && method === "GET") {
         const item: Item | undefined = ITEMS.find((candidate) => candidate.item_id === Number(itemMatch[1]));
         return item ? json(route, item) : json(route, { detail: "No such item" }, 404);
+      }
+      const wishersMatch = /^\/api\/items\/(\d+)\/wishers$/.exec(path);
+      if (wishersMatch && method === "GET") {
+        if (!me) {
+          return json(route, { detail: "Not signed in" }, 401);
+        }
+        if (!me.is_officer) {
+          return json(route, { detail: "Officers only" }, 403);
+        }
+        const wishers = Number(wishersMatch[1]) === ITEMS[0]?.item_id ? ITEM_WISHERS : [];
+        return json(route, wishers);
       }
       if (path === "/api/epgp/progression" && method === "GET") {
         return json(route, { instances: EPGP_PROGRESSION });
@@ -779,6 +794,58 @@ export const test = base.extend<{ site: Site }>({
           return json(route, { detail: "No such character" }, 404);
         }
         myCharacters = myCharacters.filter((c) => c.id !== myCharacterDeleteMatch[1]);
+        return route.fulfill({ status: 204 });
+      }
+      if (path === "/api/me/wishlist" && method === "GET") {
+        if (!me) {
+          return json(route, { detail: "Not signed in" }, 401);
+        }
+        if (!me.is_guild_member) {
+          return json(route, { detail: "Not a guild member" }, 403);
+        }
+        return json(route, myWishlist);
+      }
+      const wishlistPutMatch = /^\/api\/me\/wishlist\/(\d+)$/.exec(path);
+      if (wishlistPutMatch && method === "PUT") {
+        if (!me) {
+          return json(route, { detail: "Not signed in" }, 401);
+        }
+        if (!me.is_guild_member) {
+          return json(route, { detail: "Not a guild member" }, 403);
+        }
+        const wishItemId = Number(wishlistPutMatch[1]);
+        const wishedItem = ITEMS.find((candidate) => candidate.item_id === wishItemId);
+        if (!wishedItem) {
+          return json(route, { detail: "No such item" }, 404);
+        }
+        const body = JSON.parse(request.postData() ?? "{}") as ItemWishUpdate;
+        const existing = myWishlist.find((wish) => wish.item_id === wishItemId);
+        if (existing) {
+          existing.note = body.note ?? null;
+        } else {
+          if (myWishlist.length >= 50) {
+            return json(route, { detail: "Your wishlist already has 50 items." }, 409);
+          }
+          myWishlist = [
+            {
+              item_id: wishedItem.item_id,
+              name: wishedItem.name,
+              quality: wishedItem.quality,
+              inventory_type_name: wishedItem.inventory_type_name,
+              note: body.note ?? null,
+              added_at: new Date().toISOString(),
+            },
+            ...myWishlist,
+          ];
+        }
+        return json(route, myWishlist);
+      }
+      const wishlistDeleteMatch = /^\/api\/me\/wishlist\/(\d+)$/.exec(path);
+      if (wishlistDeleteMatch && method === "DELETE") {
+        if (!me) {
+          return json(route, { detail: "Not signed in" }, 401);
+        }
+        myWishlist = myWishlist.filter((wish) => wish.item_id !== Number(wishlistDeleteMatch[1]));
         return route.fulfill({ status: 204 });
       }
     });

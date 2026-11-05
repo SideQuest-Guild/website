@@ -225,6 +225,12 @@ const articles = [
       without signing in. An unlinked character shows up under its own name until an officer or its owner links it to a
       member.
     </p>
+    <p>
+      <strong>Wishlists are private.</strong> On an <a href="/items/">item's page</a>, a guild member can keep it on a
+      wishlist with an optional note (for example, which spec it's for). It doesn't change the loot rules or the SQL
+      addon — it only lets officers see who wants an item, and their note, next to that member's EP/GP when it drops.
+      Only you and officers can see your wishlist; it's erased when you delete your account.
+    </p>
   </Article>
 
   <Article id="guild-app" n={9} title="The guild app">
@@ -395,11 +401,11 @@ const articles = [
       </li>
       <li>
         <strong>Delete my account</strong> on the same page: your site account, every event sign-up and attendance mark,
-        your voice-minute records, your calendar link, your away dates, and your Discord XP are erased, and you're
-        signed out. Your group-voice minutes and who you grouped with are erased too; the group sessions themselves and
-        any still-retained chat transcript (auto-purged after 30 days) are kept as shared records, the same as
-        moderation cases. Moderation records stay. The bot strips every Discord role it can manage from you within a
-        minute and puts you back behind #sign-the-ledger, as if you'd just joined.
+        your voice-minute records, your calendar link, your away dates, your wishlist, and your Discord XP are erased,
+        and you're signed out. Your group-voice minutes and who you grouped with are erased too; the group sessions
+        themselves and any still-retained chat transcript (auto-purged after 30 days) are kept as shared records, the
+        same as moderation cases. Moderation records stay. The bot strips every Discord role it can manage from you
+        within a minute and puts you back behind #sign-the-ledger, as if you'd just joined.
       </li>
       <li>
         Removing SideQuest from <em>Authorized Apps</em> in Discord only stops future sign-ins. It doesn't reach us, so
