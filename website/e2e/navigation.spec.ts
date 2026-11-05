@@ -115,7 +115,10 @@ test("every destination is reachable from the bar", async ({ page, site }) => {
 });
 
 test.describe("desktop group panel", () => {
-  test.use({ viewport: { width: 1440, height: 900 } });
+  // A desktop, in every engine: the phone projects would otherwise keep their 3x pixels and mobile mode at 1440px wide,
+  // a 4320px-wide screen no device has. WebKit on a CI runner froze for seconds drawing the page fade at that size,
+  // and the URL check timed out mid-navigation.
+  test.use({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1, isMobile: false, hasTouch: false });
 
   test("hovering Raids opens the panel; moving to Guild moves the same panel", async ({ page, site }) => {
     site.signIn(MEMBER);
