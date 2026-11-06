@@ -114,6 +114,7 @@ import "../../styles/room-heroes.css";
     type HeroRow,
     type Me,
   } from "../../scripts/api";
+  import { classIconHtml, loadGameArt } from "../../scripts/art";
   import { onPage } from "../../scripts/page";
 
   type SortKey = "ep" | "raids_attended" | "chat_level";
@@ -183,15 +184,17 @@ import "../../styles/room-heroes.css";
     pvp_rank: "PvP rank",
     achievement_points: "Achievement points",
   };
+  let gameClasses: Awaited<ReturnType<typeof loadGameArt>> = [];
 
   function heroBoardRow(entry: HeroBoardEntry, rank: number): string {
+    const icon = classIconHtml(gameClasses, entry.class, 16);
     const cls = entry.class ? ` cls-${entry.class}` : "";
     const tier = rank <= 3 ? ` rank-${rank === 1 ? "gold" : rank === 2 ? "silver" : "bronze"}` : "";
     return `
     <li class="groups-board-row">
       <span class="hero-rank${tier}">${rank}</span>
       <a class="hero-name" href="/characters/detail/?slug=${encodeURIComponent(entry.slug)}">
-        <span class="hero-display-name${cls}">${escapeHtml(entry.name)} ${escapeHtml(entry.surname)}</span>
+        <span class="hero-display-name${cls}">${icon}${escapeHtml(entry.name)} ${escapeHtml(entry.surname)}</span>
       </a>
       <span class="hero-stats-group">
         <span class="hero-stat hero-stat-ep">${entry.value}</span>
@@ -351,7 +354,11 @@ import "../../styles/room-heroes.css";
     async function loadHeroBoards(): Promise<void> {
       heroBoardsGridEl.innerHTML = `<p class="aside">Loading…</p>`;
       try {
-        const boards = await apiFetch<HeroBoards>("/api/characters/boards", { signal });
+        const [classes, boards] = await Promise.all([
+          loadGameArt(),
+          apiFetch<HeroBoards>("/api/characters/boards", { signal }),
+        ]);
+        gameClasses = classes;
         heroBoardsGridEl.innerHTML = (Object.keys(BOARD_LABELS) as (keyof HeroBoards)[])
           .map((key) => heroBoard(key, boards[key]))
           .join("");

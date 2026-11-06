@@ -31,8 +31,8 @@ async function navToPlain(page: Page, name: string): Promise<void> {
   await page.locator("[data-nav-bar]").getByRole("link", { name, exact: true }).click();
 }
 
-/** Follows a Raids or Guild group entry: opens the desktop panel or the sheet's matching section first. */
-async function navToGroup(page: Page, group: "raids" | "guild", name: string): Promise<void> {
+/** Follows a Raids, Guild or Library group entry: opens the desktop panel or the sheet's matching section first. */
+async function navToGroup(page: Page, group: "raids" | "guild" | "library", name: string): Promise<void> {
   // Panel/sheet entries carry their description in the same link's accessible name (icon + name + desc), so an
   // exact match on just the visible name never matches; a substring match does.
   if (await isNarrow(page)) {
@@ -86,7 +86,10 @@ test("every destination is reachable from the bar", async ({ page, site }) => {
   // The guild page names its open tab in the hash (#roster by default).
   await expect(page).toHaveURL(/\/guild\/(#[\w-]+)?$/);
 
-  await navToGroup(page, "guild", "Characters");
+  await navToGroup(page, "library", "Item lookup");
+  await expect(page).toHaveURL("/items/");
+
+  await navToGroup(page, "library", "Characters");
   await expect(page).toHaveURL("/characters/");
 
   await navToGroup(page, "guild", "How we play");

@@ -1,0 +1,1317 @@
+{
+ "_links": {
+  "self": {
+   "href": "https://us.api.blizzard.com/data/wow/talent-tree/1089/playable-specialization/574?namespace=static-1.60.1_70399-forever-us"
+  }
+ },
+ "id": 1089,
+ "playable_class": {
+  "key": {
+   "href": "https://us.api.blizzard.com/data/wow/playable-class/11?namespace=static-1.60.1_70399-forever-us"
+  },
+  "name": "Druid",
+  "id": 11
+ },
+ "playable_specialization": {
+  "key": {
+   "href": "https://us.api.blizzard.com/data/wow/playable-specialization/574?namespace=static-1.60.1_70399-forever-us"
+  },
+  "name": "Balance",
+  "id": 574
+ },
+ "name": "Balance",
+ "media": {
+  "key": {
+   "href": "https://us.api.blizzard.com/data/wow/media/talent-tree/1089/playable-specialization/574?namespace=static-1.60.1_70399-forever-us"
+  }
+ },
+ "spec_talent_nodes": [
+  {
+   "id": 104923,
+   "node_type": {
+    "id": 0,
+    "type": "ACTIVE"
+   },
+   "ranks": [
+    {
+     "rank": 1,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134384?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Improved Wrath",
+       "id": 134384
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/16814?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Improved Wrath",
+        "id": 16814
+       },
+       "description": "Reduces the cast time of your Wrath spell by 0.1 sec and its Mana cost by 10%.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 2,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134384?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Improved Wrath",
+       "id": 134384
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/16814?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Improved Wrath",
+        "id": 16814
+       },
+       "description": "Reduces the cast time of your Wrath spell by 0.2 sec and its Mana cost by 20%.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 3,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134384?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Improved Wrath",
+       "id": 134384
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/16814?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Improved Wrath",
+        "id": 16814
+       },
+       "description": "Reduces the cast time of your Wrath spell by 0.3 sec and its Mana cost by 30%.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 4,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134384?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Improved Wrath",
+       "id": 134384
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/16814?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Improved Wrath",
+        "id": 16814
+       },
+       "description": "Reduces the cast time of your Wrath spell by 0.4 sec and its Mana cost by 40%.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 5,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134384?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Improved Wrath",
+       "id": 134384
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/16814?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Improved Wrath",
+        "id": 16814
+       },
+       "description": "Reduces the cast time of your Wrath spell by 0.5 sec and its Mana cost by 50%.",
+       "cast_time": "Passive"
+      }
+     }
+    }
+   ],
+   "display_row": 1,
+   "display_col": 2,
+   "raw_position_x": 1620,
+   "raw_position_y": 2130
+  },
+  {
+   "id": 104924,
+   "node_type": {
+    "id": 0,
+    "type": "ACTIVE"
+   },
+   "ranks": [
+    {
+     "rank": 1,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134385?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Genesis",
+       "id": 134385
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/1223081?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Genesis",
+        "id": 1223081
+       },
+       "description": "Increases the periodic damage and healing done by your spells and abilities by 2%.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 2,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134385?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Genesis",
+       "id": 134385
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/1223081?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Genesis",
+        "id": 1223081
+       },
+       "description": "Increases the periodic damage and healing done by your spells and abilities by 4%.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 3,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134385?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Genesis",
+       "id": 134385
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/1223081?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Genesis",
+        "id": 1223081
+       },
+       "description": "Increases the periodic damage and healing done by your spells and abilities by 6%.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 4,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134385?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Genesis",
+       "id": 134385
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/1223081?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Genesis",
+        "id": 1223081
+       },
+       "description": "Increases the periodic damage and healing done by your spells and abilities by 8%.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 5,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134385?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Genesis",
+       "id": 134385
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/1223081?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Genesis",
+        "id": 1223081
+       },
+       "description": "Increases the periodic damage and healing done by your spells and abilities by 10%.",
+       "cast_time": "Passive"
+      }
+     }
+    }
+   ],
+   "display_row": 1,
+   "display_col": 3,
+   "raw_position_x": 2220,
+   "raw_position_y": 2130
+  },
+  {
+   "id": 104925,
+   "node_type": {
+    "id": 0,
+    "type": "ACTIVE"
+   },
+   "ranks": [
+    {
+     "rank": 1,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134386?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Moonglow",
+       "id": 134386
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/16845?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Moonglow",
+        "id": 16845
+       },
+       "description": "Reduces the Mana cost of your damaging spells by 8%.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 2,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134386?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Moonglow",
+       "id": 134386
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/16845?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Moonglow",
+        "id": 16845
+       },
+       "description": "Reduces the Mana cost of your damaging spells by 17%.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 3,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134386?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Moonglow",
+       "id": 134386
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/16845?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Moonglow",
+        "id": 16845
+       },
+       "description": "Reduces the Mana cost of your damaging spells by 25%.",
+       "cast_time": "Passive"
+      }
+     }
+    }
+   ],
+   "display_row": 2,
+   "display_col": 1,
+   "raw_position_x": 1020,
+   "raw_position_y": 2730
+  },
+  {
+   "id": 104931,
+   "unlocks": [
+    104932
+   ],
+   "node_type": {
+    "id": 0,
+    "type": "ACTIVE"
+   },
+   "ranks": [
+    {
+     "rank": 1,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134392?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Improved Moonfire",
+       "id": 134392
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/16821?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Improved Moonfire",
+        "id": 16821
+       },
+       "description": "Increases the damage and critical strike chance of your Moonfire spell by 5%.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 2,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134392?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Improved Moonfire",
+       "id": 134392
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/16821?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Improved Moonfire",
+        "id": 16821
+       },
+       "description": "Increases the damage and critical strike chance of your Moonfire spell by 10%.",
+       "cast_time": "Passive"
+      }
+     }
+    }
+   ],
+   "display_row": 2,
+   "display_col": 2,
+   "raw_position_x": 1620,
+   "raw_position_y": 2730
+  },
+  {
+   "id": 104927,
+   "locked_by": [
+    104928
+   ],
+   "unlocks": [
+    104928
+   ],
+   "node_type": {
+    "id": 0,
+    "type": "ACTIVE"
+   },
+   "ranks": [
+    {
+     "rank": 1,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134388?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Nature's Majesty",
+       "id": 134388
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/1223082?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Nature's Majesty",
+        "id": 1223082
+       },
+       "description": "Increases your critical strike chance with spells and melee attacks by 2%.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 2,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134388?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Nature's Majesty",
+       "id": 134388
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/1223082?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Nature's Majesty",
+        "id": 1223082
+       },
+       "description": "Increases your critical strike chance with spells and melee attacks by 4%.",
+       "cast_time": "Passive"
+      }
+     }
+    }
+   ],
+   "display_row": 2,
+   "display_col": 3,
+   "raw_position_x": 2220,
+   "raw_position_y": 2730
+  },
+  {
+   "id": 104929,
+   "node_type": {
+    "id": 0,
+    "type": "ACTIVE"
+   },
+   "ranks": [
+    {
+     "rank": 1,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134390?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Nature's Reach",
+       "id": 134390
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/16819?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Nature's Reach",
+        "id": 16819
+       },
+       "description": "Increases the range of your offensive Balance spells by 10% and improves your chance to hit by 2%.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 2,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134390?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Nature's Reach",
+       "id": 134390
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/16819?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Nature's Reach",
+        "id": 16819
+       },
+       "description": "Increases the range of your offensive Balance spells by 20% and improves your chance to hit by 4%.",
+       "cast_time": "Passive"
+      }
+     }
+    }
+   ],
+   "display_row": 2,
+   "display_col": 4,
+   "raw_position_x": 2820,
+   "raw_position_y": 2730
+  },
+  {
+   "id": 104926,
+   "node_type": {
+    "id": 0,
+    "type": "ACTIVE"
+   },
+   "ranks": [
+    {
+     "rank": 1,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134387?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Improved Entangling Roots",
+       "id": 134387
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/16918?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Improved Entangling Roots",
+        "id": 16918
+       },
+       "description": "Increases the damage done by your Entangling Roots spell by 25%, and its victims can take up to 25% more damage without interrupting the effect.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 2,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134387?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Improved Entangling Roots",
+       "id": 134387
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/16918?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Improved Entangling Roots",
+        "id": 16918
+       },
+       "description": "Increases the damage done by your Entangling Roots spell by 50%, and its victims can take up to 50% more damage without interrupting the effect.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 3,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134387?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Improved Entangling Roots",
+       "id": 134387
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/16918?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Improved Entangling Roots",
+        "id": 16918
+       },
+       "description": "Increases the damage done by your Entangling Roots spell by 75%, and its victims can take up to 75% more damage without interrupting the effect.",
+       "cast_time": "Passive"
+      }
+     }
+    }
+   ],
+   "display_row": 3,
+   "display_col": 1,
+   "raw_position_x": 1020,
+   "raw_position_y": 3330
+  },
+  {
+   "id": 104928,
+   "locked_by": [
+    104927
+   ],
+   "unlocks": [
+    104927
+   ],
+   "node_type": {
+    "id": 0,
+    "type": "ACTIVE"
+   },
+   "ranks": [
+    {
+     "rank": 1,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134389?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Nature's Splendor",
+       "id": 134389
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/1223083?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Nature's Splendor",
+        "id": 1223083
+       },
+       "description": "Increases the duration of your Moonfire and Rejuvenation spells by 3 sec, your Regrowth spell by 6 sec, and your Insect Swarm spell by 2 sec.",
+       "cast_time": "Passive"
+      }
+     }
+    }
+   ],
+   "display_row": 3,
+   "display_col": 3,
+   "raw_position_x": 2220,
+   "raw_position_y": 3330
+  },
+  {
+   "id": 104930,
+   "node_type": {
+    "id": 0,
+    "type": "ACTIVE"
+   },
+   "ranks": [
+    {
+     "rank": 1,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134391?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Insect Swarm",
+       "id": 134391
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/5570?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Insect Swarm",
+        "id": 5570
+       },
+       "description": "The enemy target is swarmed by insects, decreasing their chance to hit with attacks by 2% and causing 48 Nature damage over 12 sec.",
+       "cast_time": "Instant",
+       "power_cost": "45 Mana",
+       "range": "30 yd range"
+      }
+     }
+    }
+   ],
+   "display_row": 4,
+   "display_col": 1,
+   "raw_position_x": 1020,
+   "raw_position_y": 3930
+  },
+  {
+   "id": 104932,
+   "locked_by": [
+    104931
+   ],
+   "node_type": {
+    "id": 0,
+    "type": "ACTIVE"
+   },
+   "ranks": [
+    {
+     "rank": 1,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134393?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Vengeance",
+       "id": 134393
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/16909?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Vengeance",
+        "id": 16909
+       },
+       "description": "Increases the critical strike damage bonus of your Arcane and Nature spells by 20%.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 2,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134393?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Vengeance",
+       "id": 134393
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/16909?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Vengeance",
+        "id": 16909
+       },
+       "description": "Increases the critical strike damage bonus of your Arcane and Nature spells by 40%.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 3,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134393?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Vengeance",
+       "id": 134393
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/16909?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Vengeance",
+        "id": 16909
+       },
+       "description": "Increases the critical strike damage bonus of your Arcane and Nature spells by 60%.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 4,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134393?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Vengeance",
+       "id": 134393
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/16909?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Vengeance",
+        "id": 16909
+       },
+       "description": "Increases the critical strike damage bonus of your Arcane and Nature spells by 80%.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 5,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134393?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Vengeance",
+       "id": 134393
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/16909?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Vengeance",
+        "id": 16909
+       },
+       "description": "Increases the critical strike damage bonus of your Arcane and Nature spells by 100%.",
+       "cast_time": "Passive"
+      }
+     }
+    }
+   ],
+   "display_row": 4,
+   "display_col": 2,
+   "raw_position_x": 1620,
+   "raw_position_y": 3930
+  },
+  {
+   "id": 104933,
+   "node_type": {
+    "id": 0,
+    "type": "ACTIVE"
+   },
+   "ranks": [
+    {
+     "rank": 1,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134394?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Improved Starfire",
+       "id": 134394
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/16850?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Improved Starfire",
+        "id": 16850
+       },
+       "description": "Reduces the cast time of Starfire by 0.1 sec and Starfire has a 3% chance to stun its target for 3 sec.\r\n",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 2,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134394?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Improved Starfire",
+       "id": 134394
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/16850?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Improved Starfire",
+        "id": 16850
+       },
+       "description": "Reduces the cast time of Starfire by 0.2 sec and Starfire has a 6% chance to stun its target for 3 sec.\r\n",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 3,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134394?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Improved Starfire",
+       "id": 134394
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/16850?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Improved Starfire",
+        "id": 16850
+       },
+       "description": "Reduces the cast time of Starfire by 0.3 sec and Starfire has a 9% chance to stun its target for 3 sec.\r\n",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 4,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134394?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Improved Starfire",
+       "id": 134394
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/16850?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Improved Starfire",
+        "id": 16850
+       },
+       "description": "Reduces the cast time of Starfire by 0.4 sec and Starfire has a 12% chance to stun its target for 3 sec.\r\n",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 5,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134394?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Improved Starfire",
+       "id": 134394
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/16850?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Improved Starfire",
+        "id": 16850
+       },
+       "description": "Reduces the cast time of Starfire by 0.5 sec and Starfire has a 15% chance to stun its target for 3 sec.\r\n",
+       "cast_time": "Passive"
+      }
+     }
+    }
+   ],
+   "display_row": 4,
+   "display_col": 3,
+   "raw_position_x": 2220,
+   "raw_position_y": 3930
+  },
+  {
+   "id": 110844,
+   "node_type": {
+    "id": 0,
+    "type": "ACTIVE"
+   },
+   "ranks": [
+    {
+     "rank": 1,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/142590?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Overgrowth",
+       "id": 142590
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/17245?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Overgrowth",
+        "id": 17245
+       },
+       "description": "Increases the maximum number of targets you may have affected by Entangling Roots by 1.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 2,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/142590?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Overgrowth",
+       "id": 142590
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/17245?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Overgrowth",
+        "id": 17245
+       },
+       "description": "Increases the maximum number of targets you may have affected by Entangling Roots by 2.",
+       "cast_time": "Passive"
+      }
+     }
+    }
+   ],
+   "display_row": 5,
+   "display_col": 1,
+   "raw_position_x": 1020,
+   "raw_position_y": 4530
+  },
+  {
+   "id": 104934,
+   "node_type": {
+    "id": 0,
+    "type": "ACTIVE"
+   },
+   "ranks": [
+    {
+     "rank": 1,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134395?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Nature's Grace",
+       "id": 134395
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/16880?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Nature's Grace",
+        "id": 16880
+       },
+       "description": "All non-periodic spell criticals grace you with a blessing of nature, increasing your spellcasting speed and reducing your global cooldown by 10% for 3 sec.",
+       "cast_time": "Passive"
+      }
+     }
+    }
+   ],
+   "display_row": 5,
+   "display_col": 2,
+   "raw_position_x": 1620,
+   "raw_position_y": 4530
+  },
+  {
+   "id": 104935,
+   "node_type": {
+    "id": 0,
+    "type": "ACTIVE"
+   },
+   "ranks": [
+    {
+     "rank": 1,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134396?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Eclipse",
+       "id": 134396
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/408248?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Eclipse",
+        "id": 408248
+       },
+       "description": "Your Wrath spell reduces the cast time of your next 2 Starfire spells by 0.17 sec. Stores up to 4 charges. Lasts 15 sec.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 2,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134396?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Eclipse",
+       "id": 134396
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/408248?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Eclipse",
+        "id": 408248
+       },
+       "description": "Your Wrath spell reduces the cast time of your next 2 Starfire spells by 0.33 sec. Stores up to 4 charges. Lasts 15 sec.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 3,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134396?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Eclipse",
+       "id": 134396
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/408248?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Eclipse",
+        "id": 408248
+       },
+       "description": "Your Wrath spell reduces the cast time of your next 2 Starfire spells by 0.50 sec. Stores up to 4 charges. Lasts 15 sec.",
+       "cast_time": "Passive"
+      }
+     }
+    }
+   ],
+   "display_row": 5,
+   "display_col": 3,
+   "raw_position_x": 2220,
+   "raw_position_y": 4530
+  },
+  {
+   "id": 104936,
+   "node_type": {
+    "id": 0,
+    "type": "ACTIVE"
+   },
+   "ranks": [
+    {
+     "rank": 1,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134397?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Moonfury",
+       "id": 134397
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/16896?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Moonfury",
+        "id": 16896
+       },
+       "description": "Increases the damage done by your Arcane and Nature spells by 2%.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 2,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134397?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Moonfury",
+       "id": 134397
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/16896?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Moonfury",
+        "id": 16896
+       },
+       "description": "Increases the damage done by your Arcane and Nature spells by 4%.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 3,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134397?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Moonfury",
+       "id": 134397
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/16896?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Moonfury",
+        "id": 16896
+       },
+       "description": "Increases the damage done by your Arcane and Nature spells by 6%.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 4,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134397?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Moonfury",
+       "id": 134397
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/16896?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Moonfury",
+        "id": 16896
+       },
+       "description": "Increases the damage done by your Arcane and Nature spells by 8%.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 5,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134397?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Moonfury",
+       "id": 134397
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/16896?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Moonfury",
+        "id": 16896
+       },
+       "description": "Increases the damage done by your Arcane and Nature spells by 10%.",
+       "cast_time": "Passive"
+      }
+     }
+    }
+   ],
+   "display_row": 6,
+   "display_col": 2,
+   "raw_position_x": 1620,
+   "raw_position_y": 5130
+  },
+  {
+   "id": 104937,
+   "node_type": {
+    "id": 0,
+    "type": "ACTIVE"
+   },
+   "ranks": [
+    {
+     "rank": 1,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134398?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Moonkin Form",
+       "id": 134398
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/24858?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Moonkin Form",
+        "id": 24858
+       },
+       "description": "Shapeshift into Moonkin Form, increasing Omen of Clarity's chance to trigger by 100%, Armor contribution from items by 360%, and all party or raid members within 45 yards have their Critical Strike chance increased by 3%. Also protects the caster from Polymorph effects and prevents the use of healing spells.\r\n\r\nThe act of shapeshifting frees the caster of Polymorph and Movement Impairing effects.",
+       "cast_time": "Instant",
+       "power_cost": "435 Mana"
+      }
+     }
+    }
+   ],
+   "display_row": 7,
+   "display_col": 2,
+   "raw_position_x": 1620,
+   "raw_position_y": 5730
+  }
+ ]
+}

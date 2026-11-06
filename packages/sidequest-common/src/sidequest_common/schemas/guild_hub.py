@@ -465,6 +465,9 @@ class GuildCrafterResult(BaseModel):
     recipe_id: int
     recipe_name: str
     item_id: int | None
+    battlenet_recipe_id: int | None = Field(
+        default=None, description="The matching Battle.net recipe id, if Battle.net was reachable. Links to /recipes/."
+    )
     crafters: list[GuildCrafterRow]
 
 

@@ -1202,7 +1202,7 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2.14" },
     { name = "pydantic-settings", specifier = ">=2.16" },
     { name = "sidequest-common", editable = "packages/sidequest-common" },
-    { name = "wow", specifier = ">=0.1.0" },
+    { name = "wow", specifier = ">=0.2.0" },
 ]
 
 [[package]]
@@ -1469,14 +1469,14 @@ wheels = [
 
 [[package]]
 name = "wow"
-version = "0.1.0"
+version = "0.2.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "anyio" },
     { name = "httpx" },
     { name = "msgspec" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/82/b4/0c3262b69b872c8e9951d431815d6042d2cce4b429459927f502784133a4/wow-0.1.0.tar.gz", hash = "sha256:bc0275fcbabecf45613048297afd93543badaf33c5cc7030e65277676c9b0b19", size = 53843, upload-time = "2026-11-05T21:03:15.161Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ff/76/b8cba43360dd89e169bab3ae60718758c06841eb6790474f5df98c4bf67c/wow-0.2.0.tar.gz", hash = "sha256:6ba56d0d467d52b3d265394332ad70b5e54d377354acc94486cda965cee3c528", size = 53926, upload-time = "2026-11-06T01:20:55.135Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/cb/36/9fcc943a7e6d7ec1ed03aa4f23c7db755d698f0493ce9e8147b5952c6728/wow-0.1.0-py3-none-any.whl", hash = "sha256:42fd3c4ab7c909f28a3e2a547ab760333474a3971efd8d8a82aa749cefc641f7", size = 82439, upload-time = "2026-11-05T21:03:13.601Z" },
+    { url = "https://files.pythonhosted.org/packages/15/af/3ab9813f950653735657b3645f116767433cb47af2a9439c7eb68daf5211/wow-0.2.0-py3-none-any.whl", hash = "sha256:703bee9650a9348f3ea6fa735c9d346026ec7aca0744f3f13375aebb2a546ee4", size = 82608, upload-time = "2026-11-06T01:20:53.663Z" },
 ]

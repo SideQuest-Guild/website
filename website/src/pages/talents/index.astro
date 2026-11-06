@@ -1,0 +1,536 @@
+---
+import Room from "../../layouts/Room.astro";
+import warRoom from "../../../assets/rooms/war-room.webp";
+import "../../styles/room-talents.css";
+---
+
+<Room
+  title="Talents · SideQuest"
+  description="Plan a World of Warcraft: Forever talent build for any class: spend your points, share the link, and save or pin it for raids."
+  heading="TALENTS"
+  lede="Spend 51 points across three trees, share the link, and save or pin a build for raid night."
+  art={warRoom}
+  artPosition="50% 38%"
+  current="talents"
+>
+  <section class="chamber" aria-labelledby="h-class">
+    <h2 class="chamber-title" id="h-class">
+      Class
+    </h2>
+    <div class="class-picker" role="group" aria-label="Choose a class" id="class-picker"></div>
+  </section>
+
+  <section class="chamber" id="talents-section" aria-labelledby="h-talents" hidden>
+    <h2 class="chamber-title" id="h-talents">
+      <span id="talents-class-name">Talents</span>
+    </h2>
+    <p class="status" id="talents-status" role="status" aria-live="polite"></p>
+    <div class="talent-summary" id="talent-summary"></div>
+    <div class="talent-actions">
+      <button type="button" class="btn-small" id="talent-reset-btn">
+        Reset
+      </button>
+      <button type="button" class="btn-small" id="talent-copy-btn">
+        Copy link
+      </button>
+    </div>
+    <div class="talent-trees" id="talent-trees"></div>
+  </section>
+
+  <section class="chamber" id="builds-section" aria-labelledby="h-builds" hidden>
+    <h2 class="chamber-title" id="h-builds">
+      Saved builds
+    </h2>
+
+    <h3 class="sub-title">Pinned builds</h3>
+    <p class="status" id="pinned-status" role="status" aria-live="polite"></p>
+    <ul class="talent-build-list" id="pinned-builds-list" aria-label="Pinned builds"></ul>
+
+    <h3 class="sub-title">Your builds</h3>
+    <p class="aside" id="builds-signed-out" hidden></p>
+    <div id="builds-member" hidden>
+      <form id="save-build-form" class="form-row">
+        <div class="field">
+          <label for="build-name">Name</label>
+          <input id="build-name" type="text" required maxlength="60" />
+        </div>
+        <div class="field">
+          <label for="build-note">Note (optional)</label>
+          <input id="build-note" type="text" maxlength="200" />
+        </div>
+        <button type="submit" class="btn" id="save-build-btn">
+          Save build
+        </button>
+      </form>
+      <p class="status" id="save-build-status" role="status" aria-live="polite"></p>
+      <ul class="talent-build-list" id="my-builds-list" aria-label="Your builds"></ul>
+    </div>
+  </section>
+
+  <noscript>
+    <p class="aside">Enable JavaScript to use the talent calculator.</p>
+  </noscript>
+</Room>
+
+<script>
+  import {
+    apiFetch,
+    ApiError,
+    CLASSES,
+    classLabel,
+    escapeHtml,
+    fetchMe,
+    MAX_TALENT_POINTS,
+    requireElement,
+    statusMessage,
+    type CharClass,
+    type ClassTalents,
+    type Me,
+    type TalentBuild,
+    type TalentBuildCreate,
+    type TalentNode,
+    type TalentTree,
+  } from "../../scripts/api";
+  import { loadWowheadTooltips, refreshWowheadLinks } from "../../scripts/items";
+  import { onPage } from "../../scripts/page";
+  import {
+    canAddPoint,
+    canRemovePoint,
+    decodeCode,
+    emptyRanks,
+    encodeCode,
+    rowIsOpen,
+    totalSpent,
+  } from "../../scripts/talents";
+
+  onPage("#class-picker", (signal) => {
+    const classPickerEl = requireElement("class-picker");
+    const talentsSectionEl = requireElement("talents-section");
+    const talentsStatusEl = requireElement("talents-status");
+    const talentsClassNameEl = requireElement("talents-class-name");
+    const summaryEl = requireElement("talent-summary");
+    const treesEl = requireElement("talent-trees");
+    const resetBtn = requireElement<HTMLButtonElement>("talent-reset-btn");
+    const copyBtn = requireElement<HTMLButtonElement>("talent-copy-btn");
+    const buildsSectionEl = requireElement("builds-section");
+    const pinnedStatusEl = requireElement("pinned-status");
+    const pinnedBuildsListEl = requireElement("pinned-builds-list");
+    const buildsSignedOutEl = requireElement("builds-signed-out");
+    const buildsMemberEl = requireElement("builds-member");
+    const saveBuildForm = requireElement<HTMLFormElement>("save-build-form");
+    const buildNameInput = requireElement<HTMLInputElement>("build-name");
+    const buildNoteInput = requireElement<HTMLInputElement>("build-note");
+    const saveBuildBtn = requireElement<HTMLButtonElement>("save-build-btn");
+    const saveBuildStatusEl = requireElement("save-build-status");
+    const myBuildsListEl = requireElement("my-builds-list");
+
+    let me: Me | null = null;
+    let selectedClass: CharClass | null = null;
+    let classTalents: ClassTalents | null = null;
+    let ranksByTree: number[][] = [];
+
+    function renderClassPicker(): void {
+      classPickerEl.innerHTML = CLASSES.map(
+        (cls) => `
+          <button type="button" class="class-pick" data-class="${cls}" aria-pressed="${cls === selectedClass}">
+            <span class="cls-${cls}">${escapeHtml(classLabel(cls))}</span>
+          </button>`,
+      ).join("");
+    }
+
+    function gateReason(tree: TalentTree, ranks: number[], node: TalentNode, nodeIndex: number): string {
+      const rank = ranks[nodeIndex] ?? 0;
+      if (rank >= node.max_rank) {
+        return `${node.name} is already at its max rank.`;
+      }
+      if (!rowIsOpen(tree, ranks, node)) {
+        return `Spend ${(node.row - 1) * 5} points in ${tree.name} first.`;
+      }
+      if (node.requires !== null) {
+        const prereqIndex = tree.nodes.findIndex((candidate) => candidate.id === node.requires);
+        const prereq = tree.nodes[prereqIndex];
+        if (prereq && (ranks[prereqIndex] ?? 0) < prereq.max_rank) {
+          return `Requires ${prereq.name} at rank ${prereq.max_rank} first.`;
+        }
+      }
+      if (totalSpent(ranksByTree) >= MAX_TALENT_POINTS) {
+        return `You've already spent all ${MAX_TALENT_POINTS} points.`;
+      }
+      return "";
+    }
+
+    function nodeHtml(tree: TalentTree, treeIndex: number, node: TalentNode, nodeIndex: number): string {
+      const ranks = ranksByTree[treeIndex] ?? [];
+      const rank = ranks[nodeIndex] ?? 0;
+      const canAdd = classTalents !== null && canAddPoint(classTalents.trees, ranksByTree, treeIndex, nodeIndex);
+      const canRemove = classTalents !== null && canRemovePoint(classTalents.trees, ranksByTree, treeIndex, nodeIndex);
+      const rankTooltip = node.ranks[Math.min(Math.max(rank - 1, 0), node.ranks.length - 1)] ?? node.ranks[0];
+      const wowhead = rankTooltip ? ` data-wowhead="spell=${rankTooltip.spell_id}&domain=forever"` : "";
+      const reason = canAdd ? "" : gateReason(tree, ranks, node, nodeIndex);
+      const title = reason ? ` title="${escapeHtml(reason)}"` : "";
+      return `
+        <div class="talent-node-wrap" style="grid-row:${node.row};grid-column:${node.col}">
+          <button
+            type="button"
+            class="talent-node${rank > 0 ? " has-points" : ""}"
+            data-tree="${treeIndex}"
+            data-node="${nodeIndex}"${wowhead}${title}
+            aria-label="${escapeHtml(node.name)}, rank ${rank} of ${node.max_rank}"
+            ${canAdd ? "" : "disabled"}
+          >
+            <span class="talent-node-name">${escapeHtml(node.name)}</span>
+            <span class="talent-node-rank">${rank}/${node.max_rank}</span>
+          </button>
+          <button
+            type="button"
+            class="talent-node-minus"
+            data-tree="${treeIndex}"
+            data-node="${nodeIndex}"
+            aria-label="Remove a point from ${escapeHtml(node.name)}"
+            ${canRemove ? "" : "hidden"}
+          >&minus;</button>
+        </div>`;
+    }
+
+    function treeHtml(tree: TalentTree, treeIndex: number): string {
+      const ranks = ranksByTree[treeIndex] ?? [];
+      const spent = ranks.reduce((sum, rank) => sum + rank, 0);
+      const icon = tree.icon_url
+        ? `<img src="${escapeHtml(tree.icon_url)}" alt="" width="22" height="22" loading="lazy" />`
+        : "";
+      const nodes = tree.nodes.map((node, nodeIndex) => nodeHtml(tree, treeIndex, node, nodeIndex)).join("");
+      return `
+        <div class="talent-tree">
+          <h3 class="talent-tree-title">
+            ${icon}<span>${escapeHtml(tree.name)}</span><span class="talent-tree-points">${spent}</span>
+          </h3>
+          <div class="talent-grid">${nodes}</div>
+        </div>`;
+    }
+
+    function renderSummary(): void {
+      if (!classTalents) {
+        summaryEl.innerHTML = "";
+        return;
+      }
+      const spent = totalSpent(ranksByTree);
+      const remaining = classTalents.max_points - spent;
+      const level = classTalents.first_level - 1 + spent;
+      summaryEl.innerHTML = `
+        <p class="talent-points-summary">
+          ${spent} / ${classTalents.max_points} points spent &middot; ${remaining} remaining &middot; level ${level} needed
+        </p>`;
+    }
+
+    function renderTrees(): void {
+      if (!classTalents) {
+        treesEl.innerHTML = "";
+        return;
+      }
+      treesEl.innerHTML = classTalents.trees.map((tree, treeIndex) => treeHtml(tree, treeIndex)).join("");
+      refreshWowheadLinks();
+      renderSummary();
+    }
+
+    function updateUrl(): void {
+      if (!selectedClass) {
+        return;
+      }
+      const code = encodeCode(ranksByTree);
+      const params = new URLSearchParams();
+      params.set("class", selectedClass);
+      if (code) {
+        params.set("build", code);
+      }
+      history.replaceState(null, "", `${location.pathname}?${params}`);
+    }
+
+    function buildRow(build: TalentBuild): string {
+      const note = build.note ? `<span class="talent-build-note">${escapeHtml(build.note)}</span>` : "";
+      const pinBtn = me?.is_officer
+        ? `<button type="button" class="btn-small" data-pin-build="${build.id}" data-pinned="${build.pinned}">${build.pinned ? "Unpin" : "Pin"}</button>`
+        : "";
+      const deleteBtn =
+        me && build.member_id === me.id
+          ? `<button type="button" class="btn-small btn-danger" data-delete-build="${build.id}">Delete</button>`
+          : "";
+      return `
+        <li class="talent-build-row">
+          <span class="talent-build-head">
+            <span class="talent-build-name">${escapeHtml(build.name)}</span>
+            <span class="talent-build-by">by ${escapeHtml(build.member_name)}</span>
+          </span>
+          ${note}
+          <span class="talent-build-actions">
+            <button type="button" class="btn-small" data-load-build="${escapeHtml(build.code)}">Load</button>
+            ${pinBtn}
+            ${deleteBtn}
+          </span>
+        </li>`;
+    }
+
+    async function loadPinnedBuilds(): Promise<void> {
+      if (!selectedClass) {
+        return;
+      }
+      pinnedStatusEl.textContent = "Loading\u2026";
+      try {
+        const builds = await apiFetch<TalentBuild[]>(`/api/talent-builds?class=${selectedClass}`, { signal });
+        pinnedStatusEl.textContent = builds.length === 0 ? "No pinned builds for this class yet." : "";
+        pinnedBuildsListEl.innerHTML = builds.map(buildRow).join("");
+      } catch (err) {
+        pinnedStatusEl.textContent = statusMessage(err);
+      }
+    }
+
+    async function loadMyBuilds(): Promise<void> {
+      if (!me?.is_guild_member || !selectedClass) {
+        myBuildsListEl.innerHTML = "";
+        return;
+      }
+      try {
+        const builds = await apiFetch<TalentBuild[]>("/api/me/talent-builds", { signal });
+        const mine = builds.filter((build) => build.class === selectedClass);
+        myBuildsListEl.innerHTML =
+          mine.length > 0
+            ? mine.map(buildRow).join("")
+            : `<li class="ledger-empty">You haven't saved a build for this class yet.</li>`;
+      } catch (err) {
+        myBuildsListEl.innerHTML = `<li class="ledger-empty">${escapeHtml(statusMessage(err))}</li>`;
+      }
+    }
+
+    async function initMe(): Promise<void> {
+      me = await fetchMe().catch(() => null);
+      if (!me?.is_guild_member) {
+        const next = encodeURIComponent(location.pathname + location.search);
+        buildsSignedOutEl.innerHTML = `<a href="/auth/discord/login?next=${next}">Sign in with Discord</a> to save your own talent builds.`;
+        buildsSignedOutEl.hidden = false;
+        buildsMemberEl.hidden = true;
+      } else {
+        buildsSignedOutEl.hidden = true;
+        buildsMemberEl.hidden = false;
+      }
+    }
+
+    async function selectClass(cls: CharClass, buildCode: string | null): Promise<void> {
+      selectedClass = cls;
+      for (const btn of classPickerEl.querySelectorAll<HTMLButtonElement>("[data-class]")) {
+        btn.setAttribute("aria-pressed", String(btn.dataset.class === cls));
+      }
+      talentsSectionEl.hidden = false;
+      buildsSectionEl.hidden = false;
+      talentsClassNameEl.textContent = `${classLabel(cls)} talents`;
+      talentsStatusEl.textContent = "Loading\u2026";
+      treesEl.innerHTML = "";
+      summaryEl.innerHTML = "";
+      classTalents = null;
+      try {
+        classTalents = await apiFetch<ClassTalents>(`/api/talents/${cls}`, { signal });
+        ranksByTree = buildCode ? decodeCode(buildCode, classTalents.trees) : emptyRanks(classTalents.trees);
+        talentsStatusEl.textContent = "";
+        renderTrees();
+        updateUrl();
+        refreshWowheadLinks();
+      } catch (err) {
+        talentsStatusEl.textContent =
+          err instanceof ApiError && err.status === 503
+            ? "Battle.net isn't answering right now, so talents are offline. Try again soon."
+            : statusMessage(err);
+        return;
+      }
+      await loadPinnedBuilds();
+      await loadMyBuilds();
+    }
+
+    classPickerEl.addEventListener(
+      "click",
+      (event) => {
+        const btn = (event.target as HTMLElement).closest<HTMLButtonElement>("[data-class]");
+        if (!btn || btn.dataset.class === selectedClass) {
+          return;
+        }
+        void selectClass(btn.dataset.class as CharClass, null);
+      },
+      { signal },
+    );
+
+    function addPoint(treeIndex: number, nodeIndex: number): void {
+      if (!classTalents || !canAddPoint(classTalents.trees, ranksByTree, treeIndex, nodeIndex)) {
+        return;
+      }
+      const ranks = ranksByTree[treeIndex];
+      if (!ranks) {
+        return;
+      }
+      ranks[nodeIndex] = (ranks[nodeIndex] ?? 0) + 1;
+      renderTrees();
+      updateUrl();
+    }
+
+    function removePoint(treeIndex: number, nodeIndex: number): void {
+      if (!classTalents || !canRemovePoint(classTalents.trees, ranksByTree, treeIndex, nodeIndex)) {
+        return;
+      }
+      const ranks = ranksByTree[treeIndex];
+      if (!ranks) {
+        return;
+      }
+      ranks[nodeIndex] -= 1;
+      renderTrees();
+      updateUrl();
+    }
+
+    treesEl.addEventListener(
+      "click",
+      (event) => {
+        const target = event.target as HTMLElement;
+        const minus = target.closest<HTMLButtonElement>(".talent-node-minus");
+        if (minus) {
+          removePoint(Number(minus.dataset.tree), Number(minus.dataset.node));
+          return;
+        }
+        const node = target.closest<HTMLButtonElement>(".talent-node");
+        if (node && !node.disabled) {
+          addPoint(Number(node.dataset.tree), Number(node.dataset.node));
+        }
+      },
+      { signal },
+    );
+    treesEl.addEventListener(
+      "contextmenu",
+      (event) => {
+        const node = (event.target as HTMLElement).closest<HTMLButtonElement>(".talent-node");
+        if (!node) {
+          return;
+        }
+        event.preventDefault();
+        removePoint(Number(node.dataset.tree), Number(node.dataset.node));
+      },
+      { signal },
+    );
+
+    resetBtn.addEventListener(
+      "click",
+      () => {
+        if (!classTalents) {
+          return;
+        }
+        ranksByTree = emptyRanks(classTalents.trees);
+        renderTrees();
+        updateUrl();
+      },
+      { signal },
+    );
+
+    copyBtn.addEventListener(
+      "click",
+      async () => {
+        try {
+          await navigator.clipboard.writeText(location.href);
+          const original = copyBtn.textContent;
+          copyBtn.textContent = "Copied";
+          setTimeout(() => {
+            copyBtn.textContent = original;
+          }, 1500);
+        } catch {
+          // Clipboard access blocked; the URL bar already has the link.
+        }
+      },
+      { signal },
+    );
+
+    buildsSectionEl.addEventListener(
+      "click",
+      async (event) => {
+        const target = event.target as HTMLElement;
+        const loadBtn = target.closest<HTMLButtonElement>("[data-load-build]");
+        if (loadBtn && classTalents) {
+          ranksByTree = decodeCode(loadBtn.dataset.loadBuild ?? "", classTalents.trees);
+          renderTrees();
+          updateUrl();
+          return;
+        }
+        const pinBtn = target.closest<HTMLButtonElement>("[data-pin-build]");
+        if (pinBtn) {
+          pinBtn.disabled = true;
+          try {
+            await apiFetch(`/api/talent-builds/${pinBtn.dataset.pinBuild}/pin`, {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ pinned: pinBtn.dataset.pinned !== "true" }),
+              signal,
+            });
+            await loadPinnedBuilds();
+            await loadMyBuilds();
+          } catch (err) {
+            pinnedStatusEl.textContent = statusMessage(err);
+            pinBtn.disabled = false;
+          }
+          return;
+        }
+        const deleteBtn = target.closest<HTMLButtonElement>("[data-delete-build]");
+        if (deleteBtn) {
+          deleteBtn.disabled = true;
+          try {
+            await apiFetch(`/api/me/talent-builds/${deleteBtn.dataset.deleteBuild}`, { method: "DELETE", signal });
+            await loadMyBuilds();
+            await loadPinnedBuilds();
+          } catch (err) {
+            saveBuildStatusEl.dataset.tone = "error";
+            saveBuildStatusEl.textContent = statusMessage(err);
+            deleteBtn.disabled = false;
+          }
+        }
+      },
+      { signal },
+    );
+
+    saveBuildForm.addEventListener(
+      "submit",
+      async (event) => {
+        event.preventDefault();
+        if (!selectedClass) {
+          return;
+        }
+        saveBuildBtn.disabled = true;
+        saveBuildStatusEl.dataset.tone = "";
+        try {
+          const body: TalentBuildCreate = {
+            class: selectedClass,
+            name: buildNameInput.value.trim(),
+            code: encodeCode(ranksByTree),
+            note: buildNoteInput.value.trim() || null,
+          };
+          await apiFetch<TalentBuild>("/api/me/talent-builds", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+            signal,
+          });
+          saveBuildStatusEl.textContent = "Build saved.";
+          buildNameInput.value = "";
+          buildNoteInput.value = "";
+          await loadMyBuilds();
+        } catch (err) {
+          saveBuildStatusEl.dataset.tone = "error";
+          saveBuildStatusEl.textContent = statusMessage(err);
+        } finally {
+          saveBuildBtn.disabled = false;
+        }
+      },
+      { signal },
+    );
+
+    renderClassPicker();
+    void loadWowheadTooltips();
+    void initMe().then(() => {
+      const params = new URLSearchParams(location.search);
+      const cls = params.get("class");
+      const build = params.get("build");
+      if (cls && (CLASSES as string[]).includes(cls)) {
+        void selectClass(cls as CharClass, build);
+      }
+    });
+  });
+</script>

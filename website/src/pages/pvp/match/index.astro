@@ -1,0 +1,225 @@
+---
+import Room from "../../../layouts/Room.astro";
+import warRoom from "../../../../assets/rooms/war-room.webp";
+import "../../../styles/room-pvp.css";
+---
+
+<Room
+  title="Battleground · SideQuest"
+  description="One recorded battleground's full scoreboard, both sides, guild characters highlighted."
+  heading="BATTLEGROUND"
+  art={warRoom}
+  artPosition="50% 38%"
+  current="pvp"
+>
+  <!-- Ask for the match with the HTML, not after the page script loads; the URL matches init() below. -->
+  <script is:inline slot="head">
+    const matchId = new URLSearchParams(location.search).get("id");
+    if (matchId) {
+      const link = document.createElement("link");
+      Object.assign(link, {
+        rel: "preload",
+        as: "fetch",
+        href: `/api/pvp/matches/${matchId}`,
+        crossOrigin: "anonymous",
+      });
+      document.head.append(link);
+    }
+  </script>
+
+  <p class="status" id="pvp-match-status" role="status" aria-live="polite"></p>
+
+  <div id="pvp-match-gate" hidden>
+    <section class="chamber" aria-labelledby="h-pvp-match-gate">
+      <h2 class="chamber-title" id="h-pvp-match-gate">
+        Battleground
+      </h2>
+      <p class="chamber-intro" id="pvp-match-gate-message"></p>
+    </section>
+  </div>
+
+  <div id="pvp-match-content" hidden>
+    <section class="chamber" aria-labelledby="h-pvp-match">
+      <h2 class="chamber-title" id="h-pvp-match">
+        <span id="pvp-match-map"></span>
+      </h2>
+      <div class="pvp-match-summary" id="pvp-match-summary"></div>
+      <div class="pvp-scoreboard-wrap">
+        <table class="pvp-scoreboard" id="pvp-scoreboard">
+          <thead>
+            <tr>
+              <th scope="col">Name</th>
+              <th scope="col">Faction</th>
+              <th scope="col" data-sort="killing_blows">
+                KB
+              </th>
+              <th scope="col" data-sort="honorable_kills">
+                HK
+              </th>
+              <th scope="col" data-sort="deaths">
+                Deaths
+              </th>
+              <th scope="col" data-sort="honor_gained">
+                Honor
+              </th>
+              <th scope="col" data-sort="damage_done">
+                Damage
+              </th>
+              <th scope="col" data-sort="healing_done">
+                Healing
+              </th>
+            </tr>
+          </thead>
+          <tbody id="pvp-scoreboard-body"></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <noscript>
+    <p class="aside">Enable JavaScript to view this battleground.</p>
+  </noscript>
+</Room>
+
+<script>
+  import {
+    apiFetch,
+    ApiError,
+    escapeHtml,
+    fetchMe,
+    requireElement,
+    statusMessage,
+    type Me,
+    type PvpMatchDetail,
+    type PvpPlayerRow,
+  } from "../../../scripts/api";
+  import { onPage } from "../../../scripts/page";
+
+  function formatDuration(seconds: number): string {
+    const minutes = Math.floor(seconds / 60);
+    const rest = seconds % 60;
+    return `${minutes}:${String(rest).padStart(2, "0")}`;
+  }
+
+  function resultBadge(match: PvpMatchDetail): string {
+    if (match.won === null) {
+      return `<span class="pvp-result is-draw">${match.winner === "draw" ? "Draw" : "Unknown winner"}</span>`;
+    }
+    return match.won ? `<span class="pvp-result is-won">Won</span>` : `<span class="pvp-result is-lost">Lost</span>`;
+  }
+
+  function scoreRow(row: PvpPlayerRow): string {
+    const nameInner = `<span class="${row.class ? `cls-${row.class}` : ""}">${escapeHtml(row.name)}</span>`;
+    const name = row.character_slug
+      ? `<a class="pvp-scoreboard-name" href="/characters/detail/?slug=${encodeURIComponent(row.character_slug)}">${nameInner}</a>`
+      : nameInner;
+    return `
+      <tr class="${row.guild_member ? "is-guild" : ""}">
+        <td>${name}</td>
+        <td>${row.faction === "alliance" ? "Alliance" : "Horde"}</td>
+        <td>${row.killing_blows}</td>
+        <td>${row.honorable_kills}</td>
+        <td>${row.deaths}</td>
+        <td>${row.honor_gained}</td>
+        <td>${row.damage_done}</td>
+        <td>${row.healing_done}</td>
+      </tr>`;
+  }
+
+  onPage("#pvp-match-status", (signal) => {
+    const statusEl = requireElement("pvp-match-status");
+    const gateEl = requireElement("pvp-match-gate");
+    const gateMessage = requireElement("pvp-match-gate-message");
+    const contentEl = requireElement("pvp-match-content");
+    const mapEl = requireElement("pvp-match-map");
+    const summaryEl = requireElement("pvp-match-summary");
+    const scoreboardTableEl = requireElement<HTMLTableElement>("pvp-scoreboard");
+    const scoreboardBodyEl = requireElement("pvp-scoreboard-body");
+
+    let players: PvpPlayerRow[] = [];
+    let sortKey: keyof PvpPlayerRow | null = null;
+    let sortDesc = true;
+
+    function renderScoreboard(): void {
+      const sortable = ["killing_blows", "honorable_kills", "deaths", "honor_gained", "damage_done", "healing_done"];
+      const key = sortKey;
+      const sorted =
+        key && sortable.includes(key)
+          ? players.toSorted((a, b) => {
+              const diff = (a[key] as number) - (b[key] as number);
+              return sortDesc ? -diff : diff;
+            })
+          : players;
+      scoreboardBodyEl.innerHTML = sorted.map(scoreRow).join("");
+    }
+
+    scoreboardTableEl.querySelectorAll<HTMLTableCellElement>("th[data-sort]").forEach((th) => {
+      th.addEventListener(
+        "click",
+        () => {
+          const key = th.dataset.sort as keyof PvpPlayerRow;
+          sortDesc = sortKey === key ? !sortDesc : true;
+          sortKey = key;
+          renderScoreboard();
+        },
+        { signal },
+      );
+    });
+
+    function renderSummary(match: PvpMatchDetail): void {
+      mapEl.textContent = match.map;
+      const when = new Date(match.ended_at).toLocaleString(undefined, {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+      });
+      const guildPlayers = match.guild_players.length > 0 ? escapeHtml(match.guild_players.join(", ")) : "None linked";
+      summaryEl.innerHTML = `
+        ${resultBadge(match)}
+        <span>${when}</span>
+        <span>${formatDuration(match.duration)}</span>
+        <span>Recorded by ${escapeHtml(match.recorded_by)}</span>
+        <span>SideQuest: ${guildPlayers}</span>`;
+    }
+
+    async function init(): Promise<void> {
+      let me: Me | null = null;
+      try {
+        me = await fetchMe();
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 0) {
+          statusEl.textContent = statusMessage(err);
+        }
+        me = null;
+      }
+      if (!me || !me.is_guild_member) {
+        gateEl.hidden = false;
+        const next = encodeURIComponent(location.pathname + location.search);
+        gateMessage.innerHTML = `This battleground is for members only. <a href="/auth/discord/login?next=${next}">Sign in with Discord</a> to see it.`;
+        statusEl.textContent = "";
+        return;
+      }
+      const id = new URLSearchParams(location.search).get("id");
+      if (!id) {
+        statusEl.textContent = "No battleground was given.";
+        return;
+      }
+      statusEl.textContent = "Loading\u2026";
+      try {
+        const match = await apiFetch<PvpMatchDetail>(`/api/pvp/matches/${id}`, { signal });
+        players = match.players;
+        renderSummary(match);
+        renderScoreboard();
+        contentEl.hidden = false;
+        statusEl.textContent = "";
+      } catch (err) {
+        statusEl.textContent =
+          err instanceof ApiError && err.status === 404 ? "There's no such battleground." : statusMessage(err);
+      }
+    }
+
+    void init();
+  });
+</script>

@@ -76,9 +76,13 @@ import "../../styles/room-characters.css";
     type CharacterMilestone,
     type CharacterSummary,
   } from "../../scripts/api";
+  import { classIconHtml, loadGameArt } from "../../scripts/art";
   import { onPage } from "../../scripts/page";
 
+  let gameClasses: Awaited<ReturnType<typeof loadGameArt>> = [];
+
   function characterRow(c: CharacterSummary): string {
+    const icon = classIconHtml(gameClasses, c.class);
     const cls = c.class ? ` cls-${c.class}` : "";
     const rank = c.in_roster ? rankLabel(c.guild_rank, c.rank_name) : "Not in roster";
     const meta = [
@@ -97,7 +101,7 @@ import "../../styles/room-characters.css";
     return `
       <li>
         <a class="char-row" href="/characters/detail/?slug=${encodeURIComponent(c.slug)}">
-          <span class="char-row-name${cls}">${escapeHtml(c.name)} ${escapeHtml(c.surname)}</span>
+          <span class="char-row-name${cls}">${icon}${escapeHtml(c.name)} ${escapeHtml(c.surname)}</span>
           <span class="char-row-rank">${escapeHtml(rank)}</span>
           <span class="char-row-meta">${meta}</span>
         </a>
@@ -105,11 +109,12 @@ import "../../styles/room-characters.css";
   }
 
   function milestoneRow(m: CharacterMilestone): string {
+    const icon = classIconHtml(gameClasses, m.class);
     const cls = m.class ? ` cls-${m.class}` : "";
     return `
       <li>
         <a class="char-row" href="/characters/detail/?slug=${encodeURIComponent(m.slug)}">
-          <span class="char-row-name${cls}">${escapeHtml(m.name)} ${escapeHtml(m.surname)} reached level ${m.level}</span>
+          <span class="char-row-name${cls}">${icon}${escapeHtml(m.name)} ${escapeHtml(m.surname)} reached level ${m.level}</span>
           <span class="char-row-rank">${escapeHtml(relativeTime(m.reached_at))}</span>
         </a>
       </li>`;
@@ -194,7 +199,10 @@ import "../../styles/room-characters.css";
       { signal },
     );
 
-    void loadRoster();
-    void loadMilestones();
+    void loadGameArt().then((classes) => {
+      gameClasses = classes;
+      void loadRoster();
+      void loadMilestones();
+    });
   });
 </script>

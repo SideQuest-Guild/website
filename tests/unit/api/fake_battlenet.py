@@ -138,7 +138,10 @@ def battlenet() -> dict:
     """What the fake Battle.net serves, and every API request it saw. Tests change it between calls.
 
     ``roster`` is the guild roster's members; ``profiles`` the slugs with a published profile (each served from
-    Terrorskull Gloomstep's recorded documents, renamed).
+    Terrorskull Gloomstep's recorded documents, renamed). ``documents`` maps any other API path (such as
+    ``/data/wow/talent-tree/1089/playable-specialization/574``) to the JSON body to answer it with; see
+    ``recorded_document`` for loading one recorded under ``fixtures/battlenet/``. ``down`` makes every request answer
+    503; ``failing`` makes only the paths ending with one of its strings answer 503.
     """
     return {
         "version": BETA,
@@ -146,7 +149,9 @@ def battlenet() -> dict:
         "search": [(19019, THUNDERFURY)],
         "roster": copy.deepcopy(ROSTER["members"]),
         "profiles": {TERRORSKULL},
+        "documents": {},
         "down": False,
+        "failing": set(),
         "requests": [],
     }
 
@@ -172,6 +177,11 @@ def _profile_document(path: str, battlenet: dict) -> httpx.Response:
     return httpx.Response(200, json=body)
 
 
+def recorded_document(name: str) -> dict:
+    """The body recorded at ``fixtures/battlenet/<name>.json``, such as ``static/talent-tree/1089/574``."""
+    return json.loads((RECORDED / f"{name}.json").read_text())
+
+
 def transport(battlenet: dict) -> httpx.MockTransport:
     """Answer the game data client's requests from ``battlenet``, recording each one."""
 
@@ -179,13 +189,15 @@ def transport(battlenet: dict) -> httpx.MockTransport:
         if request.url.host == "oauth.battle.net":
             return httpx.Response(200, json={"access_token": "app-token", "token_type": "bearer", "expires_in": 86399})
         battlenet["requests"].append(request)
-        if battlenet["down"]:
+        if battlenet["down"] or any(request.url.path.endswith(suffix) for suffix in battlenet["failing"]):
             return httpx.Response(503, json={"code": 503})
         path, version = request.url.path, battlenet["version"]
         if path.startswith("/profile/wow/character/"):
             return _profile_document(path, battlenet)
         if path == "/data/wow/guild/sidequest/roster":
             return httpx.Response(200, json={**ROSTER, "members": battlenet["roster"]})
+        if path in battlenet["documents"]:
+            return httpx.Response(200, json=battlenet["documents"][path])
         if path == "/data/wow/search/item":
             hits = [search_hit(item_id, name, version) for item_id, name in battlenet["search"]]
             body = {"page": 1, "pageSize": 50, "maxPageSize": 1000, "pageCount": 1, "results": hits}

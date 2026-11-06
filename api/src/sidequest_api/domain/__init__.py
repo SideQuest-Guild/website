@@ -24,6 +24,11 @@ from sidequest_api.domain.epgp.controllers import EpgpController, MyCharactersCo
 from sidequest_api.domain.event_series.controllers import EventSeriesController
 from sidequest_api.domain.event_sync.controllers import EventSyncController
 from sidequest_api.domain.events.controllers import EventsController
+from sidequest_api.domain.game_reference.controllers import (
+    GameClassesController,
+    ProfessionsController,
+    RecipesController,
+)
 from sidequest_api.domain.gm.controllers import GmController
 from sidequest_api.domain.groups.controllers import GroupStatsController, GroupVoiceController
 from sidequest_api.domain.guild_hub.controllers import (
@@ -41,12 +46,15 @@ from sidequest_api.domain.mcp.controllers import McpTokensController
 from sidequest_api.domain.member_links.controllers import MemberLinksController
 from sidequest_api.domain.member_profiles.controllers import MemberProfilesController
 from sidequest_api.domain.members.controllers import MembersController
+from sidequest_api.domain.pvp.controllers import PvpController
 from sidequest_api.domain.recruiting.controllers import RecruitingController
+from sidequest_api.domain.reference.controllers import AchievementsController, QuestsController
 from sidequest_api.domain.role_menus.controllers import RoleMenusController
 from sidequest_api.domain.role_resets.controllers import RoleResetsController
 from sidequest_api.domain.signup_notices.controllers import SignupNoticesController
 from sidequest_api.domain.stats.controllers import StatsController
 from sidequest_api.domain.system.controllers import HealthController
+from sidequest_api.domain.talents.controllers import MyTalentBuildsController, TalentBuildsController, TalentsController
 from sidequest_api.domain.weekly_board.controllers import WeeklyBoardController
 
 GUILD_API_PATH = "/api/guilds/{guild_id:int}"
@@ -103,4 +111,13 @@ public_routes = [
     ItemWishersController,
     CharactersController,
     RaidReadinessController,
+    QuestsController,
+    AchievementsController,
+    PvpController,
+    TalentsController,
+    TalentBuildsController,
+    MyTalentBuildsController,
+    ProfessionsController,
+    RecipesController,
+    GameClassesController,
 ]

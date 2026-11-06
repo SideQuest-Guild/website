@@ -21,8 +21,13 @@ import type {
   ItemWishUpdate,
   Me,
   Recruiting,
+  TalentBuild,
+  TalentBuildCreate,
 } from "../src/scripts/api";
 import {
+  ACHIEVEMENT_CATEGORIES,
+  ACHIEVEMENT_CATEGORY_DETAIL,
+  ACHIEVEMENTS,
   ADDONS,
   ATTENDANCE_EVENTS,
   ATTENDANCE_REPORT,
@@ -41,6 +46,7 @@ import {
   EPGP_STANDINGS,
   EPGP_SYNC_TOKENS,
   EVENTS,
+  GAME_CLASSES,
   GM_MEMBERS,
   GROUP_LEADERBOARD,
   GROUP_SESSIONS,
@@ -61,8 +67,18 @@ import {
   MCP_TOKENS,
   MIN_ITEM_LEVEL,
   ONLINE,
+  PROFESSIONS,
+  PROFESSION_SKILL_TIERS,
+  PVP_BOARDS,
+  PVP_MATCHES,
+  QUEST_AREA_SUMMARIES,
+  QUEST_AREAS,
+  QUESTS,
+  RECIPES,
   RECRUITING,
   SIGNUPS,
+  TALENTS_DRUID,
+  TALENT_BUILDS,
   attendanceDetail,
   epgpImportResult,
   eventDetail,
@@ -72,6 +88,7 @@ import {
   heroLeaderboard,
   heroProfile,
   itemSearch,
+  pvpMatchPage,
 } from "./data";
 
 type Site = {
@@ -205,6 +222,8 @@ export const test = base.extend<{ site: Site }>({
     let myCharacters: EpgpCharacter[] = [];
     let myWishlist: ItemWish[] = [];
     let nextCharacterId = 100;
+    let talentBuilds: TalentBuild[] = TALENT_BUILDS.map((b) => Object.assign({}, b));
+    let nextTalentBuildId = 100;
     const unmocked: string[] = [];
     const errors: string[] = [];
 
@@ -519,6 +538,49 @@ export const test = base.extend<{ site: Site }>({
           { detail: `Battle.net has no character ${slug}. It publishes a character some time after it logs out.` },
           404,
         );
+      }
+      if (path === "/api/quests/areas" && method === "GET") {
+        return json(route, QUEST_AREA_SUMMARIES);
+      }
+      const questAreaMatch = /^\/api\/quests\/areas\/(\d+)$/.exec(path);
+      if (questAreaMatch && method === "GET") {
+        const area = QUEST_AREAS.find((a) => a.id === Number(questAreaMatch[1]));
+        return area ? json(route, area) : json(route, { detail: "No such quest area" }, 404);
+      }
+      const questMatch = /^\/api\/quests\/(\d+)$/.exec(path);
+      if (questMatch && method === "GET") {
+        const quest = QUESTS.find((q) => q.id === Number(questMatch[1]));
+        return quest ? json(route, quest) : json(route, { detail: "No such quest" }, 404);
+      }
+      if (path === "/api/achievements/categories" && method === "GET") {
+        return json(route, ACHIEVEMENT_CATEGORIES);
+      }
+      const achievementCategoryMatch = /^\/api\/achievements\/categories\/(\d+)$/.exec(path);
+      if (achievementCategoryMatch && method === "GET") {
+        return Number(achievementCategoryMatch[1]) === ACHIEVEMENT_CATEGORY_DETAIL.id
+          ? json(route, ACHIEVEMENT_CATEGORY_DETAIL)
+          : json(route, { detail: "No such achievement category" }, 404);
+      }
+      const achievementMatch = /^\/api\/achievements\/(\d+)$/.exec(path);
+      if (achievementMatch && method === "GET") {
+        const achievement = ACHIEVEMENTS.find((a) => a.id === Number(achievementMatch[1]));
+        return achievement ? json(route, achievement) : json(route, { detail: "No such achievement" }, 404);
+      }
+      if (path === "/api/professions/" && method === "GET") {
+        return json(route, PROFESSIONS);
+      }
+      const professionMatch = /^\/api\/professions\/(\d+)$/.exec(path);
+      if (professionMatch && method === "GET") {
+        const tier = PROFESSION_SKILL_TIERS[Number(professionMatch[1])];
+        return tier ? json(route, tier) : json(route, { detail: "No such profession" }, 404);
+      }
+      const recipeMatch = /^\/api\/recipes\/(\d+)$/.exec(path);
+      if (recipeMatch && method === "GET") {
+        const recipe = RECIPES.find((r) => r.recipe_id === Number(recipeMatch[1]));
+        return recipe ? json(route, recipe) : json(route, { detail: "No such recipe" }, 404);
+      }
+      if (path === "/api/game/classes" && method === "GET") {
+        return json(route, GAME_CLASSES);
       }
       if (path === "/api/epgp/progression" && method === "GET") {
         return json(route, { instances: EPGP_PROGRESSION });
@@ -932,6 +994,102 @@ export const test = base.extend<{ site: Site }>({
         }
         myWishlist = myWishlist.filter((wish) => wish.item_id !== Number(wishlistDeleteMatch[1]));
         return route.fulfill({ status: 204 });
+      }
+      if (path === "/api/pvp/matches" && method === "GET") {
+        if (!me?.is_guild_member) {
+          return json(route, { detail: "Not signed in" }, 401);
+        }
+        const page = Number(url.searchParams.get("page") ?? 1);
+        return json(route, pvpMatchPage(PVP_MATCHES, page));
+      }
+      const pvpMatchDetailMatch = /^\/api\/pvp\/matches\/([^/]+)$/.exec(path);
+      if (pvpMatchDetailMatch && method === "GET") {
+        if (!me?.is_guild_member) {
+          return json(route, { detail: "Not signed in" }, 401);
+        }
+        const match = PVP_MATCHES.find((candidate) => candidate.id === pvpMatchDetailMatch[1]);
+        return match ? json(route, match) : json(route, { detail: "No such battleground" }, 404);
+      }
+      if (path === "/api/pvp/boards" && method === "GET") {
+        if (!me?.is_guild_member) {
+          return json(route, { detail: "Not signed in" }, 401);
+        }
+        return json(route, PVP_BOARDS);
+      }
+      const talentsClassMatch = /^\/api\/talents\/([^/]+)$/.exec(path);
+      if (talentsClassMatch && method === "GET") {
+        return talentsClassMatch[1] === "druid"
+          ? json(route, TALENTS_DRUID)
+          : json(route, { detail: "Unknown class" }, 400);
+      }
+      if (path === "/api/talent-builds" && method === "GET") {
+        const cls = url.searchParams.get("class");
+        return json(
+          route,
+          talentBuilds.filter((build) => build.pinned && build.class === cls),
+        );
+      }
+      if (path === "/api/me/talent-builds" && method === "GET") {
+        if (!me) {
+          return json(route, { detail: "Not signed in" }, 401);
+        }
+        return json(
+          route,
+          talentBuilds.filter((build) => build.member_id === me?.id),
+        );
+      }
+      if (path === "/api/me/talent-builds" && method === "POST") {
+        if (!me) {
+          return json(route, { detail: "Not signed in" }, 401);
+        }
+        const body = JSON.parse(request.postData() ?? "{}") as TalentBuildCreate;
+        if (!body.name || body.name.length > 60) {
+          return json(route, { detail: "Name must be 1-60 characters" }, 400);
+        }
+        if (talentBuilds.filter((build) => build.member_id === me?.id).length >= 20) {
+          return json(route, { detail: "You've already saved 20 talent builds." }, 409);
+        }
+        const created: TalentBuild = {
+          id: `talent-build-${nextTalentBuildId++}`,
+          class: body.class,
+          name: body.name,
+          code: body.code,
+          note: body.note ?? null,
+          pinned: false,
+          member_id: me.id,
+          member_name: me.display_name,
+          created_at: new Date().toISOString(),
+        };
+        talentBuilds = [created, ...talentBuilds];
+        return json(route, created, 201);
+      }
+      const talentBuildDeleteMatch = /^\/api\/me\/talent-builds\/([^/]+)$/.exec(path);
+      if (talentBuildDeleteMatch && method === "DELETE") {
+        if (!me) {
+          return json(route, { detail: "Not signed in" }, 401);
+        }
+        const target = talentBuilds.find((build) => build.id === talentBuildDeleteMatch[1]);
+        if (!target || target.member_id !== me.id) {
+          return json(route, { detail: "No such build" }, 404);
+        }
+        talentBuilds = talentBuilds.filter((build) => build.id !== target.id);
+        return route.fulfill({ status: 204 });
+      }
+      const talentBuildPinMatch = /^\/api\/talent-builds\/([^/]+)\/pin$/.exec(path);
+      if (talentBuildPinMatch && method === "PUT") {
+        if (!me) {
+          return json(route, { detail: "Not signed in" }, 401);
+        }
+        if (!me.is_officer) {
+          return json(route, { detail: "Officers only" }, 403);
+        }
+        const target = talentBuilds.find((build) => build.id === talentBuildPinMatch[1]);
+        if (!target) {
+          return json(route, { detail: "No such build" }, 404);
+        }
+        const body = JSON.parse(request.postData() ?? "{}") as { pinned: boolean };
+        target.pinned = body.pinned;
+        return json(route, target);
       }
     });
     // Sign-in leaves the site (the real server redirects to Discord): a stub shows the browser really loaded it.

@@ -1,0 +1,136 @@
+---
+import Room from "../../layouts/Room.astro";
+import hallOfHeroes from "../../../assets/rooms/hall-of-heroes.webp";
+import "../../styles/room-achievements.css";
+---
+
+<Room
+  title="Achievements · SideQuest"
+  description="Browse World of Warcraft: Forever's achievement categories and see any achievement's points and criteria."
+  heading="ACHIEVEMENTS"
+  lede="Every category's achievements, straight from Battle.net: points, icons and how to earn them."
+  art={hallOfHeroes}
+  artPosition="50% 38%"
+  current="achievements"
+>
+  <section class="chamber" aria-labelledby="h-categories">
+    <h2 class="chamber-title" id="h-categories">
+      Categories
+    </h2>
+    <p class="status" id="achievement-categories-status" role="status" aria-live="polite">
+      Loading&hellip;
+    </p>
+    <ul class="achievement-category-list" id="achievement-category-list" aria-label="Achievement categories"></ul>
+  </section>
+
+  <section class="chamber" aria-labelledby="h-achievements" id="achievement-list-section" hidden>
+    <h2 class="chamber-title" id="h-achievements">
+      Achievements
+    </h2>
+    <p class="status" id="achievement-list-status" role="status" aria-live="polite"></p>
+    <ul class="achievement-list" id="achievement-list" aria-label="Achievements in this category"></ul>
+  </section>
+
+  <noscript>
+    <p class="aside">Enable JavaScript to browse achievement categories.</p>
+  </noscript>
+</Room>
+
+<script>
+  import {
+    apiFetch,
+    ApiError,
+    escapeHtml,
+    requireElement,
+    statusMessage,
+    type AchievementCategory,
+    type AchievementCategoryTree,
+    type AchievementSummary,
+  } from "../../scripts/api";
+  import { loadWowheadTooltips, refreshWowheadLinks } from "../../scripts/items";
+  import { onPage } from "../../scripts/page";
+  import { achievementLink } from "../../scripts/reference";
+
+  function achievementRow(achievement: AchievementSummary): string {
+    const icon = achievement.icon_url
+      ? `<img class="achievement-row-icon" src="${escapeHtml(achievement.icon_url)}" alt="" width="32" height="32" />`
+      : `<span class="achievement-row-icon"></span>`;
+    return `
+      <li class="achievement-row">
+        ${icon}
+        <span>${achievementLink(achievement.id, achievement.name)}</span>
+        <span class="achievement-row-points">${achievement.points} pts</span>
+      </li>`;
+  }
+
+  onPage("#achievement-categories-status", (signal) => {
+    const statusEl = requireElement("achievement-categories-status");
+    const listEl = requireElement("achievement-category-list");
+    const listSectionEl = requireElement("achievement-list-section");
+    const listStatusEl = requireElement("achievement-list-status");
+    const achievementListEl = requireElement("achievement-list");
+    let activeCategoryId: number | null = null;
+
+    function categoryRow(root: AchievementCategoryTree): string {
+      const children = root.children
+        .map(
+          (child) =>
+            `<li><button type="button" class="achievement-category-row" data-category-id="${child.id}" aria-current="${child.id === activeCategoryId}">${escapeHtml(child.name)}</button></li>`,
+        )
+        .join("");
+      return `
+        <li>
+          <button type="button" class="achievement-category-row achievement-category-root" data-category-id="${root.id}" aria-current="${root.id === activeCategoryId}">${escapeHtml(root.name)}</button>
+          ${children ? `<ul class="achievement-category-children">${children}</ul>` : ""}
+        </li>`;
+    }
+
+    async function showCategory(categoryId: number): Promise<void> {
+      activeCategoryId = categoryId;
+      for (const button of listEl.querySelectorAll<HTMLButtonElement>("[data-category-id]")) {
+        button.setAttribute("aria-current", String(Number(button.dataset.categoryId) === categoryId));
+      }
+      listSectionEl.hidden = false;
+      listStatusEl.textContent = "Loading\u2026";
+      achievementListEl.innerHTML = "";
+      try {
+        const category = await apiFetch<AchievementCategory>(`/api/achievements/categories/${categoryId}`, {
+          signal,
+        });
+        listStatusEl.textContent = "";
+        achievementListEl.innerHTML =
+          category.achievements.length > 0
+            ? category.achievements.map(achievementRow).join("")
+            : `<li class="ledger-empty">No achievements recorded for this category yet.</li>`;
+        refreshWowheadLinks();
+      } catch (err) {
+        listStatusEl.textContent = statusMessage(err);
+      }
+    }
+
+    listEl.addEventListener("click", (event) => {
+      const button = (event.target as HTMLElement).closest<HTMLButtonElement>("[data-category-id]");
+      if (!button) {
+        return;
+      }
+      void showCategory(Number(button.dataset.categoryId));
+    });
+
+    async function init(): Promise<void> {
+      void loadWowheadTooltips();
+      try {
+        const roots = await apiFetch<AchievementCategoryTree[]>("/api/achievements/categories", { signal });
+        statusEl.textContent = roots.length > 0 ? "" : "No achievement categories found.";
+        listEl.innerHTML = roots.map(categoryRow).join("");
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 503) {
+          statusEl.textContent = "Battle.net isn't answering right now, so categories can't be shown. Try again soon.";
+        } else {
+          statusEl.textContent = statusMessage(err);
+        }
+      }
+    }
+
+    void init();
+  });
+</script>

@@ -1,0 +1,97 @@
+/* The Muster Yard: quest zones, one zone's quests, and one quest's own page. Reuses citadel.css's chamber/
+   form-row/field/status/aside primitives; row shapes mirror room-items.css's item-row without sharing a
+   stylesheet (quests and items never share a page). */
+
+/* ——— Zones: a filterable list of linked rows ——— */
+.quest-area-list {
+  margin: 16px 0 0;
+  list-style: none;
+  padding: 0;
+}
+.quest-area-list > li + li {
+  border-top: 1px solid var(--stone-2);
+}
+.quest-area-row {
+  display: block;
+  padding: 12px 0;
+  color: inherit;
+  text-decoration: none;
+  background: none;
+  border: none;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+.quest-area-row:hover,
+.quest-area-row:focus-visible {
+  color: var(--flavor);
+}
+.quest-area-row[aria-current="true"] {
+  color: var(--gold);
+}
+
+/* ——— A zone's quests ——— */
+.quest-list {
+  margin: 16px 0 0;
+  list-style: none;
+  padding: 0;
+}
+.quest-list > li + li {
+  border-top: 1px solid var(--stone-2);
+}
+.quest-list li {
+  padding: 10px 0;
+}
+
+/* ——— Quest detail ——— */
+.quest-detail-name {
+  margin: 0 0 2px;
+  font-family: var(--display);
+  font-size: clamp(21px, 2vw, 27px);
+  line-height: 1.15;
+  letter-spacing: 0.01em;
+  text-wrap: balance;
+}
+.quest-detail-meta {
+  margin: 6px 0 0;
+  color: var(--mist-2);
+}
+.quest-detail-description {
+  margin: 18px 0 0;
+  white-space: pre-line;
+}
+.quest-flags {
+  margin: 10px 0 0;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.quest-flag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border: 1px solid var(--stone-2);
+  border-radius: 999px;
+  font-size: var(--caps);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--mist);
+}
+.quest-rewards-list {
+  margin: 10px 0 0;
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.quest-wowhead-link {
+  margin-top: 18px;
+}
+
+@media (max-width: 560px) {
+  .quest-area-row {
+    padding: 14px 0;
+  }
+}

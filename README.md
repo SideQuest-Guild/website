@@ -27,11 +27,14 @@ flowchart LR
 | `/events/` | everyone | Upcoming and past events. Members also see who signed up, and can sign up themselves. |
 | `/raids/` | everyone | How raid nights, SQL loot and attendance work. |
 | `/ledger/` | everyone | Loot points for every raider, the loot rules, recent loot and boss kills. |
-| `/heroes/` | everyone (the rest is members) | The Hall of Heroes: a public "most grouped" board and four character hero boards (item level, honorable kills, PvP rank, achievement points), plus Renown, raids attended, chat level and badges for each member. A member's profile also shows a MEE6-style activity section: level, XP bar, message and voice stats, streaks and activity charts. |
+| `/heroes/` | everyone (the rest is members) | The Hall of Heroes: a public "most grouped" board and four character hero boards (item level, honorable kills, PvP rank, achievement points), each name shown with a small class icon, plus Renown, raids attended, chat level and badges for each member. A member's profile also shows a MEE6-style activity section: level, XP bar, message and voice stats, streaks and activity charts. |
 | `/guild/` | members | The in-game roster, who can craft what, the guild bank log and guild news. |
+| `/pvp/` | members | Battleground match history and PvP boards, recorded by members' addons. |
 | `/addons/` | everyone | The addons the guild uses, with download links. |
 | `/items/` | everyone | Find an item, see its tooltip, and who in the guild has already looted it. Members can keep a wishlist with a note; officers see who wants it next to their loot points. |
-| `/characters/` | everyone | The SideQuest roster's gear, item level, spec and last login, straight from Battle.net. Search finds any stored character; an exact name and surname looks anyone else up directly, since Battle.net has no name search. A Milestones row shows the latest characters to reach level 40 or 60. |
+| `/characters/` | everyone | The SideQuest roster's gear, item level, spec and last login, straight from Battle.net, each row marked with a small class icon. Search finds any stored character; an exact name and surname looks anyone else up directly, since Battle.net has no name search. A Milestones row shows the latest characters to reach level 40 or 60. |
+| `/talents/` | everyone | A classic talent calculator: pick a class, spend points across its three trees, and copy a share link. Members can save builds with a note; officers can pin a build as a raid recommendation. |
+| `/recipes/` | everyone | Browse every profession and its recipes, straight from Battle.net: what each one makes and the reagents it needs. A recipe's page also lists the guild characters who know it, linked from the Guild Hall's crafter search. |
 | `/account/` | anyone signed in | Link Battle.net, get a calendar link, mark away dates, or delete your account. |
 | `/officers/` | officers | Events, addons, recruiting, attendance, group voice stats, and guild-wide activity stats and leaderboards. Game Masters also get members, the activity log and moderation. |
 | `/officers/sync/` | officers | Move a raid night from the addon to the site, and points back to the addon. Vets recruits: link a recruit's Battle.net character by name and surname to see their level, gear, current guild (flagged if it isn't SideQuest) and last login. |

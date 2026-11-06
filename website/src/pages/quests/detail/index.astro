@@ -1,0 +1,129 @@
+---
+import Room from "../../../layouts/Room.astro";
+import musterYard from "../../../../assets/rooms/muster-yard.webp";
+import "../../../styles/room-quests.css";
+---
+
+<Room
+  title="Quest · SideQuest"
+  description="A quest's description, requirements and rewards, straight from Battle.net."
+  heading="QUEST"
+  art={musterYard}
+  artPosition="50% 42%"
+  current="quests"
+>
+  <script is:inline slot="head">
+    const questId = new URLSearchParams(location.search).get("id");
+    if (questId) {
+      const link = document.createElement("link");
+      Object.assign(link, { rel: "preload", as: "fetch", href: `/api/quests/${questId}`, crossOrigin: "anonymous" });
+      document.head.append(link);
+    }
+  </script>
+
+  <p class="status" id="quest-detail-status" role="status" aria-live="polite"></p>
+
+  <div id="quest-detail-content" hidden>
+    <section class="chamber" aria-labelledby="h-quest">
+      <h2 class="chamber-title" id="h-quest">
+        Quest
+      </h2>
+      <div id="quest-detail-card"></div>
+      <p class="quest-wowhead-link">
+        <!-- Wowhead's script puts its icon on every wowhead.com link; saying it's already there keeps it off the button. -->
+        <a
+          id="quest-wowhead-link"
+          href="#"
+          target="_blank"
+          rel="noreferrer"
+          data-astro-reload
+          data-wh-icon-added="true"
+        >
+          View on Wowhead
+        </a>
+      </p>
+    </section>
+  </div>
+
+  <noscript>
+    <p class="aside">Enable JavaScript to view this quest.</p>
+  </noscript>
+</Room>
+
+<script>
+  import {
+    apiFetch,
+    ApiError,
+    copperToGold,
+    escapeHtml,
+    requireElement,
+    statusMessage,
+    type Quest,
+  } from "../../../scripts/api";
+  import { itemLink, loadWowheadTooltips, refreshWowheadLinks } from "../../../scripts/items";
+  import { onPage } from "../../../scripts/page";
+
+  function renderQuest(quest: Quest): void {
+    const meta = [quest.area, quest.category, quest.type].filter(Boolean).join(" \u00b7 ");
+    const levels =
+      quest.min_level !== null || quest.max_level !== null
+        ? `Level ${quest.min_level ?? "?"}\u2013${quest.max_level ?? "?"}`
+        : "";
+    const flags = [
+      quest.is_repeatable ? "Repeatable" : "",
+      quest.is_daily ? "Daily" : "",
+      quest.is_weekly ? "Weekly" : "",
+    ]
+      .filter(Boolean)
+      .map((label) => `<span class="quest-flag">${label}</span>`)
+      .join("");
+    const rewards = quest.rewards;
+    const rewardLines = [
+      rewards.experience ? `<li>${rewards.experience.toLocaleString()} XP</li>` : "",
+      rewards.money ? `<li>${copperToGold(rewards.money)}</li>` : "",
+      ...rewards.items.map((item) => `<li>${itemLink(item.item_id, item.name)}</li>`),
+      ...rewards.reputations.map(
+        (rep) => `<li>${rep.value >= 0 ? "+" : ""}${rep.value} ${escapeHtml(rep.faction)} reputation</li>`,
+      ),
+    ].join("");
+    requireElement("quest-detail-card").innerHTML = `
+      <p class="quest-detail-name">${escapeHtml(quest.title)}</p>
+      ${meta ? `<p class="quest-detail-meta">${escapeHtml(meta)}${levels ? ` \u00b7 ${levels}` : ""}</p>` : levels ? `<p class="quest-detail-meta">${levels}</p>` : ""}
+      ${flags ? `<div class="quest-flags">${flags}</div>` : ""}
+      ${quest.description ? `<p class="quest-detail-description">${escapeHtml(quest.description)}</p>` : ""}
+      ${rewardLines ? `<h3>Rewards</h3><ul class="quest-rewards-list">${rewardLines}</ul>` : ""}`;
+    requireElement<HTMLAnchorElement>("quest-wowhead-link").href = `https://www.wowhead.com/forever/quest=${quest.id}`;
+    refreshWowheadLinks();
+  }
+
+  onPage("#quest-detail-status", (signal) => {
+    const statusEl = requireElement("quest-detail-status");
+    const contentEl = requireElement("quest-detail-content");
+
+    async function init(): Promise<void> {
+      const id = new URLSearchParams(location.search).get("id");
+      if (!id) {
+        statusEl.textContent = "No quest was given.";
+        return;
+      }
+      statusEl.textContent = "Loading\u2026";
+      void loadWowheadTooltips();
+      try {
+        const quest = await apiFetch<Quest>(`/api/quests/${id}`, { signal });
+        renderQuest(quest);
+        contentEl.hidden = false;
+        statusEl.textContent = "";
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 404) {
+          statusEl.textContent = "There's no such quest.";
+        } else if (err instanceof ApiError && err.status === 503) {
+          statusEl.textContent = "Battle.net isn't answering right now, so this quest can't be shown. Try again soon.";
+        } else {
+          statusEl.textContent = statusMessage(err);
+        }
+      }
+    }
+
+    void init();
+  });
+</script>

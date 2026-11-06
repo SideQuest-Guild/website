@@ -44,6 +44,17 @@
   font-size: 0.85rem;
   text-align: right;
 }
+
+/* ——— Small decorative class/spec icons (src/scripts/art.ts), drawn before a character's name ——— */
+.class-icon,
+.spec-icon {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border-radius: 3px;
+  vertical-align: -4px;
+  margin-right: 6px;
+}
 .char-row-meta {
   grid-column: 1 / -1;
   color: var(--mist-2);

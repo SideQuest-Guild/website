@@ -204,17 +204,17 @@ def _recent_achievements(achievements: CharacterAchievements | None) -> list[Cha
     """The latest earned achievements: Battle.net's recent events, or else the latest completed ones."""
     if achievements is None:
         return []
-    earned = [(event.achievement.name, event.timestamp) for event in achievements.recent_events]
+    earned = [(event.achievement.id, event.achievement.name, event.timestamp) for event in achievements.recent_events]
     if not earned:
         earned = [
-            (entry.achievement.name, entry.completed_timestamp)
+            (entry.achievement.id, entry.achievement.name, entry.completed_timestamp)
             for entry in achievements.achievements
             if entry.completed_timestamp
         ]
-    earned.sort(key=lambda pair: -pair[1])
+    earned.sort(key=lambda row: -row[2])
     return [
-        CharacterAchievementLine(name=name, completed_at=datetime.fromtimestamp(timestamp / 1000, UTC))
-        for name, timestamp in earned[:RECENT_ACHIEVEMENTS]
+        CharacterAchievementLine(id=id_, name=name, completed_at=datetime.fromtimestamp(timestamp / 1000, UTC))
+        for id_, name, timestamp in earned[:RECENT_ACHIEVEMENTS]
     ]
 
 
@@ -233,18 +233,22 @@ async def fetch_character(game_data: AsyncClient, slug: str) -> dict[str, object
     """
     characters = game_data.characters
     profile = await characters.get(slug)
-    async with asyncio.TaskGroup() as group:
-        equipment = group.create_task(_optional(characters.equipment(slug)))
-        statistics = group.create_task(_optional(characters.statistics(slug)))
-        specializations = group.create_task(_optional(characters.specializations(slug)))
-        professions = group.create_task(_optional(characters.professions(slug)))
-        reputations = group.create_task(_optional(characters.reputations(slug)))
-        pvp = group.create_task(_optional(characters.pvp_summary(slug)))
-        achievements = group.create_task(_optional(characters.achievements(slug)))
-        mounts = group.create_task(_optional(characters.mounts(slug)))
-        pets = group.create_task(_optional(characters.pets(slug)))
-        toys = group.create_task(_optional(characters.toys(slug)))
-        completed = group.create_task(_optional(characters.completed_quests(slug)))
+    try:
+        async with asyncio.TaskGroup() as group:
+            equipment = group.create_task(_optional(characters.equipment(slug)))
+            statistics = group.create_task(_optional(characters.statistics(slug)))
+            specializations = group.create_task(_optional(characters.specializations(slug)))
+            professions = group.create_task(_optional(characters.professions(slug)))
+            reputations = group.create_task(_optional(characters.reputations(slug)))
+            pvp = group.create_task(_optional(characters.pvp_summary(slug)))
+            achievements = group.create_task(_optional(characters.achievements(slug)))
+            mounts = group.create_task(_optional(characters.mounts(slug)))
+            pets = group.create_task(_optional(characters.pets(slug)))
+            toys = group.create_task(_optional(characters.toys(slug)))
+            completed = group.create_task(_optional(characters.completed_quests(slug)))
+    except* WowError as failures:
+        # Callers catch the WowError itself, not the ExceptionGroup a TaskGroup wraps it in.
+        raise failures.exceptions[0] from None
     trees = talent_trees(specializations.result())
     mounts_doc, pets_doc, toys_doc, completed_doc = mounts.result(), pets.result(), toys.result(), completed.result()
     sheet = CharacterSheet(

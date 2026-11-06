@@ -940,6 +940,8 @@ export type GuildCrafterResult = {
   recipe_id: number;
   recipe_name: string;
   item_id: number | null;
+  /** The matching Battle.net recipe id, if Battle.net was reachable; links to `/recipes/detail/?id=`. */
+  battlenet_recipe_id: number | null;
   crafters: GuildCrafter[];
 };
 
@@ -1108,6 +1110,57 @@ export type Item = ItemSummary & {
   loot_price: ItemLootPrice | null;
 };
 
+// ——— Professions, recipes, and class/spec art: GET /api/professions[/{id}], GET /api/recipes/{id},
+// GET /api/game/classes. Battle.net-backed reference data; mirrors `sidequest_common.schemas.recipes`. A 503
+// means Battle.net itself is down or unconfigured.
+
+/** One `GET /api/professions` row. */
+export type Profession = {
+  id: number;
+  name: string;
+  type: "PRIMARY" | "SECONDARY";
+  icon_url: string | null;
+  skill_tier_id: number;
+};
+
+/** A recipe reference in a skill tier category: just enough to list and link it. */
+export type RecipeRef = { id: number; name: string };
+
+/** A group of recipes in a profession's skill tier, such as Weapon Stones. */
+export type RecipeCategory = { name: string; recipes: RecipeRef[] };
+
+/** `GET /api/professions/{id}` (public): one profession's skill tier, its categories and recipes. 404 unknown. */
+export type ProfessionSkillTier = { profession_id: number; profession_name: string; categories: RecipeCategory[] };
+
+/** The item a recipe makes. */
+export type RecipeCraftedItem = { item_id: number; name: string; quality: string | null };
+
+/** One reagent a recipe uses, and how many. */
+export type RecipeReagent = { item_id: number; name: string; quantity: number; quality: string | null };
+
+/** A guild character that knows a recipe, matched from the addon's profession data by profession and name. */
+export type RecipeCrafter = { character: string; member_id: number | null; member_name: string | null; skill: number };
+
+/** `GET /api/recipes/{id}` (public): a single recipe, with its reagents and the guild characters who know it. */
+export type RecipeDetailInfo = {
+  recipe_id: number;
+  name: string;
+  description: string | null;
+  rank: number | null;
+  profession: string | null;
+  icon_url: string | null;
+  crafted_item: RecipeCraftedItem | null;
+  crafted_quantity: string | null;
+  reagents: RecipeReagent[];
+  crafters: RecipeCrafter[];
+};
+
+/** One specialization on a `GameClass`, for the site's small class/spec icons. */
+export type GameSpec = { id: number; name: string; icon_url: string | null };
+
+/** `GET /api/game/classes` (public): one playable class, its specs and small art. */
+export type GameClass = { class: CharClass; name: string; icon_url: string | null; specs: GameSpec[] };
+
 // ——— Characters: GET /api/characters/[?q=], GET /api/characters/{slug}, GET /api/characters/boards. A
 // Battle.net-backed roster + public character sheet; mirrors `sidequest_common.schemas.characters` (once it
 // exists there). A 503 means Battle.net itself is down and the character was never stored; a 404 means Battle.net
@@ -1152,7 +1205,7 @@ export type CharacterStat = { label: string; value: string };
 export type CharacterTalent = { name: string; points: number };
 export type CharacterProfession = { name: string; skill: number; max_skill: number; recipes: number };
 export type CharacterReputation = { faction: string; standing: string; value: number; max: number };
-export type CharacterAchievement = { name: string; completed_at: string };
+export type CharacterAchievement = { id: number | null; name: string; completed_at: string };
 
 /** The Battle.net-fetched half of `CharacterPage`; `null` when `profile_found` is false. */
 export type CharacterSheet = {
@@ -1238,6 +1291,74 @@ export function relativeTime(iso: string): string {
   return `${years} year${years === 1 ? "" : "s"} ago`;
 }
 
+// ——— Quests: GET /api/quests/areas[/{id}], GET /api/quests/{id}. Public, Battle.net-backed reference data;
+// mirrors `sidequest_common.schemas.reference`. A 503 means Battle.net itself is down/unconfigured; a 404 means
+// Battle.net has no such zone or quest.
+
+export type QuestAreaSummary = { id: number; name: string };
+
+export type QuestSummary = { id: number; title: string };
+
+/** `GET /api/quests/areas/{id}` (public): a quest zone and the quests that take place there. 404 unknown zone. */
+export type QuestArea = { id: number; name: string; quests: QuestSummary[] };
+
+export type QuestRewardItem = { item_id: number; name: string };
+
+export type QuestReputationReward = { faction: string; value: number };
+
+/** What completing a quest gives; `money` is copper. */
+export type QuestRewards = {
+  experience: number | null;
+  money: number | null;
+  items: QuestRewardItem[];
+  reputations: QuestReputationReward[];
+};
+
+/** `GET /api/quests/{id}` (public): a single quest. Description placeholders like `{class}` appear as Battle.net
+ * sends them. 404 unknown quest. */
+export type Quest = {
+  id: number;
+  title: string;
+  description: string | null;
+  area: string | null;
+  category: string | null;
+  type: string | null;
+  min_level: number | null;
+  max_level: number | null;
+  is_repeatable: boolean;
+  is_daily: boolean;
+  is_weekly: boolean;
+  rewards: QuestRewards;
+};
+
+// ——— Achievements: GET /api/achievements/categories[/{id}], GET /api/achievements/{id}. Public, Battle.net-backed
+// reference data; mirrors `sidequest_common.schemas.reference`.
+
+export type AchievementCategorySummary = { id: number; name: string };
+
+/** One root category of `GET /api/achievements/categories` (public), with its subcategories. */
+export type AchievementCategoryTree = { id: number; name: string; children: AchievementCategorySummary[] };
+
+export type AchievementSummary = { id: number; name: string; points: number; icon_url: string | null };
+
+/** `GET /api/achievements/categories/{id}` (public): a category and the achievements in it. 404 unknown category. */
+export type AchievementCategory = { id: number; name: string; achievements: AchievementSummary[] };
+
+/** One condition (or branch of conditions) that completes an achievement. */
+export type AchievementCriterion = { description: string | null; amount: number; children: AchievementCriterion[] };
+
+/** `GET /api/achievements/{id}` (public): a single achievement. 404 unknown achievement. */
+export type Achievement = {
+  id: number;
+  name: string;
+  description: string;
+  points: number;
+  icon_url: string | null;
+  category: string | null;
+  reward_description: string | null;
+  criteria: AchievementCriterion;
+};
+
 // ——— Item wishlist: GET/PUT/DELETE /api/me/wishlist[/{item_id}], GET /api/items/{item_id}/wishers (officer). A
 // wish never changes the loot rules or the SQL addon; it only lets officers see who wants an item next.
 
@@ -1265,6 +1386,48 @@ export type ItemWisher = {
   gp: number;
   pr: number;
   trial: boolean;
+};
+
+// ——— Talent calculator: GET /api/talents/{class}, GET/POST/DELETE /api/me/talent-builds[/{id}], GET
+// /api/talent-builds?class=, PUT /api/talent-builds/{id}/pin (officer). A build's `code` holds one digit per
+// talent node (its spent rank), node order sorted by (row, col) within each tree, the three trees joined by `-`.
+
+export const MAX_TALENT_POINTS = 51;
+export const FIRST_TALENT_LEVEL = 10;
+
+export type TalentRank = { spell_id: number; description: string };
+
+/** One node in a talent tree, positioned on its (row, col) grid. `requires` is a prerequisite node id, or null. */
+export type TalentNode = {
+  id: number;
+  row: number;
+  col: number;
+  max_rank: number;
+  talent_id: number;
+  name: string;
+  ranks: TalentRank[];
+  requires: number | null;
+};
+
+export type TalentTree = { spec_id: number; name: string; icon_url: string | null; nodes: TalentNode[] };
+
+/** `GET /api/talents/{class}`: a class's three specialization trees, in spec order. */
+export type ClassTalents = { class: CharClass; trees: TalentTree[]; max_points: number; first_level: number };
+
+/** Body for `POST /api/me/talent-builds`. */
+export type TalentBuildCreate = { class: CharClass; name: string; code: string; note?: string | null };
+
+/** One saved talent build, from `GET /api/me/talent-builds` or `GET /api/talent-builds?class=`. */
+export type TalentBuild = {
+  id: string;
+  class: CharClass;
+  name: string;
+  code: string;
+  note: string | null;
+  pinned: boolean;
+  member_id: number;
+  member_name: string;
+  created_at: string;
 };
 
 export type GuildNewsKind = "boss_kill" | "first_kill" | "loot" | "level" | "joined" | "announcement" | "badge";
@@ -1360,6 +1523,63 @@ export type EpgpMemberNote = {
 };
 
 export type EpgpMemberNotes = { notes: EpgpMemberNote[] };
+
+// ——— PvP: GET /api/pvp/matches[?page=], GET /api/pvp/matches/{id}, GET /api/pvp/boards. Members only. Mirrors
+// `sidequest_common.schemas.pvp`; built from the addon's recorded battleground scoreboards.
+
+export type BattlegroundFaction = "alliance" | "horde";
+export type BattlegroundWinner = "alliance" | "horde" | "draw";
+
+/** One scoreboard row on a match's full detail. `guild_member` is true for a SideQuest character; `character_slug`
+ * links to its character page when known. */
+export type PvpPlayerRow = {
+  name: string;
+  faction: BattlegroundFaction;
+  race: string | null;
+  class: CharClass | null;
+  killing_blows: number;
+  honorable_kills: number;
+  deaths: number;
+  honor_gained: number;
+  damage_done: number;
+  healing_done: number;
+  guild_member: boolean;
+  character_slug: string | null;
+};
+
+/** One battleground in the match history. `won` is null when the winner is unknown or a draw. */
+export type PvpMatchSummary = {
+  id: string;
+  map: string;
+  ended_at: string;
+  duration: number;
+  winner: BattlegroundWinner | null;
+  guild_faction: BattlegroundFaction;
+  won: boolean | null;
+  guild_players: string[];
+  recorded_by: string;
+};
+
+/** `GET /api/pvp/matches/{id}` (member). 404 unknown match. Players are sorted highest honorable kills first. */
+export type PvpMatchDetail = PvpMatchSummary & { players: PvpPlayerRow[] };
+
+/** `GET /api/pvp/matches?page=` (member): newest first, 25 matches a page. */
+export type PvpMatchPage = { page: number; page_count: number; matches: PvpMatchSummary[] };
+
+/** One name on a `PvpBoards` top-10 list. */
+export type PvpBoardEntry = { name: string; class: CharClass | null; character_slug: string | null; value: number };
+
+/** `GET /api/pvp/boards` (member): totals over every recorded battleground for SideQuest characters, ten to a
+ * board. Any list may be empty. */
+export type PvpBoards = {
+  matches: number;
+  wins: PvpBoardEntry[];
+  honorable_kills: PvpBoardEntry[];
+  killing_blows: PvpBoardEntry[];
+  honor_gained: PvpBoardEntry[];
+  damage_done: PvpBoardEntry[];
+  healing_done: PvpBoardEntry[];
+};
 
 /** Raised for any non-2xx/204 response; `status` 0 means the request never reached the network. */
 export class ApiError extends Error {

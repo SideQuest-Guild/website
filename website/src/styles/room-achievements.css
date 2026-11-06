@@ -1,0 +1,137 @@
+/* The Hall of Heroes' sibling for raw Battle.net achievement data: categories, one category's achievements, and
+   one achievement's own page. Reuses citadel.css's chamber/status/aside primitives; row shapes mirror
+   room-quests.css's quest-area-list without sharing a stylesheet. */
+
+/* ——— Categories: root categories, each with its clickable children ——— */
+.achievement-category-list {
+  margin: 16px 0 0;
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.achievement-category-root {
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--ink);
+}
+.achievement-category-children {
+  margin: 8px 0 0;
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+}
+.achievement-category-row {
+  background: none;
+  border: none;
+  padding: 2px 0;
+  color: var(--mist);
+  text-decoration: none;
+  font: inherit;
+  cursor: pointer;
+}
+.achievement-category-row:hover,
+.achievement-category-row:focus-visible {
+  color: var(--flavor);
+}
+.achievement-category-row[aria-current="true"] {
+  color: var(--gold);
+}
+
+/* ——— A category's achievements ——— */
+.achievement-list {
+  margin: 16px 0 0;
+  list-style: none;
+  padding: 0;
+}
+.achievement-list > li + li {
+  border-top: 1px solid var(--stone-2);
+}
+.achievement-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+}
+.achievement-row-icon {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--stone-2);
+  border-radius: 4px;
+}
+.achievement-row-points {
+  margin-left: auto;
+  color: var(--mist-2);
+  white-space: nowrap;
+}
+
+/* ——— Achievement detail ——— */
+.achievement-detail-head {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.achievement-detail-name {
+  margin: 0 0 2px;
+  font-family: var(--display);
+  font-size: clamp(21px, 2vw, 27px);
+  line-height: 1.15;
+  letter-spacing: 0.01em;
+  text-wrap: balance;
+}
+.achievement-detail-icon {
+  flex: none;
+  width: 56px;
+  height: 56px;
+  border: 1px solid var(--stone-2);
+  border-radius: 6px;
+}
+.achievement-detail-icon-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border: 1px solid var(--stone-2);
+  border-radius: 6px;
+  color: var(--mist-2);
+  font-size: var(--caps);
+}
+.achievement-detail-points {
+  margin: 4px 0 0;
+  color: var(--mist-2);
+}
+.achievement-detail-description {
+  margin: 18px 0 0;
+}
+.achievement-reward-description {
+  margin: 10px 0 0;
+  color: var(--mist);
+}
+.achievement-criteria-list {
+  margin: 10px 0 0;
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.achievement-criteria-list .achievement-criteria-list {
+  margin: 6px 0 0 20px;
+}
+.achievement-wowhead-link {
+  margin-top: 18px;
+}
+
+@media (max-width: 560px) {
+  .achievement-row {
+    flex-wrap: wrap;
+  }
+  .achievement-row-points {
+    margin-left: 0;
+  }
+}

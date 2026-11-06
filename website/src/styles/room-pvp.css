@@ -1,0 +1,209 @@
+/* PvP: the members-only battleground match history and boards, and one match's full scoreboard. */
+
+/* ——— PvP boards: six small top-10 lists, same rank/name/value row shape as the Hall of Heroes boards ——— */
+.pvp-boards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 24px;
+  margin-top: 14px;
+}
+.pvp-board .sub-title {
+  margin: 0;
+}
+.pvp-board-list {
+  display: grid;
+  gap: 6px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.pvp-board-row {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border: 1px solid var(--stone-2);
+  background: rgba(10, 16, 29, 0.4);
+}
+.pvp-board-rank {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--stone);
+  border-radius: 50%;
+  font-family: var(--serif);
+  font-size: 13px;
+  color: var(--mist);
+}
+.pvp-board-rank.rank-gold {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+.pvp-board-rank.rank-silver {
+  border-color: var(--ink-2);
+  color: var(--ink-2);
+}
+.pvp-board-rank.rank-bronze {
+  border-color: var(--gold-2);
+  color: var(--gold-2);
+}
+.pvp-board-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ink);
+  text-decoration: none;
+}
+.pvp-board-name:hover,
+.pvp-board-name:focus-visible {
+  color: var(--gold);
+}
+.pvp-board-value {
+  font-family: var(--serif);
+  font-variant-numeric: tabular-nums lining-nums;
+  color: var(--gold);
+}
+.pvp-board-empty {
+  margin-top: 10px;
+}
+
+/* ——— Match history: one row per recorded battleground ——— */
+.pvp-matches {
+  display: grid;
+  gap: 10px;
+  margin: 18px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.pvp-match-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px 18px;
+  padding: 14px 16px;
+  border: 1px solid var(--stone-2);
+  background: rgba(10, 16, 29, 0.4);
+  color: var(--ink);
+  text-decoration: none;
+  transition:
+    background-color 0.3s,
+    border-color 0.3s;
+}
+.pvp-match-row:hover,
+.pvp-match-row:focus-visible {
+  background: linear-gradient(90deg, rgba(46, 74, 133, 0.42), rgba(46, 74, 133, 0.08));
+  border-color: var(--gold-2);
+}
+.pvp-match-map {
+  font-family: var(--serif);
+  font-size: 17px;
+}
+.pvp-match-meta {
+  color: var(--mist-2);
+  font-size: 13px;
+}
+.pvp-match-players {
+  grid-column: 1 / -1;
+  color: var(--mist-2);
+  font-size: 13px;
+}
+.pvp-result {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 12px;
+  border: 1px solid var(--stone);
+  font-family: var(--serif);
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.pvp-result.is-won {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+.pvp-result.is-lost {
+  border-color: #8a4a4a;
+  color: #e0a0a0;
+}
+.pvp-result.is-draw {
+  color: var(--mist-2);
+}
+.pvp-pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  margin-top: 18px;
+}
+.pvp-page-label {
+  color: var(--mist-2);
+  font-size: 13px;
+}
+
+@media (max-width: 560px) {
+  .pvp-match-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ——— Match detail: both sides' full scoreboard, guild rows highlighted ——— */
+.pvp-match-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 18px;
+  margin-top: 14px;
+}
+/* Scrolls inside its own frame rather than the whole page, like the ledger's standings table. */
+.pvp-scoreboard-wrap {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  margin-top: clamp(20px, 2vw, 28px);
+  overflow-x: auto;
+}
+.pvp-scoreboard {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+.pvp-scoreboard th,
+.pvp-scoreboard td {
+  padding: 8px 10px;
+  text-align: right;
+  border-bottom: 1px solid var(--stone-2);
+  white-space: nowrap;
+}
+.pvp-scoreboard th:first-child,
+.pvp-scoreboard td:first-child {
+  text-align: left;
+}
+.pvp-scoreboard th {
+  color: var(--mist-2);
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  user-select: none;
+}
+.pvp-scoreboard th:hover,
+.pvp-scoreboard th:focus-visible {
+  color: var(--gold);
+}
+.pvp-scoreboard tbody tr.is-guild {
+  background: rgba(216, 171, 92, 0.1);
+}
+.pvp-scoreboard-name {
+  text-decoration: none;
+  color: inherit;
+}
+.pvp-scoreboard-name:hover,
+.pvp-scoreboard-name:focus-visible {
+  color: var(--gold);
+}

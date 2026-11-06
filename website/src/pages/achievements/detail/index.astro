@@ -1,0 +1,135 @@
+---
+import Room from "../../../layouts/Room.astro";
+import hallOfHeroes from "../../../../assets/rooms/hall-of-heroes.webp";
+import "../../../styles/room-achievements.css";
+---
+
+<Room
+  title="Achievement · SideQuest"
+  description="An achievement's points, criteria and reward, straight from Battle.net."
+  heading="ACHIEVEMENT"
+  art={hallOfHeroes}
+  artPosition="50% 38%"
+  current="achievements"
+>
+  <script is:inline slot="head">
+    const achievementId = new URLSearchParams(location.search).get("id");
+    if (achievementId) {
+      const link = document.createElement("link");
+      Object.assign(link, {
+        rel: "preload",
+        as: "fetch",
+        href: `/api/achievements/${achievementId}`,
+        crossOrigin: "anonymous",
+      });
+      document.head.append(link);
+    }
+  </script>
+
+  <p class="status" id="achievement-detail-status" role="status" aria-live="polite"></p>
+
+  <div id="achievement-detail-content" hidden>
+    <section class="chamber" aria-labelledby="h-achievement">
+      <h2 class="chamber-title" id="h-achievement">
+        Achievement
+      </h2>
+      <div id="achievement-detail-card"></div>
+      <p class="achievement-wowhead-link">
+        <!-- Wowhead's script puts its icon on every wowhead.com link; saying it's already there keeps it off the button. -->
+        <a
+          id="achievement-wowhead-link"
+          href="#"
+          target="_blank"
+          rel="noreferrer"
+          data-astro-reload
+          data-wh-icon-added="true"
+        >
+          View on Wowhead
+        </a>
+      </p>
+    </section>
+  </div>
+
+  <noscript>
+    <p class="aside">Enable JavaScript to view this achievement.</p>
+  </noscript>
+</Room>
+
+<script>
+  import {
+    apiFetch,
+    ApiError,
+    escapeHtml,
+    requireElement,
+    statusMessage,
+    type Achievement,
+    type AchievementCriterion,
+  } from "../../../scripts/api";
+  import { loadWowheadTooltips, refreshWowheadLinks } from "../../../scripts/items";
+  import { onPage } from "../../../scripts/page";
+
+  function criterionRow(criterion: AchievementCriterion): string {
+    const amount = criterion.amount > 1 ? ` (${criterion.amount})` : "";
+    const label = criterion.description ? `${escapeHtml(criterion.description)}${amount}` : "";
+    const children = criteriaList(criterion.children);
+    return label || children ? `<li>${label}${children}</li>` : "";
+  }
+
+  function criteriaList(criteria: AchievementCriterion[]): string {
+    const rows = criteria.map(criterionRow).join("");
+    return rows ? `<ul class="achievement-criteria-list">${rows}</ul>` : "";
+  }
+
+  function renderAchievement(achievement: Achievement): void {
+    const icon = achievement.icon_url
+      ? `<img class="achievement-detail-icon" src="${escapeHtml(achievement.icon_url)}" alt="" width="56" height="56" />`
+      : `<span class="achievement-detail-icon-placeholder">No icon</span>`;
+    const criteria = criteriaList([achievement.criteria]);
+    requireElement("achievement-detail-card").innerHTML = `
+      <div class="achievement-detail-head">
+        ${icon}
+        <div>
+          <p class="achievement-detail-name">${escapeHtml(achievement.name)}</p>
+          <p class="achievement-detail-points">${achievement.points} points${achievement.category ? ` \u00b7 ${escapeHtml(achievement.category)}` : ""}</p>
+        </div>
+      </div>
+      <p class="achievement-detail-description">${escapeHtml(achievement.description)}</p>
+      ${achievement.reward_description ? `<p class="achievement-reward-description">Reward: ${escapeHtml(achievement.reward_description)}</p>` : ""}
+      ${criteria ? `<h3>How to earn it</h3>${criteria}` : ""}`;
+    requireElement<HTMLAnchorElement>("achievement-wowhead-link").href =
+      `https://www.wowhead.com/forever/achievement=${achievement.id}`;
+    refreshWowheadLinks();
+  }
+
+  onPage("#achievement-detail-status", (signal) => {
+    const statusEl = requireElement("achievement-detail-status");
+    const contentEl = requireElement("achievement-detail-content");
+
+    async function init(): Promise<void> {
+      const id = new URLSearchParams(location.search).get("id");
+      if (!id) {
+        statusEl.textContent = "No achievement was given.";
+        return;
+      }
+      statusEl.textContent = "Loading\u2026";
+      void loadWowheadTooltips();
+      try {
+        const achievement = await apiFetch<Achievement>(`/api/achievements/${id}`, { signal });
+        renderAchievement(achievement);
+        contentEl.hidden = false;
+        statusEl.textContent = "";
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 404) {
+          statusEl.textContent = "There's no such achievement.";
+        } else if (err instanceof ApiError && err.status === 503) {
+          statusEl.textContent =
+            "Battle.net isn't answering right now, so this achievement can't be shown. Try again soon.";
+        } else {
+          statusEl.textContent = statusMessage(err);
+        }
+      }
+    }
+
+    void init();
+  });
+</script>

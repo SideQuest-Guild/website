@@ -98,6 +98,7 @@ class CharacterAchievementLine(BaseModel):
 
     name: str
     completed_at: datetime
+    id: int | None = Field(None, description="The achievement's game ID, linking to its reference page.")
 
 
 class CharacterSheet(BaseModel):

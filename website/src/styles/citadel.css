@@ -359,6 +359,16 @@ textarea {
 .item-link:focus-visible {
   text-decoration: underline;
 }
+/* A quest or achievement name linking to its detail page (scripts/reference.ts), same undecorated-until-hover
+   look as .item-link above, without a quality color. */
+.ref-link {
+  color: inherit;
+  text-decoration: none;
+}
+.ref-link:hover,
+.ref-link:focus-visible {
+  text-decoration: underline;
+}
 .q-poor {
   color: var(--q-poor);
 }
@@ -847,8 +857,9 @@ textarea {
     background: linear-gradient(to bottom, rgba(6, 10, 18, 0.82), rgba(6, 10, 18, 0.35));
   }
   .room-title .heading h1 {
+    min-width: 0;
     white-space: normal;
-    text-wrap: balance;
+    overflow-wrap: anywhere;
   }
   .room-title .heading .rule {
     flex-basis: 24px;

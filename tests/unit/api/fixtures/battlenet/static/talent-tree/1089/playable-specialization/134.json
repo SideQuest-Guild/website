@@ -1,0 +1,1480 @@
+{
+ "_links": {
+  "self": {
+   "href": "https://us.api.blizzard.com/data/wow/talent-tree/1089/playable-specialization/134?namespace=static-1.60.1_70399-forever-us"
+  }
+ },
+ "id": 1089,
+ "playable_class": {
+  "key": {
+   "href": "https://us.api.blizzard.com/data/wow/playable-class/11?namespace=static-1.60.1_70399-forever-us"
+  },
+  "name": "Druid",
+  "id": 11
+ },
+ "playable_specialization": {
+  "key": {
+   "href": "https://us.api.blizzard.com/data/wow/playable-specialization/134?namespace=static-1.60.1_70399-forever-us"
+  },
+  "name": "Feral Combat",
+  "id": 134
+ },
+ "name": "Feral Combat",
+ "media": {
+  "key": {
+   "href": "https://us.api.blizzard.com/data/wow/media/talent-tree/1089/playable-specialization/134?namespace=static-1.60.1_70399-forever-us"
+  }
+ },
+ "spec_talent_nodes": [
+  {
+   "id": 104938,
+   "node_type": {
+    "id": 0,
+    "type": "ACTIVE"
+   },
+   "ranks": [
+    {
+     "rank": 1,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134399?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Ferocity",
+       "id": 134399
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/16934?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Ferocity",
+        "id": 16934
+       },
+       "description": "Reduces the cost of your Maul, Primal Bite, Swipe, Claw, and Rake abilities by 1 Rage or Energy.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 2,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134399?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Ferocity",
+       "id": 134399
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/16934?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Ferocity",
+        "id": 16934
+       },
+       "description": "Reduces the cost of your Maul, Primal Bite, Swipe, Claw, and Rake abilities by 2 Rage or Energy.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 3,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134399?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Ferocity",
+       "id": 134399
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/16934?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Ferocity",
+        "id": 16934
+       },
+       "description": "Reduces the cost of your Maul, Primal Bite, Swipe, Claw, and Rake abilities by 3 Rage or Energy.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 4,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134399?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Ferocity",
+       "id": 134399
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/16934?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Ferocity",
+        "id": 16934
+       },
+       "description": "Reduces the cost of your Maul, Primal Bite, Swipe, Claw, and Rake abilities by 4 Rage or Energy.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 5,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134399?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Ferocity",
+       "id": 134399
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/16934?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Ferocity",
+        "id": 16934
+       },
+       "description": "Reduces the cost of your Maul, Primal Bite, Swipe, Claw, and Rake abilities by 5 Rage or Energy.",
+       "cast_time": "Passive"
+      }
+     }
+    }
+   ],
+   "display_row": 1,
+   "display_col": 8,
+   "raw_position_x": 5620,
+   "raw_position_y": 2130
+  },
+  {
+   "id": 104939,
+   "node_type": {
+    "id": 0,
+    "type": "ACTIVE"
+   },
+   "ranks": [
+    {
+     "rank": 1,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134400?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Furor",
+       "id": 134400
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/17056?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Furor",
+        "id": 17056
+       },
+       "description": "Gives you a 20% chance to gain 10 Rage when shapeshifting into Bear Form or Dire Bear Form. Shapeshifting into Cat Form restores 20% of the Energy you had when last in Cat Form, plus 2 Energy per second spent outside Bear Form or Dire Bear Form, up to 20 Energy.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 2,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134400?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Furor",
+       "id": 134400
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/17056?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Furor",
+        "id": 17056
+       },
+       "description": "Gives you a 40% chance to gain 10 Rage when shapeshifting into Bear Form or Dire Bear Form. Shapeshifting into Cat Form restores 40% of the Energy you had when last in Cat Form, plus 4 Energy per second spent outside Bear Form or Dire Bear Form, up to 40 Energy.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 3,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134400?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Furor",
+       "id": 134400
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/17056?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Furor",
+        "id": 17056
+       },
+       "description": "Gives you a 60% chance to gain 10 Rage when shapeshifting into Bear Form or Dire Bear Form. Shapeshifting into Cat Form restores 60% of the Energy you had when last in Cat Form, plus 6 Energy per second spent outside Bear Form or Dire Bear Form, up to 60 Energy.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 4,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134400?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Furor",
+       "id": 134400
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/17056?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Furor",
+        "id": 17056
+       },
+       "description": "Gives you a 80% chance to gain 10 Rage when shapeshifting into Bear Form or Dire Bear Form. Shapeshifting into Cat Form restores 80% of the Energy you had when last in Cat Form, plus 8 Energy per second spent outside Bear Form or Dire Bear Form, up to 80 Energy.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 5,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134400?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Furor",
+       "id": 134400
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/17056?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Furor",
+        "id": 17056
+       },
+       "description": "Gives you a 100% chance to gain 10 Rage when shapeshifting into Bear Form or Dire Bear Form. Shapeshifting into Cat Form restores 100% of the Energy you had when last in Cat Form, plus 10 Energy per second spent outside Bear Form or Dire Bear Form, up to 100 Energy.",
+       "cast_time": "Passive"
+      }
+     }
+    }
+   ],
+   "display_row": 1,
+   "display_col": 9,
+   "raw_position_x": 6220,
+   "raw_position_y": 2130
+  },
+  {
+   "id": 104943,
+   "node_type": {
+    "id": 0,
+    "type": "ACTIVE"
+   },
+   "ranks": [
+    {
+     "rank": 1,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134404?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Feral Swiftness",
+       "id": 134404
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/17002?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Feral Swiftness",
+        "id": 17002
+       },
+       "description": "Increases your movement speed while in Cat Form by 15%, and increases your chance to Dodge by 2%.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 2,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134404?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Feral Swiftness",
+       "id": 134404
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/17002?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Feral Swiftness",
+        "id": 17002
+       },
+       "description": "Increases your movement speed while in Cat Form by 30%, and increases your chance to Dodge by 4%.",
+       "cast_time": "Passive"
+      }
+     }
+    }
+   ],
+   "display_row": 2,
+   "display_col": 7,
+   "raw_position_x": 5020,
+   "raw_position_y": 2730
+  },
+  {
+   "id": 104940,
+   "node_type": {
+    "id": 0,
+    "type": "ACTIVE"
+   },
+   "ranks": [
+    {
+     "rank": 1,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134401?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Feral Instinct",
+       "id": 134401
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/16947?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Feral Instinct",
+        "id": 16947
+       },
+       "description": "Increases damage done by your Swipe ability by 10% and reduces the chance enemies have to detect you while Prowling as if you were 1 level higher.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 2,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134401?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Feral Instinct",
+       "id": 134401
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/16947?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Feral Instinct",
+        "id": 16947
+       },
+       "description": "Increases damage done by your Swipe ability by 20% and reduces the chance enemies have to detect you while Prowling as if you were 2 levels higher.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 3,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134401?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Feral Instinct",
+       "id": 134401
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/16947?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Feral Instinct",
+        "id": 16947
+       },
+       "description": "Increases damage done by your Swipe ability by 30% and reduces the chance enemies have to detect you while Prowling as if you were 3 levels higher.",
+       "cast_time": "Passive"
+      }
+     }
+    }
+   ],
+   "display_row": 2,
+   "display_col": 8,
+   "raw_position_x": 5620,
+   "raw_position_y": 2730
+  },
+  {
+   "id": 104941,
+   "node_type": {
+    "id": 0,
+    "type": "ACTIVE"
+   },
+   "ranks": [
+    {
+     "rank": 1,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134402?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Brutal Impact",
+       "id": 134402
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/16940?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Brutal Impact",
+        "id": 16940
+       },
+       "description": "Increases the stun duration of your Bash and Pounce abilities by 0.5 sec and reduces the cooldown of Bash by 15 sec.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 2,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134402?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Brutal Impact",
+       "id": 134402
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/16940?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Brutal Impact",
+        "id": 16940
+       },
+       "description": "Increases the stun duration of your Bash and Pounce abilities by 1 sec and reduces the cooldown of Bash by 30 sec.",
+       "cast_time": "Passive"
+      }
+     }
+    }
+   ],
+   "display_row": 2,
+   "display_col": 9,
+   "raw_position_x": 6220,
+   "raw_position_y": 2730
+  },
+  {
+   "id": 104942,
+   "node_type": {
+    "id": 0,
+    "type": "ACTIVE"
+   },
+   "ranks": [
+    {
+     "rank": 1,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134403?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Thick Hide",
+       "id": 134403
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/16929?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Thick Hide",
+        "id": 16929
+       },
+       "description": "While in Bear Form, Cat Form, Dire Bear Form, or Moonkin Form, you gain 1 additional base Armor per level and another 0.67 base Armor for each point of defense skill beyond five times your level. This amount can be further increased by multipliers from those forms.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 2,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134403?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Thick Hide",
+       "id": 134403
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/16929?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Thick Hide",
+        "id": 16929
+       },
+       "description": "While in Bear Form, Cat Form, Dire Bear Form, or Moonkin Form, you gain 2 additional base Armor per level and another 1.33 base Armor for each point of defense skill beyond five times your level. This amount can be further increased by multipliers from those forms.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 3,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134403?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Thick Hide",
+       "id": 134403
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/16929?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Thick Hide",
+        "id": 16929
+       },
+       "description": "While in Bear Form, Cat Form, Dire Bear Form, or Moonkin Form, you gain 3 additional base Armor per level and another 2.00 base Armor for each point of defense skill beyond five times your level. This amount can be further increased by multipliers from those forms.",
+       "cast_time": "Passive"
+      }
+     }
+    }
+   ],
+   "display_row": 2,
+   "display_col": 10,
+   "raw_position_x": 6820,
+   "raw_position_y": 2730
+  },
+  {
+   "id": 104945,
+   "node_type": {
+    "id": 0,
+    "type": "ACTIVE"
+   },
+   "ranks": [
+    {
+     "rank": 1,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134406?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Shredding Attacks",
+       "id": 134406
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/16966?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Shredding Attacks",
+        "id": 16966
+       },
+       "description": "Reduces the Energy cost of your Shred ability by 6 and reduces the Rage cost of your Lacerate ability by 1.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 2,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134406?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Shredding Attacks",
+       "id": 134406
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/16966?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Shredding Attacks",
+        "id": 16966
+       },
+       "description": "Reduces the Energy cost of your Shred ability by 12 and reduces the Rage cost of your Lacerate ability by 2.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 3,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134406?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Shredding Attacks",
+       "id": 134406
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/16966?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Shredding Attacks",
+        "id": 16966
+       },
+       "description": "Reduces the Energy cost of your Shred ability by 18 and reduces the Rage cost of your Lacerate ability by 3.",
+       "cast_time": "Passive"
+      }
+     }
+    }
+   ],
+   "display_row": 3,
+   "display_col": 7,
+   "raw_position_x": 5020,
+   "raw_position_y": 3330
+  },
+  {
+   "id": 104948,
+   "unlocks": [
+    104949
+   ],
+   "node_type": {
+    "id": 0,
+    "type": "ACTIVE"
+   },
+   "ranks": [
+    {
+     "rank": 1,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134409?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Savage Fury",
+       "id": 134409
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/16998?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Savage Fury",
+        "id": 16998
+       },
+       "description": "Increases the damage caused by your Claw, Rake, Shred, Maul, and Swipe abilities by 5%.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 2,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134409?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Savage Fury",
+       "id": 134409
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/16998?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Savage Fury",
+        "id": 16998
+       },
+       "description": "Increases the damage caused by your Claw, Rake, Shred, Maul, and Swipe abilities by 10%.",
+       "cast_time": "Passive"
+      }
+     }
+    }
+   ],
+   "display_row": 3,
+   "display_col": 8,
+   "raw_position_x": 5620,
+   "raw_position_y": 3330
+  },
+  {
+   "id": 104944,
+   "node_type": {
+    "id": 0,
+    "type": "ACTIVE"
+   },
+   "ranks": [
+    {
+     "rank": 1,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134405?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Feral Charge",
+       "id": 134405
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/1238122?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Feral Charge",
+        "id": 1238122
+       },
+       "description": "Requires Bear Form, Dire Bear Form\r\nCharge an enemy, immobilizing them and interrupting any spell they are casting for 4 sec.\r\n\r\n",
+       "cast_time": "Instant",
+       "power_cost": "5 Rage",
+       "range": "8-25 yd range",
+       "cooldown": "15 sec cooldown"
+      }
+     }
+    }
+   ],
+   "display_row": 3,
+   "display_col": 9,
+   "raw_position_x": 6220,
+   "raw_position_y": 3330
+  },
+  {
+   "id": 104946,
+   "unlocks": [
+    104947
+   ],
+   "node_type": {
+    "id": 0,
+    "type": "ACTIVE"
+   },
+   "ranks": [
+    {
+     "rank": 1,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134407?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Sharpened Claws",
+       "id": 134407
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/16942?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Sharpened Claws",
+        "id": 16942
+       },
+       "description": "Increases your critical strike chance while in Bear Form, Dire Bear Form, or Cat Form by 3%.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 2,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134407?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Sharpened Claws",
+       "id": 134407
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/16942?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Sharpened Claws",
+        "id": 16942
+       },
+       "description": "Increases your critical strike chance while in Bear Form, Dire Bear Form, or Cat Form by 6%.",
+       "cast_time": "Passive"
+      }
+     }
+    }
+   ],
+   "display_row": 3,
+   "display_col": 10,
+   "raw_position_x": 6820,
+   "raw_position_y": 3330
+  },
+  {
+   "id": 104952,
+   "unlocks": [
+    104953
+   ],
+   "node_type": {
+    "id": 0,
+    "type": "ACTIVE"
+   },
+   "ranks": [
+    {
+     "rank": 1,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134413?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Predatory Strikes",
+       "id": 134413
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/16972?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Predatory Strikes",
+        "id": 16972
+       },
+       "description": "Increases your melee Attack Power in Cat Form, Bear Form, and Dire Bear Form by 50% of your level.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 2,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134413?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Predatory Strikes",
+       "id": 134413
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/16972?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Predatory Strikes",
+        "id": 16972
+       },
+       "description": "Increases your melee Attack Power in Cat Form, Bear Form, and Dire Bear Form by 100% of your level.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 3,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134413?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Predatory Strikes",
+       "id": 134413
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/16972?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Predatory Strikes",
+        "id": 16972
+       },
+       "description": "Increases your melee Attack Power in Cat Form, Bear Form, and Dire Bear Form by 150% of your level.",
+       "cast_time": "Passive"
+      }
+     }
+    }
+   ],
+   "display_row": 4,
+   "display_col": 7,
+   "raw_position_x": 5020,
+   "raw_position_y": 3930
+  },
+  {
+   "id": 104949,
+   "locked_by": [
+    104948
+   ],
+   "node_type": {
+    "id": 0,
+    "type": "ACTIVE"
+   },
+   "ranks": [
+    {
+     "rank": 1,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134410?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Lacerate",
+       "id": 134410
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/1328617?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Lacerate",
+        "id": 1328617
+       },
+       "description": "Lacerates the enemy target, making them bleed for 20 damage over 15 sec plus 10% weapon damage per existing application of Lacerate on the target. Causes a high amount of threat. This effect stacks up to 5 times on the same target.",
+       "cast_time": "Instant",
+       "power_cost": "15 Rage",
+       "range": "Melee Range"
+      }
+     }
+    }
+   ],
+   "display_row": 4,
+   "display_col": 8,
+   "raw_position_x": 5620,
+   "raw_position_y": 3930
+  },
+  {
+   "id": 104951,
+   "unlocks": [
+    113563
+   ],
+   "node_type": {
+    "id": 0,
+    "type": "ACTIVE"
+   },
+   "ranks": [
+    {
+     "rank": 1,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134412?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Predatory Discipline",
+       "id": 134412
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/1328613?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Predatory Discipline",
+        "id": 1328613
+       },
+       "description": "Your Ferocious Bite ability no longer converts extra Energy into damage, but still deals extra damage based on your excess Energy.",
+       "cast_time": "Passive"
+      }
+     }
+    }
+   ],
+   "display_row": 4,
+   "display_col": 9,
+   "raw_position_x": 6220,
+   "raw_position_y": 3930
+  },
+  {
+   "id": 104947,
+   "locked_by": [
+    104946
+   ],
+   "node_type": {
+    "id": 0,
+    "type": "ACTIVE"
+   },
+   "ranks": [
+    {
+     "rank": 1,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134408?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Blood Frenzy",
+       "id": 134408
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/16958?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Blood Frenzy",
+        "id": 16958
+       },
+       "description": "Gives you a 50% chance to gain an additional 5 Rage any time you get a critical strike while in Bear Form or Dire Bear Form. In addition, your non-periodic critical strikes from Cat Form abilities that generate Combo Points have a 50% chance to add an additional Combo Point.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 2,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134408?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Blood Frenzy",
+       "id": 134408
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/16958?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Blood Frenzy",
+        "id": 16958
+       },
+       "description": "Gives you a 100% chance to gain an additional 5 Rage any time you get a critical strike while in Bear Form or Dire Bear Form. In addition, your non-periodic critical strikes from Cat Form abilities that generate Combo Points have a 100% chance to add an additional Combo Point.",
+       "cast_time": "Passive"
+      }
+     }
+    }
+   ],
+   "display_row": 4,
+   "display_col": 10,
+   "raw_position_x": 6820,
+   "raw_position_y": 3930
+  },
+  {
+   "id": 104955,
+   "unlocks": [
+    104956
+   ],
+   "node_type": {
+    "id": 0,
+    "type": "ACTIVE"
+   },
+   "ranks": [
+    {
+     "rank": 1,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134416?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Leader of the Pack",
+       "id": 134416
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/17007?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Leader of the Pack",
+        "id": 17007
+       },
+       "description": "While in Cat Form, Bear Form, or Dire Bear Form, the Leader of the Pack increases the Critical Strike chance of all party or raid members within 45 yards by 3%.",
+       "cast_time": "Passive"
+      }
+     }
+    }
+   ],
+   "display_row": 5,
+   "display_col": 8,
+   "raw_position_x": 5620,
+   "raw_position_y": 4530
+  },
+  {
+   "id": 104950,
+   "node_type": {
+    "id": 0,
+    "type": "ACTIVE"
+   },
+   "ranks": [
+    {
+     "rank": 1,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134411?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Natural Instinct",
+       "id": 134411
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/1223242?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Natural Instinct",
+        "id": 1223242
+       },
+       "description": "Increases the critical strike damage bonus of your melee abilities by 10% and increases your spell healing by 12% of your Intellect.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 2,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134411?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Natural Instinct",
+       "id": 134411
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/1223242?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Natural Instinct",
+        "id": 1223242
+       },
+       "description": "Increases the critical strike damage bonus of your melee abilities by 20% and increases your spell healing by 25% of your Intellect.",
+       "cast_time": "Passive"
+      }
+     }
+    }
+   ],
+   "display_row": 5,
+   "display_col": 10,
+   "raw_position_x": 6820,
+   "raw_position_y": 4530
+  },
+  {
+   "id": 104953,
+   "locked_by": [
+    104952
+   ],
+   "node_type": {
+    "id": 0,
+    "type": "ACTIVE"
+   },
+   "ranks": [
+    {
+     "rank": 1,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134414?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Rend and Tear",
+       "id": 134414
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/1223246?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Rend and Tear",
+        "id": 1223246
+       },
+       "description": "Increases damage done by your melee abilities on Bleeding targets by 3%.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 2,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134414?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Rend and Tear",
+       "id": 134414
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/1223246?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Rend and Tear",
+        "id": 1223246
+       },
+       "description": "Increases damage done by your melee abilities on Bleeding targets by 6%.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 3,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134414?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Rend and Tear",
+       "id": 134414
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/1223246?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Rend and Tear",
+        "id": 1223246
+       },
+       "description": "Increases damage done by your melee abilities on Bleeding targets by 9%.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 4,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134414?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Rend and Tear",
+       "id": 134414
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/1223246?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Rend and Tear",
+        "id": 1223246
+       },
+       "description": "Increases damage done by your melee abilities on Bleeding targets by 12%.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 5,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134414?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Rend and Tear",
+       "id": 134414
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/1223246?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Rend and Tear",
+        "id": 1223246
+       },
+       "description": "Increases damage done by your melee abilities on Bleeding targets by 15%.",
+       "cast_time": "Passive"
+      }
+     }
+    }
+   ],
+   "display_row": 6,
+   "display_col": 7,
+   "raw_position_x": 5020,
+   "raw_position_y": 5130
+  },
+  {
+   "id": 104954,
+   "node_type": {
+    "id": 0,
+    "type": "ACTIVE"
+   },
+   "ranks": [
+    {
+     "rank": 1,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134415?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Natural Reaction",
+       "id": 134415
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/417051?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Natural Reaction",
+        "id": 417051
+       },
+       "description": "Increases your dodge chance by 1%, and gives you a 20% chance to gain 5 Rage each time you dodge.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 2,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134415?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Natural Reaction",
+       "id": 134415
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/417051?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Natural Reaction",
+        "id": 417051
+       },
+       "description": "Increases your dodge chance by 2%, and gives you a 40% chance to gain 5 Rage each time you dodge.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 3,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134415?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Natural Reaction",
+       "id": 134415
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/417051?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Natural Reaction",
+        "id": 417051
+       },
+       "description": "Increases your dodge chance by 3%, and gives you a 60% chance to gain 5 Rage each time you dodge.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 4,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134415?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Natural Reaction",
+       "id": 134415
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/417051?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Natural Reaction",
+        "id": 417051
+       },
+       "description": "Increases your dodge chance by 4%, and gives you a 80% chance to gain 5 Rage each time you dodge.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 5,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134415?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Natural Reaction",
+       "id": 134415
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/417051?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Natural Reaction",
+        "id": 417051
+       },
+       "description": "Increases your dodge chance by 5%, and gives you a 100% chance to gain 5 Rage each time you dodge.",
+       "cast_time": "Passive"
+      }
+     }
+    }
+   ],
+   "display_row": 6,
+   "display_col": 10,
+   "raw_position_x": 6820,
+   "raw_position_y": 5130
+  },
+  {
+   "id": 104956,
+   "locked_by": [
+    104955
+   ],
+   "node_type": {
+    "id": 0,
+    "type": "ACTIVE"
+   },
+   "ranks": [
+    {
+     "rank": 1,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134417?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Primal Bite",
+       "id": 134417
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/407995?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Primal Bite",
+        "id": 407995
+       },
+       "description": "Bite the target, dealing 100% normal damage plus 42 and generating a high amount of threat.",
+       "cast_time": "Instant",
+       "power_cost": "20 Rage",
+       "range": "Melee Range",
+       "cooldown": "6 sec cooldown"
+      }
+     }
+    }
+   ],
+   "display_row": 7,
+   "display_col": 8,
+   "raw_position_x": 5620,
+   "raw_position_y": 5730
+  },
+  {
+   "id": 113563,
+   "locked_by": [
+    104951
+   ],
+   "node_type": {
+    "id": 0,
+    "type": "ACTIVE"
+   },
+   "ranks": [
+    {
+     "rank": 1,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/145859?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Shifting Power",
+       "id": 145859
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/1322605?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Shifting Power",
+        "id": 1322605
+       },
+       "description": "Instantly convert 684 Mana into 40 Energy. Shifting Power's cost is reduced by effects that reduce the cost of Shapeshifting.",
+       "cast_time": "Instant",
+       "power_cost": "684 Mana",
+       "cooldown": "8 sec cooldown"
+      }
+     }
+    }
+   ],
+   "display_row": 7,
+   "display_col": 9,
+   "raw_position_x": 6220,
+   "raw_position_y": 5730
+  }
+ ]
+}

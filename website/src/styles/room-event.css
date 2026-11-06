@@ -68,6 +68,16 @@ a.char-name:hover,
 a.char-name:focus-visible {
   text-decoration: underline;
 }
+/* Small decorative class/spec icons (src/scripts/art.ts), drawn before a character's name or spec. */
+.class-icon,
+.spec-icon {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  vertical-align: -2px;
+  margin-right: 4px;
+}
 /* Raid readiness (RaidReadinessUI): level, item level and spec for a signed-up character, read from their
    Battle.net profile. Under the raid's minimum item level, the ilvl part is called out in the warm error color. */
 .readiness {

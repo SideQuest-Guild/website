@@ -170,9 +170,13 @@ async def test_a_stale_character_is_fetched_again_and_served_as_stored_while_bat
     battlenet["down"] = True
     stale = await characters_client.get(f"/api/characters/{TERRORSKULL}")
     battlenet["down"] = False
+    battlenet["failing"] = {"/equipment"}  # the summary answers, one part of the sheet doesn't
+    part_down = await characters_client.get(f"/api/characters/{TERRORSKULL}")
+    battlenet["failing"] = set()
     fresh = await characters_client.get(f"/api/characters/{TERRORSKULL}")
 
     assert (stale.status_code, stale.json()["level"]) == (200, 13)
+    assert (part_down.status_code, part_down.json()["level"]) == (200, 13)
     assert (fresh.status_code, fresh.json()["level"]) == (200, 14)
 
 

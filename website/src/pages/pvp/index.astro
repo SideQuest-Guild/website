@@ -1,0 +1,233 @@
+---
+import Room from "../../layouts/Room.astro";
+import warRoom from "../../../assets/rooms/war-room.webp";
+import "../../styles/room-pvp.css";
+---
+
+<Room
+  title="PvP · SideQuest"
+  description="SideQuest's battleground match history and PvP boards, recorded by members' addons."
+  heading="PVP"
+  lede="Every battleground a member's addon has recorded: who played, who won, and the guild's top scoreboards."
+  art={warRoom}
+  artPosition="50% 38%"
+  current="pvp"
+>
+  <p class="status" id="pvp-status" role="status" aria-live="polite"></p>
+
+  <div id="pvp-gate" hidden>
+    <section class="chamber" aria-labelledby="h-pvp-gate">
+      <h2 class="chamber-title" id="h-pvp-gate">
+        PvP
+      </h2>
+      <p class="chamber-intro" id="pvp-gate-message"></p>
+    </section>
+  </div>
+
+  <div id="pvp-body" hidden>
+    <section class="chamber" aria-labelledby="h-pvp-boards">
+      <h2 class="chamber-title" id="h-pvp-boards">
+        PvP boards
+      </h2>
+      <p class="aside">The guild's top 10 characters across every recorded battleground.</p>
+      <div class="pvp-boards-grid" id="pvp-boards-grid"></div>
+    </section>
+
+    <section class="chamber" aria-labelledby="h-pvp-matches">
+      <h2 class="chamber-title" id="h-pvp-matches">
+        Match history
+      </h2>
+      <p class="status" id="pvp-matches-status" role="status" aria-live="polite"></p>
+      <ul class="pvp-matches" id="pvp-matches" aria-label="Recorded battlegrounds"></ul>
+      <div class="pvp-pager" id="pvp-pager" hidden>
+        <button type="button" class="btn-quiet btn-small" id="pvp-prev">
+          Previous
+        </button>
+        <span class="pvp-page-label" id="pvp-page-label"></span>
+        <button type="button" class="btn-quiet btn-small" id="pvp-next">
+          Next
+        </button>
+      </div>
+    </section>
+  </div>
+
+  <noscript>
+    <p class="aside">Enable JavaScript to see the PvP boards and match history.</p>
+  </noscript>
+</Room>
+
+<script>
+  import {
+    apiFetch,
+    ApiError,
+    escapeHtml,
+    fetchMe,
+    requireElement,
+    statusMessage,
+    type Me,
+    type PvpBoardEntry,
+    type PvpBoards,
+    type PvpMatchPage,
+    type PvpMatchSummary,
+  } from "../../scripts/api";
+  import { onPage } from "../../scripts/page";
+
+  type BoardKey = "wins" | "honorable_kills" | "killing_blows" | "honor_gained" | "damage_done" | "healing_done";
+
+  const BOARD_LABELS: Record<BoardKey, string> = {
+    wins: "Wins",
+    honorable_kills: "Honorable kills",
+    killing_blows: "Killing blows",
+    honor_gained: "Honor gained",
+    damage_done: "Damage done",
+    healing_done: "Healing done",
+  };
+
+  function pvpBoardRow(entry: PvpBoardEntry, rank: number): string {
+    const tier = rank <= 3 ? ` rank-${rank === 1 ? "gold" : rank === 2 ? "silver" : "bronze"}` : "";
+    const nameInner = `<span class="${entry.class ? `cls-${entry.class}` : ""}">${escapeHtml(entry.name)}</span>`;
+    const name = entry.character_slug
+      ? `<a class="pvp-board-name" href="/characters/detail/?slug=${encodeURIComponent(entry.character_slug)}">${nameInner}</a>`
+      : `<span class="pvp-board-name">${nameInner}</span>`;
+    return `
+    <li class="pvp-board-row">
+      <span class="pvp-board-rank${tier}">${rank}</span>
+      ${name}
+      <span class="pvp-board-value">${entry.value}</span>
+    </li>`;
+  }
+
+  function pvpBoard(key: BoardKey, entries: PvpBoardEntry[]): string {
+    const body =
+      entries.length > 0
+        ? `<ul class="pvp-board-list">${entries.map((e, i) => pvpBoardRow(e, i + 1)).join("")}</ul>`
+        : `<p class="pvp-board-empty aside">No battlegrounds recorded yet.</p>`;
+    return `<div class="pvp-board"><h3 class="sub-title">${BOARD_LABELS[key]}</h3>${body}</div>`;
+  }
+
+  function formatDuration(seconds: number): string {
+    const minutes = Math.floor(seconds / 60);
+    const rest = seconds % 60;
+    return `${minutes}:${String(rest).padStart(2, "0")}`;
+  }
+
+  function resultBadge(match: PvpMatchSummary): string {
+    if (match.won === null) {
+      return `<span class="pvp-result is-draw">${match.winner === "draw" ? "Draw" : "Unknown"}</span>`;
+    }
+    return match.won ? `<span class="pvp-result is-won">Won</span>` : `<span class="pvp-result is-lost">Lost</span>`;
+  }
+
+  function matchRow(match: PvpMatchSummary): string {
+    const when = new Date(match.ended_at).toLocaleString(undefined, {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    });
+    const players =
+      match.guild_players.length > 0
+        ? escapeHtml(match.guild_players.join(", "))
+        : "No linked guild characters in this match";
+    return `
+    <li>
+      <a class="pvp-match-row" href="/pvp/match/?id=${encodeURIComponent(match.id)}">
+        <span>
+          <span class="pvp-match-map">${escapeHtml(match.map)}</span><br />
+          <span class="pvp-match-meta">${when} \u00b7 ${formatDuration(match.duration)} \u00b7 Recorded by ${escapeHtml(match.recorded_by)}</span>
+        </span>
+        ${resultBadge(match)}
+        <span class="pvp-match-players">${players}</span>
+      </a>
+    </li>`;
+  }
+
+  onPage("#pvp-body", (signal) => {
+    const statusEl = requireElement("pvp-status");
+    const gateEl = requireElement("pvp-gate");
+    const gateMessage = requireElement("pvp-gate-message");
+    const bodyEl = requireElement("pvp-body");
+    const boardsGridEl = requireElement("pvp-boards-grid");
+    const matchesStatusEl = requireElement("pvp-matches-status");
+    const matchesEl = requireElement("pvp-matches");
+    const pagerEl = requireElement("pvp-pager");
+    const pageLabelEl = requireElement("pvp-page-label");
+    const prevBtn = requireElement<HTMLButtonElement>("pvp-prev");
+    const nextBtn = requireElement<HTMLButtonElement>("pvp-next");
+
+    let page = 1;
+
+    async function loadBoards(): Promise<void> {
+      boardsGridEl.innerHTML = `<p class="aside">Loading\u2026</p>`;
+      try {
+        const boards = await apiFetch<PvpBoards>("/api/pvp/boards", { signal });
+        boardsGridEl.innerHTML = (Object.keys(BOARD_LABELS) as BoardKey[])
+          .map((key) => pvpBoard(key, boards[key]))
+          .join("");
+      } catch (err) {
+        boardsGridEl.innerHTML = `<p class="aside">${escapeHtml(statusMessage(err))}</p>`;
+      }
+    }
+
+    async function loadMatches(): Promise<void> {
+      matchesStatusEl.textContent = "Loading\u2026";
+      matchesEl.innerHTML = "";
+      pagerEl.hidden = true;
+      try {
+        const data = await apiFetch<PvpMatchPage>(`/api/pvp/matches?page=${page}`, { signal });
+        if (data.matches.length === 0) {
+          matchesStatusEl.textContent = "No battlegrounds recorded yet.";
+          return;
+        }
+        matchesStatusEl.textContent = "";
+        matchesEl.innerHTML = data.matches.map(matchRow).join("");
+        pagerEl.hidden = data.page_count <= 1;
+        pageLabelEl.textContent = `Page ${data.page} of ${data.page_count}`;
+        prevBtn.disabled = data.page <= 1;
+        nextBtn.disabled = data.page >= data.page_count;
+      } catch (err) {
+        matchesStatusEl.textContent = statusMessage(err);
+      }
+    }
+
+    prevBtn.addEventListener(
+      "click",
+      () => {
+        page = Math.max(1, page - 1);
+        void loadMatches();
+      },
+      { signal },
+    );
+    nextBtn.addEventListener(
+      "click",
+      () => {
+        page += 1;
+        void loadMatches();
+      },
+      { signal },
+    );
+
+    async function init(): Promise<void> {
+      let me: Me | null = null;
+      try {
+        me = await fetchMe();
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 0) {
+          statusEl.textContent = statusMessage(err);
+        }
+        me = null;
+      }
+      if (!me || !me.is_guild_member) {
+        gateEl.hidden = false;
+        const next = encodeURIComponent(location.pathname + location.search);
+        gateMessage.innerHTML = `PvP boards and match history are for members only. <a href="/auth/discord/login?next=${next}">Sign in with Discord</a> to see them.`;
+        statusEl.textContent = "";
+        return;
+      }
+      bodyEl.hidden = false;
+      await Promise.all([loadBoards(), loadMatches()]);
+    }
+
+    void init();
+  });
+</script>

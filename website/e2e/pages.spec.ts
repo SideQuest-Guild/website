@@ -1,6 +1,9 @@
 // What each page shows to whom: signed-out visitors get event headlines only, members see rosters and can sign
 // up, officers get the Round Table, and only GMs get the member console.
 import {
+  ACHIEVEMENT_CATEGORIES,
+  ACHIEVEMENT_CATEGORY_DETAIL,
+  ACHIEVEMENTS,
   ADDONS,
   ATTENDANCE_EVENTS,
   CHARACTER_MILESTONES,
@@ -19,6 +22,12 @@ import {
   MEMBER,
   OFFICER,
   ONLINE,
+  PROFESSIONS,
+  PVP_BOARDS,
+  PVP_MATCHES,
+  QUEST_AREAS,
+  QUESTS,
+  RECIPES,
 } from "./data";
 import { expect, test } from "./fixtures";
 import { DISCORD_INVITE } from "../src/config";
@@ -594,6 +603,109 @@ test.describe("items", () => {
   });
 });
 
+test.describe("quests", () => {
+  test("filtering zones then picking one shows its quests, which link to their detail page", async ({ page, site }) => {
+    site.signIn(null);
+    await page.goto("/quests/");
+    await page.locator("#quest-area-filter").fill(QUEST_AREAS[0]!.name);
+    const row = page.locator("#quest-area-list .quest-area-row", { hasText: QUEST_AREAS[0]!.name });
+    await expect(row).toHaveCount(1);
+    await row.click();
+    const questRow = page.locator("#quest-list a.ref-link", { hasText: QUESTS[0]!.title });
+    await expect(questRow).toBeVisible();
+    await questRow.click();
+    await expect(page).toHaveURL(`/quests/detail/?id=${QUESTS[0]!.id}`);
+    await expect(page.locator(".quest-detail-name")).toHaveText(QUESTS[0]!.title);
+  });
+
+  test("a quest page shows its rewards", async ({ page, site }) => {
+    site.signIn(null);
+    await page.goto(`/quests/detail/?id=${QUESTS[0]!.id}`);
+    await expect(page.locator(".quest-detail-name")).toHaveText(QUESTS[0]!.title);
+    await expect(page.locator(".quest-rewards-list")).toContainText("Refreshing Spring Water");
+    await expect(page.locator(".quest-rewards-list")).toContainText("Argent Dawn");
+  });
+
+  test("an unknown quest says so plainly", async ({ page, site }) => {
+    site.signIn(null);
+    await page.goto("/quests/detail/?id=999999999");
+    await expect(page.locator("#quest-detail-status")).toContainText("no such quest");
+    await expect(page.locator("#quest-detail-content")).toBeHidden();
+  });
+});
+
+test.describe("achievements", () => {
+  test("picking a category lists its achievements with points, linking to their detail page", async ({
+    page,
+    site,
+  }) => {
+    site.signIn(null);
+    await page.goto("/achievements/");
+    const childRow = page.locator("#achievement-category-list .achievement-category-row", {
+      hasText: ACHIEVEMENT_CATEGORIES[0]!.children[0]!.name,
+    });
+    await childRow.click();
+    const achievementRow = page.locator("#achievement-list .achievement-row", {
+      hasText: ACHIEVEMENT_CATEGORY_DETAIL.achievements[0]!.name,
+    });
+    await expect(achievementRow).toContainText(`${ACHIEVEMENT_CATEGORY_DETAIL.achievements[0]!.points} pts`);
+    await achievementRow.locator("a.ref-link").click();
+    await expect(page).toHaveURL(`/achievements/detail/?id=${ACHIEVEMENTS[0]!.id}`);
+  });
+
+  test("an achievement page shows its criteria", async ({ page, site }) => {
+    site.signIn(null);
+    await page.goto(`/achievements/detail/?id=${ACHIEVEMENTS[0]!.id}`);
+    await expect(page.locator(".achievement-detail-name")).toHaveText(ACHIEVEMENTS[0]!.name);
+    await expect(page.locator(".achievement-criteria-list").last()).toContainText(
+      ACHIEVEMENTS[0]!.criteria.children[0]!.description!,
+    );
+  });
+
+  test("an unknown achievement says so plainly", async ({ page, site }) => {
+    site.signIn(null);
+    await page.goto("/achievements/detail/?id=999999999");
+    await expect(page.locator("#achievement-detail-status")).toContainText("no such achievement");
+    await expect(page.locator("#achievement-detail-content")).toBeHidden();
+  });
+});
+
+test.describe("recipes", () => {
+  test("picking a profession lists its categories/recipes, and the name filter narrows them", async ({
+    page,
+    site,
+  }) => {
+    site.signIn(null);
+    await page.goto("/recipes/");
+    await page.locator(`[data-profession-id="${PROFESSIONS[0]!.id}"]`).click();
+    await expect(page.locator("#recipes-profession-name")).toHaveText(PROFESSIONS[0]!.name);
+    await expect(page.locator(".recipe-row")).toHaveCount(3);
+    await expect(page.locator(".recipe-row", { hasText: "Copper Chain Pants" })).toBeVisible();
+
+    await page.locator("#recipe-filter").fill("copper");
+    await expect(page.locator(".recipe-row:visible")).toHaveCount(1);
+    await expect(page.locator(".recipe-row:visible")).toContainText("Copper Chain Pants");
+  });
+});
+
+test.describe("recipe page", () => {
+  test("shows the recipe's reagents and the guild crafters who know it", async ({ page, site }) => {
+    site.signIn(null);
+    await page.goto(`/recipes/detail/?id=${RECIPES[0]!.recipe_id}`);
+    await expect(page.locator("#recipe-name")).toHaveText(RECIPES[0]!.name);
+    await expect(page.locator("#recipe-reagent-list")).toContainText("Copper Bar");
+    await expect(page.locator("#recipe-reagent-list")).toContainText("Tin Bar");
+    await expect(page.locator("#recipe-crafter-list")).toContainText("Quest Guide");
+  });
+
+  test("an unknown recipe says so plainly", async ({ page, site }) => {
+    site.signIn(null);
+    await page.goto("/recipes/detail/?id=999999999");
+    await expect(page.locator("#recipe-detail-status")).toContainText("no such recipe");
+    await expect(page.locator("#recipe-detail-content")).toBeHidden();
+  });
+});
+
 test.describe("officers sync", () => {
   test("members are turned away at the gate", async ({ page, site }) => {
     site.signIn(MEMBER);
@@ -767,6 +879,17 @@ test.describe("guild hall", () => {
     });
     expect(copied[0]?.startsWith("/w ")).toBe(true);
   });
+
+  test("a crafter row with a matched recipe links to its recipe page", async ({ page, site }) => {
+    site.signIn(MEMBER);
+    await page.goto("/guild/#crafters");
+    await page.locator("#crafter-query").fill("Copper Chain Pants");
+    const row = page.locator(".guild-crafter-recipe", { hasText: "Copper Chain Pants" });
+    await expect(row.getByRole("link", { name: "Recipe" })).toHaveAttribute(
+      "href",
+      `/recipes/detail/?id=${RECIPES[0]!.recipe_id}`,
+    );
+  });
 });
 
 test.describe("hall of heroes", () => {
@@ -847,6 +970,52 @@ test.describe("hall of heroes", () => {
     await page.goto("/heroes/member/?id=999999");
     await expect(page.locator("#hero-status")).not.toBeEmpty();
     await expect(page.locator("#hero-content")).toBeHidden();
+  });
+});
+
+test.describe("pvp", () => {
+  test("signed out, pvp stays behind a gate", async ({ page, site }) => {
+    site.signIn(null);
+    await page.goto("/pvp/");
+    await expect(page.locator("#pvp-gate")).toBeVisible();
+    await expect(page.locator("#pvp-gate-message a")).toHaveAttribute("href", /\/auth\/discord\/login\?next=/);
+    await expect(page.locator("#pvp-body")).toBeHidden();
+  });
+
+  test("members see the PvP boards and match history, and can open a match's full scoreboard", async ({
+    page,
+    site,
+  }) => {
+    site.signIn(MEMBER);
+    await page.goto("/pvp/");
+    await expect(page.locator("#pvp-body")).toBeVisible();
+
+    const killsBoard = page.locator("#pvp-boards-grid .pvp-board", { hasText: "Honorable kills" });
+    await expect(killsBoard.locator(".pvp-board-row").first()).toContainText(
+      String(PVP_BOARDS.honorable_kills[0]!.value),
+    );
+    const healingBoard = page.locator("#pvp-boards-grid .pvp-board", { hasText: "Healing done" });
+    await expect(healingBoard.locator(".pvp-board-empty")).toBeVisible();
+
+    const rows = page.locator("#pvp-matches > li");
+    await expect(rows).toHaveCount(PVP_MATCHES.length);
+    await expect(rows.first()).toContainText(PVP_MATCHES[0]!.map);
+    await expect(rows.first()).toContainText("Won");
+    await expect(rows.last()).toContainText("Lost");
+
+    await rows.first().locator("a").click();
+    await expect(page).toHaveURL(`/pvp/match/?id=${PVP_MATCHES[0]!.id}`);
+    await expect(page.locator("#pvp-match-map")).toHaveText(PVP_MATCHES[0]!.map);
+    const scoreRows = page.locator("#pvp-scoreboard-body tr");
+    await expect(scoreRows).toHaveCount(PVP_MATCHES[0]!.players.length);
+    await expect(scoreRows.filter({ hasText: CHARACTERS[0]!.name })).toHaveClass(/is-guild/);
+  });
+
+  test("an unknown battleground says so", async ({ page, site }) => {
+    site.signIn(MEMBER);
+    await page.goto("/pvp/match/?id=00000000-0000-4000-8000-000000000000");
+    await expect(page.locator("#pvp-match-status")).toContainText("no such battleground");
+    await expect(page.locator("#pvp-match-content")).toBeHidden();
   });
 });
 
@@ -1009,5 +1178,57 @@ test.describe("API reference", () => {
     const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
     const clientWidth = await page.evaluate(() => document.documentElement.clientWidth);
     expect(scrollWidth, "no horizontal scroll on a phone").toBeLessThanOrEqual(clientWidth);
+  });
+});
+
+test.describe("talents", () => {
+  test("spending points updates the counter and the URL", async ({ page, site }) => {
+    site.signIn(null);
+    await page.goto("/talents/?class=druid");
+    const starlight = page.getByRole("button", { name: /^Starlight Wrath,/ });
+    await expect(starlight).toBeVisible();
+    await starlight.click();
+    await starlight.click();
+    await expect(page.locator(".talent-points-summary")).toContainText("2 / 51 points spent");
+    await expect(page).toHaveURL(/\?class=druid&build=2-$/);
+  });
+
+  test("a row 2 node refuses points until 5 are spent in its tree", async ({ page, site }) => {
+    site.signIn(null);
+    await page.goto("/talents/?class=druid");
+    const moonglow = page.getByRole("button", { name: /^Moonglow,/ });
+    const starlight = page.getByRole("button", { name: /^Starlight Wrath,/ });
+    await expect(moonglow).toBeDisabled();
+    await expect(moonglow).toHaveAttribute("title", /Spend 5 points in Balance first/);
+    for (let i = 0; i < 5; i++) {
+      await starlight.click();
+    }
+    await expect(moonglow).toBeEnabled();
+    await moonglow.click();
+    await expect(moonglow).toHaveAttribute("aria-label", "Moonglow, rank 1 of 1");
+  });
+
+  test("loading a pinned build restores ranks", async ({ page, site }) => {
+    site.signIn(null);
+    await page.goto("/talents/");
+    await page.getByRole("button", { name: "Druid", exact: true }).click();
+    const pinnedList = page.locator("#pinned-builds-list");
+    await expect(pinnedList).toContainText("Starfire spam");
+    await pinnedList.locator("[data-load-build]").first().click();
+    await expect(page.getByRole("button", { name: /^Starlight Wrath,/ })).toHaveAttribute(
+      "aria-label",
+      "Starlight Wrath, rank 5 of 5",
+    );
+    await expect(page).toHaveURL(/\?class=druid&build=5-$/);
+  });
+
+  test("a member saves a build", async ({ page, site }) => {
+    site.signIn(MEMBER);
+    await page.goto("/talents/?class=druid");
+    await page.getByRole("button", { name: /^Starlight Wrath,/ }).click();
+    await page.locator("#build-name").fill("My Balance build");
+    await page.locator("#save-build-btn").click();
+    await expect(page.locator("#save-build-status")).toContainText("Build saved.");
+    await expect(page.locator("#my-builds-list")).toContainText("My Balance build");
   });
 });

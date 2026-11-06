@@ -1,0 +1,161 @@
+---
+import Room from "../../layouts/Room.astro";
+import armory from "../../../assets/rooms/armory.webp";
+import "../../styles/room-recipes.css";
+---
+
+<Room
+  title="Recipes · SideQuest"
+  description="Browse every World of Warcraft: Forever profession and its recipes: what they make and what they need."
+  heading="RECIPES"
+  lede="Pick a profession to browse its recipes: what each one makes and the reagents it needs."
+  art={armory}
+  artPosition="50% 42%"
+  current="recipes"
+>
+  <section class="chamber" aria-labelledby="h-professions">
+    <h2 class="chamber-title" id="h-professions">
+      Professions
+    </h2>
+    <p class="status" id="profession-status" role="status" aria-live="polite">
+      Loading…
+    </p>
+    <ul class="profession-list" id="profession-list" aria-label="Professions"></ul>
+  </section>
+
+  <section class="chamber" id="recipes-section" aria-labelledby="h-recipes" hidden>
+    <h2 class="chamber-title" id="h-recipes">
+      <span id="recipes-profession-name">Recipes</span>
+    </h2>
+    <div class="form-row">
+      <div class="field">
+        <label for="recipe-filter">Filter by name</label>
+        <input id="recipe-filter" type="search" placeholder="e.g. Flask" />
+      </div>
+    </div>
+    <p class="status" id="recipes-status" role="status" aria-live="polite"></p>
+    <div id="recipe-categories"></div>
+  </section>
+
+  <noscript>
+    <p class="aside">Enable JavaScript to browse recipes.</p>
+  </noscript>
+</Room>
+
+<script>
+  import {
+    apiFetch,
+    escapeHtml,
+    requireElement,
+    statusMessage,
+    type Profession,
+    type ProfessionSkillTier,
+    type RecipeRef,
+  } from "../../scripts/api";
+  import { onPage } from "../../scripts/page";
+
+  function professionRow(p: Profession): string {
+    const icon = p.icon_url
+      ? `<img src="${escapeHtml(p.icon_url)}" alt="" width="32" height="32" loading="lazy" />`
+      : "";
+    const type = p.type === "PRIMARY" ? "Primary" : "Secondary";
+    return `
+      <li>
+        <button type="button" class="profession-row" data-profession-id="${p.id}" aria-current="false">
+          ${icon}
+          <span>
+            <span class="profession-row-name">${escapeHtml(p.name)}</span>
+            <span class="profession-row-type">${type}</span>
+          </span>
+        </button>
+      </li>`;
+  }
+
+  function recipeRow(r: RecipeRef): string {
+    return `<li class="recipe-row" data-recipe-name="${escapeHtml(r.name.toLowerCase())}">
+      <a href="/recipes/detail/?id=${r.id}">${escapeHtml(r.name)}</a>
+    </li>`;
+  }
+
+  onPage("#profession-list", (signal) => {
+    const professionStatusEl = requireElement("profession-status");
+    const professionListEl = requireElement("profession-list");
+    const recipesSectionEl = requireElement("recipes-section");
+    const recipesProfessionNameEl = requireElement("recipes-profession-name");
+    const recipesStatusEl = requireElement("recipes-status");
+    const categoriesEl = requireElement("recipe-categories");
+    const filterEl = requireElement<HTMLInputElement>("recipe-filter");
+
+    function applyFilter(): void {
+      const needle = filterEl.value.trim().toLowerCase();
+      let anyVisible = false;
+      for (const row of categoriesEl.querySelectorAll<HTMLLIElement>(".recipe-row")) {
+        const visible = needle.length === 0 || (row.dataset.recipeName ?? "").includes(needle);
+        row.hidden = !visible;
+        anyVisible ||= visible;
+      }
+      for (const category of categoriesEl.querySelectorAll<HTMLDivElement>(".recipe-category")) {
+        const hasVisible = category.querySelector(".recipe-row:not([hidden])") !== null;
+        category.hidden = !hasVisible;
+      }
+      recipesStatusEl.textContent = anyVisible ? "" : "No recipes matched that filter.";
+    }
+
+    async function loadProfession(id: number, name: string): Promise<void> {
+      recipesProfessionNameEl.textContent = name;
+      recipesSectionEl.hidden = false;
+      recipesStatusEl.textContent = "Loading…";
+      categoriesEl.innerHTML = "";
+      filterEl.value = "";
+      try {
+        const tier = await apiFetch<ProfessionSkillTier>(`/api/professions/${id}`, { signal });
+        recipesStatusEl.textContent = "";
+        categoriesEl.innerHTML = tier.categories
+          .map(
+            (category) => `
+              <div class="recipe-category">
+                <h3 class="sub-title">${escapeHtml(category.name)}</h3>
+                <ul class="recipe-list">${category.recipes.map(recipeRow).join("")}</ul>
+              </div>`,
+          )
+          .join("");
+      } catch (err) {
+        recipesStatusEl.dataset.tone = "error";
+        recipesStatusEl.textContent = statusMessage(err);
+      }
+    }
+
+    professionListEl.addEventListener(
+      "click",
+      (event) => {
+        const button = (event.target as HTMLElement).closest<HTMLButtonElement>("[data-profession-id]");
+        if (!button) {
+          return;
+        }
+        for (const other of professionListEl.querySelectorAll<HTMLButtonElement>("[data-profession-id]")) {
+          other.setAttribute("aria-current", String(other === button));
+        }
+        void loadProfession(
+          Number(button.dataset.professionId),
+          button.querySelector(".profession-row-name")?.textContent ?? "",
+        );
+      },
+      { signal },
+    );
+
+    filterEl.addEventListener("input", applyFilter, { signal });
+
+    async function init(): Promise<void> {
+      try {
+        const professions = await apiFetch<Profession[]>("/api/professions/", { signal });
+        professionStatusEl.textContent = "";
+        professionListEl.innerHTML = professions.map(professionRow).join("");
+      } catch (err) {
+        professionStatusEl.dataset.tone = "error";
+        professionStatusEl.textContent = statusMessage(err);
+      }
+    }
+
+    void init();
+  });
+</script>

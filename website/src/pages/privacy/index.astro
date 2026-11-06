@@ -238,6 +238,11 @@ const articles = [
       addon — it only lets officers see who wants an item, and their note, next to that member's EP/GP when it drops.
       Only you and officers can see your wishlist; it's erased when you delete your account.
     </p>
+    <p>
+      <strong>Talent builds are stored with your account.</strong> On the <a href="/talents/">talent calculator</a>, a
+      guild member can save a build with a name and optional note, and officers can pin a build as a raid
+      recommendation. Saved builds are deleted when you delete your account.
+    </p>
   </Article>
 
   <Article id="guild-app" n={9} title="The guild app">
@@ -289,6 +294,12 @@ const articles = [
       <li>
         <strong>Member notes (officer-only):</strong> free-text notes officers keep about a member, e.g. preferred role.
       </li>
+      <li>
+        <strong>Battleground scoreboards:</strong> members' addons record each finished battleground's scoreboard —
+        every player's name, faction, class, kills, deaths, honor and damage/healing — shown as the{" "}
+        <a href="/pvp/">PvP</a> page's match history and boards. Other players' names and stats are included, not just
+        yours.
+      </li>
     </ul>
     <p>
       Each part of the directory (professions, character basics, cooldowns, market, materials) can be turned off
@@ -298,8 +309,9 @@ const articles = [
     <p>
       <strong>Who sees what:</strong> the roster, professions, crafters directory, market, bank log and news on the{" "}
       <a href="/guild/">Guild</a>
-      page are for signed-in members only. Recruit notes, votes and member notes are officer-only, visible on the
-      Officers page and never shown to the member or recruit they're about.
+      page, and the match history and boards on the <a href="/pvp/">PvP</a> page, are for signed-in members only.
+      Recruit notes, votes and member notes are officer-only, visible on the Officers page and never shown to the member
+      or recruit they're about.
     </p>
   </Article>
 
@@ -408,11 +420,12 @@ const articles = [
       </li>
       <li>
         <strong>Delete my account</strong> on the same page: your site account, every event sign-up and attendance mark,
-        your voice-minute records, your calendar link, your away dates, your wishlist, and your Discord XP are erased,
-        and you're signed out. Your group-voice minutes and who you grouped with are erased too; the group sessions
-        themselves and any still-retained chat transcript (auto-purged after 30 days) are kept as shared records, the
-        same as moderation cases. Moderation records stay. The bot strips every Discord role it can manage from you
-        within a minute and puts you back behind #sign-the-ledger, as if you'd just joined.
+        your voice-minute records, your calendar link, your away dates, your wishlist, your saved talent builds, your
+        own rows on recorded battleground scoreboards, and your Discord XP are erased, and you're signed out. Your
+        group-voice minutes and who you grouped with are erased too; the group sessions themselves and any
+        still-retained chat transcript (auto-purged after 30 days) are kept as shared records, the same as moderation
+        cases. Moderation records stay. The bot strips every Discord role it can manage from you within a minute and
+        puts you back behind #sign-the-ledger, as if you'd just joined.
       </li>
       <li>
         Removing SideQuest from <em>Authorized Apps</em> in Discord only stops future sign-ins. It doesn't reach us, so

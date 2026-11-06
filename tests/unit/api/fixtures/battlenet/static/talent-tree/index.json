@@ -1,0 +1,227 @@
+{
+ "_links": {
+  "self": {
+   "href": "https://us.api.blizzard.com/data/wow/talent-tree/?namespace=static-1.60.1_70399-forever-us"
+  }
+ },
+ "spec_talent_trees": [
+  {
+   "key": {
+    "href": "https://us.api.blizzard.com/data/wow/talent-tree/1089/playable-specialization/574?namespace=static-1.60.1_70399-forever-us"
+   },
+   "name": "Balance"
+  },
+  {
+   "key": {
+    "href": "https://us.api.blizzard.com/data/wow/talent-tree/1089/playable-specialization/134?namespace=static-1.60.1_70399-forever-us"
+   },
+   "name": "Feral Combat"
+  },
+  {
+   "key": {
+    "href": "https://us.api.blizzard.com/data/wow/talent-tree/1089/playable-specialization/573?namespace=static-1.60.1_70399-forever-us"
+   },
+   "name": "Restoration"
+  },
+  {
+   "key": {
+    "href": "https://us.api.blizzard.com/data/wow/talent-tree/1100/playable-specialization/594?namespace=static-1.60.1_70399-forever-us"
+   },
+   "name": "Holy"
+  },
+  {
+   "key": {
+    "href": "https://us.api.blizzard.com/data/wow/talent-tree/1100/playable-specialization/267?namespace=static-1.60.1_70399-forever-us"
+   },
+   "name": "Protection"
+  },
+  {
+   "key": {
+    "href": "https://us.api.blizzard.com/data/wow/talent-tree/1100/playable-specialization/184?namespace=static-1.60.1_70399-forever-us"
+   },
+   "name": "Retribution"
+  },
+  {
+   "key": {
+    "href": "https://us.api.blizzard.com/data/wow/talent-tree/1111/playable-specialization/253?namespace=static-1.60.1_70399-forever-us"
+   },
+   "name": "Assassination"
+  },
+  {
+   "key": {
+    "href": "https://us.api.blizzard.com/data/wow/talent-tree/1111/playable-specialization/38?namespace=static-1.60.1_70399-forever-us"
+   },
+   "name": "Combat"
+  },
+  {
+   "key": {
+    "href": "https://us.api.blizzard.com/data/wow/talent-tree/1111/playable-specialization/39?namespace=static-1.60.1_70399-forever-us"
+   },
+   "name": "Subtlety"
+  },
+  {
+   "key": {
+    "href": "https://us.api.blizzard.com/data/wow/talent-tree/1112/playable-specialization/237?namespace=static-1.60.1_70399-forever-us"
+   },
+   "name": "Arcane"
+  },
+  {
+   "key": {
+    "href": "https://us.api.blizzard.com/data/wow/talent-tree/1112/playable-specialization/8?namespace=static-1.60.1_70399-forever-us"
+   },
+   "name": "Fire"
+  },
+  {
+   "key": {
+    "href": "https://us.api.blizzard.com/data/wow/talent-tree/1112/playable-specialization/6?namespace=static-1.60.1_70399-forever-us"
+   },
+   "name": "Frost"
+  },
+  {
+   "key": {
+    "href": "https://us.api.blizzard.com/data/wow/talent-tree/1114/playable-specialization/613?namespace=static-1.60.1_70399-forever-us"
+   },
+   "name": "Discipline"
+  },
+  {
+   "key": {
+    "href": "https://us.api.blizzard.com/data/wow/talent-tree/1114/playable-specialization/56?namespace=static-1.60.1_70399-forever-us"
+   },
+   "name": "Holy"
+  },
+  {
+   "key": {
+    "href": "https://us.api.blizzard.com/data/wow/talent-tree/1114/playable-specialization/78?namespace=static-1.60.1_70399-forever-us"
+   },
+   "name": "Shadow Magic"
+  },
+  {
+   "key": {
+    "href": "https://us.api.blizzard.com/data/wow/talent-tree/1116/playable-specialization/355?namespace=static-1.60.1_70399-forever-us"
+   },
+   "name": "Affliction"
+  },
+  {
+   "key": {
+    "href": "https://us.api.blizzard.com/data/wow/talent-tree/1116/playable-specialization/354?namespace=static-1.60.1_70399-forever-us"
+   },
+   "name": "Demonology"
+  },
+  {
+   "key": {
+    "href": "https://us.api.blizzard.com/data/wow/talent-tree/1116/playable-specialization/593?namespace=static-1.60.1_70399-forever-us"
+   },
+   "name": "Destruction"
+  },
+  {
+   "key": {
+    "href": "https://us.api.blizzard.com/data/wow/talent-tree/1117/playable-specialization/26?namespace=static-1.60.1_70399-forever-us"
+   },
+   "name": "Arms"
+  },
+  {
+   "key": {
+    "href": "https://us.api.blizzard.com/data/wow/talent-tree/1117/playable-specialization/256?namespace=static-1.60.1_70399-forever-us"
+   },
+   "name": "Fury"
+  },
+  {
+   "key": {
+    "href": "https://us.api.blizzard.com/data/wow/talent-tree/1117/playable-specialization/257?namespace=static-1.60.1_70399-forever-us"
+   },
+   "name": "Protection"
+  },
+  {
+   "key": {
+    "href": "https://us.api.blizzard.com/data/wow/talent-tree/1091/playable-specialization/50?namespace=static-1.60.1_70399-forever-us"
+   },
+   "name": "Beast Mastery"
+  },
+  {
+   "key": {
+    "href": "https://us.api.blizzard.com/data/wow/talent-tree/1091/playable-specialization/163?namespace=static-1.60.1_70399-forever-us"
+   },
+   "name": "Marksmanship"
+  },
+  {
+   "key": {
+    "href": "https://us.api.blizzard.com/data/wow/talent-tree/1091/playable-specialization/51?namespace=static-1.60.1_70399-forever-us"
+   },
+   "name": "Survival"
+  },
+  {
+   "key": {
+    "href": "https://us.api.blizzard.com/data/wow/talent-tree/1082/playable-specialization/375?namespace=static-1.60.1_70399-forever-us"
+   },
+   "name": "Elemental Combat"
+  },
+  {
+   "key": {
+    "href": "https://us.api.blizzard.com/data/wow/talent-tree/1082/playable-specialization/373?namespace=static-1.60.1_70399-forever-us"
+   },
+   "name": "Enhancement"
+  },
+  {
+   "key": {
+    "href": "https://us.api.blizzard.com/data/wow/talent-tree/1082/playable-specialization/374?namespace=static-1.60.1_70399-forever-us"
+   },
+   "name": "Restoration"
+  }
+ ],
+ "class_talent_trees": [
+  {
+   "key": {
+    "href": "https://us.api.blizzard.com/data/wow/talent-tree/1089?namespace=static-1.60.1_70399-forever-us"
+   },
+   "name": "Druid"
+  },
+  {
+   "key": {
+    "href": "https://us.api.blizzard.com/data/wow/talent-tree/1100?namespace=static-1.60.1_70399-forever-us"
+   },
+   "name": "Paladin"
+  },
+  {
+   "key": {
+    "href": "https://us.api.blizzard.com/data/wow/talent-tree/1111?namespace=static-1.60.1_70399-forever-us"
+   },
+   "name": "Rogue"
+  },
+  {
+   "key": {
+    "href": "https://us.api.blizzard.com/data/wow/talent-tree/1112?namespace=static-1.60.1_70399-forever-us"
+   },
+   "name": "Mage"
+  },
+  {
+   "key": {
+    "href": "https://us.api.blizzard.com/data/wow/talent-tree/1114?namespace=static-1.60.1_70399-forever-us"
+   },
+   "name": "Priest"
+  },
+  {
+   "key": {
+    "href": "https://us.api.blizzard.com/data/wow/talent-tree/1116?namespace=static-1.60.1_70399-forever-us"
+   },
+   "name": "Warlock"
+  },
+  {
+   "key": {
+    "href": "https://us.api.blizzard.com/data/wow/talent-tree/1117?namespace=static-1.60.1_70399-forever-us"
+   },
+   "name": "Warrior"
+  },
+  {
+   "key": {
+    "href": "https://us.api.blizzard.com/data/wow/talent-tree/1091?namespace=static-1.60.1_70399-forever-us"
+   },
+   "name": "Hunter"
+  },
+  {
+   "key": {
+    "href": "https://us.api.blizzard.com/data/wow/talent-tree/1082?namespace=static-1.60.1_70399-forever-us"
+   },
+   "name": "Shaman"
+  }
+ ]
+}

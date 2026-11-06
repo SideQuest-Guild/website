@@ -10,6 +10,7 @@ from sqlalchemy import delete, or_, select, update
 
 from sidequest_api.lib.battlenet import BattleNetOAuthError
 from sidequest_common.models import (
+    BattlegroundScore,
     EventSignup,
     EventSignupActivity,
     EventVoicePresence,
@@ -23,6 +24,8 @@ from sidequest_common.models import (
     MemberLevel,
     MemberRoleReset,
     OfficerAudit,
+    TalentBuild,
+    WowCharacter,
     XPGrant,
 )
 
@@ -107,15 +110,24 @@ class MembersService(SQLAlchemyAsyncRepositoryService[Member]):
         kept like ``ModCase`` (moderation/stats history, purged on their own retention schedule); only the
         member's own minutes and pairings are erased.
 
-        Also deletes the member's own MCP (Model Context Protocol) client tokens, and their item wishlist.
+        Also deletes the member's own MCP (Model Context Protocol) client tokens, their item wishlist, and their
+        saved talent-calculator builds.
 
         Also deletes the member's hourly activity counts (``MemberActivityHour``, keyed by Discord ID with no
         FK): stats and the Hall of Heroes activity charts stop showing them.
 
         Also queues a ``MemberRoleReset`` outbox row (same transaction) so the bot's ``link_roles`` plugin strips
         every Discord role it can manage from ``member``, leaving them gated behind #sign-the-ledger again.
+
+        Also deletes the ``BattlegroundScore`` rows linked to the member's characters: their own battleground
+        scoreboard rows go with their account, though the match itself (and other players' rows in it) stays.
         """
         session = self.repository.session
+        await session.execute(
+            delete(BattlegroundScore).where(
+                BattlegroundScore.character_id.in_(select(WowCharacter.id).where(WowCharacter.member_id == member.id))
+            )
+        )
         await session.execute(delete(EventSignup).where(EventSignup.member_id == member.id))
         await session.execute(delete(EventSignupActivity).where(EventSignupActivity.discord_id == member.discord_id))
         await session.execute(delete(EventVoicePresence).where(EventVoicePresence.discord_id == member.discord_id))
@@ -134,6 +146,7 @@ class MembersService(SQLAlchemyAsyncRepositoryService[Member]):
         await session.execute(delete(XPGrant).where(XPGrant.user_id == member.discord_id))
         await session.execute(delete(McpToken).where(McpToken.member_id == member.id))
         await session.execute(delete(ItemWish).where(ItemWish.member_id == member.id))
+        await session.execute(delete(TalentBuild).where(TalentBuild.member_id == member.id))
         await session.execute(
             update(OfficerAudit).where(OfficerAudit.actor_member_id == member.id).values(actor_member_id=None)
         )

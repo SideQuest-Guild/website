@@ -168,10 +168,18 @@ import "../../../styles/room-event.css";
   import { onPage } from "../../../scripts/page";
   import { weekdayPhrase } from "../../../scripts/series";
   import { diffAssignments, suggestGroups, type SuggestedAssignment } from "../../../scripts/raid-suggest";
+  import { classIconHtml, loadGameArt, specIconHtml } from "../../../scripts/art";
+
+  let gameClasses: Awaited<ReturnType<typeof loadGameArt>> = [];
 
   // A compact readiness line for a signed-up raid character: level, item level (warn-colored and titled when
-  // under the raid's minimum), and talent spec. Empty when the sign-up's character matches no roster character.
-  function readinessLine(r: Signup["readiness"], minItemLevel: number | null | undefined): string {
+  // under the raid's minimum), and talent spec (with its icon, once art has loaded). Empty when the sign-up's
+  // character matches no roster character.
+  function readinessLine(
+    r: Signup["readiness"],
+    minItemLevel: number | null | undefined,
+    wowClass: Signup["class"],
+  ): string {
     if (!r) {
       return "";
     }
@@ -183,16 +191,17 @@ import "../../../styles/room-event.css";
       bits.push(`<span${warnAttrs}>ilvl ${r.item_level}</span>`);
     }
     if (r.spec) {
-      bits.push(escapeHtml(r.spec));
+      const specIcon = specIconHtml(gameClasses, wowClass, r.spec, 14);
+      bits.push(`${specIcon}${escapeHtml(r.spec)}`);
     }
     return `<span class="readiness">${bits.join(" · ")}</span>`;
   }
   // The character name, linked to its page when readiness matched it to a stored roster character.
-  function characterNameHtml(s: Signup, name: string, extraClass: string): string {
+  function characterNameHtml(s: Signup, name: string, extraClass: string, icon = ""): string {
     const cls = extraClass ? ` ${extraClass}` : "";
     return s.readiness
-      ? `<a class="char-name${cls}" href="/characters/detail/?slug=${encodeURIComponent(s.readiness.slug)}">${escapeHtml(name)}</a>`
-      : `<span class="char-name${cls}">${escapeHtml(name)}</span>`;
+      ? `<a class="char-name${cls}" href="/characters/detail/?slug=${encodeURIComponent(s.readiness.slug)}">${icon}${escapeHtml(name)}</a>`
+      : `<span class="char-name${cls}">${icon}${escapeHtml(name)}</span>`;
   }
   // A character row: class color on the name when the event tracks classes, a role mark when the row mixes roles,
   // and a readiness line for raid events.
@@ -207,8 +216,9 @@ import "../../../styles/room-event.css";
         ? `<svg class="ico role-${s.role}" aria-hidden="true"><use href="#i-${s.role}"></use></svg>`
         : "";
     const clsAttr = opts.showClass && s.class ? `cls-${s.class}` : "";
-    const nameHtml = characterNameHtml(s, name, clsAttr);
-    const readiness = opts.showReadiness ? readinessLine(s.readiness, minItemLevel) : "";
+    const classIcon = opts.showClass ? classIconHtml(gameClasses, s.class, 14) : "";
+    const nameHtml = characterNameHtml(s, name, clsAttr, classIcon);
+    const readiness = opts.showReadiness ? readinessLine(s.readiness, minItemLevel, s.class) : "";
     return `<li>${roleIcon}${nameHtml}${readiness}</li>`;
   }
   // A raid-frame unit: the class color tints the bar and names the character; officers get a group/bench select and
@@ -234,8 +244,9 @@ import "../../../styles/room-event.css";
         </select>`
       : "";
     const barClass = `raid-bar${isChanged ? " raid-bar-changed" : ""}`;
-    const nameHtml = characterNameHtml(s, name, "raid-bar-name");
-    const readiness = readinessLine(s.readiness, minItemLevel);
+    const classIcon = classIconHtml(gameClasses, s.class, 14);
+    const nameHtml = characterNameHtml(s, name, "raid-bar-name", classIcon);
+    const readiness = readinessLine(s.readiness, minItemLevel, s.class);
     return `<li class="${barClass}" data-signup-id="${s.id}" style="--bar-color: ${barColor}">${roleIcon}<div class="raid-bar-info">${nameHtml}${readiness}</div>${control}</li>`;
   }
   function rosterList(
@@ -734,11 +745,13 @@ import "../../../styles/room-event.css";
         statusEl.textContent = "No event specified.";
         return;
       }
-      const [meResult, eventResult] = await Promise.allSettled([
+      const [meResult, eventResult, classes] = await Promise.allSettled([
         fetchMe(),
         apiFetch<EventDetail>(`/api/events/${eventId}`),
+        loadGameArt(),
       ]);
       me = meResult.status === "fulfilled" ? meResult.value : null;
+      gameClasses = classes.status === "fulfilled" ? classes.value : gameClasses;
       if (eventResult.status === "rejected") {
         contentEl.hidden = true;
         statusEl.textContent = statusMessage(eventResult.reason);

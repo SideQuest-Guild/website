@@ -26,6 +26,8 @@ from sqlalchemy import delete, func, or_, select
 from sidequest_api.lib.discord import avatar_url
 from sidequest_api.lib.member_auth import is_officer
 from sidequest_common.models import (
+    BattlegroundMatch,
+    BattlegroundScore,
     CharacterDirectoryChar,
     CharacterDirectoryCooldowns,
     CharacterDirectoryMarket,
@@ -74,12 +76,14 @@ from sidequest_common.schemas import (
     MIN_GP,
     OS_PERCENT,
     ROLE_KINDS,
+    SAME_MATCH_SECONDS,
     TRIAL_DAYS,
     WEEKLY_RESET_HOUR_UTC,
     WEEKLY_RESET_WEEKDAY,
     AnnouncementImportCounts,
     AwardImportCounts,
     BankImportCounts,
+    BattlegroundImportCounts,
     CharacterSource,
     DeviceAuthorizationPollStatus,
     DeviceAuthorizationStatus,
@@ -120,6 +124,7 @@ from sidequest_common.schemas import (
     EpgpSyncTokenMe,
     EpgpSyncTokenSummary,
     EventKind,
+    ExportBattleground,
     ExportDirectoryEntry,
     ExportPayload,
     ExportRecruitVote,
@@ -568,6 +573,7 @@ class EpgpService:
         note_counts = await self._import_member_notes(payload.member_notes, character_cache)
         await self._import_item_names(payload.item_names)
         directory_counts = await self._import_directory(payload.directory, payload.recipe_names, character_cache)
+        battleground_counts = await self._import_battlegrounds(payload.battlegrounds, payload.recorder)
 
         hand_off_event_id: UUID | None = None
         total_marked = 0
@@ -663,6 +669,7 @@ class EpgpService:
             recruits=recruit_counts,
             member_notes=note_counts,
             directory=directory_counts,
+            battlegrounds=battleground_counts,
         )
 
     # --- Import v2: guild hub sections ------------------------------------------------------------------------
@@ -1292,6 +1299,87 @@ class EpgpService:
                 await self._import_directory_market(character, sections.market, counts.market)
             if sections.stock is not None:
                 await self._import_directory_stock(character, sections.stock, counts.stock)
+        await self._session.flush()
+        return counts
+
+    async def _import_battlegrounds(self, matches: list[ExportBattleground], recorder: str) -> BattlegroundImportCounts:
+        """Insert-only battleground scoreboards, deduplicated by ``external_id``.
+
+        A match within ``SAME_MATCH_SECONDS`` of a stored one with the same ``instance_id`` is the same game
+        recorded by another member: it counts as ``merged`` and stores nothing new. A scoreboard row links to a
+        guild character when its name (before any ``-``) matches exactly one stored ``WowCharacter`` by casefolded
+        name; ``wow_class`` lowercases into ``WowClass``, else stored as ``None``.
+        """
+        counts = BattlegroundImportCounts()
+        window = timedelta(seconds=SAME_MATCH_SECONDS)
+        character_matches: dict[str, UUID | None] = {}
+        for entry in matches:
+            existing = (
+                await self._session.execute(
+                    select(BattlegroundMatch.id).where(BattlegroundMatch.external_id == entry.id)
+                )
+            ).scalar_one_or_none()
+            if existing is not None:
+                continue
+            ended_at = datetime.fromtimestamp(entry.ended_at, tz=UTC)
+            nearby = (
+                await self._session.execute(
+                    select(BattlegroundMatch.id).where(
+                        BattlegroundMatch.instance_id == entry.instance_id,
+                        BattlegroundMatch.ended_at >= ended_at - window,
+                        BattlegroundMatch.ended_at <= ended_at + window,
+                    )
+                )
+            ).scalar_one_or_none()
+            if nearby is not None:
+                counts.merged += 1
+                continue
+            match = BattlegroundMatch(
+                external_id=entry.id,
+                map=entry.map,
+                instance_id=entry.instance_id,
+                ended_at=ended_at,
+                duration=entry.duration,
+                winner=entry.winner.value if entry.winner is not None else None,
+                guild_faction=entry.my_faction.value,
+                recorder=recorder,
+            )
+            self._session.add(match)
+            await self._session.flush()
+            for player in entry.players:
+                name = player.name.rpartition("-")[0] or player.name
+                key = name.strip().lower()
+                if key not in character_matches:
+                    row_ids = (
+                        (
+                            await self._session.execute(
+                                select(WowCharacter.id).where(func.lower(WowCharacter.name) == key)
+                            )
+                        )
+                        .scalars()
+                        .all()
+                    )
+                    character_matches[key] = row_ids[0] if len(row_ids) == 1 else None
+                wow_class = player.wow_class.lower() if player.wow_class else None
+                if wow_class not in {member.value for member in WowClass}:
+                    wow_class = None
+                self._session.add(
+                    BattlegroundScore(
+                        match_id=match.id,
+                        character_id=character_matches[key],
+                        name=player.name,
+                        faction=player.faction.value,
+                        race=player.race,
+                        wow_class=wow_class,
+                        killing_blows=player.killing_blows,
+                        honorable_kills=player.honorable_kills,
+                        deaths=player.deaths,
+                        honor_gained=player.honor_gained,
+                        damage_done=player.damage_done,
+                        healing_done=player.healing_done,
+                    )
+                )
+            counts.new += 1
         await self._session.flush()
         return counts
 

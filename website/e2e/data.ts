@@ -1,6 +1,9 @@
 // Fixture data for the mocked API, typed against the site's own response shapes (src/scripts/api.ts) so a schema
 // change that the pages depend on breaks the build here too. Times are relative to now so "upcoming" stays upcoming.
 import type {
+  Achievement,
+  AchievementCategory,
+  AchievementCategoryTree,
   Addon,
   AttendanceDetail,
   AttendanceEventSummary,
@@ -10,6 +13,7 @@ import type {
   CharacterMilestone,
   CharacterPage,
   CharacterSummary,
+  ClassTalents,
   DiscordLive,
   DiscordOnline,
   EarnedBadge,
@@ -26,6 +30,7 @@ import type {
   EpgpSyncToken,
   EventDetail,
   EventSummary,
+  GameClass,
   GmMember,
   GmMemberDetail,
   GroupLeaderboard,
@@ -52,9 +57,18 @@ import type {
   ItemWisher,
   McpToken,
   Me,
+  Profession,
+  ProfessionSkillTier,
+  PvpBoards,
+  PvpMatchDetail,
+  PvpMatchPage,
+  Quest,
+  QuestArea,
+  RecipeDetailInfo,
   Recruiting,
   Signup,
   StatsPerson,
+  TalentBuild,
 } from "../src/scripts/api";
 
 const inDays = (days: number, hour = 20): string => {
@@ -908,6 +922,7 @@ const CRAFTER_RESULTS: GuildCrafterResult[] = [
     recipe_id: 2662,
     recipe_name: "Copper Chain Pants",
     item_id: 2852,
+    battlenet_recipe_id: 101,
     crafters: [
       {
         character: "Guideline-Whitemane",
@@ -922,6 +937,7 @@ const CRAFTER_RESULTS: GuildCrafterResult[] = [
     recipe_id: 3372,
     recipe_name: "Flask of the Titans",
     item_id: 13510,
+    battlenet_recipe_id: null,
     crafters: [
       { character: "Wanderalt-Whitemane", member_id: 7, member_name: "Wanderer", profession: "Alchemy", skill: 275 },
     ],
@@ -934,6 +950,158 @@ const CRAFTER_PROFESSIONS: GuildCrafterProfession[] = [
 ];
 
 export const GUILD_CRAFTERS = { results: CRAFTER_RESULTS, professions: CRAFTER_PROFESSIONS };
+
+// ——— Class/spec art (GET /api/game/classes, public): small icons the site draws next to class-colored names. ———
+export const GAME_CLASSES: GameClass[] = [
+  {
+    class: "warrior",
+    name: "Warrior",
+    icon_url: null,
+    specs: [
+      { id: 71, name: "Arms", icon_url: null },
+      { id: 72, name: "Fury", icon_url: null },
+      { id: 73, name: "Protection", icon_url: null },
+    ],
+  },
+  {
+    class: "paladin",
+    name: "Paladin",
+    icon_url: null,
+    specs: [
+      { id: 65, name: "Holy", icon_url: null },
+      { id: 66, name: "Protection", icon_url: null },
+      { id: 70, name: "Retribution", icon_url: null },
+    ],
+  },
+  {
+    class: "hunter",
+    name: "Hunter",
+    icon_url: null,
+    specs: [
+      { id: 254, name: "Marksmanship", icon_url: null },
+      { id: 255, name: "Survival", icon_url: null },
+      { id: 253, name: "Beast Mastery", icon_url: null },
+    ],
+  },
+  {
+    class: "rogue",
+    name: "Rogue",
+    icon_url: null,
+    specs: [
+      { id: 259, name: "Assassination", icon_url: null },
+      { id: 260, name: "Combat", icon_url: null },
+      { id: 261, name: "Subtlety", icon_url: null },
+    ],
+  },
+  {
+    class: "priest",
+    name: "Priest",
+    icon_url: null,
+    specs: [
+      { id: 256, name: "Discipline", icon_url: null },
+      { id: 257, name: "Holy", icon_url: null },
+      { id: 258, name: "Shadow", icon_url: null },
+    ],
+  },
+  {
+    class: "shaman",
+    name: "Shaman",
+    icon_url: null,
+    specs: [
+      { id: 262, name: "Elemental", icon_url: null },
+      { id: 263, name: "Enhancement", icon_url: null },
+      { id: 264, name: "Restoration", icon_url: null },
+    ],
+  },
+  {
+    class: "mage",
+    name: "Mage",
+    icon_url: null,
+    specs: [
+      { id: 62, name: "Arcane", icon_url: null },
+      { id: 63, name: "Fire", icon_url: null },
+      { id: 64, name: "Frost", icon_url: null },
+    ],
+  },
+  {
+    class: "warlock",
+    name: "Warlock",
+    icon_url: null,
+    specs: [
+      { id: 265, name: "Affliction", icon_url: null },
+      { id: 266, name: "Demonology", icon_url: null },
+      { id: 267, name: "Destruction", icon_url: null },
+    ],
+  },
+  {
+    class: "druid",
+    name: "Druid",
+    icon_url: null,
+    specs: [
+      { id: 102, name: "Feral Combat", icon_url: null },
+      { id: 573, name: "Balance", icon_url: null },
+      { id: 105, name: "Restoration", icon_url: null },
+    ],
+  },
+];
+
+// ——— Professions and recipes (GET /api/professions/[/{id}], GET /api/recipes/{id}, public): the recipes room. ———
+export const PROFESSIONS: Profession[] = [
+  { id: 164, name: "Blacksmithing", type: "PRIMARY", icon_url: null, skill_tier_id: 2938 },
+  { id: 171, name: "Alchemy", type: "PRIMARY", icon_url: null, skill_tier_id: 2940 },
+];
+
+export const PROFESSION_SKILL_TIERS: Record<number, ProfessionSkillTier> = {
+  164: {
+    profession_id: 164,
+    profession_name: "Blacksmithing",
+    categories: [
+      {
+        name: "Armor",
+        recipes: [
+          { id: 101, name: "Copper Chain Pants" },
+          { id: 102, name: "Heavy Grinding Stone" },
+        ],
+      },
+      { name: "Weapons", recipes: [{ id: 103, name: "Rough Sharpening Stone" }] },
+    ],
+  },
+  171: {
+    profession_id: 171,
+    profession_name: "Alchemy",
+    categories: [{ name: "Potions", recipes: [{ id: 104, name: "Minor Healing Potion" }] }],
+  },
+};
+
+export const RECIPES: RecipeDetailInfo[] = [
+  {
+    recipe_id: 101,
+    name: "Copper Chain Pants",
+    description: "A sturdy set of copper chain leggings.",
+    rank: null,
+    profession: "Blacksmithing",
+    icon_url: null,
+    crafted_item: { item_id: 2852, name: "Copper Chain Pants", quality: "Common" },
+    crafted_quantity: null,
+    reagents: [
+      { item_id: 2840, name: "Copper Bar", quantity: 6, quality: null },
+      { item_id: 2841, name: "Tin Bar", quantity: 2, quality: null },
+    ],
+    crafters: [{ character: "Guideline-Whitemane", member_id: 4, member_name: "Quest Guide", skill: 150 }],
+  },
+  {
+    recipe_id: 102,
+    name: "Heavy Grinding Stone",
+    description: null,
+    rank: null,
+    profession: "Blacksmithing",
+    icon_url: null,
+    crafted_item: null,
+    crafted_quantity: null,
+    reagents: [{ item_id: 2842, name: "Heavy Stone", quantity: 2, quality: null }],
+    crafters: [],
+  },
+];
 
 export const GUILD_DIRECTORY: GuildDirectory = {
   characters: [
@@ -1270,6 +1438,71 @@ export const ITEM_WISHERS: ItemWisher[] = [
   },
 ];
 
+// ——— Quests (GET /api/quests/areas[/{id}], GET /api/quests/{id}) ———
+export const QUEST_AREAS: QuestArea[] = [
+  {
+    id: 15,
+    name: "Dustwallow Marsh",
+    quests: [
+      { id: 1, title: "The Missing Diplomat" },
+      { id: 2, title: "Brackenwall Village" },
+    ],
+  },
+  { id: 1, name: "Dun Morogh", quests: [{ id: 3, title: "Rage Scar Hold" }] },
+];
+
+export const QUEST_AREA_SUMMARIES = QUEST_AREAS.map(({ id, name }) => ({ id, name }));
+
+export const QUESTS: Quest[] = [
+  {
+    id: 1,
+    title: "The Missing Diplomat",
+    description: "Find the diplomat, {class}.",
+    area: "Dustwallow Marsh",
+    category: "Epic",
+    type: "Elite",
+    min_level: 20,
+    max_level: 60,
+    is_repeatable: false,
+    is_daily: false,
+    is_weekly: false,
+    rewards: {
+      experience: 550,
+      money: 225,
+      items: [{ item_id: 159, name: "Refreshing Spring Water" }],
+      reputations: [{ faction: "Argent Dawn", value: 75 }],
+    },
+  },
+];
+
+// ——— Achievements (GET /api/achievements/categories[/{id}], GET /api/achievements/{id}) ———
+export const ACHIEVEMENT_CATEGORIES: AchievementCategoryTree[] = [
+  { id: 15568, name: "Classes", children: [{ id: 15587, name: "Alchemy" }] },
+];
+
+export const ACHIEVEMENT_CATEGORY_DETAIL: AchievementCategory = {
+  id: 15587,
+  name: "Alchemy",
+  achievements: [{ id: 62012, name: "Journeyman Alchemist", points: 10, icon_url: null }],
+};
+
+export const ACHIEVEMENTS: Achievement[] = [
+  {
+    id: 62012,
+    name: "Journeyman Alchemist",
+    description: "Learn 150 alchemy recipes.",
+    points: 10,
+    icon_url: null,
+    category: "Alchemy",
+    reward_description: null,
+    criteria: {
+      description: null,
+      amount: 0,
+      children: [{ description: "Learn Alchemy recipes", amount: 150, children: [] }],
+    },
+  },
+];
+
 // ——— Characters (GET /api/characters/[?q=], GET /api/characters/{slug}, GET /api/characters/boards) ———
 // Two roster members (one with a published Battle.net profile, one without) and one non-roster character found
 // only by exact name and surname, so a test can exercise all three states.
@@ -1405,7 +1638,7 @@ function characterSheet(overrides: Partial<CharacterPage["sheet"]> = {}): NonNul
       { faction: "Ironforge", standing: "Exalted", value: 42000, max: 42000 },
       { faction: "Argent Dawn", standing: "Honored", value: 18000, max: 21000 },
     ],
-    recent_achievements: [{ name: "Onyxia's Downfall", completed_at: inDays(-3) }],
+    recent_achievements: [{ id: ACHIEVEMENTS[0]!.id, name: "Onyxia's Downfall", completed_at: inDays(-3) }],
     mounts: 12,
     pets: 5,
     toys: 3,
@@ -1442,3 +1675,195 @@ export const HERO_BOARDS: HeroBoards = {
     .toSorted((a, b) => (b.achievement_points ?? 0) - (a.achievement_points ?? 0))
     .map((c) => ({ slug: c.slug, name: c.name, surname: c.surname, class: c.class, value: c.achievement_points ?? 0 })),
 };
+
+// ——— PvP: battleground match history and boards, built from the addon's recorded scoreboards ———
+export const PVP_MATCHES: PvpMatchDetail[] = [
+  {
+    id: "aaaaaaaa-1111-4aaa-8aaa-aaaaaaaaaaaa",
+    map: "Warsong Gulch",
+    ended_at: inDays(-1),
+    duration: 912,
+    winner: "alliance",
+    guild_faction: "alliance",
+    won: true,
+    guild_players: [CHARACTERS[0]!.name],
+    recorded_by: `${CHARACTERS[0]!.name}-${CHARACTERS[0]!.surname}`,
+    players: [
+      {
+        name: CHARACTERS[0]!.name,
+        faction: "alliance",
+        race: CHARACTERS[0]!.race,
+        class: CHARACTERS[0]!.class,
+        killing_blows: 5,
+        honorable_kills: 18,
+        deaths: 2,
+        honor_gained: 210,
+        damage_done: 62000,
+        healing_done: 1400,
+        guild_member: true,
+        character_slug: CHARACTERS[0]!.slug,
+      },
+      {
+        name: "Grimtusk",
+        faction: "horde",
+        race: "Orc",
+        class: "warrior",
+        killing_blows: 2,
+        honorable_kills: 9,
+        deaths: 4,
+        honor_gained: 120,
+        damage_done: 38000,
+        healing_done: 0,
+        guild_member: false,
+        character_slug: null,
+      },
+    ],
+  },
+  {
+    id: "bbbbbbbb-2222-4bbb-8bbb-bbbbbbbbbbbb",
+    map: "Arathi Basin",
+    ended_at: inDays(-2),
+    duration: 1480,
+    winner: "horde",
+    guild_faction: "alliance",
+    won: false,
+    guild_players: [],
+    recorded_by: "Someone-Whitemane",
+    players: [],
+  },
+];
+
+export function pvpMatchPage(matches: PvpMatchDetail[], page: number): PvpMatchPage {
+  const perPage = 25;
+  const start = (page - 1) * perPage;
+  return {
+    page,
+    page_count: Math.max(1, Math.ceil(matches.length / perPage)),
+    matches: matches.slice(start, start + perPage).map(({ players: _players, ...summary }) => summary),
+  };
+}
+
+export const PVP_BOARDS: PvpBoards = {
+  matches: PVP_MATCHES.length,
+  wins: [{ name: CHARACTERS[0]!.name, class: CHARACTERS[0]!.class, character_slug: CHARACTERS[0]!.slug, value: 1 }],
+  honorable_kills: [
+    { name: CHARACTERS[0]!.name, class: CHARACTERS[0]!.class, character_slug: CHARACTERS[0]!.slug, value: 18 },
+  ],
+  killing_blows: [
+    { name: CHARACTERS[0]!.name, class: CHARACTERS[0]!.class, character_slug: CHARACTERS[0]!.slug, value: 5 },
+  ],
+  honor_gained: [
+    { name: CHARACTERS[0]!.name, class: CHARACTERS[0]!.class, character_slug: CHARACTERS[0]!.slug, value: 210 },
+  ],
+  damage_done: [
+    { name: CHARACTERS[0]!.name, class: CHARACTERS[0]!.class, character_slug: CHARACTERS[0]!.slug, value: 62000 },
+  ],
+  healing_done: [],
+};
+
+// ——— Talents (GET /api/talents/{class}, GET /api/talent-builds?class=, GET/POST/DELETE /api/me/talent-builds[/{id}],
+// PUT /api/talent-builds/{id}/pin). One class (druid) with two small trees, few enough nodes to spend and check by
+// hand: Balance's row 2 (Moonglow) needs 5 points spent in row 1 first, and its Genesis needs Starlight Wrath maxed.
+export const TALENTS_DRUID: ClassTalents = {
+  class: "druid",
+  max_points: 51,
+  first_level: 10,
+  trees: [
+    {
+      spec_id: 574,
+      name: "Balance",
+      icon_url: null,
+      nodes: [
+        {
+          id: 1,
+          row: 1,
+          col: 1,
+          max_rank: 5,
+          talent_id: 100,
+          name: "Starlight Wrath",
+          requires: null,
+          ranks: [1, 2, 3, 4, 5].map((rank) => ({
+            spell_id: 9100 + rank,
+            description: `Reduces the cast time of Wrath and Starfire by ${rank}%.`,
+          })),
+        },
+        {
+          id: 2,
+          row: 1,
+          col: 2,
+          max_rank: 1,
+          talent_id: 101,
+          name: "Nature's Grace",
+          requires: null,
+          ranks: [
+            { spell_id: 9110, description: "Your spell critical strikes reduce the cast time of your next spell." },
+          ],
+        },
+        {
+          id: 3,
+          row: 1,
+          col: 3,
+          max_rank: 1,
+          talent_id: 102,
+          name: "Genesis",
+          requires: 1,
+          ranks: [{ spell_id: 9120, description: "Increases the damage of your damage over time spells." }],
+        },
+        {
+          id: 4,
+          row: 2,
+          col: 1,
+          max_rank: 1,
+          talent_id: 103,
+          name: "Moonglow",
+          requires: null,
+          ranks: [{ spell_id: 9130, description: "Reduces the mana cost of your Moonfire, Starfire and Wrath." }],
+        },
+      ],
+    },
+    {
+      spec_id: 134,
+      name: "Feral Combat",
+      icon_url: null,
+      nodes: [
+        {
+          id: 10,
+          row: 1,
+          col: 1,
+          max_rank: 5,
+          talent_id: 110,
+          name: "Ferocity",
+          requires: null,
+          ranks: [1, 2, 3, 4, 5].map((rank) => ({
+            spell_id: 9210 + rank,
+            description: `Reduces the cost of most Cat and Bear Form abilities by ${rank * 2}%.`,
+          })),
+        },
+        {
+          id: 11,
+          row: 1,
+          col: 2,
+          max_rank: 1,
+          talent_id: 111,
+          name: "Feral Aggression",
+          requires: null,
+          ranks: [{ spell_id: 9220, description: "Increases the attack power bonus of your Tiger's Fury." }],
+        },
+      ],
+    },
+  ],
+};
+
+export const TALENT_BUILDS: TalentBuild[] = [
+  {
+    id: "talent-build-1",
+    class: "druid",
+    name: "Starfire spam",
+    code: "5-",
+    note: "Maxes Starlight Wrath for raid night.",
+    pinned: true,
+    member_id: OFFICER.id,
+    member_name: OFFICER.display_name,
+    created_at: inDays(-6),
+  },
+];

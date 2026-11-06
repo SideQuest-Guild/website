@@ -335,9 +335,13 @@ import "../../styles/room-guild.css";
           </li>`,
       )
       .join("");
+    const recipeLink =
+      result.battlenet_recipe_id !== null
+        ? ` \u00b7 <a href="/recipes/detail/?id=${result.battlenet_recipe_id}">Recipe</a>`
+        : "";
     return `
         <li class="guild-crafter-recipe">
-          <h3 class="sub-title">${result.item_id !== null ? itemLink(result.item_id, result.recipe_name) : escapeHtml(result.recipe_name)}</h3>
+          <h3 class="sub-title">${result.item_id !== null ? itemLink(result.item_id, result.recipe_name) : escapeHtml(result.recipe_name)}${recipeLink}</h3>
           <ul class="guild-crafter-rows">${crafters}</ul>
         </li>`;
   }

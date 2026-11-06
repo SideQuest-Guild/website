@@ -3,7 +3,18 @@
 // of each is attached to the report for a human look.
 import type { Page } from "@playwright/test";
 
-import { CHARACTERS, DEVICE_AUTH_USER_CODE, EVENTS, GM, HEROES, ITEMS } from "./data";
+import {
+  ACHIEVEMENTS,
+  CHARACTERS,
+  DEVICE_AUTH_USER_CODE,
+  EVENTS,
+  GM,
+  HEROES,
+  ITEMS,
+  PVP_MATCHES,
+  QUESTS,
+  RECIPES,
+} from "./data";
 import { expect, test } from "./fixtures";
 
 const PAGES = [
@@ -17,10 +28,19 @@ const PAGES = [
   { name: "raids", path: "/raids/" },
   { name: "ledger", path: "/ledger/" },
   { name: "guild", path: "/guild/" },
+  { name: "pvp", path: "/pvp/" },
+  { name: "pvp match", path: `/pvp/match/?id=${PVP_MATCHES[0]?.id}` },
   { name: "items", path: "/items/" },
   { name: "item", path: `/items/detail/?id=${ITEMS[0]?.item_id}` },
   { name: "characters", path: "/characters/" },
   { name: "character", path: `/characters/detail/?slug=${CHARACTERS[0]?.slug}` },
+  { name: "quests", path: "/quests/" },
+  { name: "quest", path: `/quests/detail/?id=${QUESTS[0]?.id}` },
+  { name: "achievements", path: "/achievements/" },
+  { name: "achievement", path: `/achievements/detail/?id=${ACHIEVEMENTS[0]?.id}` },
+  { name: "recipes", path: "/recipes/" },
+  { name: "recipe", path: `/recipes/detail/?id=${RECIPES[0]?.recipe_id}` },
+  { name: "talents", path: "/talents/?class=druid" },
   { name: "account", path: "/account/" },
   { name: "account stats", path: "/account/#stats" },
   { name: "account wishlist", path: "/account/#wishlist" },

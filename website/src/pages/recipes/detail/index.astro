@@ -1,0 +1,161 @@
+---
+import Room from "../../../layouts/Room.astro";
+import armory from "../../../../assets/rooms/armory.webp";
+import "../../../styles/addon-tooltip.css";
+import "../../../styles/room-recipes.css";
+---
+
+<Room
+  title="Recipe · SideQuest"
+  description="A recipe's crafted item, reagents, and the guild characters who know it."
+  heading="RECIPE"
+  art={armory}
+  artPosition="50% 42%"
+  current="recipes"
+>
+  <script is:inline slot="head">
+    const recipeId = new URLSearchParams(location.search).get("id");
+    if (recipeId) {
+      const link = document.createElement("link");
+      Object.assign(link, { rel: "preload", as: "fetch", href: `/api/recipes/${recipeId}`, crossOrigin: "anonymous" });
+      document.head.append(link);
+    }
+  </script>
+
+  <p class="status" id="recipe-detail-status" role="status" aria-live="polite"></p>
+
+  <div id="recipe-detail-content" hidden>
+    <section class="chamber" aria-labelledby="h-recipe">
+      <h2 class="chamber-title" id="h-recipe">
+        Recipe
+      </h2>
+      <div class="recipe-detail-head">
+        <span class="tt-icon" id="recipe-icon"></span>
+        <div>
+          <p class="recipe-detail-name" id="recipe-name"></p>
+          <p class="recipe-detail-meta" id="recipe-meta"></p>
+        </div>
+      </div>
+      <p class="recipe-description" id="recipe-description" hidden></p>
+      <p class="recipe-crafted-quantity" id="recipe-crafted-quantity" hidden></p>
+    </section>
+
+    <section class="chamber" aria-labelledby="h-reagents">
+      <h2 class="chamber-title" id="h-reagents">
+        Reagents
+      </h2>
+      <ul class="recipe-reagent-list" id="recipe-reagent-list" aria-label="Reagents"></ul>
+    </section>
+
+    <section class="chamber" aria-labelledby="h-crafters">
+      <h2 class="chamber-title" id="h-crafters">
+        Guild crafters
+      </h2>
+      <ul class="recipe-crafter-list" id="recipe-crafter-list" aria-label="Guild crafters"></ul>
+    </section>
+  </div>
+
+  <noscript>
+    <p class="aside">Enable JavaScript to view this recipe.</p>
+  </noscript>
+</Room>
+
+<script>
+  import {
+    apiFetch,
+    ApiError,
+    escapeHtml,
+    requireElement,
+    statusMessage,
+    type RecipeDetailInfo,
+  } from "../../../scripts/api";
+  import { itemLink, loadWowheadTooltips, refreshWowheadLinks } from "../../../scripts/items";
+  import { onPage } from "../../../scripts/page";
+
+  function renderRecipe(recipe: RecipeDetailInfo): void {
+    const icon = recipe.icon_url
+      ? `<img src="${escapeHtml(recipe.icon_url)}" alt="" width="56" height="56" />`
+      : `<span class="item-icon-placeholder">No icon</span>`;
+    requireElement("recipe-icon").innerHTML = icon;
+    requireElement("recipe-name").textContent = recipe.name;
+    const metaParts = [
+      recipe.profession ? escapeHtml(recipe.profession) : null,
+      recipe.rank !== null ? `Rank ${recipe.rank}` : null,
+      recipe.crafted_item
+        ? `Makes ${itemLink(recipe.crafted_item.item_id, recipe.crafted_item.name, recipe.crafted_item.quality?.toLowerCase())}`
+        : "No item crafted",
+    ].filter((part): part is string => Boolean(part));
+    requireElement("recipe-meta").innerHTML = metaParts.join(" \u00b7 ");
+
+    const descriptionEl = requireElement("recipe-description");
+    descriptionEl.hidden = !recipe.description;
+    descriptionEl.textContent = recipe.description ?? "";
+
+    const quantityEl = requireElement("recipe-crafted-quantity");
+    quantityEl.hidden = !recipe.crafted_quantity;
+    quantityEl.textContent = recipe.crafted_quantity ?? "";
+
+    requireElement("recipe-reagent-list").innerHTML =
+      recipe.reagents.length > 0
+        ? recipe.reagents
+            .map(
+              (r) => `
+              <li class="recipe-reagent-row">
+                ${itemLink(r.item_id, r.name, r.quality?.toLowerCase())}
+                <span>\u00d7${r.quantity}</span>
+              </li>`,
+            )
+            .join("")
+        : `<li class="ledger-empty">This recipe needs no reagents.</li>`;
+
+    requireElement("recipe-crafter-list").innerHTML =
+      recipe.crafters.length > 0
+        ? recipe.crafters
+            .map((c) => {
+              const name = escapeHtml(c.member_name ?? c.character);
+              const link = c.member_id
+                ? `<a href="/heroes/member/?id=${c.member_id}">${name}</a>`
+                : `<a href="/characters/detail/?slug=${encodeURIComponent(c.character)}">${name}</a>`;
+              return `
+              <li class="recipe-crafter-row">
+                <span>${link}</span>
+                <span class="recipe-crafter-meta">Skill ${c.skill}</span>
+              </li>`;
+            })
+            .join("")
+        : `<li class="ledger-empty">No one in the guild knows this recipe yet.</li>`;
+
+    refreshWowheadLinks();
+  }
+
+  onPage("#recipe-detail-status", (signal) => {
+    const statusEl = requireElement("recipe-detail-status");
+    const contentEl = requireElement("recipe-detail-content");
+
+    async function init(): Promise<void> {
+      const id = new URLSearchParams(location.search).get("id");
+      if (!id) {
+        statusEl.textContent = "No recipe was given.";
+        return;
+      }
+      statusEl.textContent = "Loading\u2026";
+      void loadWowheadTooltips();
+      try {
+        const recipe = await apiFetch<RecipeDetailInfo>(`/api/recipes/${id}`, { signal });
+        renderRecipe(recipe);
+        contentEl.hidden = false;
+        statusEl.textContent = "";
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 404) {
+          statusEl.textContent = "There's no such recipe.";
+        } else if (err instanceof ApiError && err.status === 503) {
+          statusEl.textContent = "Battle.net isn't answering right now, so this recipe can't be shown. Try again soon.";
+        } else {
+          statusEl.textContent = statusMessage(err);
+        }
+      }
+    }
+
+    void init();
+  });
+</script>

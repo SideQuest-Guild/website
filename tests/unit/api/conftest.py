@@ -108,13 +108,18 @@ def member_web_settings() -> WebSettings:
 def member_app(
     database_url: str, member_web_settings: WebSettings, discord_state: dict, battlenet_state: dict
 ) -> Litestar:
-    """App with Discord OAuth and Battle.net configured, both behind mocked transports."""
+    """App with Discord OAuth and Battle.net configured, all behind mocked transports.
+
+    Battle.net's game data API answers 503 to everything here, as if it were down: tests that need game data build
+    their own app with ``tests.unit.api.fake_battlenet``.
+    """
     return create_app(
         DatabaseSettings(URL=database_url),
         APISettings(KEY=TEST_API_KEY),
         member_web_settings,
         discord_transport=_discord_transport(discord_state),
         battlenet_transport=_battlenet_transport(battlenet_state),
+        game_data_transport=httpx.MockTransport(lambda _request: httpx.Response(503, json={"code": 503})),
     )
 
 

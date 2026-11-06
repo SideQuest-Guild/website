@@ -1,7 +1,8 @@
 ---
-// The site's one nav: brand, Events, a Raids group, a Guild group, Addons, the Discord link and the account
-// chip. Homepage and every inner page render the same markup here (`hero` only changes how it's painted over
-// the art vs. sitting in a plain bar); `nav.ts` drives the group panel, the account menu and the phone sheet.
+// The site's one nav: brand, Events, a Raids group, a Guild group, a Library group (game data from Battle.net),
+// Addons, the Discord link and the account chip. Homepage and every inner page render the same markup here (`hero`
+// only changes how it's painted over the art vs. sitting in a plain bar); `nav.ts` drives the group panel, the
+// account menu and the phone sheet.
 import { Image } from "astro:assets";
 import { DISCORD_INVITE, DOCS_URL } from "../config";
 import guildLogo from "../../assets/brand/sidequest-logo.png";
@@ -13,9 +14,14 @@ interface Props {
     | "ledger"
     | "heroes"
     | "guild"
+    | "pvp"
     | "rules"
     | "items"
     | "characters"
+    | "talents"
+    | "recipes"
+    | "quests"
+    | "achievements"
     | "addons"
     | "officers"
     | "account"
@@ -26,8 +32,14 @@ interface Props {
 
 const { current, hero = false } = Astro.props;
 const raidsCurrent = current === "raids" || current === "ledger";
-const guildCurrent =
-  current === "guild" || current === "heroes" || current === "rules" || current === "items" || current === "characters";
+const guildCurrent = current === "guild" || current === "heroes" || current === "rules" || current === "pvp";
+const libraryCurrent =
+  current === "items" ||
+  current === "characters" ||
+  current === "talents" ||
+  current === "recipes" ||
+  current === "quests" ||
+  current === "achievements";
 const accountCurrent = current === "account" || current === "officers";
 
 type NavEntry = { href: string; icon: string; name: string; desc: string; members?: boolean; external?: boolean };
@@ -64,16 +76,11 @@ const guildEntries: NavEntry[] = [
     members: true,
   },
   {
-    href: "/items/",
-    icon: "i-nav-items",
-    name: "Item lookup",
-    desc: "Search any item and see who in the guild got it.",
-  },
-  {
-    href: "/characters/",
-    icon: "i-nav-characters",
-    name: "Characters",
-    desc: "Look up any character's gear, stats and Battle.net profile.",
+    href: "/pvp/",
+    icon: "i-nav-pvp",
+    name: "PvP boards",
+    desc: "Battleground match history and PvP boards from the addon.",
+    members: true,
   },
   { href: "/#how-we-play", icon: "i-nav-play", name: "How we play", desc: "The journey and the raid, our own way." },
   {
@@ -97,9 +104,56 @@ const guildEntries: NavEntry[] = [
   },
 ];
 
-const groups: { id: "raids" | "guild"; label: string; width: number; entries: NavEntry[] }[] = [
-  { id: "raids", label: "Raids", width: 320, entries: raidEntries },
-  { id: "guild", label: "Guild", width: 356, entries: guildEntries },
+// Game data from Battle.net: anyone may use these pages.
+const libraryEntries: NavEntry[] = [
+  {
+    href: "/items/",
+    icon: "i-nav-items",
+    name: "Item lookup",
+    desc: "Search any item and see who in the guild got it.",
+  },
+  {
+    href: "/characters/",
+    icon: "i-nav-characters",
+    name: "Characters",
+    desc: "Look up any character's gear, stats and Battle.net profile.",
+  },
+  {
+    href: "/talents/",
+    icon: "i-nav-talents",
+    name: "Talent calculator",
+    desc: "Plan a build, share the link, and save or pin it for raids.",
+  },
+  {
+    href: "/quests/",
+    icon: "i-nav-quests",
+    name: "Quests",
+    desc: "Browse zones for their quests, and see any quest's rewards.",
+  },
+  {
+    href: "/achievements/",
+    icon: "i-nav-achievements",
+    name: "Achievements",
+    desc: "Browse categories for their achievements, points and criteria.",
+  },
+  {
+    href: "/recipes/",
+    icon: "i-nav-recipes",
+    name: "Recipes",
+    desc: "Browse every profession's recipes: what they make and the reagents they need.",
+  },
+];
+
+const groups: {
+  id: "raids" | "guild" | "library";
+  label: string;
+  width: number;
+  entries: NavEntry[];
+  current: boolean;
+}[] = [
+  { id: "raids", label: "Raids", width: 320, entries: raidEntries, current: raidsCurrent },
+  { id: "guild", label: "Guild", width: 356, entries: guildEntries, current: guildCurrent },
+  { id: "library", label: "Library", width: 356, entries: libraryEntries, current: libraryCurrent },
 ];
 ---
 
@@ -125,7 +179,7 @@ const groups: { id: "raids" | "guild"; label: string; width: number; entries: Na
             data-nav-trigger={group.id}
             aria-expanded="false"
             aria-controls="nav-panel"
-            aria-current={(group.id === "raids" ? raidsCurrent : guildCurrent) ? "page" : undefined}
+            aria-current={group.current ? "page" : undefined}
           >
             {group.label}
           </button>

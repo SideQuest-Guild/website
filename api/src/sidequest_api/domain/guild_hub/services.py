@@ -16,6 +16,7 @@ from litestar.exceptions import NotFoundException
 from sqlalchemy import func, or_, select
 
 from sidequest_api.domain.characters.services import to_summary
+from sidequest_api.domain.game_reference.services import recipe_id_for
 from sidequest_common.models import (
     BattlenetCharacter,
     CharacterDirectoryChar,
@@ -85,6 +86,7 @@ if TYPE_CHECKING:
     from uuid import UUID
 
     from sqlalchemy.ext.asyncio import AsyncSession
+    from wow import AsyncClient
 
 ANNOUNCEMENTS_PAGE_SIZE = 20
 BANK_TOTALS_WINDOW_DAYS = 30
@@ -188,7 +190,9 @@ class GuildHubService:
 
     # --- Crafters ------------------------------------------------------------------------------------------------
 
-    async def get_crafters(self, *, q: str | None, profession: str | None) -> GuildCrafters:
+    async def get_crafters(
+        self, *, q: str | None, profession: str | None, game_data: AsyncClient | None = None
+    ) -> GuildCrafters:
         """Characters that know a recipe matching ``q`` (recipe or profession substring) / ``profession``."""
         statement = (
             select(ProfessionRecipe, CharacterProfession, WowCharacter)
@@ -234,6 +238,10 @@ class GuildHubService:
                 )
             )
         results = sorted(grouped.values(), key=lambda row: row.recipe_name.casefold())[:MAX_CRAFTER_RESULTS]
+        for result in results:
+            result.battlenet_recipe_id = await recipe_id_for(
+                result.crafters[0].profession, result.recipe_name, game_data
+            )
         profession_counts = (
             await self._session.execute(
                 select(

@@ -109,6 +109,20 @@ TAG_GROUPS: dict[str, dict[str, str]] = {
             "Characters from Battle.net: the guild roster, a lookup by exact name, character pages and the hero "
             "boards. Anyone may read them."
         ),
+        "Quests": "Quests from Battle.net: zones, and one quest's description and rewards. Anyone may read them.",
+        "Achievements": (
+            "Achievements from Battle.net: categories, and one achievement's points and criteria. Anyone may read them."
+        ),
+        "Talents": (
+            "Talent trees from Battle.net for the calculator, and officer-pinned raid builds. Anyone may read them."
+        ),
+        "Recipes": (
+            "Professions and recipes from Battle.net: profession list, skill tiers, and a recipe's reagents, "
+            "crafted item and guild crafters. Anyone may read them."
+        ),
+        "Game data": (
+            "Class and specialization art from Battle.net, for the site's small class/spec icons. Anyone may read it."
+        ),
     },
     "Members": {
         "My account": "The signed-in member's own profile. A member must be signed in.",
@@ -120,6 +134,9 @@ TAG_GROUPS: dict[str, dict[str, str]] = {
         "Discord presence": "Who is online in the guild's Discord right now. A member must be signed in.",
         "Hall of Heroes": "The guild's season leaderboard and member profiles. A member must be signed in.",
         "Guild hub": "Roster, crafters, and bank browsing for signed-in members. A member must be signed in.",
+        "PvP": "Battleground match history and PvP boards from members' addon-recorded scoreboards. A member "
+        "must be signed in.",
+        "My talent builds": "A signed-in member's own saved talent-calculator builds. A member must be signed in.",
         "SideQuest Companion": (
             "Sign the desktop companion in from the browser, and manage your own sync tokens. A member must be signed "
             "in, or the companion sends its sync token."
@@ -144,6 +161,9 @@ TAG_GROUPS: dict[str, dict[str, str]] = {
         "Statistics": "Guild-wide activity totals, trend, heatmap, and leaderboards. An officer must be signed in.",
         "Wishlists": "Who wants an item, next to their loot points. An officer must be signed in.",
         "Raid readiness": "Set the minimum item level for raids. An officer must be signed in.",
+        "Talent build pins": (
+            "Pin or unpin a talent build as an officer-recommended raid build. An officer must be signed in."
+        ),
     },
     "Game Masters": {
         "GM console": "Member lookup, audit log, and case review for Game Masters. A Game Master must be signed in.",

@@ -1,0 +1,132 @@
+---
+import Room from "../../layouts/Room.astro";
+import musterYard from "../../../assets/rooms/muster-yard.webp";
+import "../../styles/room-quests.css";
+---
+
+<Room
+  title="Quests · SideQuest"
+  description="Browse World of Warcraft: Forever's quest zones and see any quest's description and rewards."
+  heading="QUESTS"
+  lede="Every zone's quests, straight from Battle.net: descriptions, requirements and rewards."
+  art={musterYard}
+  artPosition="50% 42%"
+  current="quests"
+>
+  <section class="chamber" aria-labelledby="h-areas">
+    <h2 class="chamber-title" id="h-areas">
+      Zones
+    </h2>
+    <div class="form-row">
+      <div class="field">
+        <label for="quest-area-filter">Filter zones</label>
+        <input type="search" id="quest-area-filter" placeholder="Zone name" autocomplete="off" />
+      </div>
+    </div>
+    <p class="status" id="quest-areas-status" role="status" aria-live="polite">
+      Loading&hellip;
+    </p>
+    <ul class="quest-area-list" id="quest-area-list" aria-label="Quest zones"></ul>
+  </section>
+
+  <section class="chamber" aria-labelledby="h-quests" id="quest-list-section" hidden>
+    <h2 class="chamber-title" id="h-quests">
+      Quests
+    </h2>
+    <p class="status" id="quest-list-status" role="status" aria-live="polite"></p>
+    <ul class="quest-list" id="quest-list" aria-label="Quests in this zone"></ul>
+  </section>
+
+  <noscript>
+    <p class="aside">Enable JavaScript to browse quest zones.</p>
+  </noscript>
+</Room>
+
+<script>
+  import {
+    apiFetch,
+    ApiError,
+    escapeHtml,
+    requireElement,
+    statusMessage,
+    type QuestArea,
+    type QuestAreaSummary,
+  } from "../../scripts/api";
+  import { loadWowheadTooltips, refreshWowheadLinks } from "../../scripts/items";
+  import { onPage } from "../../scripts/page";
+  import { questLink } from "../../scripts/reference";
+
+  function questRow(quest: { id: number; title: string }): string {
+    return `<li>${questLink(quest.id, quest.title)}</li>`;
+  }
+
+  onPage("#quest-areas-status", (signal) => {
+    const statusEl = requireElement("quest-areas-status");
+    const listEl = requireElement("quest-area-list");
+    const filterInput = requireElement<HTMLInputElement>("quest-area-filter");
+    const listSectionEl = requireElement("quest-list-section");
+    const listStatusEl = requireElement("quest-list-status");
+    const questListEl = requireElement("quest-list");
+    let areas: QuestAreaSummary[] = [];
+    let activeAreaId: number | null = null;
+
+    function areaRow(area: QuestAreaSummary): string {
+      return `<li><button type="button" class="quest-area-row" data-area-id="${area.id}" aria-current="${area.id === activeAreaId}">${escapeHtml(area.name)}</button></li>`;
+    }
+
+    function renderAreas(): void {
+      const query = filterInput.value.trim().toLowerCase();
+      const matches = query ? areas.filter((area) => area.name.toLowerCase().includes(query)) : areas;
+      listEl.innerHTML =
+        matches.length > 0
+          ? matches.map(areaRow).join("")
+          : `<li class="ledger-empty">No zones match that filter.</li>`;
+    }
+
+    async function showArea(areaId: number): Promise<void> {
+      activeAreaId = areaId;
+      renderAreas();
+      listSectionEl.hidden = false;
+      listStatusEl.textContent = "Loading\u2026";
+      questListEl.innerHTML = "";
+      try {
+        const area = await apiFetch<QuestArea>(`/api/quests/areas/${areaId}`, { signal });
+        listStatusEl.textContent = "";
+        questListEl.innerHTML =
+          area.quests.length > 0
+            ? area.quests.map(questRow).join("")
+            : `<li class="ledger-empty">No quests recorded for this zone yet.</li>`;
+        refreshWowheadLinks();
+      } catch (err) {
+        listStatusEl.textContent = statusMessage(err);
+      }
+    }
+
+    listEl.addEventListener("click", (event) => {
+      const button = (event.target as HTMLElement).closest<HTMLButtonElement>("[data-area-id]");
+      if (!button) {
+        return;
+      }
+      void showArea(Number(button.dataset.areaId));
+    });
+
+    filterInput.addEventListener("input", renderAreas);
+
+    async function init(): Promise<void> {
+      void loadWowheadTooltips();
+      try {
+        areas = await apiFetch<QuestAreaSummary[]>("/api/quests/areas", { signal });
+        statusEl.textContent = areas.length > 0 ? "" : "No quest zones found.";
+        renderAreas();
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 503) {
+          statusEl.textContent = "Battle.net isn't answering right now, so zones can't be shown. Try again soon.";
+        } else {
+          statusEl.textContent = statusMessage(err);
+        }
+      }
+    }
+
+    void init();
+  });
+</script>

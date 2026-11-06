@@ -45,6 +45,7 @@ from sidequest_common.schemas.guild_hub import (
     RosterImportCounts,
     SignupImportCounts,
 )
+from sidequest_common.schemas.pvp import MAX_BATTLEGROUNDS, BattlegroundImportCounts, ExportBattleground
 
 # --- Rules constants (the site owns these numbers; they ship in the SQI1 import string's ``rules`` object) -------
 
@@ -297,6 +298,8 @@ class ExportPayload(BaseModel):
     directory: list[ExportDirectoryEntry] = Field(default_factory=list, max_length=MAX_DIRECTORY_ENTRIES)
     item_names: dict[str, str] = Field(default_factory=dict, max_length=MAX_ITEM_NAMES)
     recipe_names: dict[str, str] = Field(default_factory=dict, max_length=MAX_RECIPE_NAMES)
+    battlegrounds: list[ExportBattleground] = Field(default_factory=list, max_length=MAX_BATTLEGROUNDS)
+    """Finished battlegrounds' scoreboards (``sidequest_common.schemas.pvp``); additive, older sites ignore it."""
 
 
 # --- Site import (``SQI1:`` + base64 JSON): the outbound payload the game-import endpoint builds ------------------
@@ -420,6 +423,7 @@ class EpgpImportResult(BaseModel):
     recruits: RecruitImportCounts = Field(default_factory=RecruitImportCounts)
     member_notes: MemberNoteImportCounts = Field(default_factory=MemberNoteImportCounts)
     directory: DirectoryImportCounts = Field(default_factory=DirectoryImportCounts)
+    battlegrounds: BattlegroundImportCounts = Field(default_factory=BattlegroundImportCounts)
 
 
 class EpgpRules(BaseModel):

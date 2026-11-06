@@ -1,0 +1,1437 @@
+{
+ "_links": {
+  "self": {
+   "href": "https://us.api.blizzard.com/data/wow/talent-tree/1089/playable-specialization/573?namespace=static-1.60.1_70399-forever-us"
+  }
+ },
+ "id": 1089,
+ "playable_class": {
+  "key": {
+   "href": "https://us.api.blizzard.com/data/wow/playable-class/11?namespace=static-1.60.1_70399-forever-us"
+  },
+  "name": "Druid",
+  "id": 11
+ },
+ "playable_specialization": {
+  "key": {
+   "href": "https://us.api.blizzard.com/data/wow/playable-specialization/573?namespace=static-1.60.1_70399-forever-us"
+  },
+  "name": "Restoration",
+  "id": 573
+ },
+ "name": "Restoration",
+ "media": {
+  "key": {
+   "href": "https://us.api.blizzard.com/data/wow/media/talent-tree/1089/playable-specialization/573?namespace=static-1.60.1_70399-forever-us"
+  }
+ },
+ "spec_talent_nodes": [
+  {
+   "id": 104957,
+   "node_type": {
+    "id": 0,
+    "type": "ACTIVE"
+   },
+   "ranks": [
+    {
+     "rank": 1,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134418?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Nature's Focus",
+       "id": 134418
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/17063?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Nature's Focus",
+        "id": 17063
+       },
+       "description": "Gives your Arcane and Nature spells a 14% chance to not lose casting time when you take damage.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 2,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134418?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Nature's Focus",
+       "id": 134418
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/17063?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Nature's Focus",
+        "id": 17063
+       },
+       "description": "Gives your Arcane and Nature spells a 28% chance to not lose casting time when you take damage.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 3,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134418?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Nature's Focus",
+       "id": 134418
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/17063?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Nature's Focus",
+        "id": 17063
+       },
+       "description": "Gives your Arcane and Nature spells a 42% chance to not lose casting time when you take damage.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 4,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134418?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Nature's Focus",
+       "id": 134418
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/17063?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Nature's Focus",
+        "id": 17063
+       },
+       "description": "Gives your Arcane and Nature spells a 56% chance to not lose casting time when you take damage.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 5,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134418?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Nature's Focus",
+       "id": 134418
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/17063?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Nature's Focus",
+        "id": 17063
+       },
+       "description": "Gives your Arcane and Nature spells a 70% chance to not lose casting time when you take damage.",
+       "cast_time": "Passive"
+      }
+     }
+    }
+   ],
+   "display_row": 1,
+   "display_col": 15,
+   "raw_position_x": 9680,
+   "raw_position_y": 2130
+  },
+  {
+   "id": 104958,
+   "node_type": {
+    "id": 0,
+    "type": "ACTIVE"
+   },
+   "ranks": [
+    {
+     "rank": 1,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134419?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Heart of the Wild",
+       "id": 134419
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/17003?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Heart of the Wild",
+        "id": 17003
+       },
+       "description": "Increases your Intellect by 2%.  In addition, while in Bear Form or Dire Bear Form your Stamina is increased by 4% and while in Cat Form your Strength is increased by 2%.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 2,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134419?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Heart of the Wild",
+       "id": 134419
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/17003?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Heart of the Wild",
+        "id": 17003
+       },
+       "description": "Increases your Intellect by 4%.  In addition, while in Bear Form or Dire Bear Form your Stamina is increased by 8% and while in Cat Form your Strength is increased by 4%.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 3,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134419?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Heart of the Wild",
+       "id": 134419
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/17003?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Heart of the Wild",
+        "id": 17003
+       },
+       "description": "Increases your Intellect by 6%.  In addition, while in Bear Form or Dire Bear Form your Stamina is increased by 12% and while in Cat Form your Strength is increased by 6%.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 4,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134419?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Heart of the Wild",
+       "id": 134419
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/17003?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Heart of the Wild",
+        "id": 17003
+       },
+       "description": "Increases your Intellect by 8%.  In addition, while in Bear Form or Dire Bear Form your Stamina is increased by 16% and while in Cat Form your Strength is increased by 8%.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 5,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134419?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Heart of the Wild",
+       "id": 134419
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/17003?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Heart of the Wild",
+        "id": 17003
+       },
+       "description": "Increases your Intellect by 10%.  In addition, while in Bear Form or Dire Bear Form your Stamina is increased by 20% and while in Cat Form your Strength is increased by 10%.",
+       "cast_time": "Passive"
+      }
+     }
+    }
+   ],
+   "display_row": 1,
+   "display_col": 16,
+   "raw_position_x": 10280,
+   "raw_position_y": 2130
+  },
+  {
+   "id": 104922,
+   "unlocks": [
+    104921
+   ],
+   "node_type": {
+    "id": 0,
+    "type": "ACTIVE"
+   },
+   "ranks": [
+    {
+     "rank": 1,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134383?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Naturalist",
+       "id": 134383
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/17069?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Naturalist",
+        "id": 17069
+       },
+       "description": "Reduces the cast time of your Healing Touch and Wild Growth spells by 0.1 sec and increases all damage you deal by 2%.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 2,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134383?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Naturalist",
+       "id": 134383
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/17069?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Naturalist",
+        "id": 17069
+       },
+       "description": "Reduces the cast time of your Healing Touch and Wild Growth spells by 0.2 sec and increases all damage you deal by 4%.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 3,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134383?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Naturalist",
+       "id": 134383
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/17069?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Naturalist",
+        "id": 17069
+       },
+       "description": "Reduces the cast time of your Healing Touch and Wild Growth spells by 0.3 sec and increases all damage you deal by 6%.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 4,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134383?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Naturalist",
+       "id": 134383
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/17069?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Naturalist",
+        "id": 17069
+       },
+       "description": "Reduces the cast time of your Healing Touch and Wild Growth spells by 0.4 sec and increases all damage you deal by 8%.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 5,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134383?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Naturalist",
+       "id": 134383
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/17069?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Naturalist",
+        "id": 17069
+       },
+       "description": "Reduces the cast time of your Healing Touch and Wild Growth spells by 0.5 sec and increases all damage you deal by 10%.",
+       "cast_time": "Passive"
+      }
+     }
+    }
+   ],
+   "display_row": 2,
+   "display_col": 14,
+   "raw_position_x": 9080,
+   "raw_position_y": 2730
+  },
+  {
+   "id": 104920,
+   "node_type": {
+    "id": 0,
+    "type": "ACTIVE"
+   },
+   "ranks": [
+    {
+     "rank": 1,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134381?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Reflection",
+       "id": 134381
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/17106?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Reflection",
+        "id": 17106
+       },
+       "description": "Allows 17% of your Mana regeneration to continue while casting.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 2,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134381?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Reflection",
+       "id": 134381
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/17106?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Reflection",
+        "id": 17106
+       },
+       "description": "Allows 33% of your Mana regeneration to continue while casting.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 3,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134381?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Reflection",
+       "id": 134381
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/17106?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Reflection",
+        "id": 17106
+       },
+       "description": "Allows 50% of your Mana regeneration to continue while casting.",
+       "cast_time": "Passive"
+      }
+     }
+    }
+   ],
+   "display_row": 2,
+   "display_col": 15,
+   "raw_position_x": 9680,
+   "raw_position_y": 2730
+  },
+  {
+   "id": 104919,
+   "node_type": {
+    "id": 0,
+    "type": "ACTIVE"
+   },
+   "ranks": [
+    {
+     "rank": 1,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134380?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Natural Shapeshifter",
+       "id": 134380
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/16833?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Natural Shapeshifter",
+        "id": 16833
+       },
+       "description": "Reduces the mana cost of all shapeshifting by 10%.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 2,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134380?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Natural Shapeshifter",
+       "id": 134380
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/16833?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Natural Shapeshifter",
+        "id": 16833
+       },
+       "description": "Reduces the mana cost of all shapeshifting by 20%.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 3,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134380?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Natural Shapeshifter",
+       "id": 134380
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/16833?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Natural Shapeshifter",
+        "id": 16833
+       },
+       "description": "Reduces the mana cost of all shapeshifting by 30%.",
+       "cast_time": "Passive"
+      }
+     }
+    }
+   ],
+   "display_row": 2,
+   "display_col": 16,
+   "raw_position_x": 10280,
+   "raw_position_y": 2730
+  },
+  {
+   "id": 104917,
+   "node_type": {
+    "id": 0,
+    "type": "ACTIVE"
+   },
+   "ranks": [
+    {
+     "rank": 1,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134378?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Subtlety",
+       "id": 134378
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/17118?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Subtlety",
+        "id": 17118
+       },
+       "description": "Reduces the threat generated by your Nature and Arcane spells by 10%.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 2,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134378?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Subtlety",
+       "id": 134378
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/17118?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Subtlety",
+        "id": 17118
+       },
+       "description": "Reduces the threat generated by your Nature and Arcane spells by 20%.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 3,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134378?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Subtlety",
+       "id": 134378
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/17118?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Subtlety",
+        "id": 17118
+       },
+       "description": "Reduces the threat generated by your Nature and Arcane spells by 30%.",
+       "cast_time": "Passive"
+      }
+     }
+    }
+   ],
+   "display_row": 3,
+   "display_col": 15,
+   "raw_position_x": 9680,
+   "raw_position_y": 3330
+  },
+  {
+   "id": 104916,
+   "node_type": {
+    "id": 0,
+    "type": "ACTIVE"
+   },
+   "ranks": [
+    {
+     "rank": 1,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134377?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Gift of Nature",
+       "id": 134377
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/17104?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Gift of Nature",
+        "id": 17104
+       },
+       "description": "Increases the effect of all your healing spells by 2%.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 2,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134377?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Gift of Nature",
+       "id": 134377
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/17104?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Gift of Nature",
+        "id": 17104
+       },
+       "description": "Increases the effect of all your healing spells by 4%.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 3,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134377?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Gift of Nature",
+       "id": 134377
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/17104?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Gift of Nature",
+        "id": 17104
+       },
+       "description": "Increases the effect of all your healing spells by 6%.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 4,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134377?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Gift of Nature",
+       "id": 134377
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/17104?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Gift of Nature",
+        "id": 17104
+       },
+       "description": "Increases the effect of all your healing spells by 8%.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 5,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134377?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Gift of Nature",
+       "id": 134377
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/17104?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Gift of Nature",
+        "id": 17104
+       },
+       "description": "Increases the effect of all your healing spells by 10%.",
+       "cast_time": "Passive"
+      }
+     }
+    }
+   ],
+   "display_row": 3,
+   "display_col": 16,
+   "raw_position_x": 10280,
+   "raw_position_y": 3330
+  },
+  {
+   "id": 104918,
+   "node_type": {
+    "id": 0,
+    "type": "ACTIVE"
+   },
+   "ranks": [
+    {
+     "rank": 1,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134379?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Bloom",
+       "id": 134379
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/1328621?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Bloom",
+        "id": 1328621
+       },
+       "description": "When your Rejuvenation or Regrowth spell expires due to its duration, the target is instantly healed for an amount equal to 100% of your Spirit. If either spell expires due to being dispelled, the target is healed for 50% of your Spirit instead.",
+       "cast_time": "Passive"
+      }
+     }
+    }
+   ],
+   "display_row": 3,
+   "display_col": 17,
+   "raw_position_x": 10880,
+   "raw_position_y": 3330
+  },
+  {
+   "id": 104915,
+   "node_type": {
+    "id": 0,
+    "type": "ACTIVE"
+   },
+   "ranks": [
+    {
+     "rank": 1,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134376?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Tranquil Spirit",
+       "id": 134376
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/24968?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Tranquil Spirit",
+        "id": 24968
+       },
+       "description": "Reduces the mana cost of your Healing Touch and Tranquility spells by 2%.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 2,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134376?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Tranquil Spirit",
+       "id": 134376
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/24968?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Tranquil Spirit",
+        "id": 24968
+       },
+       "description": "Reduces the mana cost of your Healing Touch and Tranquility spells by 4%.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 3,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134376?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Tranquil Spirit",
+       "id": 134376
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/24968?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Tranquil Spirit",
+        "id": 24968
+       },
+       "description": "Reduces the mana cost of your Healing Touch and Tranquility spells by 6%.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 4,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134376?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Tranquil Spirit",
+       "id": 134376
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/24968?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Tranquil Spirit",
+        "id": 24968
+       },
+       "description": "Reduces the mana cost of your Healing Touch and Tranquility spells by 8%.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 5,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134376?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Tranquil Spirit",
+       "id": 134376
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/24968?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Tranquil Spirit",
+        "id": 24968
+       },
+       "description": "Reduces the mana cost of your Healing Touch and Tranquility spells by 10%.",
+       "cast_time": "Passive"
+      }
+     }
+    }
+   ],
+   "display_row": 4,
+   "display_col": 15,
+   "raw_position_x": 9680,
+   "raw_position_y": 3930
+  },
+  {
+   "id": 104914,
+   "unlocks": [
+    104913
+   ],
+   "node_type": {
+    "id": 0,
+    "type": "ACTIVE"
+   },
+   "ranks": [
+    {
+     "rank": 1,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134375?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Improved Rejuvenation",
+       "id": 134375
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/17111?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Improved Rejuvenation",
+        "id": 17111
+       },
+       "description": "Increases the effect of your Rejuvenation spell by 5%.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 2,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134375?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Improved Rejuvenation",
+       "id": 134375
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/17111?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Improved Rejuvenation",
+        "id": 17111
+       },
+       "description": "Increases the effect of your Rejuvenation spell by 10%.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 3,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134375?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Improved Rejuvenation",
+       "id": 134375
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/17111?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Improved Rejuvenation",
+        "id": 17111
+       },
+       "description": "Increases the effect of your Rejuvenation spell by 15%.",
+       "cast_time": "Passive"
+      }
+     }
+    }
+   ],
+   "display_row": 4,
+   "display_col": 16,
+   "raw_position_x": 10280,
+   "raw_position_y": 3930
+  },
+  {
+   "id": 104912,
+   "node_type": {
+    "id": 0,
+    "type": "ACTIVE"
+   },
+   "ranks": [
+    {
+     "rank": 1,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134373?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Swiftmend",
+       "id": 134373
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/18562?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Swiftmend",
+        "id": 18562
+       },
+       "description": "Instantly heals a target with your active Rejuvenation or Regrowth effect for an amount equal to the full duration of the periodic effect of the consumed spell.",
+       "cast_time": "Instant",
+       "power_cost": "249 Mana",
+       "range": "40 yd range",
+       "cooldown": "15 sec cooldown"
+      }
+     }
+    }
+   ],
+   "display_row": 4,
+   "display_col": 17,
+   "raw_position_x": 10880,
+   "raw_position_y": 3930
+  },
+  {
+   "id": 104921,
+   "locked_by": [
+    104922
+   ],
+   "node_type": {
+    "id": 0,
+    "type": "ACTIVE"
+   },
+   "ranks": [
+    {
+     "rank": 1,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134382?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Nature's Swiftness",
+       "id": 134382
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/17116?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Nature's Swiftness",
+        "id": 17116
+       },
+       "description": "When activated, your next Nature spell becomes an instant cast spell.",
+       "cast_time": "Instant",
+       "power_cost": null,
+       "cooldown": "3 min cooldown"
+      }
+     }
+    }
+   ],
+   "display_row": 5,
+   "display_col": 14,
+   "raw_position_x": 9080,
+   "raw_position_y": 4530
+  },
+  {
+   "id": 104911,
+   "unlocks": [
+    104910
+   ],
+   "node_type": {
+    "id": 0,
+    "type": "ACTIVE"
+   },
+   "ranks": [
+    {
+     "rank": 1,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134372?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Living Spirit",
+       "id": 134372
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/1309631?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Living Spirit",
+        "id": 1309631
+       },
+       "description": "Increases your Spirit by 5%.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 2,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134372?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Living Spirit",
+       "id": 134372
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/1309631?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Living Spirit",
+        "id": 1309631
+       },
+       "description": "Increases your Spirit by 10%.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 3,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134372?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Living Spirit",
+       "id": 134372
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/1309631?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Living Spirit",
+        "id": 1309631
+       },
+       "description": "Increases your Spirit by 15%.",
+       "cast_time": "Passive"
+      }
+     }
+    }
+   ],
+   "display_row": 5,
+   "display_col": 15,
+   "raw_position_x": 9680,
+   "raw_position_y": 4530
+  },
+  {
+   "id": 104909,
+   "node_type": {
+    "id": 0,
+    "type": "ACTIVE"
+   },
+   "ranks": [
+    {
+     "rank": 1,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134370?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Improved Tranquility",
+       "id": 134370
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/17123?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Improved Tranquility",
+        "id": 17123
+       },
+       "description": "Reduces threat caused by Tranquility by 50% and its cooldown by 30%.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 2,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134370?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Improved Tranquility",
+       "id": 134370
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/17123?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Improved Tranquility",
+        "id": 17123
+       },
+       "description": "Reduces threat caused by Tranquility by 100% and its cooldown by 60%.",
+       "cast_time": "Passive"
+      }
+     }
+    }
+   ],
+   "display_row": 5,
+   "display_col": 17,
+   "raw_position_x": 10880,
+   "raw_position_y": 4530
+  },
+  {
+   "id": 104913,
+   "locked_by": [
+    104914
+   ],
+   "node_type": {
+    "id": 0,
+    "type": "ACTIVE"
+   },
+   "ranks": [
+    {
+     "rank": 1,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134374?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Improved Regrowth",
+       "id": 134374
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/17074?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Improved Regrowth",
+        "id": 17074
+       },
+       "description": "Increases the critical effect chance of your Regrowth spell by 10%.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 2,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134374?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Improved Regrowth",
+       "id": 134374
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/17074?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Improved Regrowth",
+        "id": 17074
+       },
+       "description": "Increases the critical effect chance of your Regrowth spell by 20%.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 3,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134374?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Improved Regrowth",
+       "id": 134374
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/17074?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Improved Regrowth",
+        "id": 17074
+       },
+       "description": "Increases the critical effect chance of your Regrowth spell by 30%.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 4,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134374?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Improved Regrowth",
+       "id": 134374
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/17074?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Improved Regrowth",
+        "id": 17074
+       },
+       "description": "Increases the critical effect chance of your Regrowth spell by 40%.",
+       "cast_time": "Passive"
+      }
+     }
+    },
+    {
+     "rank": 5,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134374?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Improved Regrowth",
+       "id": 134374
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/17074?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Improved Regrowth",
+        "id": 17074
+       },
+       "description": "Increases the critical effect chance of your Regrowth spell by 50%.",
+       "cast_time": "Passive"
+      }
+     }
+    }
+   ],
+   "display_row": 6,
+   "display_col": 16,
+   "raw_position_x": 10280,
+   "raw_position_y": 5130
+  },
+  {
+   "id": 104910,
+   "locked_by": [
+    104911
+   ],
+   "node_type": {
+    "id": 0,
+    "type": "ACTIVE"
+   },
+   "ranks": [
+    {
+     "rank": 1,
+     "tooltip": {
+      "talent": {
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/talent/134371?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Wild Growth",
+       "id": 134371
+      },
+      "spell_tooltip": {
+       "spell": {
+        "key": {
+         "href": "https://us.api.blizzard.com/data/wow/spell/408120?namespace=static-1.60.1_70399-forever-us"
+        },
+        "name": "Wild Growth",
+        "id": 408120
+       },
+       "description": "Heals the target and their party for 336 over 7 sec. Party members must be within 43 yards of target. The amount healed is applied quickly at first, and slows down as Wild Growth reaches its full duration.",
+       "cast_time": "3 sec cast",
+       "power_cost": "550 Mana",
+       "range": "40 yd range",
+       "cooldown": "6 sec cooldown"
+      }
+     }
+    }
+   ],
+   "display_row": 7,
+   "display_col": 15,
+   "raw_position_x": 9680,
+   "raw_position_y": 5730
+  }
+ ]
+}

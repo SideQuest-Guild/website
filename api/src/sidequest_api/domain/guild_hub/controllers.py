@@ -66,7 +66,10 @@ class GuildHubController(Controller):
     """``/api/guild``: roster, crafters, news, bank, and announcements."""
 
     path = "/api/guild"
-    dependencies = {"guild_hub_service": Provide(provide_guild_hub_service)}
+    dependencies = {
+        "guild_hub_service": Provide(provide_guild_hub_service),
+        "optional_game_data": Provide(provide_optional_game_data),
+    }
 
     @get(
         "/roster",
@@ -98,11 +101,12 @@ class GuildHubController(Controller):
         self,
         current_member: NamedDependency[Member],
         guild_hub_service: NamedDependency[GuildHubService],
+        optional_game_data: NamedDependency[AsyncClient | None],
         q: Annotated[str | None, Parameter(description="A recipe or item name to search for.")] = None,
         profession: Annotated[str | None, Parameter(description="A profession to filter by.")] = None,
     ) -> GuildCrafters:
         del current_member
-        return await guild_hub_service.get_crafters(q=q, profession=profession)
+        return await guild_hub_service.get_crafters(q=q, profession=profession, game_data=optional_game_data)
 
     @get(
         "/directory",

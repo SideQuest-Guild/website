@@ -6,6 +6,8 @@ from typing import TYPE_CHECKING
 from sqlalchemy import select
 
 from sidequest_common.models import (
+    BattlegroundMatch,
+    BattlegroundScore,
     EventSignup,
     EventSignupActivity,
     EventVoicePresence,
@@ -15,6 +17,7 @@ from sidequest_common.models import (
     MemberRoleReset,
     ModCase,
     OfficerAudit,
+    WowCharacter,
 )
 from tests.unit.api.conftest import link_battlenet, login_as
 
@@ -264,3 +267,44 @@ async def test_delete_account_writes_pending_role_reset(
         assert len(resets) == 1
         assert resets[0].discord_id == 9010
         assert resets[0].done_at is None
+
+
+async def test_delete_account_removes_own_battleground_scores_but_keeps_the_match_and_others_rows(
+    member_client: AsyncTestClient, discord_state: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    await login_as(member_client, discord_state, discord_id=9011, username="pvp-haver")
+    actor_id = (await member_client.get("/api/me")).json()["id"]
+
+    async with db_sessionmaker() as session:
+        mine = WowCharacter(name="Mine", realm="Whitemane", key="mine-whitemane", source="claim", member_id=actor_id)
+        other = WowCharacter(name="Other", realm="Whitemane", key="other-whitemane", source="import")
+        session.add_all([mine, other])
+        await session.flush()
+        match = BattlegroundMatch(
+            external_id="deletion-1",
+            map="Warsong Gulch",
+            instance_id=489,
+            ended_at=datetime.now(UTC),
+            duration=900,
+            winner="alliance",
+            guild_faction="alliance",
+            recorder="Someone-Whitemane",
+        )
+        session.add(match)
+        await session.flush()
+        session.add_all(
+            [
+                BattlegroundScore(match_id=match.id, character_id=mine.id, name="Mine", faction="alliance"),
+                BattlegroundScore(match_id=match.id, character_id=other.id, name="Other", faction="horde"),
+            ]
+        )
+        await session.commit()
+        match_id = match.id
+
+    assert (await member_client.delete("/api/me")).status_code == 204
+
+    async with db_sessionmaker() as session:
+        remaining = (await session.execute(select(BattlegroundScore))).scalars().all()
+        assert [row.name for row in remaining] == ["Other"]
+        kept_match = await session.get(BattlegroundMatch, match_id)
+        assert kept_match is not None

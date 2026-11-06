@@ -105,6 +105,10 @@ import "../../../styles/room-characters.css";
   } from "../../../scripts/api";
   import { itemLink, loadWowheadTooltips, refreshWowheadLinks } from "../../../scripts/items";
   import { onPage } from "../../../scripts/page";
+  import { achievementLink } from "../../../scripts/reference";
+  import { classIconHtml, loadGameArt, specIconHtml } from "../../../scripts/art";
+
+  let gameClasses: Awaited<ReturnType<typeof loadGameArt>> = [];
 
   /** "nox-zul" -> "Nox Zul", for error copy when the API has no stored data to give a real name back. */
   function slugToDisplayName(slug: string): string {
@@ -115,6 +119,8 @@ import "../../../styles/room-characters.css";
   }
 
   function headerMarkup(c: CharacterPage): string {
+    const icon = classIconHtml(gameClasses, c.class, 24);
+    const specIcon = specIconHtml(gameClasses, c.class, c.spec, 16);
     const clsLabel = c.class ? capitalize(c.class) : "Unknown class";
     const clsClass = c.class ? ` cls-${c.class}` : "";
     const clsAttr = c.class ? ` class="cls-${c.class}"` : "";
@@ -122,7 +128,7 @@ import "../../../styles/room-characters.css";
       `Level ${c.level}`,
       c.race ? escapeHtml(c.race) : null,
       `<span${clsAttr}>${escapeHtml(clsLabel)}</span>`,
-      c.spec ? escapeHtml(c.spec) : null,
+      specIcon ? `${specIcon}${escapeHtml(c.spec ?? "")}` : c.spec ? escapeHtml(c.spec) : null,
     ].filter(Boolean);
     const guildLine = c.guild_name
       ? `${escapeHtml(c.guild_name)}${c.in_roster ? ` \u2013 ${escapeHtml(rankLabel(c.guild_rank, c.rank_name))}` : ""}`
@@ -136,7 +142,7 @@ import "../../../styles/room-characters.css";
       c.pvp_rank !== null ? `PvP rank ${c.pvp_rank}` : null,
     ].filter((part): part is string => Boolean(part));
     return `
-      <p class="char-detail-name${clsClass}">${escapeHtml(c.name)} ${escapeHtml(c.surname)}</p>
+      <p class="char-detail-name${clsClass}">${icon}${escapeHtml(c.name)} ${escapeHtml(c.surname)}</p>
       <p class="char-detail-meta">${metaParts.join(" \u00b7 ")}</p>
       <p class="char-detail-facts">${factParts.map((part) => `<span>${part}</span>`).join("")}</p>`;
   }
@@ -172,7 +178,8 @@ import "../../../styles/room-characters.css";
   }
 
   function achievementRow(a: CharacterAchievement): string {
-    return `<li><span>${escapeHtml(a.name)}</span><span>${new Date(a.completed_at).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}</span></li>`;
+    const name = a.id !== null ? achievementLink(a.id, a.name) : escapeHtml(a.name);
+    return `<li><span>${name}</span><span>${new Date(a.completed_at).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}</span></li>`;
   }
 
   onPage("#character-status", (signal) => {
@@ -272,7 +279,12 @@ import "../../../styles/room-characters.css";
       armoryLinkEl.href = `https://worldofwarcraft.blizzard.com/en-us/forever/us/armory/character/${slug}`;
       statusEl.textContent = "Loading\u2026";
       try {
-        const c = await apiFetch<CharacterPage>(`/api/characters/${slug}`, { signal });
+        const [c] = await Promise.all([
+          apiFetch<CharacterPage>(`/api/characters/${slug}`, { signal }),
+          loadGameArt().then((classes) => {
+            gameClasses = classes;
+          }),
+        ]);
         headEl.innerHTML = headerMarkup(c);
         renderSheet(c);
         contentEl.hidden = false;

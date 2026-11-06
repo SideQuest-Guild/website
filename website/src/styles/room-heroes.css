@@ -212,6 +212,16 @@
   margin-top: 10px;
 }
 
+/* ——— Small decorative class icons on hero board rows (src/scripts/art.ts) ——— */
+.class-icon {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  vertical-align: -3px;
+  margin-right: 5px;
+}
+
 @media (max-width: 760px) {
   .hero-row {
     grid-template-columns: 32px 40px minmax(0, 1fr);
