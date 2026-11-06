@@ -1,0 +1,296 @@
+---
+import Room from "../../../layouts/Room.astro";
+import greatHall from "../../../../assets/rooms/great-hall.webp";
+import "../../../styles/addon-tooltip.css";
+import "../../../styles/room-characters.css";
+---
+
+<Room
+  title="Character · SideQuest"
+  description="A character's gear, stats, talents and Battle.net standing."
+  heading="CHARACTER"
+  art={greatHall}
+  artPosition="50% 40%"
+  current="characters"
+  longTitle
+>
+  <p class="status" id="character-status" role="status" aria-live="polite"></p>
+
+  <div id="character-content" hidden>
+    <section class="chamber" aria-labelledby="h-character">
+      <h2 class="chamber-title" id="h-character">
+        Character
+      </h2>
+      <div class="char-detail-head" id="char-detail-head"></div>
+      <p class="aside" id="char-no-profile" hidden></p>
+      <p class="char-armory-link">
+        <a id="char-armory-link" href="#" target="_blank" rel="noreferrer">
+          View on the Armory
+        </a>
+      </p>
+    </section>
+
+    <section class="chamber" id="char-gear-section" aria-labelledby="h-gear" hidden>
+      <h2 class="chamber-title" id="h-gear">
+        Gear
+      </h2>
+      <ul class="char-gear-list" id="char-gear-list"></ul>
+    </section>
+
+    <section class="chamber" id="char-stats-section" aria-labelledby="h-stats" hidden>
+      <h2 class="chamber-title" id="h-stats">
+        Stats
+      </h2>
+      <dl class="char-stats-list" id="char-stats-list"></dl>
+    </section>
+
+    <section class="chamber" id="char-talents-section" aria-labelledby="h-talents" hidden>
+      <h2 class="chamber-title" id="h-talents">
+        Talents
+      </h2>
+      <ul class="char-talents-list" id="char-talents-list"></ul>
+    </section>
+
+    <section class="chamber" id="char-professions-section" aria-labelledby="h-professions" hidden>
+      <h2 class="chamber-title" id="h-professions">
+        Professions
+      </h2>
+      <ul class="char-professions-list" id="char-professions-list"></ul>
+    </section>
+
+    <section class="chamber" id="char-reputations-section" aria-labelledby="h-reputations" hidden>
+      <h2 class="chamber-title" id="h-reputations">
+        Reputations
+      </h2>
+      <ul class="char-reputations-list" id="char-reputations-list"></ul>
+    </section>
+
+    <section class="chamber" id="char-achievements-section" aria-labelledby="h-achievements" hidden>
+      <h2 class="chamber-title" id="h-achievements">
+        Recent achievements
+      </h2>
+      <ul class="char-achievements-list" id="char-achievements-list"></ul>
+    </section>
+
+    <section class="chamber" id="char-collections-section" aria-labelledby="h-collections" hidden>
+      <h2 class="chamber-title" id="h-collections">
+        Collections
+      </h2>
+      <ul class="char-collections-list" id="char-collections-list"></ul>
+    </section>
+  </div>
+
+  <noscript>
+    <p class="aside">Enable JavaScript to view this character.</p>
+  </noscript>
+</Room>
+
+<script>
+  import {
+    apiFetch,
+    ApiError,
+    capitalize,
+    escapeHtml,
+    qualityClass,
+    rankLabel,
+    relativeTime,
+    requireElement,
+    type CharacterAchievement,
+    type CharacterGearSlot,
+    type CharacterPage,
+    type CharacterProfession,
+    type CharacterReputation,
+    type CharacterStat,
+    type CharacterTalent,
+  } from "../../../scripts/api";
+  import { itemLink, loadWowheadTooltips, refreshWowheadLinks } from "../../../scripts/items";
+  import { onPage } from "../../../scripts/page";
+
+  /** "nox-zul" -> "Nox Zul", for error copy when the API has no stored data to give a real name back. */
+  function slugToDisplayName(slug: string): string {
+    return slug
+      .split("-")
+      .map((part) => (part.length > 0 ? part.charAt(0).toUpperCase() + part.slice(1) : part))
+      .join(" ");
+  }
+
+  function headerMarkup(c: CharacterPage): string {
+    const clsLabel = c.class ? capitalize(c.class) : "Unknown class";
+    const clsClass = c.class ? ` cls-${c.class}` : "";
+    const clsAttr = c.class ? ` class="cls-${c.class}"` : "";
+    const metaParts = [
+      `Level ${c.level}`,
+      c.race ? escapeHtml(c.race) : null,
+      `<span${clsAttr}>${escapeHtml(clsLabel)}</span>`,
+      c.spec ? escapeHtml(c.spec) : null,
+    ].filter(Boolean);
+    const guildLine = c.guild_name
+      ? `${escapeHtml(c.guild_name)}${c.in_roster ? ` \u2013 ${escapeHtml(rankLabel(c.guild_rank, c.rank_name))}` : ""}`
+      : "No guild";
+    const factParts = [
+      `Guild: ${guildLine}`,
+      c.item_level !== null ? `Item level ${c.item_level}` : null,
+      c.last_login_at ? `Last login ${relativeTime(c.last_login_at)}` : null,
+      c.achievement_points !== null ? `${c.achievement_points} achievement points` : null,
+      c.honorable_kills !== null ? `${c.honorable_kills} honorable kills` : null,
+      c.pvp_rank !== null ? `PvP rank ${c.pvp_rank}` : null,
+    ].filter((part): part is string => Boolean(part));
+    return `
+      <p class="char-detail-name${clsClass}">${escapeHtml(c.name)} ${escapeHtml(c.surname)}</p>
+      <p class="char-detail-meta">${metaParts.join(" \u00b7 ")}</p>
+      <p class="char-detail-facts">${factParts.map((part) => `<span>${part}</span>`).join("")}</p>`;
+  }
+
+  function gearRow(g: CharacterGearSlot): string {
+    const enchants =
+      g.enchantments.length > 0
+        ? `<p class="char-gear-enchants">${g.enchantments.map((e) => escapeHtml(e)).join(", ")}</p>`
+        : "";
+    return `
+      <li class="char-gear-row">
+        <span class="char-gear-slot">${escapeHtml(g.slot_name)}</span>
+        <span class="char-gear-name">${itemLink(g.item_id, g.name, qualityClass(g.quality))}</span>
+        <span class="char-gear-ilvl">${g.item_level !== null ? `Item level ${g.item_level}` : ""}</span>
+        ${enchants}
+      </li>`;
+  }
+
+  function statRow(s: CharacterStat): string {
+    return `<dt>${escapeHtml(s.label)}</dt><dd>${escapeHtml(s.value)}</dd>`;
+  }
+
+  function talentRow(t: CharacterTalent): string {
+    return `<li><span>${escapeHtml(t.name)}</span><span>${t.points}</span></li>`;
+  }
+
+  function professionRow(p: CharacterProfession): string {
+    return `<li><span>${escapeHtml(p.name)}</span><span>${p.skill}/${p.max_skill} \u00b7 ${p.recipes} recipes</span></li>`;
+  }
+
+  function reputationRow(r: CharacterReputation): string {
+    return `<li><span>${escapeHtml(r.faction)}</span><span>${escapeHtml(r.standing)} \u00b7 ${r.value}/${r.max}</span></li>`;
+  }
+
+  function achievementRow(a: CharacterAchievement): string {
+    return `<li><span>${escapeHtml(a.name)}</span><span>${new Date(a.completed_at).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}</span></li>`;
+  }
+
+  onPage("#character-status", (signal) => {
+    const statusEl = requireElement("character-status");
+    const contentEl = requireElement("character-content");
+    const headEl = requireElement("char-detail-head");
+    const noProfileEl = requireElement("char-no-profile");
+    const armoryLinkEl = requireElement<HTMLAnchorElement>("char-armory-link");
+
+    const sections: Record<string, { section: HTMLElement; list: HTMLElement }> = {
+      gear: { section: requireElement("char-gear-section"), list: requireElement("char-gear-list") },
+      stats: { section: requireElement("char-stats-section"), list: requireElement("char-stats-list") },
+      talents: { section: requireElement("char-talents-section"), list: requireElement("char-talents-list") },
+      professions: {
+        section: requireElement("char-professions-section"),
+        list: requireElement("char-professions-list"),
+      },
+      reputations: {
+        section: requireElement("char-reputations-section"),
+        list: requireElement("char-reputations-list"),
+      },
+      achievements: {
+        section: requireElement("char-achievements-section"),
+        list: requireElement("char-achievements-list"),
+      },
+      collections: {
+        section: requireElement("char-collections-section"),
+        list: requireElement("char-collections-list"),
+      },
+    };
+
+    function hideSheetSections(): void {
+      for (const { section } of Object.values(sections)) {
+        section.hidden = true;
+      }
+    }
+
+    function renderSheet(c: CharacterPage): void {
+      const sheet = c.sheet;
+      if (!sheet) {
+        noProfileEl.hidden = false;
+        noProfileEl.textContent =
+          "Battle.net hasn't published this character's profile yet. It does so some time after the character logs out.";
+        hideSheetSections();
+        return;
+      }
+      noProfileEl.hidden = true;
+
+      sections.gear.section.hidden = false;
+      sections.gear.list.innerHTML =
+        sheet.gear.length > 0 ? sheet.gear.map(gearRow).join("") : `<li class="aside">No gear equipped.</li>`;
+
+      sections.stats.section.hidden = false;
+      sections.stats.list.innerHTML =
+        sheet.stats.length > 0 ? sheet.stats.map(statRow).join("") : `<dt class="aside">No stats recorded.</dt>`;
+
+      sections.talents.section.hidden = false;
+      sections.talents.list.innerHTML =
+        sheet.talents.length > 0
+          ? sheet.talents.map(talentRow).join("")
+          : `<li class="aside">No talent points spent.</li>`;
+
+      sections.professions.section.hidden = false;
+      sections.professions.list.innerHTML =
+        sheet.professions.length > 0
+          ? sheet.professions.map(professionRow).join("")
+          : `<li class="aside">No professions shared.</li>`;
+
+      sections.reputations.section.hidden = false;
+      sections.reputations.list.innerHTML =
+        sheet.reputations.length > 0
+          ? sheet.reputations.map(reputationRow).join("")
+          : `<li class="aside">No tracked reputations.</li>`;
+
+      sections.achievements.section.hidden = false;
+      sections.achievements.list.innerHTML =
+        sheet.recent_achievements.length > 0
+          ? sheet.recent_achievements.map(achievementRow).join("")
+          : `<li class="aside">No recent achievements.</li>`;
+
+      sections.collections.section.hidden = false;
+      sections.collections.list.innerHTML = `
+        <li><span>Mounts</span><span>${sheet.mounts}</span></li>
+        <li><span>Pets</span><span>${sheet.pets}</span></li>
+        <li><span>Toys</span><span>${sheet.toys}</span></li>
+        <li><span>Quests completed</span><span>${sheet.quests_completed ?? "\u2013"}</span></li>`;
+
+      void loadWowheadTooltips().then(() => refreshWowheadLinks());
+    }
+
+    async function init(): Promise<void> {
+      const slug = (new URLSearchParams(location.search).get("slug") ?? "").toLowerCase();
+      if (!slug) {
+        statusEl.textContent = "Enter a name and surname.";
+        return;
+      }
+      armoryLinkEl.href = `https://worldofwarcraft.blizzard.com/en-us/forever/us/armory/character/${slug}`;
+      statusEl.textContent = "Loading\u2026";
+      try {
+        const c = await apiFetch<CharacterPage>(`/api/characters/${slug}`, { signal });
+        headEl.innerHTML = headerMarkup(c);
+        renderSheet(c);
+        contentEl.hidden = false;
+        statusEl.textContent = "";
+      } catch (err) {
+        const [name, surname] = slugToDisplayName(slug).split(" ");
+        if (err instanceof ApiError && err.status === 400) {
+          statusEl.textContent = "Enter a name and surname.";
+        } else if (err instanceof ApiError && err.status === 404) {
+          statusEl.textContent = `No character named ${name ?? ""} ${surname ?? ""} on Battle.net yet. Battle.net publishes a character some time after it logs out.`;
+        } else if (err instanceof ApiError && err.status === 503) {
+          statusEl.textContent = "Battle.net did not answer; try again in a minute.";
+        } else {
+          statusEl.textContent = err instanceof ApiError ? err.detail : "Something went wrong. Try again in a moment.";
+        }
+      }
+    }
+
+    void init();
+  });
+</script>

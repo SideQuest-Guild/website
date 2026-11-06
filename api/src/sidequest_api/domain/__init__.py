@@ -12,6 +12,11 @@ from sidequest_api.domain.badges.controllers import BadgesController
 from sidequest_api.domain.battlenet.controllers import BattleNetController
 from sidequest_api.domain.calendar.controllers import CalendarFeedController, CalendarLinkController
 from sidequest_api.domain.cases.controllers import CasesController
+from sidequest_api.domain.characters.controllers import (
+    CharactersController,
+    RaidReadinessController,
+    RosterSyncController,
+)
 from sidequest_api.domain.discord_live.controllers import DiscordLiveController, DiscordLivePublicController
 from sidequest_api.domain.discord_online.controllers import DiscordOnlineController
 from sidequest_api.domain.discord_signups.controllers import DiscordSignupsController
@@ -65,6 +70,7 @@ guild_controllers = [
     BadgesController,
     GroupVoiceController,
     GuildAnnouncementsBotController,
+    RosterSyncController,
 ]
 
 public_routes = [
@@ -95,4 +101,6 @@ public_routes = [
     ItemsController,
     MyWishlistController,
     ItemWishersController,
+    CharactersController,
+    RaidReadinessController,
 ]

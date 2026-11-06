@@ -1,0 +1,356 @@
+{
+ "_links": {
+  "self": {
+   "href": "https://us.api.blizzard.com/profile/wow/character/terrorskull-gloomstep/professions?namespace=profile-forever-us"
+  }
+ },
+ "character": {
+  "id": 163709,
+  "key": {
+   "href": "https://us.api.blizzard.com/profile/wow/character/terrorskull-gloomstep?namespace=profile-forever-us"
+  },
+  "name": "Terrorskull",
+  "slug": "terrorskull-gloomstep",
+  "surname": "Gloomstep"
+ },
+ "primaries": [
+  {
+   "profession": {
+    "id": 165,
+    "key": {
+     "href": "https://us.api.blizzard.com/data/wow/profession/165?namespace=static-1.60.1_70399-forever-us"
+    },
+    "name": "Leatherworking"
+   },
+   "tiers": [
+    {
+     "known_recipes": [
+      {
+       "id": 1353,
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/recipe/1353?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Handstitched Leather Boots"
+      },
+      {
+       "id": 1355,
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/recipe/1355?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Handstitched Leather Pants"
+      },
+      {
+       "id": 1356,
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/recipe/1356?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Light Armor Kit"
+      },
+      {
+       "id": 1362,
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/recipe/1362?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Embossed Leather Vest"
+      },
+      {
+       "id": 1364,
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/recipe/1364?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Embossed Leather Cloak"
+      },
+      {
+       "id": 1708,
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/recipe/1708?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Light Leather"
+      },
+      {
+       "id": 2162,
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/recipe/2162?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Handstitched Leather Belt"
+      },
+      {
+       "id": 2164,
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/recipe/2164?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Embossed Leather Gloves"
+      },
+      {
+       "id": 4987,
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/recipe/4987?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Handstitched Leather Cloak"
+      },
+      {
+       "id": 4988,
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/recipe/4988?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Handstitched Leather Bracers"
+      },
+      {
+       "id": 4989,
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/recipe/4989?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Light Leather Quiver"
+      },
+      {
+       "id": 4990,
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/recipe/4990?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Small Leather Ammo Pouch"
+      },
+      {
+       "id": 4992,
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/recipe/4992?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Light Leather Bracers"
+      },
+      {
+       "id": 2195,
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/recipe/2195?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Cured Light Hide"
+      },
+      {
+       "id": 4156,
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/recipe/4156?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Handstitched Leather Vest"
+      },
+      {
+       "id": 52647,
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/recipe/52647?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Camp Tent"
+      },
+      {
+       "id": 55206,
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/recipe/55206?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Dark Leather Boots"
+      }
+     ],
+     "max_skill_points": 75,
+     "skill_points": 55,
+     "tier": {
+      "id": 2945,
+      "name": "Leatherworking"
+     }
+    }
+   ]
+  },
+  {
+   "profession": {
+    "id": 393,
+    "key": {
+     "href": "https://us.api.blizzard.com/data/wow/profession/393?namespace=static-1.60.1_70399-forever-us"
+    },
+    "name": "Skinning"
+   },
+   "tiers": [
+    {
+     "known_recipes": [
+      {
+       "id": 4767,
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/recipe/4767?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Skinning"
+      },
+      {
+       "id": 52644,
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/recipe/52644?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Camp Chair"
+      }
+     ],
+     "max_skill_points": 150,
+     "skill_points": 98,
+     "tier": {
+      "id": 2947,
+      "name": "Skinning"
+     }
+    }
+   ]
+  }
+ ],
+ "secondaries": [
+  {
+   "profession": {
+    "id": 185,
+    "key": {
+     "href": "https://us.api.blizzard.com/data/wow/profession/185?namespace=static-1.60.1_70399-forever-us"
+    },
+    "name": "Cooking"
+   },
+   "tiers": [
+    {
+     "known_recipes": [
+      {
+       "id": 8616,
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/recipe/8616?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Crispy Bat Wing"
+      },
+      {
+       "id": 1535,
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/recipe/1535?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Charred Wolf Meat"
+      },
+      {
+       "id": 1536,
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/recipe/1536?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Spiced Wolf Meat"
+      },
+      {
+       "id": 1537,
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/recipe/1537?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Roasted Boar Meat"
+      },
+      {
+       "id": 4353,
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/recipe/4353?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Brilliant Smallfish"
+      },
+      {
+       "id": 4354,
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/recipe/4354?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Slitherskin Mackerel"
+      },
+      {
+       "id": 4786,
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/recipe/4786?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Herb Baked Egg"
+      },
+      {
+       "id": 52640,
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/recipe/52640?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Basic Campfire"
+      }
+     ],
+     "max_skill_points": 75,
+     "skill_points": 24,
+     "tier": {
+      "id": 2939,
+      "name": "Cooking"
+     }
+    }
+   ]
+  },
+  {
+   "profession": {
+    "id": 356,
+    "key": {
+     "href": "https://us.api.blizzard.com/data/wow/profession/356?namespace=static-1.60.1_70399-forever-us"
+    },
+    "name": "Fishing"
+   },
+   "tiers": [
+    {
+     "known_recipes": [
+      {
+       "id": 4344,
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/recipe/4344?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Fishing"
+      }
+     ],
+     "max_skill_points": 75,
+     "skill_points": 1,
+     "tier": {
+      "id": 2943,
+      "name": "Fishing"
+     }
+    }
+   ]
+  },
+  {
+   "profession": {
+    "id": 129,
+    "key": {
+     "href": "https://us.api.blizzard.com/data/wow/profession/129?namespace=static-1.60.1_70399-forever-us"
+    },
+    "name": "First Aid"
+   },
+   "tiers": [
+    {
+     "known_recipes": [
+      {
+       "id": 1838,
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/recipe/1838?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Linen Bandage"
+      },
+      {
+       "id": 1839,
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/recipe/1839?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Heavy Linen Bandage"
+      },
+      {
+       "id": 52641,
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/recipe/52641?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "First Aid Kit"
+      },
+      {
+       "id": 54191,
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/recipe/54191?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Minor Healing Potion"
+      },
+      {
+       "id": 54192,
+       "key": {
+        "href": "https://us.api.blizzard.com/data/wow/recipe/54192?namespace=static-1.60.1_70399-forever-us"
+       },
+       "name": "Lesser Healing Potion"
+      }
+     ],
+     "max_skill_points": 150,
+     "skill_points": 71,
+     "tier": {
+      "id": 2942,
+      "name": "First Aid"
+     }
+    }
+   ]
+  }
+ ]
+}

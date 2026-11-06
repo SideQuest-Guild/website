@@ -1,14 +1,45 @@
-"""A fake Battle.net game data API for tests: item, item media and item search, plus the app token endpoint.
+"""A fake Battle.net game data API for tests: items, item search, the guild roster and character profiles.
 
-Import ``battlenet`` (what it serves) and ``forget_battlenet_state`` (autouse; clears the items domain's process-wide
-data version and search cache) into a test module, and pass ``transport(battlenet)`` to ``create_app`` as
-``game_data_transport``.
+Import ``battlenet`` (what it serves) and ``forget_battlenet_state`` (autouse; clears the items and characters
+domains' process-wide caches) into a test module, and pass ``transport(battlenet)`` to ``create_app`` as
+``game_data_transport``. Roster and profile documents are real ones recorded from Battle.net, under
+``fixtures/battlenet/``: the SideQuest roster, and every profile document of Terrorskull Gloomstep.
 """
+
+import copy
+import json
+import zlib
+from pathlib import Path
 
 import httpx
 import pytest
 
+from sidequest_api.domain.characters import services as characters_services
 from sidequest_api.domain.items import services as items_services
+
+API = "https://us.api.blizzard.com"
+BETA = "static-1.60.1_70399-forever-us"
+PATCH = "static-1.60.2_71000-forever-us"
+THUNDERFURY = "Thunderfury, Blessed Blade of the Windseeker"
+RECORDED = Path(__file__).parent / "fixtures" / "battlenet"
+TERRORSKULL = "terrorskull-gloomstep"
+ROSTER = json.loads((RECORDED / "guild" / "sidequest" / "roster.json").read_text())
+
+
+def roster_member(name: str, surname: str, *, rank: int, level: int = 10, class_id: int = 4) -> dict:
+    """A roster entry shaped like Battle.net's, for a character the recorded roster doesn't have."""
+    slug = f"{name}-{surname}".lower()
+    character = copy.deepcopy(ROSTER["members"][0]["character"])
+    character.update(
+        name=name,
+        surname=surname,
+        slug=slug,
+        level=level,
+        id=zlib.crc32(slug.encode()),
+        playable_class={**character["playable_class"], "id": class_id},
+    )
+    return {"character": character, "rank": rank}
+
 
 API = "https://us.api.blizzard.com"
 BETA = "static-1.60.1_70399-forever-us"
@@ -104,11 +135,17 @@ def search_hit(item_id: int, name: str, version: str) -> dict:
 
 @pytest.fixture
 def battlenet() -> dict:
-    """What the fake Battle.net serves, and every API request it saw. Tests change it between calls."""
+    """What the fake Battle.net serves, and every API request it saw. Tests change it between calls.
+
+    ``roster`` is the guild roster's members; ``profiles`` the slugs with a published profile (each served from
+    Terrorskull Gloomstep's recorded documents, renamed).
+    """
     return {
         "version": BETA,
         "items": {19019: THUNDERFURY},
         "search": [(19019, THUNDERFURY)],
+        "roster": copy.deepcopy(ROSTER["members"]),
+        "profiles": {TERRORSKULL},
         "down": False,
         "requests": [],
     }
@@ -119,6 +156,20 @@ def forget_battlenet_state() -> None:
     """The data version and the search cache are process-wide; tests must not see each other's."""
     items_services._data_version = None
     items_services._search_cache.clear()
+    characters_services._missing.clear()
+
+
+def _profile_document(path: str, battlenet: dict) -> httpx.Response:
+    """A character profile document: Terrorskull Gloomstep's recording, under the requested character's name."""
+    slug, _, part = path.removeprefix("/profile/wow/character/").partition("/")
+    if slug not in battlenet["profiles"]:
+        return httpx.Response(404, json={"code": 404})
+    recorded = RECORDED / "wow" / "character" / (f"{TERRORSKULL}/{part}.json" if part else f"{TERRORSKULL}.json")
+    if not recorded.exists():
+        return httpx.Response(404, json={"code": 404})
+    name, surname = (word.capitalize() for word in slug.split("-", 1))
+    body = json.loads(recorded.read_text().replace("Terrorskull", name).replace("Gloomstep", surname))
+    return httpx.Response(200, json=body)
 
 
 def transport(battlenet: dict) -> httpx.MockTransport:
@@ -131,6 +182,10 @@ def transport(battlenet: dict) -> httpx.MockTransport:
         if battlenet["down"]:
             return httpx.Response(503, json={"code": 503})
         path, version = request.url.path, battlenet["version"]
+        if path.startswith("/profile/wow/character/"):
+            return _profile_document(path, battlenet)
+        if path == "/data/wow/guild/sidequest/roster":
+            return httpx.Response(200, json={**ROSTER, "members": battlenet["roster"]})
         if path == "/data/wow/search/item":
             hits = [search_hit(item_id, name, version) for item_id, name in battlenet["search"]]
             body = {"page": 1, "pageSize": 50, "maxPageSize": 1000, "pageCount": 1, "results": hits}

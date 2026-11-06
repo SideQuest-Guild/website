@@ -1,0 +1,98 @@
+{
+ "_links": {
+  "self": {
+   "href": "https://us.api.blizzard.com/profile/wow/character/terrorskull-gloomstep/reputations?namespace=profile-forever-us"
+  }
+ },
+ "character": {
+  "id": 163709,
+  "key": {
+   "href": "https://us.api.blizzard.com/profile/wow/character/terrorskull-gloomstep?namespace=profile-forever-us"
+  },
+  "name": "Terrorskull",
+  "slug": "terrorskull-gloomstep",
+  "surname": "Gloomstep"
+ },
+ "reputations": [
+  {
+   "faction": {
+    "id": 81,
+    "key": {
+     "href": "https://us.api.blizzard.com/data/wow/reputation-faction/81?namespace=static-1.60.1_70399-forever-us"
+    },
+    "name": "Thunder Bluff"
+   },
+   "standing": {
+    "max": 3000,
+    "name": "Neutral",
+    "raw": 686,
+    "tier": 3,
+    "value": 686
+   }
+  },
+  {
+   "faction": {
+    "id": 76,
+    "key": {
+     "href": "https://us.api.blizzard.com/data/wow/reputation-faction/76?namespace=static-1.60.1_70399-forever-us"
+    },
+    "name": "Orgrimmar"
+   },
+   "standing": {
+    "max": 3000,
+    "name": "Neutral",
+    "raw": 2186,
+    "tier": 3,
+    "value": 2186
+   }
+  },
+  {
+   "faction": {
+    "id": 530,
+    "key": {
+     "href": "https://us.api.blizzard.com/data/wow/reputation-faction/530?namespace=static-1.60.1_70399-forever-us"
+    },
+    "name": "Darkspear Trolls"
+   },
+   "standing": {
+    "max": 3000,
+    "name": "Neutral",
+    "raw": 2186,
+    "tier": 3,
+    "value": 2186
+   }
+  },
+  {
+   "faction": {
+    "id": 529,
+    "key": {
+     "href": "https://us.api.blizzard.com/data/wow/reputation-faction/529?namespace=static-1.60.1_70399-forever-us"
+    },
+    "name": "Argent Dawn"
+   },
+   "standing": {
+    "max": 3000,
+    "name": "Neutral",
+    "raw": 1050,
+    "tier": 3,
+    "value": 1050
+   }
+  },
+  {
+   "faction": {
+    "id": 68,
+    "key": {
+     "href": "https://us.api.blizzard.com/data/wow/reputation-faction/68?namespace=static-1.60.1_70399-forever-us"
+    },
+    "name": "Undercity"
+   },
+   "standing": {
+    "max": 12000,
+    "name": "Honored",
+    "raw": 9480,
+    "tier": 5,
+    "value": 480
+   }
+  }
+ ]
+}

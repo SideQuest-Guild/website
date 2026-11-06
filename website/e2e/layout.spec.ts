@@ -3,7 +3,7 @@
 // of each is attached to the report for a human look.
 import type { Page } from "@playwright/test";
 
-import { DEVICE_AUTH_USER_CODE, EVENTS, GM, HEROES, ITEMS } from "./data";
+import { CHARACTERS, DEVICE_AUTH_USER_CODE, EVENTS, GM, HEROES, ITEMS } from "./data";
 import { expect, test } from "./fixtures";
 
 const PAGES = [
@@ -19,6 +19,8 @@ const PAGES = [
   { name: "guild", path: "/guild/" },
   { name: "items", path: "/items/" },
   { name: "item", path: `/items/detail/?id=${ITEMS[0]?.item_id}` },
+  { name: "characters", path: "/characters/" },
+  { name: "character", path: `/characters/detail/?slug=${CHARACTERS[0]?.slug}` },
   { name: "account", path: "/account/" },
   { name: "account stats", path: "/account/#stats" },
   { name: "account wishlist", path: "/account/#wishlist" },

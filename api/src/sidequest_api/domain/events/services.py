@@ -11,6 +11,7 @@ from litestar.exceptions import HTTPException, NotFoundException, ValidationExce
 from litestar.status_codes import HTTP_409_CONFLICT
 from sqlalchemy import delete, func, or_, select
 
+from sidequest_api.domain.characters.services import raid_min_item_level, readiness_for, signup_readiness
 from sidequest_api.domain.event_series.materializer import materialize_all
 from sidequest_api.lib.discord import avatar_url
 from sidequest_common.models import (
@@ -47,6 +48,8 @@ from sidequest_common.schemas import (
 if TYPE_CHECKING:
     from uuid import UUID
 
+    from sidequest_common.schemas import SignupReadiness
+
 UPCOMING_LOOKBACK = timedelta(hours=6)
 PAST_LIMIT = 50
 _GUILD_TZ = ZoneInfo("America/Chicago")
@@ -82,7 +85,7 @@ def _event_summary_fields(event: GuildEvent) -> dict[str, object]:
     }
 
 
-def _to_signup_schema(signup: EventSignup, member: Member) -> Signup:
+def _to_signup_schema(signup: EventSignup, member: Member, readiness: SignupReadiness | None = None) -> Signup:
     member_avatar = avatar_url(member.discord_id, member.avatar_hash)
     return Signup.model_validate(
         {
@@ -96,6 +99,7 @@ def _to_signup_schema(signup: EventSignup, member: Member) -> Signup:
             "group": signup.chart_group,
             "bench": signup.bench,
             "updated_at": signup.updated_at,
+            "readiness": readiness,
         }
     )
 
@@ -182,11 +186,14 @@ class EventsService(SQLAlchemyAsyncRepositoryService[GuildEvent]):
             for event in events
         ]
 
-    async def get_detail(self, event_id: UUID, *, viewer: Member | None, full_access: bool) -> EventDetail:
+    async def get_detail(
+        self, event_id: UUID, *, viewer: Member | None, full_access: bool, guild_id: int
+    ) -> EventDetail:
         """An event with its full roster and the viewer's own signup (``None`` if anonymous or not signed up).
 
         Anonymous callers (``full_access=False``) get the headline fields only: ``notes``, ``counts``,
         ``discord_interest`` and ``away`` are ``None``, and ``signups``/``my_signup`` are empty; no roster queries run.
+        Each sign-up carries its character's raid readiness, against ``guild_id``'s minimum item level.
         """
         event = await self.get_event_or_404(event_id)
         if not full_access:
@@ -208,12 +215,16 @@ class EventsService(SQLAlchemyAsyncRepositoryService[GuildEvent]):
             .where(EventSignup.event_id == event_id)
         )
         rows = (await session.execute(statement)).all()
-        signups = [_to_signup_schema(signup, member) for signup, member in rows]
+        min_item_level = await raid_min_item_level(session, guild_id)
+        readiness = await signup_readiness(session, [signup.character for signup, _ in rows], min_item_level)
+        signups = [
+            _to_signup_schema(signup, member, readiness_for(readiness, signup.character)) for signup, member in rows
+        ]
         my_signup = None
         if viewer is not None:
             own = next(((signup, member) for signup, member in rows if member.id == viewer.id), None)
             if own is not None:
-                my_signup = _to_signup_schema(*own)
+                my_signup = _to_signup_schema(*own, readiness_for(readiness, own[0].character))
         counts = (await self._counts_for([event_id]))[event_id]
         discord_interest = await self._discord_interest_for(event_id)
         away = await self._away_for(event)
@@ -225,6 +236,7 @@ class EventsService(SQLAlchemyAsyncRepositoryService[GuildEvent]):
                 "my_signup": my_signup,
                 "discord_interest": discord_interest,
                 "away": away,
+                "min_item_level": min_item_level,
             }
         )
 

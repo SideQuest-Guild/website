@@ -150,7 +150,9 @@ async def get_event(event_id: str) -> dict[str, Any]:
     """One event's full detail, including its sign-up roster."""
     ctx = get_context()
     events_service = EventsService(ctx.session)
-    detail = await events_service.get_detail(UUID(event_id), viewer=None, full_access=True)
+    detail = await events_service.get_detail(
+        UUID(event_id), viewer=None, full_access=True, guild_id=ctx.web_settings.GUILD_ID
+    )
     return detail.model_dump(mode="json")
 
 
@@ -324,7 +326,9 @@ async def create_event(
         subject_id=str(event.id),
         summary=f'Created {event.kind} "{event.title}" for {event.starts_at:%b %-d} via MCP',
     )
-    detail = await events_service.get_detail(event.id, viewer=None, full_access=True)
+    detail = await events_service.get_detail(
+        event.id, viewer=None, full_access=True, guild_id=ctx.web_settings.GUILD_ID
+    )
     return detail.model_dump(mode="json")
 
 
@@ -364,7 +368,9 @@ async def update_event(
         subject_id=str(event.id),
         summary=f'Updated event "{event.title}" via MCP',
     )
-    detail = await events_service.get_detail(event.id, viewer=None, full_access=True)
+    detail = await events_service.get_detail(
+        event.id, viewer=None, full_access=True, guild_id=ctx.web_settings.GUILD_ID
+    )
     return detail.model_dump(mode="json")
 
 
@@ -381,7 +387,9 @@ async def cancel_event(event_id: str) -> dict[str, Any]:
         subject_id=str(event.id),
         summary=f'Cancelled event "{event.title}" via MCP',
     )
-    detail = await events_service.get_detail(event.id, viewer=None, full_access=True)
+    detail = await events_service.get_detail(
+        event.id, viewer=None, full_access=True, guild_id=ctx.web_settings.GUILD_ID
+    )
     return detail.model_dump(mode="json")
 
 

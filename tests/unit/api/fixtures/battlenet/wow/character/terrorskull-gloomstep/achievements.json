@@ -1,0 +1,344 @@
+{
+ "_links": {
+  "self": {
+   "href": "https://us.api.blizzard.com/profile/wow/character/terrorskull-gloomstep/achievements?namespace=profile-forever-us"
+  }
+ },
+ "achievements": [
+  {
+   "achievement": {
+    "id": 62024,
+    "key": {
+     "href": "https://us.api.blizzard.com/data/wow/achievement/62024?namespace=static-1.60.1_70399-forever-us"
+    },
+    "name": "Journeyman Leatherworker"
+   },
+   "criteria": {
+    "child_criteria": [
+     {
+      "amount": 55,
+      "id": 221528,
+      "is_completed": false
+     }
+    ],
+    "id": 221527,
+    "is_completed": false
+   },
+   "id": 62024
+  },
+  {
+   "achievement": {
+    "id": 62025,
+    "key": {
+     "href": "https://us.api.blizzard.com/data/wow/achievement/62025?namespace=static-1.60.1_70399-forever-us"
+    },
+    "name": "Expert Leatherworker"
+   },
+   "criteria": {
+    "child_criteria": [
+     {
+      "amount": 55,
+      "id": 221530,
+      "is_completed": false
+     }
+    ],
+    "id": 221529,
+    "is_completed": false
+   },
+   "id": 62025
+  },
+  {
+   "achievement": {
+    "id": 62026,
+    "key": {
+     "href": "https://us.api.blizzard.com/data/wow/achievement/62026?namespace=static-1.60.1_70399-forever-us"
+    },
+    "name": "Artisan Leatherworker"
+   },
+   "criteria": {
+    "child_criteria": [
+     {
+      "amount": 55,
+      "id": 221532,
+      "is_completed": false
+     }
+    ],
+    "id": 221531,
+    "is_completed": false
+   },
+   "id": 62026
+  },
+  {
+   "achievement": {
+    "id": 728,
+    "key": {
+     "href": "https://us.api.blizzard.com/data/wow/achievement/728?namespace=static-1.60.1_70399-forever-us"
+    },
+    "name": "Explore Durotar"
+   },
+   "criteria": {
+    "child_criteria": [
+     {
+      "amount": 0,
+      "id": 126895,
+      "is_completed": false
+     },
+     {
+      "amount": 0,
+      "id": 126896,
+      "is_completed": false
+     },
+     {
+      "amount": 0,
+      "id": 126897,
+      "is_completed": false
+     },
+     {
+      "amount": 0,
+      "id": 126898,
+      "is_completed": false
+     },
+     {
+      "amount": 0,
+      "id": 126899,
+      "is_completed": false
+     },
+     {
+      "amount": 0,
+      "id": 126900,
+      "is_completed": false
+     },
+     {
+      "amount": 0,
+      "id": 126901,
+      "is_completed": false
+     },
+     {
+      "amount": 0,
+      "id": 126902,
+      "is_completed": false
+     },
+     {
+      "amount": 0,
+      "id": 126903,
+      "is_completed": false
+     },
+     {
+      "amount": 1,
+      "id": 126904,
+      "is_completed": true
+     },
+     {
+      "amount": 0,
+      "id": 126905,
+      "is_completed": false
+     }
+    ],
+    "id": 126894,
+    "is_completed": false
+   },
+   "id": 728
+  },
+  {
+   "achievement": {
+    "id": 768,
+    "key": {
+     "href": "https://us.api.blizzard.com/data/wow/achievement/768?namespace=static-1.60.1_70399-forever-us"
+    },
+    "name": "Explore Tirisfal Glades"
+   },
+   "criteria": {
+    "child_criteria": [
+     {
+      "amount": 1,
+      "id": 125989,
+      "is_completed": true
+     },
+     {
+      "amount": 1,
+      "id": 125990,
+      "is_completed": true
+     },
+     {
+      "amount": 1,
+      "id": 125991,
+      "is_completed": true
+     },
+     {
+      "amount": 1,
+      "id": 125992,
+      "is_completed": true
+     },
+     {
+      "amount": 1,
+      "id": 125993,
+      "is_completed": true
+     },
+     {
+      "amount": 1,
+      "id": 125994,
+      "is_completed": true
+     },
+     {
+      "amount": 0,
+      "id": 125995,
+      "is_completed": false
+     },
+     {
+      "amount": 1,
+      "id": 125996,
+      "is_completed": true
+     },
+     {
+      "amount": 0,
+      "id": 125997,
+      "is_completed": false
+     },
+     {
+      "amount": 1,
+      "id": 125998,
+      "is_completed": true
+     },
+     {
+      "amount": 1,
+      "id": 125999,
+      "is_completed": true
+     },
+     {
+      "amount": 1,
+      "id": 126000,
+      "is_completed": true
+     },
+     {
+      "amount": 1,
+      "id": 126001,
+      "is_completed": true
+     },
+     {
+      "amount": 1,
+      "id": 126002,
+      "is_completed": true
+     },
+     {
+      "amount": 1,
+      "id": 126003,
+      "is_completed": true
+     },
+     {
+      "amount": 1,
+      "id": 126004,
+      "is_completed": true
+     }
+    ],
+    "id": 125988,
+    "is_completed": false
+   },
+   "id": 768
+  },
+  {
+   "achievement": {
+    "id": 769,
+    "key": {
+     "href": "https://us.api.blizzard.com/data/wow/achievement/769?namespace=static-1.60.1_70399-forever-us"
+    },
+    "name": "Explore Silverpine Forest"
+   },
+   "criteria": {
+    "child_criteria": [
+     {
+      "amount": 0,
+      "id": 126299,
+      "is_completed": false
+     },
+     {
+      "amount": 1,
+      "id": 126300,
+      "is_completed": true
+     },
+     {
+      "amount": 0,
+      "id": 126301,
+      "is_completed": false
+     },
+     {
+      "amount": 0,
+      "id": 126302,
+      "is_completed": false
+     },
+     {
+      "amount": 1,
+      "id": 126303,
+      "is_completed": true
+     },
+     {
+      "amount": 1,
+      "id": 126304,
+      "is_completed": true
+     },
+     {
+      "amount": 0,
+      "id": 126305,
+      "is_completed": false
+     },
+     {
+      "amount": 1,
+      "id": 126306,
+      "is_completed": true
+     },
+     {
+      "amount": 0,
+      "id": 126307,
+      "is_completed": false
+     },
+     {
+      "amount": 0,
+      "id": 126308,
+      "is_completed": false
+     },
+     {
+      "amount": 0,
+      "id": 126309,
+      "is_completed": false
+     },
+     {
+      "amount": 1,
+      "id": 126310,
+      "is_completed": true
+     },
+     {
+      "amount": 0,
+      "id": 126311,
+      "is_completed": false
+     },
+     {
+      "amount": 0,
+      "id": 126312,
+      "is_completed": false
+     },
+     {
+      "amount": 0,
+      "id": 126313,
+      "is_completed": false
+     }
+    ],
+    "id": 126298,
+    "is_completed": false
+   },
+   "id": 769
+  }
+ ],
+ "character": {
+  "id": 163709,
+  "key": {
+   "href": "https://us.api.blizzard.com/profile/wow/character/terrorskull-gloomstep?namespace=profile-forever-us"
+  },
+  "name": "Terrorskull",
+  "slug": "terrorskull-gloomstep",
+  "surname": "Gloomstep"
+ },
+ "statistics": {
+  "href": "https://us.api.blizzard.com/profile/wow/character/terrorskull-gloomstep/achievements/statistics?namespace=profile-forever-us"
+ },
+ "total_points": 0,
+ "total_quantity": 0
+}

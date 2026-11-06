@@ -15,6 +15,7 @@ interface Props {
     | "guild"
     | "rules"
     | "items"
+    | "characters"
     | "addons"
     | "officers"
     | "account"
@@ -25,7 +26,8 @@ interface Props {
 
 const { current, hero = false } = Astro.props;
 const raidsCurrent = current === "raids" || current === "ledger";
-const guildCurrent = current === "guild" || current === "heroes" || current === "rules" || current === "items";
+const guildCurrent =
+  current === "guild" || current === "heroes" || current === "rules" || current === "items" || current === "characters";
 const accountCurrent = current === "account" || current === "officers";
 
 type NavEntry = { href: string; icon: string; name: string; desc: string; members?: boolean; external?: boolean };
@@ -66,6 +68,12 @@ const guildEntries: NavEntry[] = [
     icon: "i-nav-items",
     name: "Item lookup",
     desc: "Search any item and see who in the guild got it.",
+  },
+  {
+    href: "/characters/",
+    icon: "i-nav-characters",
+    name: "Characters",
+    desc: "Look up any character's gear, stats and Battle.net profile.",
   },
   { href: "/#how-we-play", icon: "i-nav-play", name: "How we play", desc: "The journey and the raid, our own way." },
   {

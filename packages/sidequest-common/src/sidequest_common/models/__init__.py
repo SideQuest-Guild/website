@@ -5,6 +5,7 @@ from sidequest_common.models.addons import Addon
 from sidequest_common.models.audit import OfficerAudit
 from sidequest_common.models.away import MemberAwayRange
 from sidequest_common.models.badges import MemberBadge
+from sidequest_common.models.characters import BattlenetCharacter
 from sidequest_common.models.directory import (
     CharacterDirectoryChar,
     CharacterDirectoryCooldowns,
@@ -60,6 +61,7 @@ from sidequest_common.models.role_resets import MemberRoleReset
 
 __all__ = (
     "Addon",
+    "BattlenetCharacter",
     "BattlenetItem",
     "CharacterDirectoryChar",
     "CharacterDirectoryCooldowns",

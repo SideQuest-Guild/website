@@ -1,0 +1,164 @@
+/* Characters: the roster search/lookup page and one character's own sheet. Reuses citadel.css's chamber/
+   form-row/field/status/aside primitives and the global .q-* / .cls-* color classes; row and sheet shapes here
+   mirror room-items.css's item-row/item-detail-* without sharing a stylesheet (items and characters never share
+   a page). */
+
+/* ——— Search ——— */
+.char-search-note {
+  margin-top: 10px;
+}
+.char-exact-lookup {
+  margin: 14px 0 0;
+}
+
+/* ——— Roster / search results: a list of linked rows ——— */
+.char-row-list {
+  list-style: none;
+  margin: 14px 0 0;
+  padding: 0;
+}
+.char-row-list > li + li {
+  border-top: 1px solid var(--stone-2);
+}
+.char-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2px 16px;
+  align-items: baseline;
+  padding: 10px 0;
+  color: inherit;
+  text-decoration: none;
+}
+.char-row:hover,
+.char-row:focus-visible {
+  color: var(--flavor);
+}
+.char-row-name {
+  grid-column: 1;
+  font-family: var(--display);
+  font-size: 1.05rem;
+}
+.char-row-rank {
+  grid-column: 2;
+  color: var(--mist-2);
+  font-size: 0.85rem;
+  text-align: right;
+}
+.char-row-meta {
+  grid-column: 1 / -1;
+  color: var(--mist-2);
+  font-size: 0.85rem;
+}
+
+/* ——— Detail header: name, class, level, guild and the Battle.net facts, armory look like items' tooltip card ——— */
+.char-detail-head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.char-detail-name {
+  margin: 0;
+  font-family: var(--display);
+  font-size: clamp(1.4rem, 2.2vw, 1.8rem);
+}
+.char-detail-meta {
+  margin: 0;
+  color: var(--mist-2);
+}
+.char-detail-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin: 10px 0 0;
+  color: var(--mist);
+}
+.char-armory-link {
+  margin-top: 18px;
+}
+
+/* ——— Gear: item-linked rows, same quality coloring as the item lookup ——— */
+.char-gear-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.char-gear-list > li + li {
+  border-top: 1px solid var(--stone-2);
+}
+.char-gear-row {
+  display: grid;
+  grid-template-columns: 110px 1fr auto;
+  gap: 4px 12px;
+  align-items: baseline;
+  padding: 8px 0;
+}
+.char-gear-slot {
+  color: var(--mist-2);
+  font-size: 0.85rem;
+}
+.char-gear-ilvl {
+  color: var(--mist-2);
+  font-size: 0.85rem;
+  text-align: right;
+}
+.char-gear-enchants {
+  grid-column: 2 / -1;
+  margin: 0;
+  color: var(--mist-2);
+  font-size: 0.82rem;
+}
+
+/* ——— Stats: a compact label/value grid ——— */
+.char-stats-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 6px 18px;
+  margin: 0;
+}
+.char-stats-list dt {
+  color: var(--mist-2);
+  font-size: 0.82rem;
+}
+.char-stats-list dd {
+  margin: 0;
+  color: var(--ink);
+}
+
+/* ——— Talents, professions, reputations, achievements, collections: plain rows ——— */
+.char-talents-list,
+.char-professions-list,
+.char-reputations-list,
+.char-achievements-list,
+.char-collections-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.char-talents-list li,
+.char-professions-list li,
+.char-reputations-list li,
+.char-achievements-list li,
+.char-collections-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+@media (max-width: 560px) {
+  .char-row {
+    grid-template-columns: 1fr;
+  }
+  .char-row-rank {
+    grid-column: 1;
+    text-align: left;
+  }
+  .char-gear-row {
+    grid-template-columns: 1fr auto;
+  }
+  .char-gear-slot {
+    grid-column: 1 / -1;
+  }
+}

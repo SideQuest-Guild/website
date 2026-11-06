@@ -28,6 +28,7 @@ from sidequest_common.schemas import (
     Signup,
     SignupUpsert,
 )
+from sidequest_common.settings import WebSettings
 
 _EVENT_ID = Annotated[UUID, Parameter(description="The event's ID.")]
 
@@ -83,8 +84,11 @@ class EventsController(Controller):
         events_service: NamedDependency[EventsService],
         optional_member: NamedDependency[Member | None],
         full_access: NamedDependency[bool],
+        web_settings: NamedDependency[WebSettings],
     ) -> EventDetail:
-        return await events_service.get_detail(event_id, viewer=optional_member, full_access=full_access)
+        return await events_service.get_detail(
+            event_id, viewer=optional_member, full_access=full_access, guild_id=web_settings.GUILD_ID
+        )
 
     @put(
         "/{event_id:uuid}/signup",
@@ -147,6 +151,7 @@ class EventsController(Controller):
         data: JSONBody[EventCreate],
         events_service: NamedDependency[EventsService],
         current_officer: NamedDependency[Member],
+        web_settings: NamedDependency[WebSettings],
     ) -> EventDetail:
         event = await events_service.create_event(data)
         await record_officer_audit(
@@ -157,7 +162,7 @@ class EventsController(Controller):
             subject_id=str(event.id),
             summary=f'Created {event.kind} "{event.title}" for {event.starts_at:%b %-d}',
         )
-        return await events_service.get_detail(event.id, viewer=None, full_access=True)
+        return await events_service.get_detail(event.id, viewer=None, full_access=True, guild_id=web_settings.GUILD_ID)
 
     @patch(
         "/{event_id:uuid}",
@@ -183,6 +188,7 @@ class EventsController(Controller):
         data: JSONBody[EventUpdate],
         events_service: NamedDependency[EventsService],
         current_officer: NamedDependency[Member],
+        web_settings: NamedDependency[WebSettings],
     ) -> EventDetail:
         event = await events_service.update_event(event_id, data)
         await record_officer_audit(
@@ -193,7 +199,7 @@ class EventsController(Controller):
             subject_id=str(event.id),
             summary=f'Updated event "{event.title}"',
         )
-        return await events_service.get_detail(event.id, viewer=None, full_access=True)
+        return await events_service.get_detail(event.id, viewer=None, full_access=True, guild_id=web_settings.GUILD_ID)
 
     @delete(
         "/{event_id:uuid}",

@@ -1,0 +1,18 @@
+{
+ "_links": {
+  "self": {
+   "href": "https://us.api.blizzard.com/profile/wow/character/terrorskull-gloomstep/pvp-summary?namespace=profile-forever-us"
+  }
+ },
+ "character": {
+  "id": 163709,
+  "key": {
+   "href": "https://us.api.blizzard.com/profile/wow/character/terrorskull-gloomstep?namespace=profile-forever-us"
+  },
+  "name": "Terrorskull",
+  "slug": "terrorskull-gloomstep",
+  "surname": "Gloomstep"
+ },
+ "honorable_kills": 0,
+ "pvp_rank": 0
+}

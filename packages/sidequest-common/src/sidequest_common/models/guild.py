@@ -85,3 +85,7 @@ class GuildConfig(UUIDAuditBase):
     """The bot's pinned spawn panel in ``lfg_channel_id``, so a restart edits it instead of posting another."""
     lfg_ping_role_ids: Mapped[dict[str, int]] = mapped_column(JsonB, default=dict)
     """Opt-in role to ping per group kind (``EventKind`` value -> role id), when the creator ticks the ping box."""
+
+    # Raid readiness
+    raid_min_item_level: Mapped[int | None] = mapped_column(Integer, default=None)
+    """Sign-ups below this equipped item level are marked on the raid chart; ``None`` marks nobody. Officers set it."""

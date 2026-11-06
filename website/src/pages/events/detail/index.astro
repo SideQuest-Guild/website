@@ -79,6 +79,14 @@ import "../../../styles/room-event.css";
             Discard
           </button>
         </div>
+        <form class="chart-minlevel" id="chart-minlevel-form">
+          <label for="chart-min-ilvl">Minimum item level</label>
+          <input id="chart-min-ilvl" type="number" min="1" max="1000" inputmode="numeric" placeholder="None" />
+          <button type="submit" class="btn-quiet" id="chart-min-ilvl-save">
+            Save
+          </button>
+        </form>
+        <p class="status" id="chart-minlevel-status" role="status" aria-live="polite"></p>
       </div>
       <p class="status" id="chart-status" role="status" aria-live="polite"></p>
       <div class="raid-frames" id="chart-grid"></div>
@@ -146,12 +154,14 @@ import "../../../styles/room-event.css";
     escapeHtml,
     requireElement,
     statusMessage,
+    ApiError,
     CLASSES,
     ROLES,
     ROLE_KINDS,
     EVENT_KIND_LABELS,
     type EventDetail,
     type Me,
+    type RaidReadiness,
     type Role,
     type Signup,
   } from "../../../scripts/api";
@@ -159,19 +169,57 @@ import "../../../styles/room-event.css";
   import { weekdayPhrase } from "../../../scripts/series";
   import { diffAssignments, suggestGroups, type SuggestedAssignment } from "../../../scripts/raid-suggest";
 
-  // A character row: class color on the name when the event tracks classes, a role mark when the row mixes roles.
-  function memberRow(s: Signup, opts: { showClass: boolean; showRole: boolean }): string {
+  // A compact readiness line for a signed-up raid character: level, item level (warn-colored and titled when
+  // under the raid's minimum), and talent spec. Empty when the sign-up's character matches no roster character.
+  function readinessLine(r: Signup["readiness"], minItemLevel: number | null | undefined): string {
+    if (!r) {
+      return "";
+    }
+    const bits = [`Lvl ${r.level}`];
+    if (r.item_level !== null) {
+      const warnAttrs = r.below_minimum
+        ? ` class="readiness-low" title="Below the raid minimum of ${minItemLevel}"`
+        : "";
+      bits.push(`<span${warnAttrs}>ilvl ${r.item_level}</span>`);
+    }
+    if (r.spec) {
+      bits.push(escapeHtml(r.spec));
+    }
+    return `<span class="readiness">${bits.join(" · ")}</span>`;
+  }
+  // The character name, linked to its page when readiness matched it to a stored roster character.
+  function characterNameHtml(s: Signup, name: string, extraClass: string): string {
+    const cls = extraClass ? ` ${extraClass}` : "";
+    return s.readiness
+      ? `<a class="char-name${cls}" href="/characters/detail/?slug=${encodeURIComponent(s.readiness.slug)}">${escapeHtml(name)}</a>`
+      : `<span class="char-name${cls}">${escapeHtml(name)}</span>`;
+  }
+  // A character row: class color on the name when the event tracks classes, a role mark when the row mixes roles,
+  // and a readiness line for raid events.
+  function memberRow(
+    s: Signup,
+    opts: { showClass: boolean; showRole: boolean; showReadiness: boolean },
+    minItemLevel: number | null | undefined,
+  ): string {
     const name = s.character ?? s.member.display_name;
     const roleIcon =
       opts.showRole && s.role
         ? `<svg class="ico role-${s.role}" aria-hidden="true"><use href="#i-${s.role}"></use></svg>`
         : "";
-    const clsAttr = opts.showClass && s.class ? ` class="cls-${s.class}"` : "";
-    return `<li>${roleIcon}<span${clsAttr}>${escapeHtml(name)}</span></li>`;
+    const clsAttr = opts.showClass && s.class ? `cls-${s.class}` : "";
+    const nameHtml = characterNameHtml(s, name, clsAttr);
+    const readiness = opts.showReadiness ? readinessLine(s.readiness, minItemLevel) : "";
+    return `<li>${roleIcon}${nameHtml}${readiness}</li>`;
   }
   // A raid-frame unit: the class color tints the bar and names the character; officers get a group/bench select and
   // a drag handle (data-signup-id), and a preview-suggested slot that differs from the saved one is marked changed.
-  function raidBar(s: Signup, isInteractive: boolean, isBench: boolean, isChanged: boolean): string {
+  function raidBar(
+    s: Signup,
+    isInteractive: boolean,
+    isBench: boolean,
+    isChanged: boolean,
+    minItemLevel: number | null | undefined,
+  ): string {
     const name = s.character ?? s.member.display_name;
     const barColor = s.class ? `var(--c-${s.class})` : "var(--mist-2)";
     const roleIcon = s.role
@@ -186,13 +234,20 @@ import "../../../styles/room-event.css";
         </select>`
       : "";
     const barClass = `raid-bar${isChanged ? " raid-bar-changed" : ""}`;
-    return `<li class="${barClass}" data-signup-id="${s.id}" style="--bar-color: ${barColor}">${roleIcon}<span class="raid-bar-name">${escapeHtml(name)}</span>${control}</li>`;
+    const nameHtml = characterNameHtml(s, name, "raid-bar-name");
+    const readiness = readinessLine(s.readiness, minItemLevel);
+    return `<li class="${barClass}" data-signup-id="${s.id}" style="--bar-color: ${barColor}">${roleIcon}<div class="raid-bar-info">${nameHtml}${readiness}</div>${control}</li>`;
   }
-  function rosterList(signups: Signup[], emptyText: string, opts: { showClass: boolean; showRole: boolean }): string {
+  function rosterList(
+    signups: Signup[],
+    emptyText: string,
+    opts: { showClass: boolean; showRole: boolean; showReadiness: boolean },
+    minItemLevel: number | null | undefined,
+  ): string {
     if (signups.length === 0) {
       return `<li class="aside">${emptyText}</li>`;
     }
-    return signups.map((s) => memberRow(s, opts)).join("");
+    return signups.map((s) => memberRow(s, opts, minItemLevel)).join("");
   }
   // `target` is the frame's drop identity for drag-and-drop ("1".."8" or "bench"); `changed` are signup ids whose
   // suggested slot differs from what's saved, so the preview can call them out before Apply commits anything.
@@ -203,8 +258,9 @@ import "../../../styles/room-event.css";
     isBench: boolean,
     target: string,
     changed: ReadonlySet<string>,
+    minItemLevel: number | null | undefined,
   ): string {
-    const rows = members.map((s) => raidBar(s, isInteractive, isBench, changed.has(s.id))).join("");
+    const rows = members.map((s) => raidBar(s, isInteractive, isBench, changed.has(s.id), minItemLevel)).join("");
     const frameClass = isBench ? "raid-frame raid-frame-bench" : "raid-frame";
     return `<div class="${frameClass}" data-chart-target="${target}"><h3 class="raid-frame-title">${label}</h3><ul class="raid-roster">${rows || `<li class="raid-empty">Empty</li>`}</ul></div>`;
   }
@@ -240,6 +296,9 @@ import "../../../styles/room-event.css";
     const suggestDiscardBtn = requireElement<HTMLButtonElement>("suggest-discard-btn");
     const chartStatus = requireElement("chart-status");
     const chartGrid = requireElement("chart-grid");
+    const minIlvlForm = requireElement<HTMLFormElement>("chart-minlevel-form");
+    const minIlvlInput = requireElement<HTMLInputElement>("chart-min-ilvl");
+    const minIlvlStatus = requireElement("chart-minlevel-status");
     const signupInvite = requireElement("signup-invite");
     const signupSection = requireElement("signup-section");
     const signedOutSection = requireElement("signed-out-section");
@@ -270,6 +329,8 @@ import "../../../styles/room-event.css";
 
     function renderRoster(detail: EventDetail): void {
       const roleKind = ROLE_KINDS.includes(detail.kind);
+      const isRaid = detail.kind === "raid";
+      const minItemLevel = detail.min_item_level;
       const signed = detail.signups.filter((s) => s.status === "signed");
       const tentative = detail.signups.filter((s) => s.status === "tentative");
       const absent = detail.signups.filter((s) => s.status === "absent");
@@ -281,7 +342,7 @@ import "../../../styles/room-event.css";
           return `
           <div class="roster-col">
             <h3><svg class="ico role-${role}" aria-hidden="true"><use href="#i-${role}"></use></svg> ${capitalize(role)} <span class="count">(${members.length})</span></h3>
-            <ul class="roster-list">${rosterList(members, "None yet", { showClass: true, showRole: false })}</ul>
+            <ul class="roster-list">${rosterList(members, "None yet", { showClass: true, showRole: false, showReadiness: isRaid }, minItemLevel)}</ul>
           </div>`;
         }).join("");
         statusHeading.textContent = "Tentative & absent";
@@ -289,11 +350,11 @@ import "../../../styles/room-event.css";
         rosterExtra.innerHTML = `
         <div class="roster-col">
           <h3>Tentative <span class="count">(${tentative.length})</span></h3>
-          <ul class="roster-list">${rosterList(tentative, "None", { showClass: true, showRole: true })}</ul>
+          <ul class="roster-list">${rosterList(tentative, "None", { showClass: true, showRole: true, showReadiness: isRaid }, minItemLevel)}</ul>
         </div>
         <div class="roster-col">
           <h3>Absent <span class="count">(${absent.length})</span></h3>
-          <ul class="roster-list">${rosterList(absent, "None", { showClass: true, showRole: true })}</ul>
+          <ul class="roster-list">${rosterList(absent, "None", { showClass: true, showRole: true, showReadiness: isRaid }, minItemLevel)}</ul>
         </div>`;
       } else {
         statusHeading.textContent = "Going, maybe & can't make it";
@@ -301,15 +362,15 @@ import "../../../styles/room-event.css";
         rosterExtra.innerHTML = `
         <div class="roster-col">
           <h3>Going <span class="count">(${signed.length})</span></h3>
-          <ul class="roster-list">${rosterList(signed, "None yet", { showClass: false, showRole: false })}</ul>
+          <ul class="roster-list">${rosterList(signed, "None yet", { showClass: false, showRole: false, showReadiness: false }, minItemLevel)}</ul>
         </div>
         <div class="roster-col">
           <h3>Maybe <span class="count">(${tentative.length})</span></h3>
-          <ul class="roster-list">${rosterList(tentative, "None", { showClass: false, showRole: false })}</ul>
+          <ul class="roster-list">${rosterList(tentative, "None", { showClass: false, showRole: false, showReadiness: false }, minItemLevel)}</ul>
         </div>
         <div class="roster-col">
           <h3>Can't make it <span class="count">(${absent.length})</span></h3>
-          <ul class="roster-list">${rosterList(absent, "None", { showClass: false, showRole: false })}</ul>
+          <ul class="roster-list">${rosterList(absent, "None", { showClass: false, showRole: false, showReadiness: false }, minItemLevel)}</ul>
         </div>`;
       }
     }
@@ -554,6 +615,30 @@ import "../../../styles/room-event.css";
       { signal },
     );
 
+    minIlvlForm.addEventListener(
+      "submit",
+      async (ev) => {
+        ev.preventDefault();
+        const raw = minIlvlInput.value.trim();
+        const minItemLevel = raw.length > 0 ? Number(raw) : null;
+        minIlvlStatus.dataset.tone = "";
+        minIlvlStatus.textContent = "Saving…";
+        try {
+          await apiFetch<RaidReadiness>("/api/raid-readiness", {
+            method: "PUT",
+            body: JSON.stringify({ min_item_level: minItemLevel }),
+          });
+          minIlvlStatus.textContent = "Saved.";
+          await refresh();
+        } catch (err) {
+          minIlvlStatus.dataset.tone = "error";
+          minIlvlStatus.textContent =
+            err instanceof ApiError && err.status === 403 ? "Only officers can set this." : statusMessage(err);
+        }
+      },
+      { signal },
+    );
+
     function renderChart(detail: EventDetail): void {
       chartSection.hidden = detail.kind !== "raid";
       if (detail.kind !== "raid") {
@@ -564,6 +649,10 @@ import "../../../styles/room-event.css";
       chartToolbar.hidden = !isOfficer;
       suggestBtn.hidden = previewing;
       suggestPreviewActions.hidden = !previewing;
+      const minItemLevel = detail.min_item_level ?? null;
+      if (document.activeElement !== minIlvlInput) {
+        minIlvlInput.value = minItemLevel === null ? "" : String(minItemLevel);
+      }
       const signed = detail.signups.filter((s) => s.status === "signed");
       const bySignupId = previewAssignments ? new Map(previewAssignments.map((a) => [a.signupId, a])) : null;
       const changed = new Set<string>();
@@ -579,10 +668,10 @@ import "../../../styles/room-event.css";
       const frames: string[] = [];
       for (let group = 1; group <= 8; group++) {
         const members = effective.filter((s) => s.group === group && !s.bench);
-        frames.push(raidFrame(`Group ${group}`, members, interactive, false, String(group), changed));
+        frames.push(raidFrame(`Group ${group}`, members, interactive, false, String(group), changed, minItemLevel));
       }
       const bench = effective.filter((s) => s.bench || s.group === null);
-      frames.push(raidFrame("Bench", bench, interactive, true, "bench", changed));
+      frames.push(raidFrame("Bench", bench, interactive, true, "bench", changed, minItemLevel));
       chartGrid.innerHTML = frames.join("");
       chartGrid.classList.toggle("officer-view", interactive);
 

@@ -188,6 +188,30 @@
   }
 }
 
+/* ——— Hero boards (public, Hall of Heroes): four small item level/kills/PvP rank/achievement boards, each a
+   groups-board-list of its top 10. ——— */
+.hero-boards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 24px;
+  margin-top: 14px;
+}
+.hero-board .sub-title {
+  margin: 0;
+}
+.hero-board .groups-board-list {
+  margin-top: 10px;
+  gap: 6px;
+}
+.hero-board .groups-board-row {
+  grid-template-columns: 32px minmax(0, 1fr) auto;
+  padding: 8px 12px;
+  gap: 12px;
+}
+.hero-board-empty {
+  margin-top: 10px;
+}
+
 @media (max-width: 760px) {
   .hero-row {
     grid-template-columns: 32px 40px minmax(0, 1fr);

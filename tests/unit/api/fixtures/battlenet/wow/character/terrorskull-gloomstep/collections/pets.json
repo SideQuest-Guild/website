@@ -1,0 +1,172 @@
+{
+ "_links": {
+  "self": {
+   "href": "https://us.api.blizzard.com/profile/wow/character/terrorskull-gloomstep/collections/pets?namespace=profile-forever-us"
+  }
+ },
+ "pets": [
+  {
+   "creature_display": {
+    "id": 146954,
+    "key": {
+     "href": "https://us.api.blizzard.com/data/wow/media/creature-display/146954?namespace=static-1.60.1_70399-forever-us"
+    }
+   },
+   "id": 62694,
+   "level": 1,
+   "quality": {
+    "name": "Uncommon",
+    "type": "UNCOMMON"
+   },
+   "species": {
+    "id": 5160,
+    "key": {
+     "href": "https://us.api.blizzard.com/data/wow/pet/5160?namespace=static-1.60.1_70399-forever-us"
+    },
+    "name": "Zergling"
+   },
+   "stats": {
+    "breed_id": 0,
+    "health": 100,
+    "power": 0,
+    "speed": 0
+   }
+  },
+  {
+   "creature_display": {
+    "id": 146955,
+    "key": {
+     "href": "https://us.api.blizzard.com/data/wow/media/creature-display/146955?namespace=static-1.60.1_70399-forever-us"
+    }
+   },
+   "id": 62695,
+   "level": 1,
+   "quality": {
+    "name": "Uncommon",
+    "type": "UNCOMMON"
+   },
+   "species": {
+    "id": 5159,
+    "key": {
+     "href": "https://us.api.blizzard.com/data/wow/pet/5159?namespace=static-1.60.1_70399-forever-us"
+    },
+    "name": "Panda Cub"
+   },
+   "stats": {
+    "breed_id": 0,
+    "health": 100,
+    "power": 0,
+    "speed": 0
+   }
+  },
+  {
+   "creature_display": {
+    "id": 146956,
+    "key": {
+     "href": "https://us.api.blizzard.com/data/wow/media/creature-display/146956?namespace=static-1.60.1_70399-forever-us"
+    }
+   },
+   "id": 62696,
+   "level": 1,
+   "quality": {
+    "name": "Uncommon",
+    "type": "UNCOMMON"
+   },
+   "species": {
+    "id": 5161,
+    "key": {
+     "href": "https://us.api.blizzard.com/data/wow/pet/5161?namespace=static-1.60.1_70399-forever-us"
+    },
+    "name": "Mini Diablo"
+   },
+   "stats": {
+    "breed_id": 0,
+    "health": 100,
+    "power": 0,
+    "speed": 0
+   }
+  },
+  {
+   "creature_display": {
+    "id": 146839,
+    "key": {
+     "href": "https://us.api.blizzard.com/data/wow/media/creature-display/146839?namespace=static-1.60.1_70399-forever-us"
+    }
+   },
+   "id": 62697,
+   "level": 1,
+   "quality": {
+    "name": "Uncommon",
+    "type": "UNCOMMON"
+   },
+   "species": {
+    "id": 5138,
+    "key": {
+     "href": "https://us.api.blizzard.com/data/wow/pet/5138?namespace=static-1.60.1_70399-forever-us"
+    },
+    "name": "Pachimari"
+   },
+   "stats": {
+    "breed_id": 0,
+    "health": 100,
+    "power": 0,
+    "speed": 0
+   }
+  },
+  {
+   "creature_display": {
+    "id": 148274,
+    "key": {
+     "href": "https://us.api.blizzard.com/data/wow/media/creature-display/148274?namespace=static-1.60.1_70399-forever-us"
+    }
+   },
+   "id": 62698,
+   "level": 1,
+   "quality": {
+    "name": "Uncommon",
+    "type": "UNCOMMON"
+   },
+   "species": {
+    "id": 5179,
+    "key": {
+     "href": "https://us.api.blizzard.com/data/wow/pet/5179?namespace=static-1.60.1_70399-forever-us"
+    },
+    "name": "Azurky"
+   },
+   "stats": {
+    "breed_id": 0,
+    "health": 100,
+    "power": 0,
+    "speed": 0
+   }
+  },
+  {
+   "creature_display": {
+    "id": 144879,
+    "key": {
+     "href": "https://us.api.blizzard.com/data/wow/media/creature-display/144879?namespace=static-1.60.1_70399-forever-us"
+    }
+   },
+   "id": 254140,
+   "level": 1,
+   "quality": {
+    "name": "Uncommon",
+    "type": "UNCOMMON"
+   },
+   "species": {
+    "id": 5075,
+    "key": {
+     "href": "https://us.api.blizzard.com/data/wow/pet/5075?namespace=static-1.60.1_70399-forever-us"
+    },
+    "name": "Excitable Slime"
+   },
+   "stats": {
+    "breed_id": 0,
+    "health": 100,
+    "power": 0,
+    "speed": 0
+   }
+  }
+ ],
+ "unlocked_battle_pet_slots": 0
+}

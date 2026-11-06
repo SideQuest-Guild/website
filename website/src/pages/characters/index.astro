@@ -1,0 +1,161 @@
+---
+import Room from "../../layouts/Room.astro";
+import greatHall from "../../../assets/rooms/great-hall.webp";
+import "../../styles/room-characters.css";
+---
+
+<Room
+  title="Characters · SideQuest"
+  description="The SideQuest roster: gear, item level, spec and last login for every character, and a Battle.net lookup for anyone else."
+  heading="CHARACTER ROSTER"
+  lede="Every SideQuest character's gear and standing, straight from Battle.net. Look up anyone else by their exact name and surname."
+  art={greatHall}
+  artPosition="50% 40%"
+  current="characters"
+>
+  <section class="chamber" aria-labelledby="h-search">
+    <h2 class="chamber-title" id="h-search">
+      Search
+    </h2>
+    <form id="characters-search-form">
+      <div class="form-row">
+        <div class="field">
+          <label for="char-query">Name</label>
+          <input id="char-query" type="search" placeholder="e.g. Nox Zul" maxlength="60" />
+        </div>
+      </div>
+      <button type="submit" class="btn">
+        Search
+      </button>
+    </form>
+    <p class="aside char-search-note">
+      Battle.net has no name search, so anyone outside the roster is found by their exact name and surname.
+    </p>
+    <p class="status" id="char-search-status" role="status" aria-live="polite"></p>
+    <p class="char-exact-lookup" id="char-exact-lookup" hidden>
+      <a class="btn-quiet" id="char-exact-link" href="#">
+        Look up on Battle.net
+      </a>
+    </p>
+    <ul class="char-row-list" id="char-search-results" aria-label="Search results"></ul>
+  </section>
+
+  <section class="chamber" aria-labelledby="h-roster">
+    <h2 class="chamber-title" id="h-roster">
+      Roster
+    </h2>
+    <p class="status" id="char-roster-status" role="status" aria-live="polite">
+      Loading…
+    </p>
+    <ul class="char-row-list" id="char-roster-list" aria-label="Guild roster"></ul>
+  </section>
+
+  <noscript>
+    <p class="aside">Enable JavaScript to view characters.</p>
+  </noscript>
+</Room>
+
+<script>
+  import {
+    apiFetch,
+    escapeHtml,
+    rankLabel,
+    relativeTime,
+    requireElement,
+    statusMessage,
+    type CharacterSummary,
+  } from "../../scripts/api";
+  import { onPage } from "../../scripts/page";
+
+  function characterRow(c: CharacterSummary): string {
+    const cls = c.class ? ` cls-${c.class}` : "";
+    const rank = c.in_roster ? rankLabel(c.guild_rank, c.rank_name) : "Not in roster";
+    const meta = [
+      `Level ${c.level}`,
+      c.spec,
+      c.item_level !== null ? `Item level ${c.item_level}` : null,
+      c.last_login_at
+        ? `Last seen ${relativeTime(c.last_login_at)}`
+        : !c.profile_found
+          ? "No Battle.net profile yet"
+          : null,
+    ]
+      .filter(Boolean)
+      .map((part) => escapeHtml(part as string))
+      .join(" \u00b7 ");
+    return `
+      <li>
+        <a class="char-row" href="/characters/detail/?slug=${encodeURIComponent(c.slug)}">
+          <span class="char-row-name${cls}">${escapeHtml(c.name)} ${escapeHtml(c.surname)}</span>
+          <span class="char-row-rank">${escapeHtml(rank)}</span>
+          <span class="char-row-meta">${meta}</span>
+        </a>
+      </li>`;
+  }
+
+  onPage("#characters-search-form", (signal) => {
+    const form = requireElement<HTMLFormElement>("characters-search-form");
+    const queryEl = requireElement<HTMLInputElement>("char-query");
+    const searchStatusEl = requireElement("char-search-status");
+    const resultsEl = requireElement("char-search-results");
+    const exactLookupEl = requireElement("char-exact-lookup");
+    const exactLinkEl = requireElement<HTMLAnchorElement>("char-exact-link");
+    const rosterStatusEl = requireElement("char-roster-status");
+    const rosterListEl = requireElement("char-roster-list");
+
+    async function loadRoster(): Promise<void> {
+      try {
+        const roster = await apiFetch<CharacterSummary[]>("/api/characters/", { signal });
+        rosterStatusEl.textContent = "";
+        rosterListEl.innerHTML =
+          roster.length > 0 ? roster.map(characterRow).join("") : `<li class="aside">No one on the roster yet.</li>`;
+      } catch (err) {
+        rosterStatusEl.dataset.tone = "error";
+        rosterStatusEl.textContent = statusMessage(err);
+      }
+    }
+
+    async function search(): Promise<void> {
+      const q = queryEl.value.trim();
+      resultsEl.innerHTML = "";
+      exactLookupEl.hidden = true;
+
+      const twoWords = /^(\S+)\s+(\S+)$/.exec(q);
+      if (twoWords) {
+        const slug = `${twoWords[1]}-${twoWords[2]}`.toLowerCase();
+        exactLinkEl.href = `/characters/detail/?slug=${encodeURIComponent(slug)}`;
+        exactLinkEl.textContent = `Look up ${twoWords[1]} ${twoWords[2]} on Battle.net`;
+        exactLookupEl.hidden = false;
+      }
+
+      if (q.length === 0) {
+        searchStatusEl.textContent = "";
+        return;
+      }
+      if (q.length < 2) {
+        searchStatusEl.textContent = "Keep typing \u2014 search needs at least 2 letters.";
+        return;
+      }
+      searchStatusEl.textContent = "Searching\u2026";
+      try {
+        const results = await apiFetch<CharacterSummary[]>(`/api/characters/?q=${encodeURIComponent(q)}`, { signal });
+        searchStatusEl.textContent = results.length > 0 ? "" : "No stored character matches that.";
+        resultsEl.innerHTML = results.map(characterRow).join("");
+      } catch (err) {
+        searchStatusEl.dataset.tone = "error";
+        searchStatusEl.textContent = statusMessage(err);
+      }
+    }
+
+    form.addEventListener(
+      "submit",
+      (event) => {
+        event.preventDefault();
+        void search();
+      },
+      { signal },
+    );
+
+    void loadRoster();
+  });
+</script>

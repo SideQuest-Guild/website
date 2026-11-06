@@ -59,6 +59,31 @@
 .roster-list li.aside {
   border-bottom: 0;
 }
+/* A character name linking to its page when sign-up readiness matched it to a stored roster character. */
+.char-name {
+  color: inherit;
+  text-decoration: none;
+}
+a.char-name:hover,
+a.char-name:focus-visible {
+  text-decoration: underline;
+}
+/* Raid readiness (RaidReadinessUI): level, item level and spec for a signed-up character, read from their
+   Battle.net profile. Under the raid's minimum item level, the ilvl part is called out in the warm error color. */
+.readiness {
+  flex: none;
+  margin-left: auto;
+  max-width: 45%;
+  overflow: hidden;
+  color: var(--mist-2);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.readiness-low {
+  color: var(--error);
+  font-weight: 600;
+}
 
 /* Away chips: a quieter line than the roster lists, since this is "heads up" rather than a count to scan. */
 .chip-list {
@@ -112,6 +137,32 @@
   align-items: center;
   gap: 10px;
 }
+/* Officer-only: the raid gear floor, saved to PUT /api/raid-readiness. */
+.chart-minlevel {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
+.chart-minlevel label {
+  font-weight: 500;
+  font-size: var(--caps);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--mist);
+}
+.chart-minlevel input {
+  width: 84px;
+  min-height: 38px;
+  padding: 6px 10px;
+  background: rgba(4, 8, 16, 0.62);
+  border: 1px solid var(--stone);
+  border-radius: 0;
+  font: inherit;
+  font-size: var(--body);
+  color: var(--ink);
+  color-scheme: dark;
+}
 .raid-frames {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -161,6 +212,12 @@
   height: 15px;
   flex: none;
 }
+.raid-bar-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
 .raid-bar-name {
   min-width: 0;
   overflow: hidden;
@@ -168,6 +225,10 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   font-weight: 500;
+}
+.raid-bar-info .readiness {
+  margin-left: 0;
+  max-width: none;
 }
 .raid-bar select {
   flex: none;
@@ -251,6 +312,19 @@
   .raid-bar select {
     margin-left: 0;
     width: 100%;
+  }
+  .chart-minlevel {
+    flex-wrap: wrap;
+    width: 100%;
+    margin-left: 0;
+  }
+  .chart-minlevel label {
+    flex-basis: 100%;
+  }
+  .chart-minlevel input {
+    flex: 1;
+    width: auto;
+    min-width: 0;
   }
 }
 

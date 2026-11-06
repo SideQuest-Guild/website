@@ -105,6 +105,10 @@ TAG_GROUPS: dict[str, dict[str, str]] = {
         "Calendar feed": "A member's private calendar feed. Anyone with the feed link can read it; no sign-in needed.",
         "Group leaderboard": "The public group-voice leaderboard: members by groups joined. Anyone may read it.",
         "Items": "Game items from Battle.net: one item's details, and item search. Anyone may read them.",
+        "Characters": (
+            "Characters from Battle.net: the guild roster, a lookup by exact name, character pages and the hero "
+            "boards. Anyone may read them."
+        ),
     },
     "Members": {
         "My account": "The signed-in member's own profile. A member must be signed in.",
@@ -139,6 +143,7 @@ TAG_GROUPS: dict[str, dict[str, str]] = {
         "Group stats": "Group-voice stats and session browsing. An officer must be signed in.",
         "Statistics": "Guild-wide activity totals, trend, heatmap, and leaderboards. An officer must be signed in.",
         "Wishlists": "Who wants an item, next to their loot points. An officer must be signed in.",
+        "Raid readiness": "Set the minimum item level for raids. An officer must be signed in.",
     },
     "Game Masters": {
         "GM console": "Member lookup, audit log, and case review for Game Masters. A Game Master must be signed in.",
@@ -173,6 +178,7 @@ TAG_GROUPS: dict[str, dict[str, str]] = {
         "Badges": "Badge role state and pending announcements. Called by the bot with its shared key.",
         "Guild announcements": "The bot's queue of guild announcements still to post. Called by the bot.",
         "Group voice": "Group voice channel session lifecycle, spawned from the #lfg panel. Called by the bot.",
+        "Roster sync": "Syncs the guild roster and character profiles from Battle.net. Called by the bot.",
     },
 }
 

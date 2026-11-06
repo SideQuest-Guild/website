@@ -3,6 +3,8 @@
 import {
   ADDONS,
   ATTENDANCE_EVENTS,
+  CHARACTER_PAGES,
+  CHARACTERS,
   DEVICE_AUTH_USER_CODE,
   EPGP_RECRUITS,
   EVENTS,
@@ -210,6 +212,44 @@ test.describe("raid chart", () => {
     await page.mouse.move(targetBox.x + targetBox.width / 2, targetBox.y + targetBox.height / 2, { steps: 10 });
     await page.mouse.up();
     await expect(page.locator('.raid-frame[data-chart-target="5"]')).toContainText("Thistlewhit");
+  });
+});
+
+test.describe("raid readiness", () => {
+  test("shows level, item level and spec, marking under-geared sign-ups", async ({ page, site }) => {
+    site.signIn(MEMBER);
+    await page.goto(`/events/detail/?id=${raid?.id}`);
+    const brannoc = page.locator('.raid-bar[data-signup-id="s1"]');
+    await expect(brannoc.locator(".readiness-low")).toHaveText("ilvl 54");
+    await expect(brannoc.locator(".readiness-low")).toHaveAttribute("title", "Below the raid minimum of 58");
+    await expect(brannoc.locator("a.raid-bar-name")).toHaveAttribute(
+      "href",
+      "/characters/detail/?slug=brannoc-anvilheart",
+    );
+    const elowen = page.locator('.raid-bar[data-signup-id="s2"]');
+    await expect(elowen.locator(".readiness")).toContainText("ilvl 60");
+    await expect(elowen.locator(".readiness-low")).toHaveCount(0);
+    const thistlewhit = page.locator('.raid-bar[data-signup-id="s3"]');
+    await expect(thistlewhit.locator(".readiness")).toContainText("Lvl 58");
+    await expect(thistlewhit.locator(".readiness")).not.toContainText("ilvl");
+  });
+
+  test("officer sets a minimum item level and the marks follow it", async ({ page, site }) => {
+    site.signIn(OFFICER);
+    let putBody: unknown = null;
+    page.on("request", (req) => {
+      if (req.method() === "PUT" && req.url().endsWith("/api/raid-readiness")) {
+        putBody = req.postDataJSON();
+      }
+    });
+    await page.goto(`/events/detail/?id=${raid?.id}`);
+    await expect(page.locator("#chart-min-ilvl")).toHaveValue("58");
+    await page.locator("#chart-min-ilvl").fill("70");
+    await page.locator("#chart-min-ilvl-save").click();
+    await expect(page.locator("#chart-minlevel-status")).toHaveText("Saved.");
+    expect(putBody).toEqual({ min_item_level: 70 });
+    // Elowen's ilvl 60 sign-up is fine under 58 but under-geared once the minimum rises to 70.
+    await expect(page.locator('.raid-bar[data-signup-id="s2"] .readiness-low')).toHaveText("ilvl 60");
   });
 });
 
@@ -709,6 +749,21 @@ test.describe("hall of heroes", () => {
     await expect(page.locator("#heroes-body")).toBeHidden();
   });
 
+  test("the hero boards show the roster's top characters, and an empty board where no one qualifies", async ({
+    page,
+    site,
+  }) => {
+    site.signIn(null);
+    await page.goto("/heroes/");
+    const boards = page.locator("#hero-boards-grid .hero-board");
+    await expect(boards).toHaveCount(4);
+    const itemLevelBoard = page.locator("#hero-boards-grid .hero-board", { hasText: "Item level" });
+    const topRow = itemLevelBoard.locator(".groups-board-row").first();
+    await expect(topRow).toContainText(`${CHARACTERS[0]!.name} ${CHARACTERS[0]!.surname}`);
+    await expect(topRow.locator("a")).toHaveAttribute("href", `/characters/detail/?slug=${CHARACTERS[0]!.slug}`);
+    const killsBoard = page.locator("#hero-boards-grid .hero-board", { hasText: "Honorable kills" });
+    await expect(killsBoard.locator(".hero-board-empty")).toContainText("No one yet");
+  });
   test("members see the leaderboard ranked by Renown, and can switch season and sort", async ({ page, site }) => {
     site.signIn(MEMBER);
     await page.goto("/heroes/");
@@ -763,6 +818,50 @@ test.describe("hall of heroes", () => {
     await page.goto("/heroes/member/?id=999999");
     await expect(page.locator("#hero-status")).not.toBeEmpty();
     await expect(page.locator("#hero-content")).toBeHidden();
+  });
+});
+
+test.describe("characters", () => {
+  test("the roster lists every current member, linking to their detail page", async ({ page, site }) => {
+    site.signIn(null);
+    await page.goto("/characters/");
+    const rows = page.locator("#char-roster-list li");
+    const roster = CHARACTERS.filter((c) => c.in_roster);
+    await expect(rows).toHaveCount(roster.length);
+    await expect(rows.first()).toContainText(`${roster[0]!.name} ${roster[0]!.surname}`);
+    await expect(rows.first().locator("a")).toHaveAttribute("href", `/characters/detail/?slug=${roster[0]!.slug}`);
+  });
+
+  test("an exact two-word search offers a direct Battle.net lookup, which navigates to the character's page", async ({
+    page,
+    site,
+  }) => {
+    site.signIn(null);
+    const target = CHARACTER_PAGES[2]!;
+    await page.goto("/characters/");
+    await page.locator("#char-query").fill(`${target.name} ${target.surname}`);
+    await page.locator("#characters-search-form button[type=submit]").click();
+    const exactLink = page.locator("#char-exact-link");
+    await expect(exactLink).toBeVisible();
+    await expect(exactLink).toHaveAttribute("href", `/characters/detail/?slug=${target.slug}`);
+    await exactLink.click();
+    await expect(page).toHaveURL(`/characters/detail/?slug=${target.slug}`);
+    await expect(page.locator(".char-detail-name")).toContainText(`${target.name} ${target.surname}`);
+  });
+
+  test("a roster character without a Battle.net profile shows the not-published line", async ({ page, site }) => {
+    site.signIn(null);
+    const noProfile = CHARACTER_PAGES.find((c) => c.sheet === null)!;
+    await page.goto(`/characters/detail/?slug=${noProfile.slug}`);
+    await expect(page.locator("#char-no-profile")).toContainText("hasn't published");
+    await expect(page.locator("#char-gear-section")).toBeHidden();
+  });
+
+  test("an unknown character shows a clear not-found message", async ({ page, site }) => {
+    site.signIn(null);
+    await page.goto("/characters/detail/?slug=nobody-nowhere");
+    await expect(page.locator("#character-status")).toContainText("No character named Nobody Nowhere");
+    await expect(page.locator("#character-content")).toBeHidden();
   });
 });
 

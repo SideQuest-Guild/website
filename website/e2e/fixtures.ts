@@ -27,6 +27,8 @@ import {
   ATTENDANCE_EVENTS,
   ATTENDANCE_REPORT,
   ATTENDANCE_TRENDS,
+  CHARACTER_PAGES,
+  CHARACTERS,
   EPGP_CHARACTERS,
   EPGP_DEVICE_AUTHORIZATION,
   EPGP_LOOT,
@@ -50,11 +52,13 @@ import {
   GUILD_NEWS,
   GUILD_ROSTER,
   GUILD_STATS,
+  HERO_BOARDS,
   HEROES,
   ITEM_WISHERS,
   ITEMS,
   LIVE,
   MCP_TOKENS,
+  MIN_ITEM_LEVEL,
   ONLINE,
   RECRUITING,
   SIGNUPS,
@@ -183,6 +187,8 @@ export const test = base.extend<{ site: Site }>({
     // A per-test copy: the raid chart's PATCH handler mutates this, and a shared SIGNUPS array would leak those
     // group/bench changes into the next test.
     const signups = SIGNUPS.map((s) => Object.assign({}, s));
+    // The raid chart's officer-set gear floor; PUT /api/raid-readiness mutates this per test.
+    let minItemLevel: number | null = MIN_ITEM_LEVEL;
     // Per-test copies, mutated by the officer sync console and the account page's character CRUD.
     const epgpCharacters = EPGP_CHARACTERS.map((c) => Object.assign({}, c));
     const epgpRoster = EPGP_ROSTER.map((m) => Object.assign({}, m));
@@ -298,8 +304,32 @@ export const test = base.extend<{ site: Site }>({
         if (!event) {
           return json(route, { detail: "No such event" }, 404);
         }
-        const detail = { ...eventDetail(event), signups };
+        // Mirrors the real API: below_minimum is derived from the event's current min_item_level, not stored.
+        const liveSignups = signups.map((s) =>
+          s.readiness
+            ? {
+                ...s,
+                readiness: {
+                  ...s.readiness,
+                  below_minimum:
+                    s.readiness.item_level !== null && minItemLevel !== null && s.readiness.item_level < minItemLevel,
+                },
+              }
+            : s,
+        );
+        const detail = { ...eventDetail(event, minItemLevel), signups: liveSignups };
         return json(route, me ? detail : anonymousDetail(detail));
+      }
+      if (path === "/api/raid-readiness" && method === "PUT") {
+        if (!me) {
+          return json(route, { detail: "Not signed in" }, 401);
+        }
+        if (!me.is_officer) {
+          return json(route, { detail: "Only officers can set this" }, 403);
+        }
+        const body = JSON.parse(request.postData() ?? "{}");
+        minItemLevel = body.min_item_level ?? null;
+        return json(route, { min_item_level: minItemLevel });
       }
       if (/^\/api\/events\/[^/]+\/signup$/.test(path) && method === "PUT") {
         return json(route, { ...eventDetail(EVENTS[0]).signups[0], ...JSON.parse(request.postData() ?? "{}") });
@@ -449,6 +479,42 @@ export const test = base.extend<{ site: Site }>({
         }
         const wishers = Number(wishersMatch[1]) === ITEMS[0]?.item_id ? ITEM_WISHERS : [];
         return json(route, wishers);
+      }
+      if (path === "/api/characters/boards" && method === "GET") {
+        return json(route, HERO_BOARDS);
+      }
+      if (path === "/api/characters/" && method === "GET") {
+        const q = url.searchParams.get("q");
+        if (q !== null) {
+          if (q.length < 2 || q.length > 60) {
+            return json(route, { detail: "q must be 2-60 characters" }, 400);
+          }
+          const needle = q.toLowerCase();
+          const matches = CHARACTERS.filter(
+            (c) => `${c.name} ${c.surname}`.toLowerCase().includes(needle) || c.slug.includes(needle),
+          );
+          return json(route, matches.slice(0, 25));
+        }
+        const roster = CHARACTERS.filter((c) => c.in_roster).toSorted(
+          (a, b) => (a.guild_rank ?? 99) - (b.guild_rank ?? 99),
+        );
+        return json(route, roster);
+      }
+      const characterMatch = /^\/api\/characters\/([^/]+)$/.exec(path);
+      if (characterMatch && method === "GET") {
+        const slug = characterMatch[1] ?? "";
+        const found = CHARACTER_PAGES.find((c) => c.slug === slug);
+        if (found) {
+          return json(route, found);
+        }
+        if (!/^[^\s/?#-]+-[^\s/?#-]+$/.test(slug)) {
+          return json(route, { detail: "slug must be name-surname" }, 400);
+        }
+        return json(
+          route,
+          { detail: `Battle.net has no character ${slug}. It publishes a character some time after it logs out.` },
+          404,
+        );
       }
       if (path === "/api/epgp/progression" && method === "GET") {
         return json(route, { instances: EPGP_PROGRESSION });

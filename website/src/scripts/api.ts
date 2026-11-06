@@ -133,6 +133,17 @@ export type EventSummary = {
 
 export type SignupMember = { display_name: string; avatar_url: string | null };
 
+// ——— Raid readiness (RaidReadinessUI) ———
+/** A signed-up character's gear readiness for a raid, from the matched roster character's Battle.net profile. */
+export type SignupReadiness = {
+  slug: string;
+  level: number;
+  /** `null` when the character has no published Battle.net profile yet. */
+  item_level: number | null;
+  spec: string | null;
+  below_minimum: boolean;
+};
+
 export type Signup = {
   id: string;
   member: SignupMember;
@@ -144,7 +155,12 @@ export type Signup = {
   group: number | null;
   bench: boolean;
   updated_at: string;
+  /** `null` when the sign-up's character name matches no single roster character. */
+  readiness?: SignupReadiness | null;
 };
+
+/** `PUT /api/raid-readiness` request/response body. */
+export type RaidReadiness = { min_item_level: number | null };
 
 /** Discord "Interested" clicks: `members` lists only people who have signed in on the site. */
 export type DiscordInterest = { count: number; members: SignupMember[] };
@@ -157,6 +173,8 @@ export type EventDetail = EventSummary & {
   discord_interest: DiscordInterest | null;
   /** Members away (see `AwayRange`) on this event's start date, America/Chicago. `null` for anonymous visitors. */
   away: SignupMember[] | null;
+  /** Raid gear floor officers set with `PUT /api/raid-readiness`. `null` when none is set. */
+  min_item_level?: number | null;
 };
 
 export type AddonOrigin = "guild" | "community";
@@ -1089,6 +1107,124 @@ export type Item = ItemSummary & {
   tooltip: string[];
   loot_price: ItemLootPrice | null;
 };
+
+// ——— Characters: GET /api/characters/[?q=], GET /api/characters/{slug}, GET /api/characters/boards. A
+// Battle.net-backed roster + public character sheet; mirrors `sidequest_common.schemas.characters` (once it
+// exists there). A 503 means Battle.net itself is down and the character was never stored; a 404 means Battle.net
+// has never heard of that name and surname.
+
+/** One `GET /api/characters/[?q=]` row, and the roster/summary half of `CharacterPage`. */
+export type CharacterSummary = {
+  slug: string;
+  name: string;
+  surname: string;
+  level: number;
+  class: CharClass | null;
+  race: string | null;
+  faction: string | null;
+  guild_name: string | null;
+  guild_slug: string | null;
+  in_roster: boolean;
+  guild_rank: number | null;
+  rank_name: string | null;
+  item_level: number | null;
+  spec: string | null;
+  achievement_points: number | null;
+  honorable_kills: number | null;
+  pvp_rank: number | null;
+  last_login_at: string | null;
+  profile_found: boolean;
+  fetched_at: string | null;
+};
+
+/** One piece of gear on a `CharacterSheet`; `quality` colors it with the same `q-*` classes as `ItemQuality`. */
+export type CharacterGearSlot = {
+  slot: string;
+  slot_name: string;
+  item_id: number;
+  name: string;
+  quality: ItemQuality;
+  item_level: number | null;
+  enchantments: string[];
+};
+
+export type CharacterStat = { label: string; value: string };
+export type CharacterTalent = { name: string; points: number };
+export type CharacterProfession = { name: string; skill: number; max_skill: number; recipes: number };
+export type CharacterReputation = { faction: string; standing: string; value: number; max: number };
+export type CharacterAchievement = { name: string; completed_at: string };
+
+/** The Battle.net-fetched half of `CharacterPage`; `null` when `profile_found` is false. */
+export type CharacterSheet = {
+  gear: CharacterGearSlot[];
+  stats: CharacterStat[];
+  talents: CharacterTalent[];
+  professions: CharacterProfession[];
+  reputations: CharacterReputation[];
+  recent_achievements: CharacterAchievement[];
+  mounts: number;
+  pets: number;
+  toys: number;
+  quests_completed: number | null;
+};
+
+/** `GET /api/characters/{slug}` (public): the roster summary plus the full sheet, or `sheet: null` when
+ * Battle.net hasn't published this character's profile yet. */
+export type CharacterPage = CharacterSummary & { sheet: CharacterSheet | null };
+
+/** One name on a `HeroBoards` top-10 list. */
+export type HeroBoardEntry = { slug: string; name: string; surname: string; class: CharClass | null; value: number };
+
+/** `GET /api/characters/boards` (public): the guild's top 10 roster characters by item level, honorable kills,
+ * PvP rank and achievement points. Any list may be empty. */
+export type HeroBoards = {
+  item_level: HeroBoardEntry[];
+  honorable_kills: HeroBoardEntry[];
+  pvp_rank: HeroBoardEntry[];
+  achievement_points: HeroBoardEntry[];
+};
+
+/** A roster character's rank for display: the addon-reported rank name when known, else "Guild Master" for rank 0
+ * or "Rank N". Empty string for a character not currently in the roster (`guild_rank` is `null` then). */
+export function rankLabel(guildRank: number | null, rankName: string | null): string {
+  if (guildRank === null) {
+    return "";
+  }
+  if (rankName) {
+    return rankName;
+  }
+  return guildRank === 0 ? "Guild Master" : `Rank ${guildRank}`;
+}
+
+/** Plain-language relative time ("just now", "5 minutes ago", "3 days ago", "2 months ago"), for a character's
+ * last login and similar timestamps the site shows informally rather than as an exact date. */
+export function relativeTime(iso: string): string {
+  const ms = Date.now() - new Date(iso).getTime();
+  const minute = 60_000;
+  const hour = 3_600_000;
+  const day = 86_400_000;
+  if (ms < minute) {
+    return "just now";
+  }
+  if (ms < hour) {
+    const n = Math.max(1, Math.round(ms / minute));
+    return `${n} minute${n === 1 ? "" : "s"} ago`;
+  }
+  if (ms < day) {
+    const n = Math.round(ms / hour);
+    return `${n} hour${n === 1 ? "" : "s"} ago`;
+  }
+  const days = Math.round(ms / day);
+  if (days < 30) {
+    return `${days} day${days === 1 ? "" : "s"} ago`;
+  }
+  if (days < 365) {
+    const months = Math.round(days / 30);
+    return `${months} month${months === 1 ? "" : "s"} ago`;
+  }
+  const years = Math.round(days / 365);
+  return `${years} year${years === 1 ? "" : "s"} ago`;
+}
 
 // ——— Item wishlist: GET/PUT/DELETE /api/me/wishlist[/{item_id}], GET /api/items/{item_id}/wishers (officer). A
 // wish never changes the loot rules or the SQL addon; it only lets officers see who wants an item next.

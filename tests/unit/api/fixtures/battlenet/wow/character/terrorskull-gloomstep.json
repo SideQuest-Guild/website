@@ -1,0 +1,104 @@
+{
+ "_links": {
+  "self": {
+   "href": "https://us.api.blizzard.com/profile/wow/character/terrorskull-gloomstep?namespace=profile-forever-us"
+  }
+ },
+ "achievement_points": 0,
+ "achievements": {
+  "href": "https://us.api.blizzard.com/profile/wow/character/terrorskull-gloomstep/achievements?namespace=profile-forever-us"
+ },
+ "achievements_statistics": {
+  "href": "https://us.api.blizzard.com/profile/wow/character/terrorskull-gloomstep/achievements/statistics?namespace=profile-forever-us"
+ },
+ "appearance": {
+  "href": "https://us.api.blizzard.com/profile/wow/character/terrorskull-gloomstep/appearance?namespace=profile-forever-us"
+ },
+ "average_item_level": 6,
+ "character_class": {
+  "id": 4,
+  "key": {
+   "href": "https://us.api.blizzard.com/data/wow/playable-class/4?namespace=static-1.60.1_70399-forever-us"
+  },
+  "name": "Rogue"
+ },
+ "collections": {
+  "href": "https://us.api.blizzard.com/profile/wow/character/terrorskull-gloomstep/collections?namespace=profile-forever-us"
+ },
+ "encounters": {
+  "href": "https://us.api.blizzard.com/profile/wow/character/terrorskull-gloomstep/encounters?namespace=profile-forever-us"
+ },
+ "equipment": {
+  "href": "https://us.api.blizzard.com/profile/wow/character/terrorskull-gloomstep/equipment?namespace=profile-forever-us"
+ },
+ "equipped_item_level": 6,
+ "experience": 3268,
+ "faction": {
+  "name": "Horde",
+  "type": "HORDE"
+ },
+ "gender": {
+  "name": "Male",
+  "type": "MALE"
+ },
+ "guild": {
+  "faction": {
+   "name": "Horde",
+   "type": "HORDE"
+  },
+  "id": 173003,
+  "key": {
+   "href": "https://us.api.blizzard.com/data/wow/guild/fuzion?namespace=profile-forever-us"
+  },
+  "name": "Fuzion",
+  "slug": "fuzion"
+ },
+ "id": 163709,
+ "is_remix": false,
+ "last_login_timestamp": 1793869523000,
+ "level": 14,
+ "media": {
+  "href": "https://us.api.blizzard.com/profile/wow/character/terrorskull-gloomstep/character-media?namespace=profile-forever-us"
+ },
+ "mythic_keystone_profile": {
+  "href": "https://us.api.blizzard.com/profile/wow/character/terrorskull-gloomstep/mythic-keystone-profile?namespace=profile-forever-us"
+ },
+ "name": "Terrorskull",
+ "name_search": "Terrorskull Gloomstep",
+ "professions": {
+  "href": "https://us.api.blizzard.com/profile/wow/character/terrorskull-gloomstep/professions?namespace=profile-forever-us"
+ },
+ "pvp_summary": {
+  "href": "https://us.api.blizzard.com/profile/wow/character/terrorskull-gloomstep/pvp-summary?namespace=profile-forever-us"
+ },
+ "quests": {
+  "href": "https://us.api.blizzard.com/profile/wow/character/terrorskull-gloomstep/quests?namespace=profile-forever-us"
+ },
+ "race": {
+  "id": 5,
+  "key": {
+   "href": "https://us.api.blizzard.com/data/wow/playable-race/5?namespace=static-1.60.1_70399-forever-us"
+  },
+  "name": "Undead"
+ },
+ "reputations": {
+  "href": "https://us.api.blizzard.com/profile/wow/character/terrorskull-gloomstep/reputations?namespace=profile-forever-us"
+ },
+ "ruleset": {
+  "id": 2,
+  "key": {
+   "href": "https://us.api.blizzard.com/data/wow/ruleset/2?namespace=dynamic-forever-us"
+  },
+  "name": "Normal"
+ },
+ "specializations": {
+  "href": "https://us.api.blizzard.com/profile/wow/character/terrorskull-gloomstep/specializations?namespace=profile-forever-us"
+ },
+ "statistics": {
+  "href": "https://us.api.blizzard.com/profile/wow/character/terrorskull-gloomstep/statistics?namespace=profile-forever-us"
+ },
+ "surname": "Gloomstep",
+ "titles": {
+  "href": "https://us.api.blizzard.com/profile/wow/character/terrorskull-gloomstep/titles?namespace=profile-forever-us"
+ }
+}

@@ -1,0 +1,150 @@
+{
+ "_links": {
+  "self": {
+   "href": "https://us.api.blizzard.com/profile/wow/character/terrorskull-gloomstep/statistics?namespace=profile-forever-us"
+  }
+ },
+ "agility": {
+  "base": 38,
+  "effective": 46
+ },
+ "arcane_resistance": {
+  "base": 0,
+  "effective": 0
+ },
+ "armor": {
+  "base": 32,
+  "effective": 375
+ },
+ "attack_power": 85,
+ "avoidance": {
+  "rating_bonus": 0.0,
+  "rating_normalized": 0
+ },
+ "block": {
+  "rating_bonus": 0.0,
+  "rating_normalized": 0,
+  "value": 0.0
+ },
+ "bonus_armor": 32,
+ "character": {
+  "id": 163709,
+  "key": {
+   "href": "https://us.api.blizzard.com/profile/wow/character/terrorskull-gloomstep?namespace=profile-forever-us"
+  },
+  "name": "Terrorskull",
+  "slug": "terrorskull-gloomstep",
+  "surname": "Gloomstep"
+ },
+ "dodge": {
+  "rating_bonus": 0.0,
+  "rating_normalized": 0,
+  "value": 17.4116
+ },
+ "fire_resistance": {
+  "base": 0,
+  "effective": 0
+ },
+ "frost_resistance": {
+  "base": 0,
+  "effective": 0
+ },
+ "health": 336,
+ "intellect": {
+  "base": 20,
+  "effective": 20
+ },
+ "lifesteal": {
+  "rating_bonus": 0.0,
+  "rating_normalized": 0,
+  "value": 0.0
+ },
+ "main_hand_damage_max": 30.142859,
+ "main_hand_damage_min": 21.142859,
+ "main_hand_dps": 12.821429,
+ "main_hand_speed": 2.0,
+ "mana_regen": 0.0,
+ "mana_regen_combat": 0.0,
+ "mastery": {
+  "rating_bonus": 0.0,
+  "rating_normalized": 0,
+  "value": 0.0
+ },
+ "melee_crit": {
+  "rating_bonus": 0.0,
+  "rating_normalized": 0,
+  "value": 8.6058
+ },
+ "melee_haste": {
+  "rating_bonus": 0.0,
+  "rating_normalized": 0,
+  "value": 0.0
+ },
+ "nature_resistance": {
+  "base": 0,
+  "effective": 0
+ },
+ "off_hand_damage_max": 9.25,
+ "off_hand_damage_min": 6.7500005,
+ "off_hand_dps": 5.714286,
+ "off_hand_speed": 1.4,
+ "parry": {
+  "rating_bonus": 0.0,
+  "rating_normalized": 0,
+  "value": 4.7200003
+ },
+ "power": 100,
+ "power_type": {
+  "id": 3,
+  "key": {
+   "href": "https://us.api.blizzard.com/data/wow/power-type/3?namespace=static-1.60.1_70399-forever-us"
+  },
+  "name": "Energy"
+ },
+ "ranged_crit": {
+  "rating_bonus": 0.0,
+  "rating_normalized": 0,
+  "value": 8.2858
+ },
+ "ranged_haste": {
+  "rating_bonus": 0.0,
+  "rating_normalized": 0,
+  "value": 0.0
+ },
+ "shadow_resistance": {
+  "base": 0,
+  "effective": 0
+ },
+ "speed": {
+  "rating_bonus": 0.0,
+  "rating_normalized": 0
+ },
+ "spell_crit": {
+  "rating_bonus": 0.0,
+  "rating_normalized": 0,
+  "value": 0.0
+ },
+ "spell_haste": {
+  "rating_bonus": 0.0,
+  "rating_normalized": 0,
+  "value": 0.0
+ },
+ "spell_penetration": 0,
+ "spell_power": 0,
+ "spirit": {
+  "base": 30,
+  "effective": 30
+ },
+ "stamina": {
+  "base": 31,
+  "effective": 36
+ },
+ "strength": {
+  "base": 29,
+  "effective": 31
+ },
+ "versatility": 0.0,
+ "versatility_damage_done_bonus": 0.0,
+ "versatility_damage_taken_bonus": 0.0,
+ "versatility_healing_done_bonus": 0.0
+}

@@ -176,6 +176,20 @@ class DiscordInterest(BaseModel):
     members: list[SignupMember]
 
 
+class SignupReadiness(BaseModel):
+    """The signed-up character's Battle.net level, equipped item level and spec, matched by character name.
+
+    ``item_level`` and ``spec`` are ``None`` while Battle.net has no profile for the character. ``below_minimum`` is
+    true when the officers set a minimum item level and the character's is known and lower.
+    """
+
+    slug: str
+    level: int
+    item_level: int | None
+    spec: str | None
+    below_minimum: bool
+
+
 class Signup(BaseModel):
     """One member's signup for an event, including the officer-assigned raid chart slot."""
 
@@ -191,6 +205,8 @@ class Signup(BaseModel):
     group: int | None
     bench: bool
     updated_at: datetime
+    readiness: SignupReadiness | None = None
+    """``None`` when the sign-up names no character, or no roster character has that name."""
 
 
 class EventDetail(EventSummary):
@@ -204,6 +220,8 @@ class EventDetail(EventSummary):
     discord_interest: DiscordInterest | None
     away: list[SignupMember] | None
     """Members away (see ``AwayRangeIn``) on this event's start date, America/Chicago. ``None`` if anonymous."""
+    min_item_level: int | None = None
+    """The officers' minimum equipped item level for raids; ``None`` if they set none."""
 
 
 class EventCreate(BaseModel):

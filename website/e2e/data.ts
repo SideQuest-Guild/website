@@ -7,6 +7,8 @@ import type {
   AttendanceReport,
   AttendanceSignup,
   AttendanceTrends,
+  CharacterPage,
+  CharacterSummary,
   DiscordLive,
   DiscordOnline,
   EarnedBadge,
@@ -39,6 +41,7 @@ import type {
   GuildRoster,
   GuildStats,
   HeroActivity,
+  HeroBoards,
   HeroDay,
   HeroLeaderboard,
   HeroProfile,
@@ -145,20 +148,39 @@ const signup = (id: string, name: string, overrides: Partial<Signup>): Signup =>
 });
 
 export const SIGNUPS: Signup[] = [
-  signup("s1", "Brannoc", { class: "warrior", role: "tank", group: 1 }),
-  signup("s2", "Elowen", { class: "priest", role: "healer", group: 1 }),
-  signup("s3", "Thistlewhit", { class: "mage", role: "dps", group: 2 }),
+  signup("s1", "Brannoc", {
+    class: "warrior",
+    role: "tank",
+    group: 1,
+    readiness: { slug: "brannoc-anvilheart", level: 60, item_level: 54, spec: "Protection", below_minimum: true },
+  }),
+  signup("s2", "Elowen", {
+    class: "priest",
+    role: "healer",
+    group: 1,
+    readiness: { slug: "elowen-dawnsworn", level: 60, item_level: 60, spec: "Holy", below_minimum: false },
+  }),
+  signup("s3", "Thistlewhit", {
+    class: "mage",
+    role: "dps",
+    group: 2,
+    readiness: { slug: "thistlewhit-sparkwhistle", level: 58, item_level: null, spec: null, below_minimum: false },
+  }),
   signup("s4", "Kaelthasmaybe", { class: "shaman", role: "healer", status: "tentative" }),
   signup("s5", "Grimbold", { class: "hunter", role: "dps", bench: true }),
 ];
 
-export function eventDetail(event: EventSummary): EventDetail {
+/** The raid chart's officer-set gear floor (PUT /api/raid-readiness); matches SIGNUPS' `below_minimum` values. */
+export const MIN_ITEM_LEVEL = 58;
+
+export function eventDetail(event: EventSummary, minItemLevel: number | null = MIN_ITEM_LEVEL): EventDetail {
   return {
     ...event,
     signups: SIGNUPS,
     my_signup: null,
     discord_interest: { count: 4, members: [] },
     away: [{ display_name: "Kaelthasmaybe", avatar_url: null }],
+    min_item_level: minItemLevel,
   };
 }
 
@@ -1210,3 +1232,152 @@ export const ITEM_WISHERS: ItemWisher[] = [
     trial: true,
   },
 ];
+
+// ——— Characters (GET /api/characters/[?q=], GET /api/characters/{slug}, GET /api/characters/boards) ———
+// Two roster members (one with a published Battle.net profile, one without) and one non-roster character found
+// only by exact name and surname, so a test can exercise all three states.
+export const CHARACTERS: CharacterSummary[] = [
+  {
+    slug: "nox-zul",
+    name: "Nox",
+    surname: "Zul",
+    level: 60,
+    class: "warrior",
+    race: "Human",
+    faction: "Alliance",
+    guild_name: "SideQuest",
+    guild_slug: "sidequest",
+    in_roster: true,
+    guild_rank: 0,
+    rank_name: "Guild Master",
+    item_level: 272,
+    spec: "Protection",
+    achievement_points: 4820,
+    honorable_kills: 312,
+    pvp_rank: 6,
+    last_login_at: inDays(-1),
+    profile_found: true,
+    fetched_at: inDays(-1),
+  },
+  {
+    slug: "mira-ashbrook",
+    name: "Mira",
+    surname: "Ashbrook",
+    level: 58,
+    class: "priest",
+    race: "Night Elf",
+    faction: "Alliance",
+    guild_name: "SideQuest",
+    guild_slug: "sidequest",
+    in_roster: true,
+    guild_rank: 2,
+    rank_name: "Raider",
+    item_level: null,
+    spec: null,
+    achievement_points: null,
+    honorable_kills: null,
+    pvp_rank: null,
+    last_login_at: null,
+    profile_found: false,
+    fetched_at: null,
+  },
+  {
+    slug: "thal-windrunner",
+    name: "Thal",
+    surname: "Windrunner",
+    level: 60,
+    class: "hunter",
+    race: "Dwarf",
+    faction: "Alliance",
+    guild_name: null,
+    guild_slug: null,
+    in_roster: false,
+    guild_rank: null,
+    rank_name: null,
+    item_level: 265,
+    spec: "Marksmanship",
+    achievement_points: 3100,
+    honorable_kills: 50,
+    pvp_rank: 3,
+    last_login_at: inDays(-5),
+    profile_found: true,
+    fetched_at: inDays(-5),
+  },
+];
+
+function characterSheet(overrides: Partial<CharacterPage["sheet"]> = {}): NonNullable<CharacterPage["sheet"]> {
+  return {
+    gear: [
+      {
+        slot: "HEAD",
+        slot_name: "Head",
+        item_id: 1001,
+        name: "Lionheart Helm",
+        quality: "EPIC",
+        item_level: 78,
+        enchantments: [],
+      },
+      {
+        slot: "CHEST",
+        slot_name: "Chest",
+        item_id: 1002,
+        name: "Breastplate of Valor",
+        quality: "RARE",
+        item_level: 70,
+        enchantments: ["+8 Stamina"],
+      },
+    ],
+    stats: [
+      { label: "Health", value: "4820" },
+      { label: "Armor", value: "3120" },
+      { label: "Strength", value: "210" },
+    ],
+    talents: [
+      { name: "Protection", points: 31 },
+      { name: "Arms", points: 15 },
+    ],
+    professions: [
+      { name: "Blacksmithing", skill: 300, max_skill: 300, recipes: 48 },
+      { name: "Mining", skill: 300, max_skill: 300, recipes: 0 },
+    ],
+    reputations: [
+      { faction: "Ironforge", standing: "Exalted", value: 42000, max: 42000 },
+      { faction: "Argent Dawn", standing: "Honored", value: 18000, max: 21000 },
+    ],
+    recent_achievements: [{ name: "Onyxia's Downfall", completed_at: inDays(-3) }],
+    mounts: 12,
+    pets: 5,
+    toys: 3,
+    quests_completed: 980,
+    ...overrides,
+  };
+}
+
+export const CHARACTER_PAGES: CharacterPage[] = [
+  { ...CHARACTERS[0]!, sheet: characterSheet() },
+  { ...CHARACTERS[1]!, sheet: null },
+  {
+    ...CHARACTERS[2]!,
+    sheet: characterSheet({
+      professions: [],
+      reputations: [],
+      recent_achievements: [],
+      mounts: 2,
+      pets: 0,
+      toys: 0,
+      quests_completed: null,
+    }),
+  },
+];
+
+// Honorable kills and PvP rank are left empty on purpose, to exercise a board's "No one yet" state.
+export const HERO_BOARDS: HeroBoards = {
+  item_level: CHARACTERS.filter((c) => c.in_roster && c.item_level !== null)
+    .toSorted((a, b) => (b.item_level ?? 0) - (a.item_level ?? 0))
+    .map((c) => ({ slug: c.slug, name: c.name, surname: c.surname, class: c.class, value: c.item_level ?? 0 })),
+  honorable_kills: [],
+  pvp_rank: [],
+  achievement_points: CHARACTERS.filter((c) => c.in_roster && c.achievement_points !== null)
+    .toSorted((a, b) => (b.achievement_points ?? 0) - (a.achievement_points ?? 0))
+    .map((c) => ({ slug: c.slug, name: c.name, surname: c.surname, class: c.class, value: c.achievement_points ?? 0 })),
+};

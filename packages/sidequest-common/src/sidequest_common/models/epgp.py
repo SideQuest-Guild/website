@@ -40,6 +40,12 @@ class WowCharacter(UUIDAuditBase):
     is_main: Mapped[bool] = mapped_column(Boolean, default=False)
     source: Mapped[str] = mapped_column(String(20), default="import")
     last_seen_at: Mapped[datetime | None] = mapped_column(DateTimeUTC(timezone=True), default=None)
+    blizzard_id: Mapped[int | None] = mapped_column(BigInteger, index=True, default=None)
+    """Battle.net's id for this character, filled in by the roster sync. ``None`` until it matches a roster member."""
+    surname: Mapped[str | None] = mapped_column(Text, default=None)
+    slug: Mapped[str | None] = mapped_column(Text, index=True, default=None)
+    """Battle.net's ``name-surname`` address (``BattlenetCharacter.slug``). Forever has no realms, so ``key`` keeps its
+    old ``name-realm`` form only for the addon and the bot."""
 
 
 class RaidSession(UUIDAuditBase):

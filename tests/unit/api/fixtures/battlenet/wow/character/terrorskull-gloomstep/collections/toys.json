@@ -1,0 +1,27 @@
+{
+ "_links": {
+  "self": {
+   "href": "https://us.api.blizzard.com/profile/wow/character/terrorskull-gloomstep/collections/toys?namespace=profile-forever-us"
+  }
+ },
+ "toys": [
+  {
+   "toy": {
+    "id": 1761,
+    "key": {
+     "href": "https://us.api.blizzard.com/data/wow/toy/1761?namespace=static-1.60.1_70399-forever-us"
+    },
+    "name": "Shen'dorei Windwell"
+   }
+  },
+  {
+   "toy": {
+    "id": 1792,
+    "key": {
+     "href": "https://us.api.blizzard.com/data/wow/toy/1792?namespace=static-1.60.1_70399-forever-us"
+    },
+    "name": "Pouch of Violet Dust"
+   }
+  }
+ ]
+}

@@ -59,6 +59,17 @@ import "../../styles/room-heroes.css";
   </div>
 
   <!-- Public: no sign-in needed, unlike the leaderboard above. -->
+  <section class="chamber" id="hero-boards-section" aria-labelledby="h-hero-boards">
+    <h2 class="chamber-title" id="h-hero-boards">
+      Hero boards
+    </h2>
+    <p class="aside">
+      The guild's top 10 roster characters by item level, honorable kills, PvP rank and achievement points.
+    </p>
+    <div class="hero-boards-grid" id="hero-boards-grid"></div>
+  </section>
+
+  <!-- Public: no sign-in needed, unlike the leaderboard above. -->
   <section class="chamber" id="groups-board-section" aria-labelledby="h-groups-board">
     <h2 class="chamber-title" id="h-groups-board">
       Most grouped
@@ -97,6 +108,8 @@ import "../../styles/room-heroes.css";
     badgeIconId,
     type GroupLeaderboard,
     type GroupLeaderboardRow,
+    type HeroBoardEntry,
+    type HeroBoards,
     type HeroLeaderboard,
     type HeroRow,
     type Me,
@@ -164,6 +177,36 @@ import "../../styles/room-heroes.css";
     </a>`;
   }
 
+  const BOARD_LABELS: Record<keyof HeroBoards, string> = {
+    item_level: "Item level",
+    honorable_kills: "Honorable kills",
+    pvp_rank: "PvP rank",
+    achievement_points: "Achievement points",
+  };
+
+  function heroBoardRow(entry: HeroBoardEntry, rank: number): string {
+    const cls = entry.class ? ` cls-${entry.class}` : "";
+    const tier = rank <= 3 ? ` rank-${rank === 1 ? "gold" : rank === 2 ? "silver" : "bronze"}` : "";
+    return `
+    <li class="groups-board-row">
+      <span class="hero-rank${tier}">${rank}</span>
+      <a class="hero-name" href="/characters/detail/?slug=${encodeURIComponent(entry.slug)}">
+        <span class="hero-display-name${cls}">${escapeHtml(entry.name)} ${escapeHtml(entry.surname)}</span>
+      </a>
+      <span class="hero-stats-group">
+        <span class="hero-stat hero-stat-ep">${entry.value}</span>
+      </span>
+    </li>`;
+  }
+
+  function heroBoard(key: keyof HeroBoards, entries: HeroBoardEntry[]): string {
+    const body =
+      entries.length > 0
+        ? `<ul class="groups-board-list">${entries.map((e, i) => heroBoardRow(e, i + 1)).join("")}</ul>`
+        : `<p class="hero-board-empty aside">No one yet.</p>`;
+    return `<div class="hero-board"><h3 class="sub-title">${BOARD_LABELS[key]}</h3>${body}</div>`;
+  }
+
   function groupsBoardRow(row: GroupLeaderboardRow, rank: number): string {
     return `
     <li class="groups-board-row">
@@ -189,6 +232,7 @@ import "../../styles/room-heroes.css";
     const boardEl = requireElement("leaderboard");
     const groupsBoardTabsEl = requireElement("groups-board-tabs");
     const groupsBoardListEl = requireElement("groups-board-list");
+    const heroBoardsGridEl = requireElement("hero-boards-grid");
 
     // Season One hasn't started yet at launch: default to All time until it has, per SEASONS[0].starts_at.
     const seasonOneStarted = Date.now() >= new Date(SEASONS[0]!.starts_at).getTime();
@@ -304,8 +348,21 @@ import "../../styles/room-heroes.css";
       );
     }
 
+    async function loadHeroBoards(): Promise<void> {
+      heroBoardsGridEl.innerHTML = `<p class="aside">Loading…</p>`;
+      try {
+        const boards = await apiFetch<HeroBoards>("/api/characters/boards", { signal });
+        heroBoardsGridEl.innerHTML = (Object.keys(BOARD_LABELS) as (keyof HeroBoards)[])
+          .map((key) => heroBoard(key, boards[key]))
+          .join("");
+      } catch (err) {
+        heroBoardsGridEl.innerHTML = `<p class="status" data-tone="error">${escapeHtml(statusMessage(err))}</p>`;
+      }
+    }
+
     async function init(): Promise<void> {
       void loadGroupsBoard();
+      void loadHeroBoards();
       let me: Me | null = null;
       try {
         me = await fetchMe();

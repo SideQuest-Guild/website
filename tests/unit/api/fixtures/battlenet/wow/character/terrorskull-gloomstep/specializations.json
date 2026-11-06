@@ -1,0 +1,67 @@
+{
+ "_links": {
+  "self": {
+   "href": "https://us.api.blizzard.com/profile/wow/character/terrorskull-gloomstep/specializations?namespace=profile-forever-us"
+  }
+ },
+ "character": {
+  "id": 163709,
+  "key": {
+   "href": "https://us.api.blizzard.com/profile/wow/character/terrorskull-gloomstep?namespace=profile-forever-us"
+  },
+  "name": "Terrorskull",
+  "slug": "terrorskull-gloomstep",
+  "surname": "Gloomstep"
+ },
+ "specialization_groups": [
+  {
+   "is_active": true,
+   "specializations": [
+    {
+     "specialization": {
+      "id": 38,
+      "key": {
+       "href": "https://us.api.blizzard.com/data/wow/playable-specialization/38?namespace=static-1.60.1_70399-forever-us"
+      },
+      "name": "Combat"
+     },
+     "specialization_name": "Combat",
+     "spent_points": 4,
+     "talents": [
+      {
+       "spell_tooltip": {
+        "cast_time": "Passive",
+        "description": "Increases the damage done by your Eviscerate ability by 13%, and the damage and storage rate of your Death Mark ability by 13%.",
+        "spell": {
+         "id": 14162,
+         "name": "Coup de Grace"
+        }
+       },
+       "talent": {
+        "id": 135238,
+        "name": "Coup de Grace"
+       },
+       "talent_rank": 2
+      },
+      {
+       "spell_tooltip": {
+        "cast_time": "Passive",
+        "description": "Reduces the Energy cost of your Sinister Strike and Hemorrhage abilities by 5.",
+        "power_cost": null,
+        "spell": {
+         "id": 13732,
+         "name": "Efficient Strikes"
+        }
+       },
+       "talent": {
+        "id": 135271,
+        "name": "Efficient Strikes"
+       },
+       "talent_rank": 2
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}
