@@ -16,6 +16,7 @@ import pytest
 
 from sidequest_api.domain.characters import services as characters_services
 from sidequest_api.domain.items import services as items_services
+from sidequest_api.domain.talents import services as talents_services
 
 API = "https://us.api.blizzard.com"
 BETA = "static-1.60.1_70399-forever-us"
@@ -158,10 +159,11 @@ def battlenet() -> dict:
 
 @pytest.fixture(autouse=True)
 def forget_battlenet_state() -> None:
-    """The data version and the search cache are process-wide; tests must not see each other's."""
+    """The data version and the search and talent tree caches are process-wide; tests must not see each other's."""
     items_services._data_version = None
     items_services._search_cache.clear()
     characters_services._missing.clear()
+    talents_services._tree_cache.clear()
 
 
 def _profile_document(path: str, battlenet: dict) -> httpx.Response:

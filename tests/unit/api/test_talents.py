@@ -196,6 +196,29 @@ async def test_the_real_druid_trees_load_with_one_way_prerequisites(
     assert balance["Nature's Majesty"]["requires"] is None
     assert balance["Nature's Splendor"]["requires"] == balance["Nature's Majesty"]["id"]
     assert balance["Vengeance"]["requires"] == balance["Improved Moonfire"]["id"]
+    # Battle.net numbers columns across the class window (Feral 7-10, Restoration 14-17); each tree's grid is 1-4.
+    assert [sorted({node["col"] for node in tree["nodes"]}) for tree in trees] == [[1, 2, 3, 4]] * 3
+
+
+async def test_stray_copies_battle_net_places_outside_the_tree_are_left_out(
+    talents_client: AsyncTestClient, battlenet: dict
+) -> None:
+    # Shapes from the live Hunter and Priest data: a tree at columns 14-17 with a duplicate parked at column 170 on
+    # the last row, and another copy at row 33.
+    path = f"/data/wow/talent-tree/{TREE_ID}/playable-specialization/{SPECS[0][0]}"
+    document = battlenet["documents"][path]
+    document["spec_talent_nodes"] = [
+        _node(1, 1, 14, 5),
+        _node(2, 1, 17, 5),
+        _node(3, 7, 15, 1),
+        _node(4, 7, 170, 5),
+        _node(5, 33, 14, 5),
+    ]
+
+    response = await talents_client.get(f"{TALENTS}/warrior")
+
+    nodes = response.json()["trees"][0]["nodes"]
+    assert [(node["id"], node["row"], node["col"]) for node in nodes] == [(1, 1, 1), (2, 1, 4), (3, 7, 2)]
 
 
 async def test_a_member_saves_a_build_and_can_delete_only_their_own(

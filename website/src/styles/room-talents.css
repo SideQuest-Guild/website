@@ -118,9 +118,19 @@
   background: rgba(46, 74, 133, 0.35);
   color: #f6f3ee;
 }
+/* A name's widest word must fit its cell, or the browser breaks it mid-word ("Benedictio / n"). The page measures
+   that word (`--widest-word`, in ems); the font shrinks just enough for it, never below 0.5rem, and a word still too
+   wide at that size hyphenates where the browser can, else breaks. A cell's text box is a quarter of the grid less
+   the three 6px gaps, the 1px borders and the 2px side padding; 2% spare covers rounding. */
+.talent-grid {
+  container-type: inline-size;
+}
 .talent-node-name {
+  max-width: 100%;
   font-weight: 500;
-  overflow-wrap: anywhere;
+  font-size: clamp(0.5rem, ((100cqi - 18px) / 4 - 6px) * 0.98 / max(var(--widest-word, 1), 0.01), 0.68rem);
+  hyphens: auto;
+  overflow-wrap: break-word;
 }
 .talent-node-rank {
   color: var(--mist-2);

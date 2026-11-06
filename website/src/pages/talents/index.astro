@@ -103,6 +103,22 @@ import "../../styles/room-talents.css";
     totalSpent,
   } from "../../scripts/talents";
 
+  const wordMeasure = document.createElement("canvas").getContext("2d");
+
+  /**
+   * The width, in ems of the page's own font at weight 500, of the widest unbreakable piece of a talent name (words,
+   * and hyphenated words split after the hyphen, as the browser may wrap there). The CSS sizes the name so this fits
+   * its cell.
+   */
+  function widestWordEm(name: string): number {
+    if (!wordMeasure) {
+      return 0;
+    }
+    wordMeasure.font = `500 100px ${getComputedStyle(document.body).fontFamily}`;
+    const pieces = name.split(/\s+/).flatMap((word) => word.split(/(?<=-)/));
+    return Math.max(...pieces.map((piece) => wordMeasure.measureText(piece).width)) / 100;
+  }
+
   onPage("#class-picker", (signal) => {
     const classPickerEl = requireElement("class-picker");
     const talentsSectionEl = requireElement("talents-section");
@@ -168,6 +184,8 @@ import "../../styles/room-talents.css";
       const wowhead = rankTooltip ? ` data-wowhead="spell=${rankTooltip.spell_id}&domain=forever"` : "";
       const reason = canAdd ? "" : gateReason(tree, ranks, node, nodeIndex);
       const title = reason ? ` title="${escapeHtml(reason)}"` : "";
+      // Sizes the name so its widest word fits the cell, instead of breaking mid-word ("Benedictio / n").
+      const widestWord = widestWordEm(node.name).toFixed(2);
       return `
         <div class="talent-node-wrap" style="grid-row:${node.row};grid-column:${node.col}">
           <button
@@ -178,7 +196,7 @@ import "../../styles/room-talents.css";
             aria-label="${escapeHtml(node.name)}, rank ${rank} of ${node.max_rank}"
             ${canAdd ? "" : "disabled"}
           >
-            <span class="talent-node-name">${escapeHtml(node.name)}</span>
+            <span class="talent-node-name" style="--widest-word:${widestWord}">${escapeHtml(node.name)}</span>
             <span class="talent-node-rank">${rank}/${node.max_rank}</span>
           </button>
           <button
@@ -228,6 +246,14 @@ import "../../styles/room-talents.css";
         return;
       }
       treesEl.innerHTML = classTalents.trees.map((tree, treeIndex) => treeHtml(tree, treeIndex)).join("");
+      if (document.fonts.status !== "loaded") {
+        // Names were measured in a fallback font; measure again in the page's own once it arrives.
+        void document.fonts.ready.then(() => {
+          if (!signal.aborted) {
+            renderTrees();
+          }
+        });
+      }
       refreshWowheadLinks();
       renderSummary();
     }

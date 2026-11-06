@@ -50,9 +50,11 @@ _TREE_HREF = re.compile(r"/talent-tree/(\d+)$")
 _SPEC_HREF = re.compile(r"/talent-tree/(\d+)/playable-specialization/(\d+)$")
 
 _tree_cache: dict[str, ClassTalents] = {}
+TREE_ROWS = 7
+TREE_COLUMNS = 4
 
 
-def _node_schema(node: TalentTreeNode, rows: dict[int, int]) -> TalentNode:
+def _node_schema(node: TalentTreeNode, rows: dict[int, int], first_col: int) -> TalentNode:
     """One talent node, with its prerequisite.
 
     Battle.net links some prerequisite pairs both ways in ``locked_by``; the prerequisite is the one in an earlier row.
@@ -61,7 +63,7 @@ def _node_schema(node: TalentTreeNode, rows: dict[int, int]) -> TalentNode:
     return TalentNode(
         id=node.id,
         row=node.display_row,
-        col=node.display_col,
+        col=node.display_col - first_col + 1,
         max_rank=len(node.ranks),
         talent_id=first.id,
         name=first.name or "",
@@ -76,13 +78,29 @@ def _node_schema(node: TalentTreeNode, rows: dict[int, int]) -> TalentNode:
 
 
 def _tree_schema(tree: TalentTree, icon_url: str | None) -> TalentTreeSchema:
-    nodes = sorted(tree.spec_talent_nodes, key=lambda node: (node.display_row, node.display_col))
+    """One spec's tree, with columns counted from 1.
+
+    Battle.net numbers columns across the whole class window (the three trees sit side by side, e.g. 1-4, 7-10 and
+    14-17), so each tree's columns are shifted to start at 1; order within a tree is unchanged.
+
+    Battle.net also lists a few stray copies far outside the window (a second Lightning Reflexes at column 170, Holy
+    Specialization at row 33); the game doesn't show them, so neither does the calculator.
+    """
+    first_col = min((node.display_col for node in tree.spec_talent_nodes), default=1)
+    nodes = sorted(
+        (
+            node
+            for node in tree.spec_talent_nodes
+            if 1 <= node.display_row <= TREE_ROWS and 0 <= node.display_col - first_col < TREE_COLUMNS
+        ),
+        key=lambda node: (node.display_row, node.display_col),
+    )
     rows = {node.id: node.display_row for node in nodes}
     return TalentTreeSchema(
         spec_id=tree.playable_specialization.id,
         name=tree.name,
         icon_url=icon_url,
-        nodes=[_node_schema(n, rows) for n in nodes],
+        nodes=[_node_schema(n, rows, first_col) for n in nodes],
     )
 
 
