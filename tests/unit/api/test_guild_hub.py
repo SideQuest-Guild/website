@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 from sqlalchemy import select
 
 from sidequest_common.models import (
+    BattlenetCharacter,
     CharacterProfession,
     GuildAnnouncement,
     GuildNewsEvent,
@@ -593,6 +594,45 @@ async def test_game_import_v2_shape_decodes_and_officer_part_present(
     for key in ("members", "news", "sheets", "crafters", "recipe_names", "officer"):
         assert key in decoded
     assert set(decoded["officer"]) == {"recruits", "member_notes", "inactive"}
+
+
+async def test_game_import_inactive_list_uses_battlenet_last_login(
+    member_client: AsyncTestClient, discord_state: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    now = datetime.now(UTC)
+    async with db_sessionmaker() as session:
+        for discord_id, slug, last_login in (
+            (7711, "recent-player", now - timedelta(days=1)),
+            (7712, "gone-player", now - timedelta(days=40)),
+        ):
+            member = Member(discord_id=discord_id, username=slug, is_guild_member=True)
+            session.add(member)
+            await session.flush()
+            name, surname = slug.split("-")
+            session.add(
+                WowCharacter(
+                    name=name.title(), realm="Whitemane", key=f"{name}-whitemane", member_id=member.id, slug=slug
+                )
+            )
+            session.add(
+                BattlenetCharacter(
+                    slug=slug,
+                    blizzard_id=discord_id,
+                    name=name.title(),
+                    surname=surname.title(),
+                    level=60,
+                    last_login_at=last_login,
+                )
+            )
+        await session.commit()
+    await _login_officer(member_client, discord_state, discord_id=7710)
+
+    response = await member_client.get("/api/epgp/game-import")
+    assert response.status_code == 200, response.text
+    decoded = json.loads(base64.b64decode(response.json()["payload"].removeprefix("SQI1:")))
+    inactive = {row["name"]: row for row in decoded["officer"]["inactive"]}
+    assert "recent-player" not in inactive
+    assert inactive["gone-player"]["last_seen_at"] == int((now - timedelta(days=40)).timestamp())
 
 
 async def test_game_import_requires_officer(member_client: AsyncTestClient, discord_state: dict) -> None:

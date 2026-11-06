@@ -28,6 +28,7 @@ from sidequest_api.lib.member_auth import is_officer
 from sidequest_common.models import (
     BattlegroundMatch,
     BattlegroundScore,
+    BattlenetCharacter,
     CharacterDirectoryChar,
     CharacterDirectoryCooldowns,
     CharacterDirectoryMarket,
@@ -1967,6 +1968,14 @@ class EpgpService:
         cutoff = reference - timedelta(days=INACTIVE_AFTER_DAYS)
         snapshots = (await self._session.execute(select(GuildRosterSnapshot))).scalars().all()
         last_seen_by_character = {row.character_id: row.last_seen_at for row in snapshots}
+        # Battle.net's last login, from the roster sync, counts too: it covers members whose game hasn't swept the
+        # roster, and characters played on a computer without the addon.
+        logins = await self._session.execute(
+            select(BattlenetCharacter.slug, BattlenetCharacter.last_login_at).where(
+                BattlenetCharacter.last_login_at.is_not(None)
+            )
+        )
+        battlenet_logins = dict(logins.tuples().all())
         presences = (await self._session.execute(select(SessionCharacterPresence))).scalars().all()
         last_raid_by_character: dict[UUID, datetime] = {}
         for presence in presences:
@@ -1983,7 +1992,12 @@ class EpgpService:
         for member in members:
             member_chars = chars_by_member.get(member.id, [])
             last_seen = max(
-                (last_seen_by_character[c.id] for c in member_chars if c.id in last_seen_by_character),
+                (
+                    seen
+                    for c in member_chars
+                    for seen in (last_seen_by_character.get(c.id), battlenet_logins.get(c.slug or ""))
+                    if seen is not None
+                ),
                 default=None,
             )
             last_raid = max(
