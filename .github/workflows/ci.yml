@@ -119,10 +119,36 @@ jobs:
           path: website/dist
           retention-days: 7
 
+  playwright-version:
+    name: Playwright version
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      version: ${{ steps.read.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: website/package-lock.json
+          sparse-checkout-cone-mode: false
+
+      - name: Read the locked Playwright version
+        id: read
+        run: >-
+          echo "version=$(jq -r '.packages["node_modules/@playwright/test"].version' website/package-lock.json)"
+          >> "$GITHUB_OUTPUT"
+
   website-e2e:
     name: Website end-to-end (${{ matrix.project }} ${{ matrix.shard }}/2)
+    needs: playwright-version
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    # Playwright's own image for the locked version already holds every browser and the system libraries they need.
+    # Installing WebKit's libraries with `playwright install --with-deps` pulls them from Azure's Ubuntu mirror, which
+    # has crawled at a few KB/s and run the job past its time limit.
+    container:
+      image: mcr.microsoft.com/playwright:v${{ needs.playwright-version.outputs.version }}-noble
+      options: --ipc=host
     # Each device in two halves on its own runner, at Playwright's default worker count: more parallel workers on one
     # 4-vCPU runner starved WebKit and made the phone tests flaky.
     strategy:
@@ -146,9 +172,6 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
-
-      - name: Install browsers
-        run: npx playwright install --with-deps ${{ (matrix.project == 'iphone' || matrix.project == 'small-phone') && 'webkit' || 'chromium' }}
 
       - name: Build
         run: npm run build
