@@ -392,6 +392,14 @@ class GameImportInactiveMember(BaseModel):
     name: str
     last_seen_at: int | None
     last_raid_at: int | None
+    level: int | None = None
+
+
+class GameImportUnseenMember(BaseModel):
+    """One guild member with no roster sweep, Battle.net login, or raid presence on record at all."""
+
+    member_id: int
+    name: str
 
 
 class GameImportOfficerPart(BaseModel):
@@ -400,6 +408,7 @@ class GameImportOfficerPart(BaseModel):
     recruits: list[GameImportOfficerRecruit]
     member_notes: list[GameImportOfficerNote]
     inactive: list[GameImportInactiveMember]
+    unseen: list[GameImportUnseenMember] = Field(default_factory=list)
 
 
 # --- ``/api/guild/*`` HTTP API schemas ---------------------------------------------------------------------------
@@ -703,6 +712,7 @@ __all__ = (
     "GameImportOfficerPart",
     "GameImportOfficerRecruit",
     "GameImportSheet",
+    "GameImportUnseenMember",
     "GuildAnnouncementCreate",
     "GuildAnnouncementRow",
     "GuildAnnouncementsPage",

@@ -306,13 +306,17 @@ class ExportPayload(BaseModel):
 
 
 class GameImportSignup(BaseModel):
-    """One event sign-up in the game-import payload. ``character`` is the free-text sign-up name, no realm."""
+    """One event sign-up in the game-import payload. ``character`` is the free-text sign-up name, no realm.
+
+    ``wow_class``/``role`` are ``None`` for sign-ups to non-``ROLE_KINDS`` events (social, transmog, leveling,
+    pvp, other); those events accept a bare going/maybe/can't RSVP, same as the site's own sign-up API.
+    """
 
     model_config = ConfigDict(populate_by_name=True, serialize_by_alias=True)
 
     character: str
-    wow_class: WowClass = Field(alias="class")
-    role: SignupRole
+    wow_class: WowClass | None = Field(default=None, alias="class")
+    role: SignupRole | None = None
     status: SignupStatus
     group: int | None
     bench: bool

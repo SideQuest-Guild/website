@@ -18,7 +18,9 @@ from sidequest_common.models import (
     GuildRosterSnapshot,
     Member,
     MemberNote,
+    RaidSession,
     RecruitVote,
+    SessionCharacterPresence,
     WowCharacter,
 )
 from tests.unit.api.conftest import OFFICER_ROLE_ID, login_as
@@ -593,7 +595,7 @@ async def test_game_import_v2_shape_decodes_and_officer_part_present(
     assert decoded["v"] == 2
     for key in ("members", "news", "sheets", "crafters", "recipe_names", "officer"):
         assert key in decoded
-    assert set(decoded["officer"]) == {"recruits", "member_notes", "inactive"}
+    assert set(decoded["officer"]) == {"recruits", "member_notes", "inactive", "unseen"}
 
 
 async def test_game_import_inactive_list_uses_battlenet_last_login(
@@ -633,6 +635,127 @@ async def test_game_import_inactive_list_uses_battlenet_last_login(
     inactive = {row["name"]: row for row in decoded["officer"]["inactive"]}
     assert "recent-player" not in inactive
     assert inactive["gone-player"]["last_seen_at"] == int((now - timedelta(days=40)).timestamp())
+    assert inactive["gone-player"]["level"] == 60
+
+
+async def test_game_import_unseen_member_is_not_listed_inactive(
+    member_client: AsyncTestClient, discord_state: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    """A member with no roster sweep, Battle.net login, or raid presence at all is "unseen", not "inactive":
+    inactivity shouldn't hinge on data that was never collected."""
+    async with db_sessionmaker() as session:
+        member = Member(discord_id=7713, username="never-recorded", is_guild_member=True)
+        session.add(member)
+        await session.flush()
+        session.add(
+            WowCharacter(
+                name="Neverrecorded",
+                realm="Whitemane",
+                key="neverrecorded-whitemane",
+                member_id=member.id,
+                slug="never-recorded",
+            )
+        )
+        await session.commit()
+    await _login_officer(member_client, discord_state, discord_id=7710)
+
+    response = await member_client.get("/api/epgp/game-import")
+    assert response.status_code == 200, response.text
+    decoded = json.loads(base64.b64decode(response.json()["payload"].removeprefix("SQI1:")))
+    inactive_names = {row["name"] for row in decoded["officer"]["inactive"]}
+    unseen_names = {row["name"] for row in decoded["officer"]["unseen"]}
+    assert "never-recorded" not in inactive_names
+    assert "never-recorded" in unseen_names
+
+
+async def test_game_import_no_raids_held_does_not_flag_inactive(
+    member_client: AsyncTestClient, discord_state: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    """A member recently swept by the roster addon isn't flagged inactive just because the guild hasn't raided."""
+    now = datetime.now(UTC)
+    async with db_sessionmaker() as session:
+        member = Member(discord_id=7714, username="fresh-sweep", is_guild_member=True)
+        session.add(member)
+        await session.flush()
+        character = WowCharacter(
+            name="Freshsweep",
+            realm="Whitemane",
+            key="freshsweep-whitemane",
+            member_id=member.id,
+            slug="fresh-sweep",
+        )
+        session.add(character)
+        await session.flush()
+        session.add(
+            GuildRosterSnapshot(
+                character_id=character.id,
+                rank="Member",
+                rank_index=3,
+                level=45,
+                zone="",
+                last_seen_at=now - timedelta(days=1),
+            )
+        )
+        await session.commit()
+    await _login_officer(member_client, discord_state, discord_id=7710)
+
+    response = await member_client.get("/api/epgp/game-import")
+    assert response.status_code == 200, response.text
+    decoded = json.loads(base64.b64decode(response.json()["payload"].removeprefix("SQI1:")))
+    inactive_names = {row["name"] for row in decoded["officer"]["inactive"]}
+    unseen_names = {row["name"] for row in decoded["officer"]["unseen"]}
+    assert "fresh-sweep" not in inactive_names
+    assert "fresh-sweep" not in unseen_names
+
+
+async def test_game_import_recent_raid_presence_counts_as_seen(
+    member_client: AsyncTestClient, discord_state: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    """A member with no roster sweep or Battle.net login, but a recent raid presence, is counted as seen."""
+    now = datetime.now(UTC)
+    async with db_sessionmaker() as session:
+        member = Member(discord_id=7715, username="raider-only", is_guild_member=True)
+        session.add(member)
+        await session.flush()
+        character = WowCharacter(
+            name="Raideronly",
+            realm="Whitemane",
+            key="raideronly-whitemane",
+            member_id=member.id,
+            slug="raider-only",
+        )
+        session.add(character)
+        session_row = RaidSession(
+            external_id="session-1",
+            instance_name="Blackwing Lair",
+            instance_id=469,
+            difficulty_id=1,
+            size=40,
+            recorder=RECORDER,
+            started_at=now - timedelta(days=2, hours=3),
+            ended_at=now - timedelta(days=2),
+        )
+        session.add(session_row)
+        await session.flush()
+        session.add(
+            SessionCharacterPresence(
+                session_id=session_row.id,
+                character_id=character.id,
+                first_seen=now - timedelta(days=2, hours=3),
+                last_seen=now - timedelta(days=2),
+                standby=False,
+            )
+        )
+        await session.commit()
+    await _login_officer(member_client, discord_state, discord_id=7710)
+
+    response = await member_client.get("/api/epgp/game-import")
+    assert response.status_code == 200, response.text
+    decoded = json.loads(base64.b64decode(response.json()["payload"].removeprefix("SQI1:")))
+    inactive_names = {row["name"] for row in decoded["officer"]["inactive"]}
+    unseen_names = {row["name"] for row in decoded["officer"]["unseen"]}
+    assert "raider-only" not in inactive_names
+    assert "raider-only" not in unseen_names
 
 
 async def test_game_import_requires_officer(member_client: AsyncTestClient, discord_state: dict) -> None:

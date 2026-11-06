@@ -198,6 +198,33 @@ async def test_import_same_payload_twice_creates_no_new_rows(
         assert award_count == 1
 
 
+async def test_import_canonicalizes_legacy_forever_space_separated_character_names(
+    member_client: AsyncTestClient, discord_state: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    """Addon versions before the Forever identity fix (v0.8.0 and earlier) exported the raw "First Surname"
+    shape with a stray "-<realm>" tail (GetNormalizedRealmName() mistakenly appended to an already-complete
+    name); a fixed addon sends the canonical "First-Surname" link form instead. Both must resolve to the same
+    WowCharacter row, not create a duplicate."""
+    await _login_officer(member_client, discord_state)
+    legacy_payload = _base_payload(
+        awards=[_award_row(award_id="A1", character="Legs Behindhead-ShatteredHalls", session_id=None)]
+    )
+    first = await member_client.post("/api/epgp/imports", json={"payload": _export_string(legacy_payload)})
+    assert first.status_code == 200, first.text
+
+    fixed_payload = _base_payload(awards=[_award_row(award_id="A2", character="Legs-Behindhead", session_id=None)])
+    second = await member_client.post("/api/epgp/imports", json={"payload": _export_string(fixed_payload)})
+    assert second.status_code == 200, second.text
+
+    async with db_sessionmaker() as session:
+        rows = (
+            (await session.execute(select(WowCharacter).where(WowCharacter.key == "legs-behindhead"))).scalars().all()
+        )
+        assert len(rows) == 1, "the legacy and fixed exports land on the same character row"
+        assert rows[0].name == "Legs"
+        assert rows[0].realm == "Behindhead"
+
+
 async def test_voiding_sets_voided_at_and_excludes_from_standings_and_cannot_unvoid(
     member_client: AsyncTestClient, discord_state: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
 ) -> None:
@@ -600,6 +627,79 @@ async def test_game_import_string_decodes_back_to_contract_shape(
     assert "events" in decoded
     for key in ("members", "news", "sheets", "crafters", "recipe_names"):
         assert key in decoded
+
+
+async def test_game_import_includes_non_role_kind_event(
+    member_client: AsyncTestClient, discord_state: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    """A scheduled social/other event must appear in the SQI1: import, not just raid/dungeon/world_boss."""
+    await _login_officer(member_client, discord_state, discord_id=6610)
+    async with db_sessionmaker() as session:
+        event = GuildEvent(
+            kind="other",
+            title="The Adventure Begins - Discord hang out",
+            location="",
+            starts_at=PAST,
+            status="scheduled",
+        )
+        session.add(event)
+        await session.commit()
+        event_id = str(event.id)
+
+    response = await member_client.get("/api/epgp/game-import")
+    assert response.status_code == 200
+    decoded = json.loads(base64.b64decode(response.json()["payload"][len("SQI1:") :]))
+    kinds_by_id = {e["id"]: e["kind"] for e in decoded["events"]}
+    assert kinds_by_id.get(event_id) == "other"
+
+
+async def test_game_import_carries_roleless_signup_for_non_role_event(
+    member_client: AsyncTestClient, discord_state: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    """A member's Going/Maybe/Can't answer on a social event round-trips without class/role."""
+    await _login_officer(member_client, discord_state, discord_id=6611)
+    async with db_sessionmaker() as session:
+        event = GuildEvent(kind="social", title="Game Night", location="", starts_at=PAST, status="scheduled")
+        session.add(event)
+        await session.flush()
+        member = Member(discord_id=6612, username="roleless", is_guild_member=True)
+        session.add(member)
+        await session.flush()
+        session.add(EventSignup(event_id=event.id, member_id=member.id, character="Barehand", status="signed"))
+        await session.commit()
+        event_id = str(event.id)
+
+    response = await member_client.get("/api/epgp/game-import")
+    decoded = json.loads(base64.b64decode(response.json()["payload"][len("SQI1:") :]))
+    event_payload = next(e for e in decoded["events"] if e["id"] == event_id)
+    assert len(event_payload["signups"]) == 1
+    signup = event_payload["signups"][0]
+    assert signup["character"] == "Barehand"
+    assert signup["status"] == "signed"
+    assert signup["class"] is None
+    assert signup["role"] is None
+
+
+async def test_game_import_excludes_incomplete_signup_for_role_kind_event(
+    member_client: AsyncTestClient, discord_state: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    """A raid/dungeon/world_boss sign-up missing class or role is still dropped, unlike non-role kinds."""
+    await _login_officer(member_client, discord_state, discord_id=6613)
+    async with db_sessionmaker() as session:
+        event = GuildEvent(kind="raid", title="Molten Core", location="", starts_at=PAST, status="scheduled")
+        session.add(event)
+        await session.flush()
+        member = Member(discord_id=6614, username="incomplete", is_guild_member=True)
+        session.add(member)
+        await session.flush()
+        session.add(EventSignup(event_id=event.id, member_id=member.id, character="Halfsigned", status="signed"))
+        await session.commit()
+        event_id = str(event.id)
+
+    response = await member_client.get("/api/epgp/game-import")
+    decoded = json.loads(base64.b64decode(response.json()["payload"][len("SQI1:") :]))
+    event_payload = next(e for e in decoded["events"] if e["id"] == event_id)
+    assert event_payload["signups"] == []
 
 
 async def test_sync_token_authorizes_game_import(

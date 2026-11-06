@@ -80,6 +80,7 @@ from sidequest_common.schemas import (
     PendingAnnouncementsPage,
     RecruitChecklist,
     WowClass,
+    character_key,
 )
 
 if TYPE_CHECKING:
@@ -92,9 +93,7 @@ ANNOUNCEMENTS_PAGE_SIZE = 20
 BANK_TOTALS_WINDOW_DAYS = 30
 MAX_CRAFTER_RESULTS = 50
 
-
-def _character_key(character: str) -> str:
-    return character.strip().lower()
+_character_key = character_key
 
 
 class GuildHubService:

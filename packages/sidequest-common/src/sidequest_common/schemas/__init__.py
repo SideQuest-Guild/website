@@ -50,6 +50,8 @@ from sidequest_common.schemas.characters import (
     MilestonePosted,
     RaidReadinessSettings,
     RosterSyncReport,
+    canonical_character_name,
+    character_key,
 )
 from sidequest_common.schemas.directory import (
     MARKET_REQUEST_NOTE_MAX,
@@ -316,6 +318,7 @@ from sidequest_common.schemas.guild_hub import (
     GameImportOfficerPart,
     GameImportOfficerRecruit,
     GameImportSheet,
+    GameImportUnseenMember,
     GuildAnnouncementCreate,
     GuildAnnouncementRow,
     GuildAnnouncementsPage,
@@ -769,6 +772,7 @@ __all__ = (
     "GameImportSheet",
     "GameImportSignup",
     "GameImportStandingsRow",
+    "GameImportUnseenMember",
     "GameSpecSchema",
     "GmCase",
     "GmCaseReasonUpdate",
@@ -973,6 +977,8 @@ __all__ = (
     "XPAwardResult",
     "XPGrantResult",
     "XPSource",
+    "canonical_character_name",
+    "character_key",
     "event_ep",
     "sql_price",
 )

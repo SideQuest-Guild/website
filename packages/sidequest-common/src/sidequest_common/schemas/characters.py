@@ -17,6 +17,33 @@ MILESTONE_LEVELS = (40, 60)
 RECENT_MILESTONES = 20
 
 
+_CANONICAL_NAME_PARTS = 2
+
+
+def canonical_character_name(character: str) -> str:
+    """The addon's own identity (``SQ.CanonicalName``): ``First-Surname`` on Forever, ``Name-Realm`` elsewhere.
+
+    Exports from before the addon's Forever identity fix (v0.8.0 and earlier) sent the raw space-joined
+    ``First Surname`` shape, sometimes with a stray ``-<realm>`` tail the old, broken in-game normalizer
+    appended (it treated the already-complete name as a bare name and appended the connected realm). Collapse
+    every shape a stored or imported string might be in to the same two-part identity, so a character an old
+    addon version created and one a fixed version sends later land on the same :class:`WowCharacter` row
+    instead of creating a duplicate.
+    """
+    normalized = character.strip()
+    if " " in normalized:
+        normalized = normalized.replace(" ", "-", 1)
+    parts = normalized.split("-")
+    if len(parts) >= _CANONICAL_NAME_PARTS and parts[0] and parts[1]:
+        return f"{parts[0]}-{parts[1]}"
+    return normalized
+
+
+def character_key(character: str) -> str:
+    """The lookup key for :class:`WowCharacter.key`: :func:`canonical_character_name`, lowercased."""
+    return canonical_character_name(character).lower()
+
+
 class CharacterSummary(BaseModel):
     """A character's Battle.net summary.
 

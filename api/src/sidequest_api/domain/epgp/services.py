@@ -145,6 +145,7 @@ from sidequest_common.schemas import (
     GameImportSheet,
     GameImportSignup,
     GameImportStandingsRow,
+    GameImportUnseenMember,
     ImportAttendanceResult,
     ImportCounts,
     LedgerKind,
@@ -161,6 +162,8 @@ from sidequest_common.schemas import (
     SignupRole,
     SignupStatus,
     WowClass,
+    canonical_character_name,
+    character_key,
 )
 
 if TYPE_CHECKING:
@@ -224,8 +227,7 @@ def decayed_amount(amount: int, at: datetime, now: datetime) -> float:
     return amount * ((1 - DECAY_PERCENT / 100) ** resets_since(at, now))
 
 
-def _character_key(character: str) -> str:
-    return character.strip().lower()
+_character_key = character_key
 
 
 class EpgpService:
@@ -281,9 +283,10 @@ class EpgpService:
                 await self._session.execute(select(WowCharacter).where(WowCharacter.key == key))
             ).scalar_one_or_none()
             if row is None:
-                name, _, realm = character.rpartition("-")
+                canonical = canonical_character_name(character)
+                name, _, realm = canonical.rpartition("-")
                 if not name:
-                    name, realm = character, ""
+                    name, realm = canonical, ""
                 row = WowCharacter(name=name, realm=realm, key=key, source="import")
                 self._session.add(row)
                 await self._session.flush()
@@ -1642,7 +1645,7 @@ class EpgpService:
     # --- Game-import string -----------------------------------------------------------------------------------
 
     async def build_game_import(self, *, now: datetime | None = None) -> EpgpGameImport:
-        """Build the ``SQI1:`` string: rules, standings, killed encounters, and upcoming role-kind events."""
+        """Build the ``SQI1:`` string: rules, standings, killed encounters, and every upcoming scheduled event."""
         reference = now or datetime.now(UTC)
         standings = await self.get_standings(now=reference)
         killed_rows = (
@@ -1660,7 +1663,6 @@ class EpgpService:
                     select(GuildEvent)
                     .where(
                         GuildEvent.status == "scheduled",
-                        GuildEvent.kind.in_(_ROLE_KINDS),
                         GuildEvent.starts_at >= window_start,
                         GuildEvent.starts_at <= window_end,
                     )
@@ -1684,14 +1686,19 @@ class EpgpService:
         game_events = []
         for event in events:
             signups = []
+            is_role_kind = event.kind in _ROLE_KINDS
             for signup in signups_by_event.get(event.id, []):
-                if signup.character is None or signup.wow_class is None or signup.role is None:
+                # A sign-up needs a character to be worth anything in game (invite target, roster line); role
+                # and class are required only for ROLE_KINDS events, same as the site's own sign-up API.
+                if signup.character is None:
+                    continue
+                if is_role_kind and (signup.wow_class is None or signup.role is None):
                     continue
                 signups.append(
                     GameImportSignup(
                         character=signup.character,
-                        wow_class=WowClass(signup.wow_class),
-                        role=SignupRole(signup.role),
+                        wow_class=WowClass(signup.wow_class) if signup.wow_class else None,
+                        role=SignupRole(signup.role) if signup.role else None,
                         status=SignupStatus(signup.status),
                         group=signup.chart_group,
                         bench=signup.bench,
@@ -1918,10 +1925,12 @@ class EpgpService:
         return members, news, sheets, crafters, recipe_names
 
     async def _build_officer_game_import(self, reference: datetime) -> GameImportOfficerPart:
-        """The officer-only ``recruits``/``member_notes``/``inactive`` section of the game-import payload.
+        """The officer-only ``recruits``/``member_notes``/``inactive``/``unseen`` section of the game-import payload.
 
-        ``inactive`` flags a member seen in neither a roster sweep nor a raid session within
-        ``INACTIVE_AFTER_DAYS`` days (never seen in either counts as inactive too).
+        A member's last activity is the latest of their roster-sweep ``last_seen``, Battle.net last login, and raid
+        presence. ``inactive`` flags a member whose last activity is known and older than ``INACTIVE_AFTER_DAYS``
+        days; a member with no activity on record at all is never inactive (raid absence alone never flags anyone)
+        and goes in ``unseen`` instead, so officers can tell "never recorded" from "actually gone quiet".
         """
         recruit_rows = (await self._session.execute(select(GuildRecruit))).scalars().all()
         vote_rows = (await self._session.execute(select(RecruitVote))).scalars().all()
@@ -1968,14 +1977,16 @@ class EpgpService:
         cutoff = reference - timedelta(days=INACTIVE_AFTER_DAYS)
         snapshots = (await self._session.execute(select(GuildRosterSnapshot))).scalars().all()
         last_seen_by_character = {row.character_id: row.last_seen_at for row in snapshots}
+        level_by_character = {row.character_id: row.level for row in snapshots}
         # Battle.net's last login, from the roster sync, counts too: it covers members whose game hasn't swept the
         # roster, and characters played on a computer without the addon.
-        logins = await self._session.execute(
-            select(BattlenetCharacter.slug, BattlenetCharacter.last_login_at).where(
-                BattlenetCharacter.last_login_at.is_not(None)
+        battlenet_rows = (
+            await self._session.execute(
+                select(BattlenetCharacter.slug, BattlenetCharacter.last_login_at, BattlenetCharacter.level)
             )
-        )
-        battlenet_logins = dict(logins.tuples().all())
+        ).all()
+        battlenet_logins = {slug: last_login for slug, last_login, _ in battlenet_rows if last_login is not None}
+        battlenet_levels = {slug: level for slug, _, level in battlenet_rows}
         presences = (await self._session.execute(select(SessionCharacterPresence))).scalars().all()
         last_raid_by_character: dict[UUID, datetime] = {}
         for presence in presences:
@@ -1989,6 +2000,7 @@ class EpgpService:
             if character.member_id is not None:
                 chars_by_member.setdefault(character.member_id, []).append(character)
         inactive = []
+        unseen = []
         for member in members:
             member_chars = chars_by_member.get(member.id, [])
             last_seen = max(
@@ -2004,16 +2016,31 @@ class EpgpService:
                 (last_raid_by_character[c.id] for c in member_chars if c.id in last_raid_by_character),
                 default=None,
             )
-            if (last_seen is None or last_seen < cutoff) and (last_raid is None or last_raid < cutoff):
+            last_activity = max((seen for seen in (last_seen, last_raid) if seen is not None), default=None)
+            if last_activity is None:
+                unseen.append(GameImportUnseenMember(member_id=member.id, name=member.display_name))
+            elif last_activity < cutoff:
+                level = max(
+                    (
+                        lvl
+                        for c in member_chars
+                        for lvl in (level_by_character.get(c.id), battlenet_levels.get(c.slug or ""))
+                        if lvl is not None
+                    ),
+                    default=None,
+                )
                 inactive.append(
                     GameImportInactiveMember(
                         member_id=member.id,
                         name=member.display_name,
                         last_seen_at=int(last_seen.timestamp()) if last_seen else None,
                         last_raid_at=int(last_raid.timestamp()) if last_raid else None,
+                        level=level,
                     )
                 )
-        return GameImportOfficerPart(recruits=officer_recruits, member_notes=officer_notes, inactive=inactive)
+        return GameImportOfficerPart(
+            recruits=officer_recruits, member_notes=officer_notes, inactive=inactive, unseen=unseen
+        )
 
     # --- Officer: adjustments ----------------------------------------------------------------------------------
 
