@@ -309,7 +309,9 @@ class StatsService:
         """Guild-wide activity stats for ``stats_range``."""
         reference = now or datetime.now(UTC)
         days = _RANGE_DAYS.get(stats_range)
-        since = reference - timedelta(days=days) if days is not None else None
+        # Count back on the guild's wall clock, not in UTC hours: the trend's days are America/Chicago days, and
+        # across a daylight-saving change 7 x 24 hours would land an hour off and drop or add a day.
+        since = (reference.astimezone(GUILD_TZ) - timedelta(days=days)).astimezone(UTC) if days is not None else None
         bucket = "week" if stats_range in _WEEK_BUCKET_RANGES else "day"
 
         tracking_since = (

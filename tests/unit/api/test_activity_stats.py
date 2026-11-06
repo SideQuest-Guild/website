@@ -6,7 +6,10 @@ from typing import TYPE_CHECKING
 from sqlalchemy import func, select
 
 from sidequest_api.domain.members.services import MembersService
+from sidequest_api.domain.stats.services import StatsService
 from sidequest_common.models import Member, MemberActivityHour
+from sidequest_common.schemas import StatsRange
+from sidequest_common.settings import WebSettings
 from tests.conftest import GUILD_ID
 from tests.unit.api.conftest import OFFICER_ROLE_ID, login_as
 
@@ -195,6 +198,18 @@ async def test_stats_officer_gets_guild_stats_shape(member_client, discord_state
     assert body["previous"] is not None
     assert len(body["trend"]) == 8  # since..now inclusive, zero-filled
     assert any(leader["value"] == 3 for leader in body["top_chatters"])
+
+
+async def test_seven_day_trend_has_eight_days_late_evening_after_clocks_go_back(db_sessionmaker) -> None:
+    # 2026-11-05 23:13 in Chicago, four days after daylight saving ended: 7 x 24 hours back is just past midnight
+    # on Oct 30 there, which used to drop Oct 29 from the trend.
+    late_evening = datetime(2026, 11, 6, 5, 13, tzinfo=UTC)
+    async with db_sessionmaker() as session:
+        stats = await StatsService(session, WebSettings(GUILD_ID=GUILD_ID)).get_stats(
+            StatsRange.SEVEN_DAYS, now=late_evening
+        )
+    assert [point.start.isoformat() for point in stats.trend][:1] == ["2026-10-29"]
+    assert len(stats.trend) == 8
 
 
 async def test_stats_all_range_has_no_previous_and_week_buckets(member_client, discord_state) -> None:
