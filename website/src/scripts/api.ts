@@ -1184,6 +1184,18 @@ export type HeroBoards = {
   achievement_points: HeroBoardEntry[];
 };
 
+/** One row of `GET /api/characters/milestones` (public): a roster character that reached level 40 or 60. */
+export type CharacterMilestone = {
+  id: string;
+  slug: string;
+  name: string;
+  surname: string;
+  class: CharClass | null;
+  level: 40 | 60;
+  reached_at: string;
+  posted_at: string | null;
+};
+
 /** A roster character's rank for display: the addon-reported rank name when known, else "Guild Master" for rank 0
  * or "Rank N". Empty string for a character not currently in the roster (`guild_rank` is `null` then). */
 export function rankLabel(guildRank: number | null, rankName: string | null): string {
@@ -1322,11 +1334,18 @@ export type EpgpRecruit = {
   checklist: EpgpRecruitChecklist;
   votes: EpgpRecruitVote[];
   at: string;
+  slug: string | null;
+  battlenet: CharacterSummary | null;
 };
 
 export type EpgpRecruits = { recruits: EpgpRecruit[] };
 
-export type EpgpRecruitUpdate = { status?: EpgpRecruitStatus; note?: string; checklist?: EpgpRecruitChecklist };
+export type EpgpRecruitUpdate = {
+  status?: EpgpRecruitStatus;
+  note?: string;
+  checklist?: EpgpRecruitChecklist;
+  slug?: string | null;
+};
 
 export type EpgpRecruitVoteCreate = { vote: EpgpRecruitVoteValue };
 

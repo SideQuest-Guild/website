@@ -9,7 +9,7 @@ from datetime import datetime  # SQLAlchemy resolves Mapped[] annotations at run
 
 from advanced_alchemy.base import UUIDAuditBase
 from advanced_alchemy.types import DateTimeUTC, JsonB
-from sqlalchemy import BigInteger, Boolean, Integer, Text
+from sqlalchemy import BigInteger, Boolean, Integer, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 
@@ -49,3 +49,26 @@ class BattlenetCharacter(UUIDAuditBase):
     sheet: Mapped[dict[str, object] | None] = mapped_column(JsonB, default=None)
     fetched_at: Mapped[datetime | None] = mapped_column(DateTimeUTC(timezone=True), index=True, default=None)
     """When the profile was last asked for, found or not. ``None`` until the first try."""
+
+
+class CharacterMilestone(UUIDAuditBase):
+    """A roster character reaching a milestone level (40 or 60), queued for the bot to post to Discord.
+
+    Written once per character and level, when a sync or a profile refresh first sees the character at or above the
+    level after having stored it below. ``posted_at`` is set when the bot has posted it.
+    """
+
+    __tablename__ = "character_milestone"
+    __table_args__ = (
+        UniqueConstraint("slug", "level", name="uq_character_milestone_slug_level"),
+        {"comment": "Roster characters reaching levels 40 and 60, queued for the Discord feed."},
+    )
+
+    slug: Mapped[str] = mapped_column(Text, index=True)
+    name: Mapped[str] = mapped_column(Text)
+    surname: Mapped[str] = mapped_column(Text)
+    wow_class: Mapped[str | None] = mapped_column(Text, default=None)
+    level: Mapped[int] = mapped_column(Integer)
+    reached_at: Mapped[datetime] = mapped_column(DateTimeUTC(timezone=True), index=True)
+    posted_at: Mapped[datetime | None] = mapped_column(DateTimeUTC(timezone=True), index=True, default=None)
+    discord_message_id: Mapped[int | None] = mapped_column(BigInteger, default=None)

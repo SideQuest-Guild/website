@@ -12,6 +12,7 @@ from uuid import UUID  # pydantic needs it at runtime
 
 from pydantic import BaseModel, BeforeValidator, ConfigDict, Field
 
+from sidequest_common.schemas.characters import CHARACTER_SLUG_PATTERN, CharacterSummary
 from sidequest_common.schemas.events import SignupRole, SignupStatus, WowClass
 
 
@@ -569,6 +570,11 @@ class EpgpRecruitRow(BaseModel):
     votes: list[ExportRecruitVote]
     member_id: int | None
     at: datetime
+    slug: str | None = None
+    """The recruit's Battle.net character, as an officer set it."""
+    battlenet: CharacterSummary | None = None
+    """That character as Battle.net last showed it: guild, level, item level, spec, last login. ``None`` until an
+    officer sets ``slug``, or while Battle.net has never answered for it."""
 
 
 class EpgpRecruitList(BaseModel):
@@ -583,6 +589,12 @@ class EpgpRecruitUpdate(BaseModel):
     status: RecruitStatus | None = None
     note: str | None = Field(default=None, max_length=RECRUIT_NOTE_MAX)
     checklist: RecruitChecklist | None = None
+    slug: str | None = Field(
+        default=None,
+        max_length=50,
+        pattern=CHARACTER_SLUG_PATTERN,
+        description="The recruit's Battle.net `name-surname`; setting it looks the character up. `null` clears it.",
+    )
 
 
 class EpgpRecruitVoteCreate(BaseModel):

@@ -95,6 +95,44 @@ code {
   gap: 6px;
 }
 
+/* ——— Recruit vetting: Battle.net lookup block spans the full row below the main content ——— */
+.battlenet-block {
+  flex: 1 1 100%;
+  min-width: 0;
+  padding-top: 10px;
+  border-top: 1px dashed var(--stone-2);
+}
+.battlenet-title {
+  margin: 0 0 6px;
+  font-family: var(--display);
+  font-size: 0.95rem;
+  color: var(--mist-2);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.battlenet-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px 16px;
+  margin-top: 10px;
+}
+.battlenet-form .field {
+  margin-top: 0;
+  min-width: 220px;
+}
+.battlenet-form-actions {
+  display: flex;
+  gap: 8px;
+}
+.battlenet-form .status {
+  flex-basis: 100%;
+  margin: 0;
+}
+.bnet-other-guild {
+  color: var(--error);
+}
+
 /* ——— Announcement composer ——— */
 .announcement-discord-toggle {
   display: inline-flex;
@@ -109,6 +147,7 @@ code {
 @media (max-width: 560px) {
   .sync-row {
     flex-direction: column;
+    flex-wrap: nowrap;
     align-items: stretch;
   }
   .sync-row select {
@@ -116,5 +155,19 @@ code {
   }
   .recruit-actions {
     align-items: stretch;
+  }
+  .battlenet-form .field {
+    min-width: 0;
+    width: 100%;
+  }
+  .battlenet-form input {
+    width: 100%;
+    min-width: 0;
+  }
+  .battlenet-form-actions {
+    width: 100%;
+  }
+  .battlenet-form-actions .btn-quiet {
+    flex: 1;
   }
 }

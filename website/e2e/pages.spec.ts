@@ -3,6 +3,7 @@
 import {
   ADDONS,
   ATTENDANCE_EVENTS,
+  CHARACTER_MILESTONES,
   CHARACTER_PAGES,
   CHARACTERS,
   DEVICE_AUTH_USER_CODE,
@@ -626,6 +627,34 @@ test.describe("officers sync", () => {
     await expect(page.locator("#sync-status")).toHaveText("Vote recorded.");
   });
 
+  test("an officer sets a recruit's Battle.net character and sees their guild", async ({ page, site }) => {
+    site.signIn(OFFICER);
+    await page.goto("/officers/sync/");
+
+    const linked = EPGP_RECRUITS[0]!;
+    const linkedRow = page.locator(`[data-recruit-id="${linked.id}"]`);
+    await expect(linkedRow).toContainText(`In guild ${linked.battlenet!.guild_name}`);
+
+    const unlinked = EPGP_RECRUITS[1]!;
+    const row = page.locator(`[data-recruit-id="${unlinked.id}"]`);
+    await expect(row).toContainText("No Battle.net character linked yet.");
+    const target = CHARACTERS[0]!;
+    await row.locator("[data-battlenet-input]").fill(`${target.name} ${target.surname}`);
+    await row.locator('button[type="submit"]').click();
+    await expect(row).toContainText(`${target.name} ${target.surname}`);
+    await expect(row).toContainText(target.guild_name ?? "");
+  });
+
+  test("checking an unknown Battle.net character shows the API's detail", async ({ page, site }) => {
+    site.signIn(OFFICER);
+    await page.goto("/officers/sync/");
+    const recruit = EPGP_RECRUITS[1]!;
+    const row = page.locator(`[data-recruit-id="${recruit.id}"]`);
+    await row.locator("[data-battlenet-input]").fill("Nobody Nowhere");
+    await row.locator('button[type="submit"]').click();
+    await expect(row.locator("[data-battlenet-status]")).toContainText("Battle.net has no character nobody-nowhere.");
+  });
+
   test("an officer composes an announcement and it appears in the recent list", async ({ page, site }) => {
     site.signIn(OFFICER);
     await page.goto("/officers/sync/");
@@ -830,6 +859,16 @@ test.describe("characters", () => {
     await expect(rows).toHaveCount(roster.length);
     await expect(rows.first()).toContainText(`${roster[0]!.name} ${roster[0]!.surname}`);
     await expect(rows.first().locator("a")).toHaveAttribute("href", `/characters/detail/?slug=${roster[0]!.slug}`);
+  });
+
+  test("the Milestones section lists recent level 40/60 characters", async ({ page, site }) => {
+    site.signIn(null);
+    await page.goto("/characters/");
+    const rows = page.locator("#char-milestones-list li");
+    await expect(rows).toHaveCount(CHARACTER_MILESTONES.length);
+    const first = CHARACTER_MILESTONES[0]!;
+    await expect(rows.first()).toContainText(`${first.name} ${first.surname} reached level ${first.level}`);
+    await expect(rows.first().locator("a")).toHaveAttribute("href", `/characters/detail/?slug=${first.slug}`);
   });
 
   test("an exact two-word search offers a direct Battle.net lookup, which navigates to the character's page", async ({

@@ -19,6 +19,7 @@ from sqlalchemy import select
 
 from sidequest_api.domain.attendance.services import AttendanceService
 from sidequest_api.domain.away.services import AwayService, today_chicago
+from sidequest_api.domain.characters.services import CharactersService, to_page, to_summary
 from sidequest_api.domain.epgp.services import EpgpService
 from sidequest_api.domain.events.services import EventsService
 from sidequest_api.domain.guild_hub.services import GuildHubService
@@ -36,6 +37,7 @@ from sidequest_common.models import GuildRole, Member, MemberAwayRange
 from sidequest_common.schemas import (
     ITEM_SEARCH_MIN_LENGTH,
     AttendanceRange,
+    EpgpRecruitUpdate,
     EventCreate,
     EventKind,
     EventStatus,
@@ -227,6 +229,86 @@ async def get_game_item(item_id: int) -> dict[str, Any]:
         "wanted_by": [wisher.model_dump(mode="json") for wisher in wishers],
         "looted": [award.model_dump(mode="json") for award in loot.items],
     }
+
+
+def _character_slug(name_surname: str) -> str:
+    """``Nox Zul`` (or ``nox-zul``) as Battle.net's ``nox-zul`` slug."""
+    words = name_surname.replace("-", " ").split()
+    if len(words) != 2:  # noqa: PLR2004 - a name and a surname
+        msg = "Give the character's name and surname, like `Nox Zul`"
+        raise ToolError(msg)
+    return "-".join(words).casefold()
+
+
+async def get_character(name_surname: str) -> dict[str, Any]:
+    """One character from Battle.net by exact name and surname, like ``Nox Zul``.
+
+    Returns level, class, race, spec, guild (and roster rank if in SideQuest), equipped item level, last login,
+    honorable kills, PvP rank, and the character sheet: gear, stats, talents, professions, reputations, recent
+    achievements and collections. Battle.net has no name search, and publishes a character only some time after it
+    logs out, so an unknown or unpublished character is an error.
+    """
+    ctx = get_context()
+    game_data = require_game_data(ctx)
+    service = CharactersService(session=ctx.session)
+    try:
+        character = await service.get_character(_character_slug(name_surname), game_data)
+    except HTTPException as error:
+        raise ToolError(error.detail) from error
+    return to_page(character, await service.rank_names()).model_dump(mode="json")
+
+
+async def guild_roster() -> list[dict[str, Any]]:
+    """The guild roster as Battle.net lists it at the last sync (every 30 minutes), highest rank first.
+
+    Each character has rank, level, class, spec, equipped item level, last login, and ``profile_found`` (false while
+    Battle.net hasn't published its profile, so only roster facts are known).
+    """
+    ctx = get_context()
+    service = CharactersService(session=ctx.session)
+    rank_names = await service.rank_names()
+    return [to_summary(row, rank_names).model_dump(mode="json") for row in await service.search(None)]
+
+
+async def list_recruits() -> list[dict[str, Any]]:
+    """Every recruiting candidate, newest first, for vetting.
+
+    Each has status, note, officer checklist and votes, and ``battlenet``: the recruit's Battle.net character (current
+    guild, level, spec, item level, last login) once an officer has set it with ``set_recruit_character``.
+    """
+    ctx = get_context()
+    recruits = await GuildHubService(ctx.session).list_recruits()
+    return [row.model_dump(mode="json") for row in recruits.recruits]
+
+
+async def set_recruit_character(recruit_id: str, name_surname: str) -> dict[str, Any]:
+    """Set a recruit's Battle.net character by exact name and surname, for vetting.
+
+    Looks the character up on Battle.net and stores it, then returns the recruit with its current guild, level, spec,
+    item level and last login. Use ``get_character`` for the full gear list.
+    """
+    ctx = get_context()
+    game_data = require_game_data(ctx)
+    slug = _character_slug(name_surname)
+    try:
+        recruit_uuid = UUID(recruit_id)
+    except ValueError as error:
+        msg = "recruit_id must be a recruit's id from list_recruits"
+        raise ToolError(msg) from error
+    try:
+        await CharactersService(session=ctx.session).get_character(slug, game_data)
+        row = await GuildHubService(ctx.session).update_recruit(recruit_uuid, EpgpRecruitUpdate(slug=slug))
+    except HTTPException as error:
+        raise ToolError(error.detail) from error
+    await record_officer_audit(
+        ctx.session,
+        actor=ctx.actor,
+        action="mcp.set_recruit_character",
+        subject_type="recruit",
+        subject_id=str(row.id),
+        summary=f"Set recruit {row.character}'s Battle.net character to {slug} via MCP",
+    )
+    return row.model_dump(mode="json")
 
 
 async def list_channels() -> list[dict[str, Any]]:
@@ -533,6 +615,9 @@ _READ_TOOLS = (
     away_this_week,
     search_game_items,
     get_game_item,
+    get_character,
+    guild_roster,
+    list_recruits,
     list_channels,
     list_roles,
     read_messages,
@@ -547,6 +632,7 @@ _OFFICER_WRITE_TOOLS = (
     add_member_role,
     remove_member_role,
     post_announcement,
+    set_recruit_character,
 )
 _GM_TOOLS = (confirm_member_on_roster, attendance_report)
 

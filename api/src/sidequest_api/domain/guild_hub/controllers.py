@@ -15,12 +15,17 @@ from uuid import UUID
 
 from litestar import Controller, get, post, put
 from litestar.di import NamedDependency, Provide
-from litestar.exceptions import NotFoundException
+from litestar.exceptions import HTTPException, NotFoundException
 from litestar.openapi.datastructures import ResponseSpec
 from litestar.params import JSONBody, Parameter, QueryParameter
+from litestar.status_codes import HTTP_503_SERVICE_UNAVAILABLE
+from wow import AsyncClient
 
+from sidequest_api.domain.characters.dependencies import provide_characters_service
+from sidequest_api.domain.characters.services import CharactersService
 from sidequest_api.domain.guild_hub.dependencies import provide_guild_hub_service
 from sidequest_api.domain.guild_hub.services import GuildHubService
+from sidequest_api.lib.game_data import provide_optional_game_data
 from sidequest_api.lib.openapi import NOT_A_MEMBER, NOT_AN_OFFICER, NOT_SIGNED_IN, SECURITY_SESSION, GuildIdPath
 from sidequest_common.models import Member
 from sidequest_common.schemas import (
@@ -231,7 +236,11 @@ class EpgpRecruitsController(Controller):
     path = "/api/epgp/recruits"
     tags = ["EPGP recruits"]
     security = SECURITY_SESSION
-    dependencies = {"guild_hub_service": Provide(provide_guild_hub_service)}
+    dependencies = {
+        "guild_hub_service": Provide(provide_guild_hub_service),
+        "characters_service": Provide(provide_characters_service),
+        "optional_game_data": Provide(provide_optional_game_data),
+    }
 
     @get(
         "/",
@@ -251,12 +260,17 @@ class EpgpRecruitsController(Controller):
         "/{recruit_id:uuid}",
         operation_id="UpdateEpgpRecruit",
         summary="Update an EPGP recruit",
-        description="Updates a recruit's status, note, or checklist. Only the fields present are changed.",
+        description=(
+            "Updates a recruit's status, note, checklist or Battle.net character (`slug`, `name-surname`). Only the "
+            "fields present are changed. Setting `slug` looks the character up on Battle.net and stores it, so the "
+            "recruit list shows its guild, level, item level and last login: 404 if Battle.net has no such "
+            "character, 503 if Battle.net is not configured or did not answer."
+        ),
         response_description="The recruit's updated record.",
         responses={
             401: NOT_SIGNED_IN,
             403: NOT_AN_OFFICER,
-            404: ResponseSpec(None, description="No recruit has this ID."),
+            404: ResponseSpec(None, description="No recruit has this ID, or Battle.net has no such character."),
         },
     )
     async def update_recruit(
@@ -264,9 +278,16 @@ class EpgpRecruitsController(Controller):
         recruit_id: Annotated[UUID, Parameter(description="The recruit's ID.")],
         data: JSONBody[EpgpRecruitUpdate],
         current_officer: NamedDependency[Member],
+        *,
         guild_hub_service: NamedDependency[GuildHubService],
+        characters_service: NamedDependency[CharactersService],
+        optional_game_data: NamedDependency[AsyncClient | None],
     ) -> EpgpRecruitRow:
         del current_officer
+        if data.slug is not None:
+            if optional_game_data is None:
+                raise HTTPException(status_code=HTTP_503_SERVICE_UNAVAILABLE, detail="Battle.net is not configured")
+            await characters_service.get_character(data.slug.casefold(), optional_game_data)
         return await guild_hub_service.update_recruit(recruit_id, data)
 
     @post(

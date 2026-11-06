@@ -6,6 +6,7 @@ Cloudflare's cache rule ignores, so search is never edge-cached; it reads only P
 """
 
 from typing import Annotated
+from uuid import UUID
 
 from litestar import Controller, get, post, put
 from litestar.datastructures import ResponseHeader
@@ -27,9 +28,12 @@ from sidequest_common.models import Member
 from sidequest_common.schemas import (
     CHARACTER_SEARCH_MIN_LENGTH,
     CHARACTER_SLUG_MAX_LENGTH,
+    CHARACTER_SLUG_PATTERN,
+    CharacterMilestoneSchema,
     CharacterPage,
     CharacterSummary,
     HeroBoards,
+    MilestonePosted,
     RaidReadinessSettings,
     RosterSyncReport,
 )
@@ -37,9 +41,13 @@ from sidequest_common.settings import WebSettings
 
 # A character changes as it is played: ten minutes at the edge, then stale for an hour while one fetch refreshes it.
 EDGE_CHARACTER_CACHE = ResponseHeader(name=EDGE_CACHE_HEADER, value="max-age=600, stale-while-revalidate=3600")
-# ``name-surname``: two parts and nothing that would leave the path segment.
-_SLUG = r"^[^\s/?#-]+-[^\s/?#-]+$"
 _NOT_SITE_GUILD = ResponseSpec(None, description="This guild_id is not the SideQuest server.")
+
+
+def _require_site_guild(guild_id: int, web_settings: WebSettings) -> None:
+    if guild_id != web_settings.GUILD_ID:
+        msg = f"No guild {guild_id}"
+        raise NotFoundException(msg)
 
 
 class CharactersController(Controller):
@@ -92,6 +100,23 @@ class CharactersController(Controller):
         return await characters_service.hero_boards()
 
     @get(
+        "/milestones",
+        operation_id="ListCharacterMilestones",
+        response_headers=[EDGE_CHARACTER_CACHE],
+        opt=SKIP_SESSION,
+        summary="List recent level milestones",
+        description=(
+            "Returns the latest 20 times a guild roster character reached level 40 or 60, newest first, as the "
+            "roster sync saw them. The bot posts each one to Discord."
+        ),
+        response_description="The recent milestones.",
+    )
+    async def milestones(
+        self, characters_service: NamedDependency[CharactersService]
+    ) -> list[CharacterMilestoneSchema]:
+        return [CharacterMilestoneSchema.model_validate(row) for row in await characters_service.recent_milestones()]
+
+    @get(
         "/{slug:str}",
         operation_id="GetCharacter",
         response_headers=[EDGE_CHARACTER_CACHE],
@@ -115,7 +140,7 @@ class CharactersController(Controller):
             Parameter(
                 description="The character's name and surname joined by a hyphen, such as `nox-zul`.",
                 max_length=CHARACTER_SLUG_MAX_LENGTH,
-                pattern=_SLUG,
+                pattern=CHARACTER_SLUG_PATTERN,
             ),
         ],
     ) -> CharacterPage:
@@ -151,10 +176,51 @@ class RosterSyncController(Controller):
         game_data: NamedDependency[AsyncClient],
         web_settings: NamedDependency[WebSettings],
     ) -> RosterSyncReport:
-        if guild_id != web_settings.GUILD_ID:
-            msg = f"No guild {guild_id}"
-            raise NotFoundException(msg)
+        _require_site_guild(guild_id, web_settings)
         return await characters_service.sync_roster(game_data)
+
+    @get(
+        "/milestones/pending",
+        operation_id="ListPendingMilestones",
+        summary="List milestones to post",
+        description=(
+            "Returns the level 40 and 60 milestones the bot has not posted to Discord yet, oldest first. Returns "
+            "404 for any guild_id other than the SideQuest server."
+        ),
+        response_description="The milestones still to post.",
+        responses={404: _NOT_SITE_GUILD},
+    )
+    async def pending_milestones(
+        self,
+        guild_id: GuildIdPath,
+        characters_service: NamedDependency[CharactersService],
+        web_settings: NamedDependency[WebSettings],
+    ) -> list[CharacterMilestoneSchema]:
+        _require_site_guild(guild_id, web_settings)
+        return [CharacterMilestoneSchema.model_validate(row) for row in await characters_service.pending_milestones()]
+
+    @post(
+        "/milestones/{milestone_id:uuid}/posted",
+        operation_id="MarkMilestonePosted",
+        status_code=204,
+        summary="Mark a milestone as posted",
+        description=(
+            "Records that the bot posted a milestone to Discord, so it stops coming back as pending. Returns 404 for "
+            "an unknown milestone, or any guild_id other than the SideQuest server."
+        ),
+        response_description="The milestone is marked as posted.",
+        responses={404: _NOT_SITE_GUILD},
+    )
+    async def mark_posted(
+        self,
+        guild_id: GuildIdPath,
+        milestone_id: Annotated[UUID, Parameter(description="The milestone's ID.")],
+        data: JSONBody[MilestonePosted],
+        characters_service: NamedDependency[CharactersService],
+        web_settings: NamedDependency[WebSettings],
+    ) -> None:
+        _require_site_guild(guild_id, web_settings)
+        await characters_service.mark_milestone_posted(milestone_id, data.discord_message_id)
 
 
 class RaidReadinessController(Controller):

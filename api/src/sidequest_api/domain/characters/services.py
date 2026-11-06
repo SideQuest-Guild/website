@@ -20,10 +20,18 @@ from litestar.status_codes import HTTP_503_SERVICE_UNAVAILABLE
 from sqlalchemy import func, or_, select
 from wow import NotFoundError, WowError
 
-from sidequest_common.models import BattlenetCharacter, GuildConfig, GuildRosterSnapshot, WowCharacter
+from sidequest_common.models import (
+    BattlenetCharacter,
+    CharacterMilestone,
+    GuildConfig,
+    GuildRosterSnapshot,
+    WowCharacter,
+)
 from sidequest_common.schemas import (
     CHARACTER_SEARCH_LIMIT,
     HERO_BOARD_SIZE,
+    MILESTONE_LEVELS,
+    RECENT_MILESTONES,
     CharacterAchievementLine,
     CharacterGear,
     CharacterPage,
@@ -42,6 +50,7 @@ from sidequest_common.schemas import (
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable
+    from uuid import UUID
 
     from sqlalchemy.ext.asyncio import AsyncSession
     from wow import AsyncClient
@@ -359,9 +368,59 @@ class CharactersService(SQLAlchemyAsyncRepositoryService[BattlenetCharacter]):
                 # Another request stored the same character first; theirs is as fresh as ours.
                 await self.repository.session.rollback()
                 return await self.get_one(slug=slug)
+        previous_level = stored.level
         for field, value in values.items():
             setattr(stored, field, value)
+        if stored.in_roster:
+            await self._note_milestone(stored, previous_level)
         return await self.update(stored, auto_commit=True)
+
+    async def _note_milestone(self, row: BattlenetCharacter, previous_level: int) -> None:
+        """Queue a milestone if the character just passed level 40 or 60 (the higher one, if both)."""
+        reached = [level for level in MILESTONE_LEVELS if previous_level < level <= row.level]
+        if not reached:
+            return
+        session = self.repository.session
+        level = max(reached)
+        statement = select(CharacterMilestone.id).where(
+            CharacterMilestone.slug == row.slug, CharacterMilestone.level == level
+        )
+        if await session.scalar(statement) is None:
+            session.add(
+                CharacterMilestone(
+                    slug=row.slug,
+                    name=row.name,
+                    surname=row.surname,
+                    wow_class=row.wow_class,
+                    level=level,
+                    reached_at=datetime.now(UTC),
+                )
+            )
+
+    async def pending_milestones(self) -> list[CharacterMilestone]:
+        """Milestones the bot has not posted yet, oldest first."""
+        statement = (
+            select(CharacterMilestone)
+            .where(CharacterMilestone.posted_at.is_(None))
+            .order_by(CharacterMilestone.reached_at)
+        )
+        return list((await self.repository.session.execute(statement)).scalars())
+
+    async def recent_milestones(self) -> list[CharacterMilestone]:
+        """The latest milestones, newest first, posted or not."""
+        statement = select(CharacterMilestone).order_by(CharacterMilestone.reached_at.desc()).limit(RECENT_MILESTONES)
+        return list((await self.repository.session.execute(statement)).scalars())
+
+    async def mark_milestone_posted(self, milestone_id: UUID, discord_message_id: int | None) -> None:
+        """Record that the bot posted a milestone. 404 if there's no such milestone."""
+        session = self.repository.session
+        milestone = await session.get(CharacterMilestone, milestone_id)
+        if milestone is None:
+            msg = f"No milestone {milestone_id}"
+            raise NotFoundException(msg)
+        milestone.posted_at = datetime.now(UTC)
+        milestone.discord_message_id = discord_message_id
+        await session.commit()
 
     async def search(self, query: str | None) -> list[BattlenetCharacter]:
         """Stored characters whose ``Name Surname`` contains ``query``, roster first; the roster if no query."""
@@ -399,12 +458,16 @@ class CharactersService(SQLAlchemyAsyncRepositoryService[BattlenetCharacter]):
         joined: list[str] = []
         for member in roster.members:
             row = stored.get(member.character.slug)
+            was_in_roster = row is not None and row.in_roster
             if row is None:
                 row = self._roster_row(member)
                 session.add(row)
             else:
+                previous_level = row.level
                 self._apply_roster(row, member)
-            if not row.in_roster and not first_sync:
+                if was_in_roster:
+                    await self._note_milestone(row, previous_level)
+            if not was_in_roster and not first_sync:
                 joined.append(full_name(row.name, row.surname))
                 row.joined_roster_at = now
             row.in_roster = True

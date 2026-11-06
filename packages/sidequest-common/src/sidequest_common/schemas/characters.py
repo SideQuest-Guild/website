@@ -1,6 +1,7 @@
 """Characters from Battle.net: the guild roster, looked-up characters, their character sheets and the hero boards."""
 
 from datetime import datetime
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -9,7 +10,11 @@ from sidequest_common.schemas.events import WowClass
 CHARACTER_SEARCH_MIN_LENGTH = 2
 CHARACTER_SEARCH_LIMIT = 25
 CHARACTER_SLUG_MAX_LENGTH = 50
+CHARACTER_SLUG_PATTERN = r"^[^\s/?#-]+-[^\s/?#-]+$"
+"""``name-surname``: two parts, and nothing that would leave a URL path segment."""
 HERO_BOARD_SIZE = 10
+MILESTONE_LEVELS = (40, 60)
+RECENT_MILESTONES = 20
 
 
 class CharacterSummary(BaseModel):
@@ -155,3 +160,24 @@ class HeroBoards(BaseModel):
     honorable_kills: list[HeroBoardEntry]
     pvp_rank: list[HeroBoardEntry]
     achievement_points: list[HeroBoardEntry]
+
+
+class CharacterMilestoneSchema(BaseModel):
+    """A roster character reaching level 40 or 60. ``posted_at`` is ``None`` until the bot posts it to Discord."""
+
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True, serialize_by_alias=True)
+
+    id: UUID
+    slug: str
+    name: str
+    surname: str
+    wow_class: WowClass | None = Field(alias="class")
+    level: int
+    reached_at: datetime
+    posted_at: datetime | None
+
+
+class MilestonePosted(BaseModel):
+    """Body for the bot's ``POST .../characters/milestones/{id}/posted``: the Discord message it posted."""
+
+    discord_message_id: int | None = None

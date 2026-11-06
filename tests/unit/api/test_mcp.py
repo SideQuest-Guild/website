@@ -16,7 +16,7 @@ from sqlalchemy import select
 
 from sidequest_api.app import create_app
 from sidequest_api.domain.members.services import MembersService
-from sidequest_common.models import ItemWish, LootAward, McpToken, Member, OfficerAudit
+from sidequest_common.models import GuildRecruit, ItemWish, LootAward, McpToken, Member, OfficerAudit
 from sidequest_common.settings import APISettings, DatabaseSettings, WebSettings
 from tests.conftest import GUILD_ID, TEST_API_KEY
 from tests.unit.api.fake_battlenet import THUNDERFURY, battlenet, forget_battlenet_state, transport
@@ -466,3 +466,50 @@ async def test_game_item_tools_say_when_battlenet_is_not_configured(
     result = response.json()["result"]
     assert result["isError"] is True
     assert "battle.net isn't configured" in result["content"][0]["text"].lower()
+
+
+# --- Characters and recruit vetting ---------------------------------------------------------------------------
+
+
+async def test_officers_vet_a_recruit_by_their_battlenet_character(
+    database_url: str, battlenet: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    member_id, token = await _seed_member(db_sessionmaker, roles=[OFFICER_ROLE_ID])
+    async with db_sessionmaker() as session:
+        recruit = GuildRecruit(character="Terrorskull", at=datetime(2026, 11, 5, 3, 0, tzinfo=UTC))
+        session.add(recruit)
+        await session.commit()
+        recruit_id = str(recruit.id)
+    async with AsyncTestClient(app=_items_app(database_url, battlenet)) as client:
+        vetted = await _call_tool(
+            client, token, "set_recruit_character", {"recruit_id": recruit_id, "name_surname": "Terrorskull Gloomstep"}
+        )
+        listed = await _call_tool(client, token, "list_recruits")
+        unknown = await _call_tool(
+            client, token, "set_recruit_character", {"recruit_id": recruit_id, "name_surname": "Nobody Here"}
+        )
+        one_word = await _call_tool(client, token, "get_character", {"name_surname": "Terrorskull"})
+
+    battlenet_character = vetted.json()["result"]["structuredContent"]["battlenet"]
+    assert (battlenet_character["guild_name"], battlenet_character["level"]) == ("Fuzion", 14)
+    [row] = listed.json()["result"]["structuredContent"]["result"]
+    assert row["slug"] == "terrorskull-gloomstep"
+    assert unknown.json()["result"]["isError"] is True
+    assert "name and surname" in one_word.json()["result"]["content"][0]["text"]
+    async with db_sessionmaker() as session:
+        audit = (
+            await session.execute(select(OfficerAudit).where(OfficerAudit.actor_member_id == member_id))
+        ).scalar_one()
+    assert audit.action == "mcp.set_recruit_character"
+
+
+async def test_officers_look_up_a_character_by_name_and_surname(
+    database_url: str, battlenet: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    _member_id, token = await _seed_member(db_sessionmaker, roles=[OFFICER_ROLE_ID])
+    async with AsyncTestClient(app=_items_app(database_url, battlenet)) as client:
+        response = await _call_tool(client, token, "get_character", {"name_surname": "terrorskull gloomstep"})
+
+    character = response.json()["result"]["structuredContent"]
+    assert (character["slug"], character["spec"]) == ("terrorskull-gloomstep", "Combat")
+    assert len(character["sheet"]["gear"]) == 11

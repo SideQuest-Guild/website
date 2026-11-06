@@ -31,10 +31,10 @@ flowchart LR
 | `/guild/` | members | The in-game roster, who can craft what, the guild bank log and guild news. |
 | `/addons/` | everyone | The addons the guild uses, with download links. |
 | `/items/` | everyone | Find an item, see its tooltip, and who in the guild has already looted it. Members can keep a wishlist with a note; officers see who wants it next to their loot points. |
-| `/characters/` | everyone | The SideQuest roster's gear, item level, spec and last login, straight from Battle.net. Search finds any stored character; an exact name and surname looks anyone else up directly, since Battle.net has no name search. |
+| `/characters/` | everyone | The SideQuest roster's gear, item level, spec and last login, straight from Battle.net. Search finds any stored character; an exact name and surname looks anyone else up directly, since Battle.net has no name search. A Milestones row shows the latest characters to reach level 40 or 60. |
 | `/account/` | anyone signed in | Link Battle.net, get a calendar link, mark away dates, or delete your account. |
 | `/officers/` | officers | Events, addons, recruiting, attendance, group voice stats, and guild-wide activity stats and leaderboards. Game Masters also get members, the activity log and moderation. |
-| `/officers/sync/` | officers | Move a raid night from the addon to the site, and points back to the addon. |
+| `/officers/sync/` | officers | Move a raid night from the addon to the site, and points back to the addon. Vets recruits: link a recruit's Battle.net character by name and surname to see their level, gear, current guild (flagged if it isn't SideQuest) and last login. |
 | `/rules/`, `/privacy/`, `/terms/` | everyone | Guild rules, what the site keeps about you, and the terms. |
 | `/api-reference/` | everyone | The same API reference below, styled like the rest of the site. |
 

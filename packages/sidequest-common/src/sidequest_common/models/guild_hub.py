@@ -129,6 +129,8 @@ class GuildRecruit(UUIDAuditBase):
     note: Mapped[str | None] = mapped_column(Text, default=None)
     checklist: Mapped[dict] = mapped_column(JsonB, default=dict)
     at: Mapped[datetime] = mapped_column(DateTimeUTC(timezone=True))
+    slug: Mapped[str | None] = mapped_column(Text, default=None)
+    """The recruit's Battle.net character (``name-surname``), set by an officer for vetting."""
 
 
 class RecruitVote(UUIDAuditBase):

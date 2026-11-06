@@ -8,7 +8,7 @@ from litestar.testing import AsyncTestClient
 from sqlalchemy import select, update
 
 from sidequest_api.app import create_app
-from sidequest_common.models import BattlenetCharacter, GuildEvent, WowCharacter
+from sidequest_common.models import BattlenetCharacter, GuildEvent, GuildRecruit, WowCharacter
 from sidequest_common.settings import APISettings, DatabaseSettings, WebSettings
 from tests.conftest import GUILD_ID, TEST_API_KEY
 from tests.unit.api.conftest import OFFICER_ROLE_ID, _discord_transport, login_as
@@ -240,3 +240,71 @@ async def test_raid_signups_show_readiness_against_the_officers_minimum_item_lev
         "below_minimum": True,
     }
     assert readiness["Thrall"] is None
+
+
+def _level(battlenet: dict, slug: str, level: int) -> None:
+    next(member for member in battlenet["roster"] if member["character"]["slug"] == slug)["character"]["level"] = level
+
+
+async def test_reaching_level_40_or_60_queues_one_milestone_for_the_bot(
+    characters_client: AsyncTestClient, battlenet: dict
+) -> None:
+    pending_url = f"/api/guilds/{GUILD_ID}/characters/milestones/pending"
+    battlenet["roster"] += [
+        roster_member("Climber", "Up", rank=6, level=39),
+        roster_member("Rocket", "Fast", rank=6, level=38),
+    ]
+    await characters_client.post(SYNC, headers=BOT)
+    assert (await characters_client.get(pending_url, headers=BOT)).json() == []
+
+    _level(battlenet, "climber-up", 41)
+    _level(battlenet, "rocket-fast", 60)
+    battlenet["roster"].append(roster_member("Late", "Joiner", rank=6, level=60))
+    await characters_client.post(SYNC, headers=BOT)
+    await characters_client.post(SYNC, headers=BOT)  # nothing new: no second milestone
+
+    pending = (await characters_client.get(pending_url, headers=BOT)).json()
+    # Passing 40 and 60 at once announces 60 only; joining the guild already at 60 announces nothing.
+    assert sorted((row["slug"], row["level"]) for row in pending) == [("climber-up", 40), ("rocket-fast", 60)]
+    posted = await characters_client.post(
+        f"/api/guilds/{GUILD_ID}/characters/milestones/{pending[0]['id']}/posted",
+        headers=BOT,
+        json={"discord_message_id": 123},
+    )
+    assert posted.status_code == 204
+    remaining = (await characters_client.get(pending_url, headers=BOT)).json()
+    assert [row["id"] for row in remaining] == [pending[1]["id"]]
+    public = (await characters_client.get("/api/characters/milestones")).json()
+    assert {row["slug"] for row in public} == {"climber-up", "rocket-fast"}
+    wrong_guild = "/api/guilds/1/characters/milestones/pending"
+    assert (await characters_client.get(wrong_guild, headers=BOT)).status_code == 404
+
+
+async def test_officers_vet_a_recruit_by_setting_their_battlenet_character(
+    characters_client: AsyncTestClient, discord_state: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    async with db_sessionmaker() as session:
+        recruit = GuildRecruit(character="Terrorskull", at=datetime.now(UTC))
+        session.add(recruit)
+        await session.commit()
+        url = f"/api/epgp/recruits/{recruit.id}"
+    await login_as(characters_client, discord_state, discord_id=8101, username="member")
+    assert (await characters_client.put(url, json={"slug": TERRORSKULL})).status_code == 403
+    await login_as(characters_client, discord_state, discord_id=8102, username="officer", roles=[OFFICER_ROLE_ID])
+
+    set_slug = await characters_client.put(url, json={"slug": "Terrorskull-Gloomstep"})
+    unknown = await characters_client.put(url, json={"slug": "nobody-here"})
+    status_only = await characters_client.put(url, json={"status": "trial"})
+    listed = (await characters_client.get("/api/epgp/recruits/")).json()["recruits"]
+
+    assert set_slug.status_code == 200
+    vetting = set_slug.json()["battlenet"]
+    assert (vetting["slug"], vetting["guild_name"], vetting["level"], vetting["item_level"]) == (
+        TERRORSKULL,
+        "Fuzion",
+        14,
+        6,
+    )
+    assert unknown.status_code == 404
+    assert (status_only.json()["status"], status_only.json()["slug"]) == ("trial", TERRORSKULL)
+    assert listed[0]["battlenet"]["guild_name"] == "Fuzion"

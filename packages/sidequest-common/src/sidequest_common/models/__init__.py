@@ -5,7 +5,7 @@ from sidequest_common.models.addons import Addon
 from sidequest_common.models.audit import OfficerAudit
 from sidequest_common.models.away import MemberAwayRange
 from sidequest_common.models.badges import MemberBadge
-from sidequest_common.models.characters import BattlenetCharacter
+from sidequest_common.models.characters import BattlenetCharacter, CharacterMilestone
 from sidequest_common.models.directory import (
     CharacterDirectoryChar,
     CharacterDirectoryCooldowns,
@@ -68,6 +68,7 @@ __all__ = (
     "CharacterDirectoryMarket",
     "CharacterDirectorySection",
     "CharacterDirectoryStock",
+    "CharacterMilestone",
     "CharacterProfession",
     "CharacterRecipeLink",
     "DiscordEventTombstone",

@@ -27,6 +27,7 @@ import {
   ATTENDANCE_EVENTS,
   ATTENDANCE_REPORT,
   ATTENDANCE_TRENDS,
+  CHARACTER_MILESTONES,
   CHARACTER_PAGES,
   CHARACTERS,
   EPGP_CHARACTERS,
@@ -483,6 +484,9 @@ export const test = base.extend<{ site: Site }>({
       if (path === "/api/characters/boards" && method === "GET") {
         return json(route, HERO_BOARDS);
       }
+      if (path === "/api/characters/milestones" && method === "GET") {
+        return json(route, CHARACTER_MILESTONES);
+      }
       if (path === "/api/characters/" && method === "GET") {
         const q = url.searchParams.get("q");
         if (q !== null) {
@@ -797,6 +801,21 @@ export const test = base.extend<{ site: Site }>({
           return json(route, { detail: "No such recruit" }, 404);
         }
         const body = JSON.parse(request.postData() ?? "{}") as Partial<EpgpRecruit>;
+        if ("slug" in body) {
+          if (body.slug === null) {
+            target.slug = null;
+            target.battlenet = null;
+            return json(route, target);
+          }
+          const slug = body.slug as string;
+          const found = CHARACTERS.find((c) => c.slug === slug);
+          if (!found) {
+            return json(route, { detail: `Battle.net has no character ${slug}.` }, 404);
+          }
+          target.slug = slug;
+          target.battlenet = found;
+          return json(route, target);
+        }
         Object.assign(target, body);
         return json(route, target);
       }

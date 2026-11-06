@@ -15,7 +15,9 @@ from typing import TYPE_CHECKING
 from litestar.exceptions import NotFoundException
 from sqlalchemy import func, or_, select
 
+from sidequest_api.domain.characters.services import to_summary
 from sidequest_common.models import (
+    BattlenetCharacter,
     CharacterDirectoryChar,
     CharacterDirectoryCooldowns,
     CharacterDirectoryMarket,
@@ -37,6 +39,7 @@ from sidequest_common.models import (
 )
 from sidequest_common.schemas import (
     AnnouncementPostedResult,
+    CharacterSummary,
     EpgpMemberNoteList,
     EpgpMemberNoteRow,
     EpgpRecruitList,
@@ -642,7 +645,18 @@ class GuildHubService:
             ],
             member_id=character.member_id if character else None,
             at=recruit.at,
+            slug=recruit.slug,
+            battlenet=await self._recruit_battlenet(recruit.slug),
         )
+
+    async def _recruit_battlenet(self, slug: str | None) -> CharacterSummary | None:
+        """The stored Battle.net character for a recruit's slug, if any."""
+        if slug is None:
+            return None
+        stored = (
+            await self._session.execute(select(BattlenetCharacter).where(BattlenetCharacter.slug == slug))
+        ).scalar_one_or_none()
+        return to_summary(stored) if stored is not None else None
 
     async def list_recruits(self) -> EpgpRecruitList:
         """Every recruiting candidate, newest first."""
@@ -650,7 +664,7 @@ class GuildHubService:
         return EpgpRecruitList(recruits=[await self._to_recruit_row(row) for row in rows])
 
     async def update_recruit(self, recruit_id: UUID, data: EpgpRecruitUpdate) -> EpgpRecruitRow:
-        """Update a recruit's status/note/checklist (only fields present). 404 unknown recruit.
+        """Update a recruit's status/note/checklist/slug (only fields present). 404 unknown recruit.
 
         Setting ``status: "trial"`` also sets the linked member's ``raid_status``/``trial_started_at`` if the
         character is linked and the member has no raid status yet.
@@ -666,6 +680,8 @@ class GuildHubService:
             recruit.note = changes["note"]
         if "checklist" in changes and changes["checklist"] is not None:
             recruit.checklist = changes["checklist"]
+        if "slug" in changes:
+            recruit.slug = changes["slug"].casefold() if changes["slug"] is not None else None
         if recruit.status == "trial":
             character = (
                 await self._session.execute(

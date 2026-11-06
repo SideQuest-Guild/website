@@ -193,6 +193,7 @@ import "../../../styles/room-officers-sync.css";
     escapeHtml,
     fetchMe,
     normalizeClass,
+    relativeTime,
     requireElement,
     statusMessage,
     type EpgpAdjustmentCreate,
@@ -303,6 +304,82 @@ import "../../../styles/room-officers-sync.css";
     return recruit.votes.length > 0 ? recruit.votes.map((v) => `${v.officer}: ${v.vote}`).join(", ") : "No votes yet";
   }
 
+  /** "Nox Zul" or "nox-zul" -> "nox-zul"; null if neither shape matches the API's slug pattern. */
+  function parseSlugInput(value: string): string | null {
+    const trimmed = value.trim();
+    const twoWords = /^(\S+)\s+(\S+)$/.exec(trimmed);
+    if (twoWords) {
+      return `${twoWords[1]}-${twoWords[2]}`.toLowerCase();
+    }
+    return /^[^\s/?#-]+-[^\s/?#-]+$/.test(trimmed) ? trimmed.toLowerCase() : null;
+  }
+
+  function battlenetErrorMessage(err: unknown): string {
+    if (err instanceof ApiError) {
+      if (err.status === 404) {
+        return err.detail || "Battle.net has no such character.";
+      }
+      if (err.status === 503) {
+        return "Battle.net did not answer; try again in a minute.";
+      }
+    }
+    return statusMessage(err);
+  }
+
+  function battlenetInfo(r: EpgpRecruit): string {
+    const bn = r.battlenet;
+    if (!bn) {
+      return `<p class="item-meta">No Battle.net character linked yet.</p>`;
+    }
+    if (!bn.profile_found) {
+      return `<p class="item-meta">Battle.net hasn't published ${escapeHtml(bn.name)} ${escapeHtml(bn.surname)}'s profile yet.</p>`;
+    }
+    const guildLine = bn.guild_name
+      ? bn.in_roster
+        ? "SideQuest"
+        : `<strong class="bnet-other-guild">In guild ${escapeHtml(bn.guild_name)}</strong>`
+      : "No guild";
+    const parts = [
+      `Level ${bn.level}`,
+      charClassSpan(bn.class),
+      bn.spec ? escapeHtml(bn.spec) : null,
+      guildLine,
+      bn.item_level !== null ? `Item level ${bn.item_level}` : null,
+      bn.last_login_at ? `Last login ${relativeTime(bn.last_login_at)}` : null,
+      bn.fetched_at ? `checked ${relativeTime(bn.fetched_at)}` : null,
+    ].filter((part): part is string => Boolean(part));
+    return `
+      <p class="item-meta">
+        <a href="/characters/detail/?slug=${encodeURIComponent(r.slug ?? "")}">${escapeHtml(bn.name)} ${escapeHtml(bn.surname)}</a>
+        \u00b7 ${parts.join(" \u00b7 ")}
+      </p>`;
+  }
+
+  function battlenetBlock(r: EpgpRecruit): string {
+    return `
+      <div class="battlenet-block">
+        <h3 class="battlenet-title">Battle.net</h3>
+        ${battlenetInfo(r)}
+        <form class="battlenet-form" data-recruit-battlenet-form>
+          <div class="field">
+            <label for="battlenet-slug-${r.id}">Battle.net name and surname</label>
+            <input
+              id="battlenet-slug-${r.id}"
+              type="text"
+              placeholder="Name Surname"
+              autocomplete="off"
+              data-battlenet-input
+            />
+          </div>
+          <div class="battlenet-form-actions">
+            <button type="submit" class="btn-quiet btn-small">Check</button>
+            ${r.slug ? `<button type="button" class="btn-quiet btn-small btn-danger" data-battlenet-clear>Clear</button>` : ""}
+          </div>
+          <p class="status" data-battlenet-status role="status" aria-live="polite"></p>
+        </form>
+      </div>`;
+  }
+
   function recruitRow(r: EpgpRecruit): string {
     const checklist = RECRUIT_CHECKLIST.map(
       ([key, label]) => `
@@ -332,6 +409,7 @@ import "../../../styles/room-officers-sync.css";
             <button type="button" class="btn-quiet btn-small" data-recruit-vote="wait">Wait</button>
           </span>
         </span>
+        ${battlenetBlock(r)}
       </li>`;
   }
 
@@ -572,6 +650,73 @@ import "../../../styles/room-officers-sync.css";
         } catch (err) {
           statusEl.dataset.tone = "error";
           statusEl.textContent = statusMessage(err);
+          btn.disabled = false;
+        }
+      },
+      { signal },
+    );
+
+    recruitsListEl.addEventListener(
+      "submit",
+      async (event) => {
+        const form = (event.target as HTMLElement).closest<HTMLFormElement>("[data-recruit-battlenet-form]");
+        const row = form?.closest<HTMLLIElement>("[data-recruit-id]");
+        if (!form || !row?.dataset.recruitId) {
+          return;
+        }
+        event.preventDefault();
+        const id = row.dataset.recruitId;
+        const input = form.querySelector<HTMLInputElement>("[data-battlenet-input]");
+        const bnStatusEl = form.querySelector<HTMLElement>("[data-battlenet-status]");
+        if (!input || !bnStatusEl) {
+          return;
+        }
+        const slug = parseSlugInput(input.value);
+        if (!slug) {
+          bnStatusEl.dataset.tone = "error";
+          bnStatusEl.textContent = 'Enter a name and surname, like "Nox Zul".';
+          return;
+        }
+        bnStatusEl.dataset.tone = "";
+        bnStatusEl.textContent = "Checking\u2026";
+        try {
+          const updated = await apiFetch<EpgpRecruit>(`/api/epgp/recruits/${id}`, {
+            method: "PUT",
+            body: JSON.stringify({ slug }),
+          });
+          recruits = recruits.map((r) => (r.id === id ? updated : r));
+          renderRecruits();
+        } catch (err) {
+          bnStatusEl.dataset.tone = "error";
+          bnStatusEl.textContent = battlenetErrorMessage(err);
+        }
+      },
+      { signal },
+    );
+
+    recruitsListEl.addEventListener(
+      "click",
+      async (event) => {
+        const btn = (event.target as HTMLElement).closest<HTMLButtonElement>("[data-battlenet-clear]");
+        const row = btn?.closest<HTMLLIElement>("[data-recruit-id]");
+        if (!btn || !row?.dataset.recruitId) {
+          return;
+        }
+        const id = row.dataset.recruitId;
+        btn.disabled = true;
+        try {
+          const updated = await apiFetch<EpgpRecruit>(`/api/epgp/recruits/${id}`, {
+            method: "PUT",
+            body: JSON.stringify({ slug: null }),
+          });
+          recruits = recruits.map((r) => (r.id === id ? updated : r));
+          renderRecruits();
+        } catch (err) {
+          const bnStatusEl = row.querySelector<HTMLElement>("[data-battlenet-status]");
+          if (bnStatusEl) {
+            bnStatusEl.dataset.tone = "error";
+            bnStatusEl.textContent = statusMessage(err);
+          }
           btn.disabled = false;
         }
       },

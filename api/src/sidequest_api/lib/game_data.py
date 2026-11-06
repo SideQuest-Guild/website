@@ -54,3 +54,8 @@ async def provide_game_data(state: State) -> AsyncClient:
     if client is None:
         raise HTTPException(status_code=HTTP_503_SERVICE_UNAVAILABLE, detail="Battle.net is not configured")
     return client
+
+
+async def provide_optional_game_data(state: State) -> AsyncClient | None:
+    """The game data client, or ``None`` if Battle.net is not configured, for routes that only sometimes need it."""
+    return state.get(GAME_DATA_STATE_KEY)

@@ -50,6 +50,16 @@ import "../../styles/room-characters.css";
     <ul class="char-row-list" id="char-roster-list" aria-label="Guild roster"></ul>
   </section>
 
+  <section class="chamber" aria-labelledby="h-milestones">
+    <h2 class="chamber-title" id="h-milestones">
+      Milestones
+    </h2>
+    <p class="status" id="char-milestones-status" role="status" aria-live="polite">
+      Loading…
+    </p>
+    <ul class="char-row-list" id="char-milestones-list" aria-label="Level milestones"></ul>
+  </section>
+
   <noscript>
     <p class="aside">Enable JavaScript to view characters.</p>
   </noscript>
@@ -63,6 +73,7 @@ import "../../styles/room-characters.css";
     relativeTime,
     requireElement,
     statusMessage,
+    type CharacterMilestone,
     type CharacterSummary,
   } from "../../scripts/api";
   import { onPage } from "../../scripts/page";
@@ -93,6 +104,17 @@ import "../../styles/room-characters.css";
       </li>`;
   }
 
+  function milestoneRow(m: CharacterMilestone): string {
+    const cls = m.class ? ` cls-${m.class}` : "";
+    return `
+      <li>
+        <a class="char-row" href="/characters/detail/?slug=${encodeURIComponent(m.slug)}">
+          <span class="char-row-name${cls}">${escapeHtml(m.name)} ${escapeHtml(m.surname)} reached level ${m.level}</span>
+          <span class="char-row-rank">${escapeHtml(relativeTime(m.reached_at))}</span>
+        </a>
+      </li>`;
+  }
+
   onPage("#characters-search-form", (signal) => {
     const form = requireElement<HTMLFormElement>("characters-search-form");
     const queryEl = requireElement<HTMLInputElement>("char-query");
@@ -102,6 +124,8 @@ import "../../styles/room-characters.css";
     const exactLinkEl = requireElement<HTMLAnchorElement>("char-exact-link");
     const rosterStatusEl = requireElement("char-roster-status");
     const rosterListEl = requireElement("char-roster-list");
+    const milestonesStatusEl = requireElement("char-milestones-status");
+    const milestonesListEl = requireElement("char-milestones-list");
 
     async function loadRoster(): Promise<void> {
       try {
@@ -112,6 +136,20 @@ import "../../styles/room-characters.css";
       } catch (err) {
         rosterStatusEl.dataset.tone = "error";
         rosterStatusEl.textContent = statusMessage(err);
+      }
+    }
+
+    async function loadMilestones(): Promise<void> {
+      try {
+        const milestones = await apiFetch<CharacterMilestone[]>("/api/characters/milestones", { signal });
+        milestonesStatusEl.textContent = "";
+        milestonesListEl.innerHTML =
+          milestones.length > 0
+            ? milestones.map(milestoneRow).join("")
+            : `<li class="aside">No one has reached level 40 or 60 since the roster sync began.</li>`;
+      } catch (err) {
+        milestonesStatusEl.dataset.tone = "error";
+        milestonesStatusEl.textContent = statusMessage(err);
       }
     }
 
@@ -157,5 +195,6 @@ import "../../styles/room-characters.css";
     );
 
     void loadRoster();
+    void loadMilestones();
   });
 </script>
