@@ -22,6 +22,8 @@ export function itemLink(itemId: number, name: string, qualityClass?: string): s
 
 let wowheadLoad: Promise<void> | null = null;
 
+const WOWHEAD_ORIGIN = "https://wow.zamimg.com/";
+
 /**
  * Loads Wowhead's tooltip script once per visit (cached across page swaps, since the module stays loaded), setting
  * `window.whTooltips` first as its docs require. Call from a page that shows `itemLink`s before relying on hovers
@@ -32,11 +34,19 @@ export function loadWowheadTooltips(): Promise<void> {
     const { promise, resolve } = Promise.withResolvers<void>();
     window.whTooltips = { colorLinks: false, iconizeLinks: true, renameLinks: false };
     const script = document.createElement("script");
-    script.src = "https://wow.zamimg.com/js/tooltips.js";
+    script.src = `${WOWHEAD_ORIGIN}js/tooltips.js`;
     script.async = true;
     script.addEventListener("load", () => resolve(), { once: true });
     script.addEventListener("error", () => resolve(), { once: true });
     document.head.append(script);
+    // The script runs once, but its stylesheet lives in <head>, which ClientRouter swaps for the next page's on every
+    // navigation. Copying it into the incoming head makes Astro keep the live node; without it, tooltips shown after
+    // a page swap come up unstyled.
+    document.addEventListener("astro:before-swap", (event) => {
+      for (const link of document.head.querySelectorAll(`link[rel=stylesheet][href^="${WOWHEAD_ORIGIN}"]`)) {
+        event.newDocument.head.append(link.cloneNode());
+      }
+    });
     wowheadLoad = promise;
   }
   return wowheadLoad;

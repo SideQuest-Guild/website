@@ -550,6 +550,27 @@ test.describe("items", () => {
     await expect(page.locator(".item-detail-name")).toHaveText("Glory of the Defender");
   });
 
+  test("Wowhead's tooltip styles survive moving to another page", async ({ page, site }) => {
+    site.signIn(null);
+    // Stands in for Wowhead's script, which runs once per visit and adds its stylesheet to <head>.
+    const css = "https://wow.zamimg.com/css/universal.css?19";
+    await page.route("https://wow.zamimg.com/js/tooltips.js", (route) =>
+      route.fulfill({
+        contentType: "text/javascript",
+        body: `document.head.insertAdjacentHTML("beforeend", '<link rel="stylesheet" href="${css}">');`,
+      }),
+    );
+    const stylesheet = page.locator(`head link[rel=stylesheet][href="${css}"]`);
+    await page.goto("/items/");
+    await page.locator("#item-query").fill("Glory of the Defender");
+    await page.locator("#item-search-form button[type=submit]").click();
+    await expect(stylesheet).toHaveCount(1);
+
+    await page.locator("#item-results .item-row a.item-link").click();
+    await expect(page.locator(".item-detail-name")).toHaveText("Glory of the Defender");
+    await expect(stylesheet).toHaveCount(1);
+  });
+
   test("too short a query asks for more letters instead of searching", async ({ page, site }) => {
     site.signIn(null);
     await page.goto("/items/");
