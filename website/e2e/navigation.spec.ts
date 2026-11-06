@@ -172,6 +172,24 @@ test.describe("desktop group panel", () => {
     await expect(raids).toBeFocused();
   });
 
+  test("reopening on another group shows only that group's links", async ({ page, site }) => {
+    site.signIn(MEMBER);
+    await page.goto("/");
+
+    const raids = page.getByRole("button", { name: "Raids", exact: true });
+    const panel = page.locator("[data-nav-panel]");
+    await raids.hover();
+    await expect(panel.getByRole("link", { name: "How raid nights work" })).toBeVisible();
+    // Leave the bar so hover intent closes the panel.
+    await page.mouse.move(720, 700);
+    await expect(panel).toBeHidden();
+
+    await page.getByRole("button", { name: "Guild", exact: true }).hover();
+    await expect(panel.getByRole("link", { name: "Hall of Heroes" })).toBeVisible();
+    // The closed Raids pane must not stay painted under the Guild one.
+    await expect(panel.getByRole("link", { name: "How raid nights work" })).toBeHidden();
+  });
+
   test("a panel link navigates in place", async ({ page, site }) => {
     site.signIn(MEMBER);
     await page.goto("/");

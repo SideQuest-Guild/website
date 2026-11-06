@@ -187,6 +187,17 @@ function setupGroupPanel(nav: HTMLElement, signal: AbortSignal): void {
     const dir: 1 | -1 = order.indexOf(group) >= order.indexOf(openGroup ?? group) ? 1 : -1;
     const leaving = openGroup && openGroup !== group ? (panes.get(openGroup) ?? null) : null;
 
+    if (openGroup === null) {
+      // Closing leaves the last pane marked active (so it fades out with the panel); reopening on another group
+      // must drop it, or both panes paint on top of each other.
+      for (const other of panes.values()) {
+        if (other !== pane) {
+          animations.get(other)?.cancel();
+          other.removeAttribute("data-active");
+          other.style.visibility = "";
+        }
+      }
+    }
     if (firstOpen) {
       panel.hidden = false;
     }
