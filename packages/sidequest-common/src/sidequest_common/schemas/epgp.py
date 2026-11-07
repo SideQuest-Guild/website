@@ -323,7 +323,7 @@ class GameImportSignup(BaseModel):
 
 
 class GameImportEvent(BaseModel):
-    """One upcoming scheduled event in the game-import payload."""
+    """One scheduled event in the game-import payload (upcoming in ``events``, recent in ``past_events``)."""
 
     id: UUID
     title: str
@@ -378,6 +378,9 @@ class GameImportPayload(BaseModel):
     standings: list[GameImportStandingsRow]
     killed_encounters: list[int]
     events: list[GameImportEvent]
+    past_events: list[GameImportEvent] = Field(default_factory=list)
+    """Up to 20 events that started in the last 30 days (before the ``events`` window), newest first, cancelled ones
+    left out; additive, older addons ignore it."""
     members: list[GameImportMember] = Field(default_factory=list)
     news: list[GameImportNews] = Field(default_factory=list)
     sheets: dict[str, GameImportSheet] = Field(default_factory=dict)
