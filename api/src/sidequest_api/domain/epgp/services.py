@@ -47,6 +47,7 @@ from sidequest_common.models import (
     GuildBankLogEntry,
     GuildEvent,
     GuildNewsEvent,
+    GuildRank,
     GuildRecruit,
     GuildRosterSnapshot,
     ItemName,
@@ -760,6 +761,7 @@ class EpgpService:
             row.rank_index = member_row.rank_index
             row.level = member_row.level
             row.zone = member_row.zone
+            row.online = member_row.online
             row.last_seen_at = last_seen_at
             row.left_guild_at = None
             if is_new:
@@ -776,6 +778,20 @@ class EpgpService:
                     character=character.key,
                 )
         await self._session.flush()
+        if roster.ranks:
+            reported_indices = {export_rank.index for export_rank in roster.ranks}
+            for export_rank in roster.ranks:
+                rank_row = (
+                    await self._session.execute(select(GuildRank).where(GuildRank.rank_index == export_rank.index))
+                ).scalar_one_or_none()
+                is_new_rank = rank_row is None
+                rank_row = rank_row or GuildRank(rank_index=export_rank.index)
+                rank_row.name = export_rank.name
+                rank_row.is_officer = export_rank.officer
+                if is_new_rank:
+                    self._session.add(rank_row)
+            await self._session.flush()
+            await self._session.execute(delete(GuildRank).where(GuildRank.rank_index.not_in(reported_indices)))
         cutoff = taken_at - timedelta(days=LEFT_GUILD_AFTER_DAYS)
         stale = (
             (

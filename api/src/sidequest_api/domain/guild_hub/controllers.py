@@ -14,6 +14,7 @@ from typing import Annotated
 from uuid import UUID
 
 from litestar import Controller, get, post, put
+from litestar.datastructures import ResponseHeader
 from litestar.di import NamedDependency, Provide
 from litestar.exceptions import HTTPException, NotFoundException
 from litestar.openapi.datastructures import ResponseSpec
@@ -27,6 +28,7 @@ from sidequest_api.domain.guild_hub.dependencies import provide_guild_hub_servic
 from sidequest_api.domain.guild_hub.services import GuildHubService
 from sidequest_api.lib.game_data import provide_optional_game_data
 from sidequest_api.lib.openapi import NOT_A_MEMBER, NOT_AN_OFFICER, NOT_SIGNED_IN, SECURITY_SESSION, GuildIdPath
+from sidequest_api.lib.website import EDGE_CACHE_HEADER, SKIP_SESSION
 from sidequest_common.models import Member
 from sidequest_common.schemas import (
     AnnouncementPosted,
@@ -44,11 +46,16 @@ from sidequest_common.schemas import (
     GuildDirectory,
     GuildMarket,
     GuildNewsPage,
+    GuildOfficers,
     GuildRoster,
     GuildStock,
     PendingAnnouncementsPage,
 )
 from sidequest_common.settings import WebSettings
+
+# The addon syncs roster/ranks periodically: five minutes at the edge, then stale for an hour while one fetch
+# refreshes it.
+EDGE_OFFICERS_CACHE = ResponseHeader(name=EDGE_CACHE_HEADER, value="max-age=300, stale-while-revalidate=3600")
 
 DEFAULT_NEWS_LIMIT = 30
 MAX_NEWS_LIMIT = 60
@@ -86,6 +93,19 @@ class GuildHubController(Controller):
     ) -> GuildRoster:
         del current_member
         return await guild_hub_service.get_roster()
+
+    @get(
+        "/officers",
+        operation_id="GetGuildOfficers",
+        tags=["Guild hub"],
+        opt=SKIP_SESSION,
+        response_headers=[EDGE_OFFICERS_CACHE],
+        summary="Get the guild officers",
+        description="Returns current members on an officer rank, sorted by rank then name.",
+        response_description="The guild's current officers.",
+    )
+    async def get_officers(self, guild_hub_service: NamedDependency[GuildHubService]) -> GuildOfficers:
+        return await guild_hub_service.get_officers()
 
     @get(
         "/crafters",
