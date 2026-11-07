@@ -10,6 +10,7 @@ import type {
   AttendanceReport,
   AttendanceSignup,
   AttendanceTrends,
+  AuctionWatch,
   CharacterMilestone,
   CharacterPage,
   CharacterSummary,
@@ -53,6 +54,8 @@ import type {
   HeroProfile,
   HeroRow,
   Item,
+  ItemAuctionPrice,
+  ItemPriceSummary,
   ItemSearch,
   ItemWisher,
   McpToken,
@@ -1411,6 +1414,84 @@ export function itemSearch(items: Item[], page: number): ItemSearch {
     })),
   };
 }
+
+// ——— Auction house prices (GET /api/auctions/prices/{item_id}[?ids=], GET/POST/DELETE /api/me/auction-watches):
+// faction-wide lowest prices for items already seen above (items, recipe reagents, guild market). Glory of the
+// Defender (ITEMS[0]) is listed with a 14-day trend and two houses; Cloak of Autumn's Child (ITEMS[1]) is never
+// listed, to exercise the "Not listed right now" state.
+function auctionTrend(basePrice: number): ItemAuctionPrice["trend"] {
+  return Array.from({ length: 14 }, (_, i) => ({
+    day: inDays(-13 + i, 0).slice(0, 10),
+    unit_price: basePrice + (i % 3) * 50,
+  }));
+}
+
+function itemAuctionPrice(itemId: number, unitPrice: number | null): ItemAuctionPrice {
+  if (unitPrice === null) {
+    return { item_id: itemId, unit_price: null, quantity_total: 0, houses: [], trend: [], updated_at: null };
+  }
+  return {
+    item_id: itemId,
+    unit_price: unitPrice,
+    quantity_total: 12,
+    houses: [
+      {
+        house_id: 110,
+        house_name: "Alliance Auction House",
+        unit_price: unitPrice,
+        quantity: 7,
+        listings: 3,
+        updated_at: inDays(0),
+      },
+      {
+        house_id: 111,
+        house_name: "Alliance Auction House",
+        unit_price: unitPrice + 500,
+        quantity: 5,
+        listings: 2,
+        updated_at: inDays(0),
+      },
+    ],
+    trend: auctionTrend(unitPrice),
+    updated_at: inDays(0),
+  };
+}
+
+export const AUCTION_PRICES: Record<number, ItemAuctionPrice> = {
+  [ITEMS[0]!.item_id]: itemAuctionPrice(ITEMS[0]!.item_id, 15000), // Glory of the Defender: 1g 50s
+  [ITEMS[1]!.item_id]: itemAuctionPrice(ITEMS[1]!.item_id, null), // Cloak of Autumn's Child: not listed
+  2840: itemAuctionPrice(2840, 100), // Copper Bar (recipe 101 reagent, priced)
+  2841: itemAuctionPrice(2841, 150), // Tin Bar (recipe 101 reagent, priced \u2014 recipe 101 fully prices)
+  2852: itemAuctionPrice(2852, 2000), // Heavy Grinding Stone (recipe 101's crafted item; also a guild market buy row)
+  13510: itemAuctionPrice(13510, 50000), // Flask of the Titans (guild market sell row)
+  // Recipe 102's reagent (2842, Heavy Stone) is intentionally left unpriced to exercise the missing-price state.
+};
+
+export function auctionPriceSummary(itemId: number): ItemPriceSummary {
+  const price = AUCTION_PRICES[itemId];
+  return price
+    ? {
+        item_id: itemId,
+        unit_price: price.unit_price,
+        quantity_total: price.quantity_total,
+        updated_at: price.updated_at,
+      }
+    : { item_id: itemId, unit_price: null, quantity_total: 0, updated_at: null };
+}
+
+// The member's own watches (GET/POST/DELETE /api/me/auction-watches), mutated per test like the wishlist.
+export const AUCTION_WATCHES: AuctionWatch[] = [
+  {
+    id: "watch-1",
+    item_id: ITEMS[0]!.item_id,
+    item_name: ITEMS[0]!.name,
+    icon_url: null,
+    max_unit_price: 20000,
+    current_unit_price: 15000,
+    created_at: inDays(-5),
+    last_alerted_at: inDays(-1),
+  },
+];
 
 // Item wishlist (GET/PUT/DELETE /api/me/wishlist[/{item_id}], GET /api/items/{item_id}/wishers): who wants
 // ITEMS[0] (Glory of the Defender), highest priority first, reusing EPGP_STANDINGS' EP/GP so the numbers agree

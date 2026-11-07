@@ -271,3 +271,47 @@
     row-gap: 4px;
   }
 }
+
+/* ——— Auction house: summary line, a sparkline, and a per-house price table, same table shape as the ledger ——— */
+.auction-summary {
+  margin: 14px 0 0;
+}
+.auction-trend {
+  margin-top: 10px;
+  max-width: 320px;
+}
+.price-trend-svg {
+  display: block;
+  width: 100%;
+  height: 48px;
+}
+.auction-table-wrap {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  overflow-x: auto;
+  margin-top: 14px;
+}
+.auction-table {
+  width: 100%;
+  min-width: 420px;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.auction-table th,
+.auction-table td {
+  padding: 10px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--stone-2);
+  vertical-align: middle;
+}
+.auction-table th {
+  font-family: var(--display);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--mist-2);
+}
+.auction-table td {
+  color: var(--ink);
+  font-variant-numeric: tabular-nums lining-nums;
+}

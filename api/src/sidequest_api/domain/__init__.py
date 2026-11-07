@@ -6,6 +6,12 @@
 
 from sidequest_api.domain.addons.controllers import AddonsController
 from sidequest_api.domain.attendance.controllers import AttendanceController, AttendanceVoiceController
+from sidequest_api.domain.auctions.controllers import (
+    AuctionBotWatchesController,
+    AuctionPricesController,
+    AuctionsSyncController,
+    AuctionWatchesController,
+)
 from sidequest_api.domain.auth.controllers import AuthController
 from sidequest_api.domain.away.controllers import AwayController, AwayNowController
 from sidequest_api.domain.badges.controllers import BadgesController
@@ -79,6 +85,8 @@ guild_controllers = [
     GroupVoiceController,
     GuildAnnouncementsBotController,
     RosterSyncController,
+    AuctionsSyncController,
+    AuctionBotWatchesController,
 ]
 
 public_routes = [
@@ -120,4 +128,6 @@ public_routes = [
     ProfessionsController,
     RecipesController,
     GameClassesController,
+    AuctionPricesController,
+    AuctionWatchesController,
 ]

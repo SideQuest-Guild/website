@@ -10,6 +10,8 @@ from sqlalchemy import delete, or_, select, update
 
 from sidequest_api.lib.battlenet import BattleNetOAuthError
 from sidequest_common.models import (
+    AuctionAlert,
+    AuctionWatch,
     BattlegroundScore,
     EventSignup,
     EventSignupActivity,
@@ -110,8 +112,8 @@ class MembersService(SQLAlchemyAsyncRepositoryService[Member]):
         kept like ``ModCase`` (moderation/stats history, purged on their own retention schedule); only the
         member's own minutes and pairings are erased.
 
-        Also deletes the member's own MCP (Model Context Protocol) client tokens, their item wishlist, and their
-        saved talent-calculator builds.
+        Also deletes the member's own MCP (Model Context Protocol) client tokens, their item wishlist, their
+        auction price watches and any alerts those watches queued, and their saved talent-calculator builds.
 
         Also deletes the member's hourly activity counts (``MemberActivityHour``, keyed by Discord ID with no
         FK): stats and the Hall of Heroes activity charts stop showing them.
@@ -146,6 +148,12 @@ class MembersService(SQLAlchemyAsyncRepositoryService[Member]):
         await session.execute(delete(XPGrant).where(XPGrant.user_id == member.discord_id))
         await session.execute(delete(McpToken).where(McpToken.member_id == member.id))
         await session.execute(delete(ItemWish).where(ItemWish.member_id == member.id))
+        await session.execute(
+            delete(AuctionAlert).where(
+                AuctionAlert.watch_id.in_(select(AuctionWatch.id).where(AuctionWatch.member_id == member.id))
+            )
+        )
+        await session.execute(delete(AuctionWatch).where(AuctionWatch.member_id == member.id))
         await session.execute(delete(TalentBuild).where(TalentBuild.member_id == member.id))
         await session.execute(
             update(OfficerAudit).where(OfficerAudit.actor_member_id == member.id).values(actor_member_id=None)

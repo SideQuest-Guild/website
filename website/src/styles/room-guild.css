@@ -147,6 +147,13 @@ a.guild-member-name:focus-visible {
   grid-area: btn;
 }
 
+/* ——— Market: AH price next to a sell/buy listing's own price ——— */
+.guild-market-ah {
+  color: var(--mist-2);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
 /* ——— Bank: totals, then a dense ledger of rows ——— */
 .guild-bank-totals {
   display: grid;
