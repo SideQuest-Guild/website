@@ -18,6 +18,7 @@
           "**/scripts/discord-live",
           "**/scripts/discord-online",
           "**/scripts/recruiting-band",
+          "**/scripts/officers-band",
           "**/scripts/charter",
           "**/scripts/api-reference"
         ]
