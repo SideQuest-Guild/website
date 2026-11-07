@@ -146,8 +146,17 @@ async def test_series_ep_override_reaches_its_occurrences(member_client: AsyncTe
     assert (created.json()["ep"], created.json()["ep_override"]) == (4, 4)
 
     async def occurrence_eps() -> set[int]:
+        # A series edit reaches occurrences that haven't started; "upcoming" also lists one that started in the last
+        # few hours, which keeps its EP. Late Friday evening in Chicago that is this series' raid in progress.
+        now = datetime.now(UTC)
         events = (await member_client.get("/api/events", params={"when": "upcoming"})).json()
-        return {event["ep"] for event in events if event["series"] and event["series"]["id"] == series_id}
+        return {
+            event["ep"]
+            for event in events
+            if event["series"]
+            and event["series"]["id"] == series_id
+            and datetime.fromisoformat(event["starts_at"]) >= now
+        }
 
     assert await occurrence_eps() == {4}
 
