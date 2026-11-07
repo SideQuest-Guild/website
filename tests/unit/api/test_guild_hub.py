@@ -14,6 +14,7 @@ from sidequest_common.models import (
     CharacterProfession,
     GuildAnnouncement,
     GuildNewsEvent,
+    GuildRank,
     GuildRecruit,
     GuildRosterSnapshot,
     Member,
@@ -169,6 +170,181 @@ async def test_roster_import_marks_left_guild_at_after_thirty_days(
             await session.execute(select(GuildRosterSnapshot).where(GuildRosterSnapshot.character_id == character.id))
         ).scalar_one()
         assert snapshot.left_guild_at is not None
+
+
+async def test_roster_import_with_ranks_stores_officer_flags(
+    member_client: AsyncTestClient, discord_state: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    await _login_officer(member_client, discord_state, discord_id=7003)
+    first = await member_client.post(
+        "/api/epgp/imports",
+        json={
+            "payload": _export_string(
+                _base_payload(
+                    roster={
+                        "taken_at": EXPORTED_AT,
+                        "members": [],
+                        "ranks": [
+                            {"index": 0, "name": "Guild Master", "officer": True},
+                            {"index": 1, "name": "Officer", "officer": True},
+                            {"index": 2, "name": "Member", "officer": False},
+                        ],
+                    }
+                )
+            )
+        },
+    )
+    assert first.status_code == 200, first.text
+
+    async with db_sessionmaker() as session:
+        ranks = {rank.rank_index: rank for rank in (await session.execute(select(GuildRank))).scalars().all()}
+        assert ranks[0].name == "Guild Master"
+        assert ranks[0].is_officer is True
+        assert ranks[1].name == "Officer"
+        assert ranks[1].is_officer is True
+        assert ranks[2].name == "Member"
+        assert ranks[2].is_officer is False
+
+    # A later export that no longer reports rank 2 deletes it; ranks it still reports are updated in place.
+    second = await member_client.post(
+        "/api/epgp/imports",
+        json={
+            "payload": _export_string(
+                _base_payload(
+                    roster={
+                        "taken_at": EXPORTED_AT + 3600,
+                        "members": [],
+                        "ranks": [
+                            {"index": 0, "name": "Guild Master", "officer": True},
+                            {"index": 1, "name": "Raid Officer", "officer": True},
+                        ],
+                    }
+                )
+            )
+        },
+    )
+    assert second.status_code == 200, second.text
+
+    async with db_sessionmaker() as session:
+        ranks = {rank.rank_index: rank for rank in (await session.execute(select(GuildRank))).scalars().all()}
+        assert set(ranks) == {0, 1}
+        assert ranks[1].name == "Raid Officer"
+
+
+async def test_roster_import_without_ranks_still_imports(
+    member_client: AsyncTestClient, discord_state: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    """An export from an older addon with no ``ranks`` key still imports members, leaving ranks untouched."""
+    await _login_officer(member_client, discord_state, discord_id=7004)
+    payload = _base_payload(
+        roster={
+            "taken_at": EXPORTED_AT,
+            "members": [{"character": "Oldaddon-Whitemane", "rank": "Member", "rank_index": 2, "level": 60}],
+        }
+    )
+    response = await member_client.post("/api/epgp/imports", json={"payload": _export_string(payload)})
+    assert response.status_code == 200, response.text
+    assert response.json()["roster"]["updated"] == 1
+
+    async with db_sessionmaker() as session:
+        character = (
+            await session.execute(select(WowCharacter).where(WowCharacter.key == "oldaddon-whitemane"))
+        ).scalar_one()
+        snapshot = (
+            await session.execute(select(GuildRosterSnapshot).where(GuildRosterSnapshot.character_id == character.id))
+        ).scalar_one()
+        assert snapshot.rank_index == 2
+        ranks = (await session.execute(select(GuildRank))).scalars().all()
+        assert ranks == []
+
+
+# --- officers endpoint: officer-rank members, left_guild_at excluded, rank-0 fallback -----------------------------
+
+
+async def test_guild_officers_endpoint_lists_only_officer_rank_current_members(
+    member_client: AsyncTestClient, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    async with db_sessionmaker() as session:
+        session.add_all(
+            [
+                GuildRank(rank_index=0, name="Guild Master", is_officer=True),
+                GuildRank(rank_index=1, name="Officer", is_officer=True),
+                GuildRank(rank_index=2, name="Member", is_officer=False),
+            ]
+        )
+        officer_char = WowCharacter(name="Boss", realm="Whitemane", key="boss-whitemane", source="import")
+        member_char = WowCharacter(name="Grunt", realm="Whitemane", key="grunt-whitemane", source="import")
+        left_char = WowCharacter(name="Gone", realm="Whitemane", key="gone-whitemane", source="import")
+        session.add_all([officer_char, member_char, left_char])
+        await session.flush()
+        now = datetime.now(UTC)
+        session.add_all(
+            [
+                GuildRosterSnapshot(
+                    character_id=officer_char.id,
+                    rank="Officer",
+                    rank_index=1,
+                    level=60,
+                    zone="Orgrimmar",
+                    online=True,
+                    last_seen_at=now,
+                ),
+                GuildRosterSnapshot(
+                    character_id=member_char.id,
+                    rank="Member",
+                    rank_index=2,
+                    level=60,
+                    zone="Orgrimmar",
+                    last_seen_at=now,
+                ),
+                GuildRosterSnapshot(
+                    character_id=left_char.id,
+                    rank="Officer",
+                    rank_index=1,
+                    level=60,
+                    zone="Orgrimmar",
+                    last_seen_at=now,
+                    left_guild_at=now,
+                ),
+            ]
+        )
+        await session.commit()
+
+    response = await member_client.get("/api/guild/officers")
+    assert response.status_code == 200, response.text
+    officers = response.json()["officers"]
+    assert [row["character"] for row in officers] == ["Boss-Whitemane"]
+    assert officers[0]["name"] == "Boss Whitemane"
+    assert officers[0]["rank_index"] == 1
+    assert officers[0]["online"] is True
+
+
+async def test_guild_officers_endpoint_falls_back_to_rank_zero_without_flags(
+    member_client: AsyncTestClient, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    """Before any export has reported rank flags, only rank 0 (Guild Master) counts as an officer rank."""
+    async with db_sessionmaker() as session:
+        gm_char = WowCharacter(name="Founder", realm="Whitemane", key="founder-whitemane", source="import")
+        officer_char = WowCharacter(name="Lieutenant", realm="Whitemane", key="lieutenant-whitemane", source="import")
+        session.add_all([gm_char, officer_char])
+        await session.flush()
+        now = datetime.now(UTC)
+        session.add_all(
+            [
+                GuildRosterSnapshot(
+                    character_id=gm_char.id, rank="Guild Master", rank_index=0, level=60, last_seen_at=now
+                ),
+                GuildRosterSnapshot(
+                    character_id=officer_char.id, rank="Officer", rank_index=1, level=60, last_seen_at=now
+                ),
+            ]
+        )
+        await session.commit()
+
+    response = await member_client.get("/api/guild/officers")
+    assert response.status_code == 200, response.text
+    officers = response.json()["officers"]
+    assert [row["character"] for row in officers] == ["Founder-Whitemane"]
 
 
 # --- professions: upsert, recipes replaced wholesale -------------------------------------------------------------

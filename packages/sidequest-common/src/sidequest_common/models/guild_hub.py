@@ -33,8 +33,26 @@ class GuildRosterSnapshot(UUIDAuditBase):
     rank_index: Mapped[int] = mapped_column(Integer, default=0)
     level: Mapped[int] = mapped_column(Integer, default=0)
     zone: Mapped[str] = mapped_column(Text, default="")
+    online: Mapped[bool] = mapped_column(Boolean, default=False)
     last_seen_at: Mapped[datetime] = mapped_column(DateTimeUTC(timezone=True))
     left_guild_at: Mapped[datetime | None] = mapped_column(DateTimeUTC(timezone=True), index=True, default=None)
+
+
+class GuildRank(UUIDAuditBase):
+    """One guild rank, as reported by the addon's ``GuildControlGetRankFlags``/``GuildControlGetRankName``.
+
+    ``rank_index`` is 0-based (0 = Guild Master, matching ``GuildRosterSnapshot.rank_index``). ``is_officer`` is
+    ``None`` until an addon with officer access has reported it (``GuildControlGetRankFlags`` requires officer
+    privileges and may error); until then only rank 0 counts as an officer rank. Rows for indices no longer
+    reported by an export carrying a non-empty ``ranks`` list are deleted (``EpgpService._import_roster``).
+    """
+
+    __tablename__ = "guild_rank"
+    __table_args__ = {"comment": "Guild ranks reported by the addon, with which ones are officer ranks."}
+
+    rank_index: Mapped[int] = mapped_column(Integer, unique=True, index=True)
+    name: Mapped[str] = mapped_column(String(60))
+    is_officer: Mapped[bool | None] = mapped_column(Boolean, default=None)
 
 
 class CharacterProfession(UUIDAuditBase):

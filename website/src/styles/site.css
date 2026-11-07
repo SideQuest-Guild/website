@@ -1562,6 +1562,37 @@ html:not(.officer) [data-officer-nav] {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* ——— Officer whisper list: who to whisper in game for an invite, under the join section's Discord channels.
+   Built by scripts/officers-band.ts; hidden while the guild has no officer ranks recorded, or the fetch fails. ——— */
+.officers-invite {
+  width: 100%;
+  margin: clamp(26px, 2.6vw, 40px) 0 0;
+  display: grid;
+  justify-items: center;
+}
+.officers-invite-label {
+  color: var(--ink-2);
+}
+.officers-invite-list {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 20px;
+  margin: 10px 0 0;
+  max-width: 44em;
+}
+.officers-invite-item {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5em;
+  font-size: 14px;
+}
+.officers-invite-rank {
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  color: var(--ink-3);
+}
 .online-now-more {
   margin: 0;
   font-weight: 500;

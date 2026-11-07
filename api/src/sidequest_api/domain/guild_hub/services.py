@@ -29,6 +29,7 @@ from sidequest_common.models import (
     GuildAnnouncement,
     GuildBankLogEntry,
     GuildNewsEvent,
+    GuildRank,
     GuildRecruit,
     GuildRosterSnapshot,
     ItemName,
@@ -70,6 +71,8 @@ from sidequest_common.schemas import (
     GuildMarketSellRow,
     GuildNewsItem,
     GuildNewsPage,
+    GuildOfficerRow,
+    GuildOfficers,
     GuildRoster,
     GuildRosterCharacter,
     GuildRosterMember,
@@ -186,6 +189,62 @@ class GuildHubService:
         roster_members.sort(key=lambda row: row.name.casefold())
         unlinked_rows.sort(key=lambda row: row.name.casefold())
         return GuildRoster(taken_at=taken_at, members=roster_members, unlinked=unlinked_rows)
+
+    # --- Officers ------------------------------------------------------------------------------------------------
+
+    async def get_officers(self) -> GuildOfficers:
+        """Current officers (current roster rows on an officer rank), sorted by rank then name.
+
+        An officer rank is one whose stored :class:`GuildRank` ``is_officer`` is true; until an addon with officer
+        access has ever imported rank flags, only rank 0 (Guild Master) counts.
+        """
+        rank_rows = (await self._session.execute(select(GuildRank))).scalars().all()
+        officer_indices = {rank.rank_index for rank in rank_rows if rank.is_officer} if rank_rows else {0}
+        if not officer_indices:
+            return GuildOfficers(officers=[])
+        snapshot_rows = (
+            (
+                await self._session.execute(
+                    select(GuildRosterSnapshot).where(
+                        GuildRosterSnapshot.left_guild_at.is_(None),
+                        GuildRosterSnapshot.rank_index.in_(officer_indices),
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+        if not snapshot_rows:
+            return GuildOfficers(officers=[])
+        character_ids = [row.character_id for row in snapshot_rows]
+        characters = {
+            character.id: character
+            for character in (
+                await self._session.execute(select(WowCharacter).where(WowCharacter.id.in_(character_ids)))
+            )
+            .scalars()
+            .all()
+        }
+        officers: list[GuildOfficerRow] = []
+        for snapshot in snapshot_rows:
+            character = characters.get(snapshot.character_id)
+            if character is None:
+                continue
+            display = f"{character.name}-{character.realm}" if character.realm else character.name
+            officers.append(
+                GuildOfficerRow(
+                    character=display,
+                    name=display.replace("-", " "),
+                    rank=snapshot.rank,
+                    rank_index=snapshot.rank_index,
+                    wow_class=WowClass(character.wow_class) if character.wow_class else None,
+                    level=snapshot.level,
+                    online=snapshot.online,
+                    last_seen_at=snapshot.last_seen_at,
+                )
+            )
+        officers.sort(key=lambda row: (row.rank_index, row.name.casefold()))
+        return GuildOfficers(officers=officers)
 
     # --- Crafters ------------------------------------------------------------------------------------------------
 

@@ -16,6 +16,7 @@ import {
   GM,
   GUILD_ANNOUNCEMENTS,
   GUILD_MARKET,
+  GUILD_OFFICERS,
   GUILD_ROSTER,
   HEROES,
   ITEMS,
@@ -127,6 +128,24 @@ test.describe("homepage", () => {
       }),
     );
     expect(spills).toEqual([]);
+  });
+
+  test("signed out, the join section lists current officers to whisper", async ({ page, site }) => {
+    site.signIn(null);
+    await page.goto("/");
+    await expect(page.locator("[data-officers-invite]")).toBeVisible();
+    const items = page.locator(".officers-invite-item");
+    await expect(items).toHaveCount(GUILD_OFFICERS.length);
+    await expect(items.first()).toContainText(GUILD_OFFICERS[0]?.character ?? "");
+    await expect(items.first()).toContainText(GUILD_OFFICERS[0]?.rank ?? "");
+  });
+
+  test("the join section hides the officers list when there are none", async ({ page, site }) => {
+    site.signIn(null);
+    site.officers([]);
+    await page.goto("/");
+    await page.waitForLoadState("networkidle");
+    await expect(page.locator("[data-officers-invite]")).toBeHidden();
   });
 });
 

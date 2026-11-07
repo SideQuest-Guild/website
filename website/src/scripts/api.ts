@@ -1041,6 +1041,21 @@ export type GuildStockRow = {
 /** `GET /api/guild/stock?item_id=` (member): who holds the item, in bags or bank. */
 export type GuildStock = { item_id: number; item_name: string | null; rows: GuildStockRow[] };
 
+/** One row of `GET /api/guild/officers` (public), sorted by rank then name. */
+export type GuildOfficer = {
+  character: string;
+  name: string;
+  rank: string;
+  rank_index: number;
+  class: CharClass | null;
+  level: number;
+  online: boolean;
+  last_seen_at: string | null;
+};
+
+/** `GET /api/guild/officers` (public): current members on an officer rank. */
+export type GuildOfficers = { officers: GuildOfficer[] };
+
 // ——— Item catalog: GET /api/items[?q=&page=&quality=&slot=], GET /api/items/{id}. Battle.net-backed, so a 503
 // means Battle.net itself is down/unconfigured; mirrors `sidequest_common.schemas.items` (once it exists there).
 

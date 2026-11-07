@@ -45,6 +45,7 @@ import type {
   GuildDirectory,
   GuildMarket,
   GuildNewsItem,
+  GuildOfficer,
   GuildRoster,
   GuildStats,
   HeroActivity,
@@ -1168,6 +1169,29 @@ export const GUILD_NEWS: GuildNewsItem[] = [
     character: null,
     item_id: null,
     quality: null,
+  },
+];
+
+export const GUILD_OFFICERS: GuildOfficer[] = [
+  {
+    character: "Guideline-Whitemane",
+    name: "Guideline Whitemane",
+    rank: "Guild Master",
+    rank_index: 0,
+    class: "paladin",
+    level: 60,
+    online: true,
+    last_seen_at: inDays(0, 9),
+  },
+  {
+    character: "Wanderer-Whitemane",
+    name: "Wanderer Whitemane",
+    rank: "Officer",
+    rank_index: 1,
+    class: "hunter",
+    level: 60,
+    online: false,
+    last_seen_at: inDays(0, 10),
   },
 ];
 

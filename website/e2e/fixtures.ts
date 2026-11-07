@@ -16,6 +16,7 @@ import type {
   EventDetail,
   EventSummary,
   GuildAnnouncement,
+  GuildOfficer,
   GuildStats,
   HeroRow,
   Item,
@@ -61,6 +62,7 @@ import {
   GUILD_DIRECTORY,
   GUILD_MARKET,
   GUILD_NEWS,
+  GUILD_OFFICERS,
   GUILD_ROSTER,
   GUILD_STATS,
   HERO_BOARDS,
@@ -103,6 +105,8 @@ type Site = {
   addons(list: Addon[]): void;
   /** What `/api/recruiting` reports; `RECRUITING` (nothing wanted) by default. */
   recruiting(data: Recruiting): void;
+  /** What `/api/guild/officers` lists; `GUILD_OFFICERS` by default. */
+  officers(list: GuildOfficer[]): void;
   /** API calls that reached the mock without a handler. */
   unmocked: string[];
   /** Uncaught page errors and `console.error` lines. */
@@ -205,6 +209,7 @@ export const test = base.extend<{ site: Site }>({
     let me: Me | null = null;
     let addons = ADDONS;
     let recruiting = RECRUITING;
+    let officers = GUILD_OFFICERS;
     let calendarToken = "mock-calendar-token";
     let awayRanges: AwayRange[] = [];
     // A per-test copy: the raid chart's PATCH handler mutates this, and a shared SIGNUPS array would leak those
@@ -853,6 +858,9 @@ export const test = base.extend<{ site: Site }>({
       if (path === "/api/guild/news" && method === "GET") {
         return json(route, { items: GUILD_NEWS });
       }
+      if (path === "/api/guild/officers" && method === "GET") {
+        return json(route, { officers });
+      }
       if (path === "/api/guild/bank" && method === "GET") {
         if (!me?.is_guild_member) {
           return json(route, { detail: "Not signed in" }, 401);
@@ -1193,6 +1201,7 @@ export const test = base.extend<{ site: Site }>({
       signIn: (who) => (me = who),
       addons: (list) => (addons = list),
       recruiting: (data) => (recruiting = data),
+      officers: (list) => (officers = list),
       unmocked,
       errors,
     });

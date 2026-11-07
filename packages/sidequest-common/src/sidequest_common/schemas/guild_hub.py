@@ -24,6 +24,7 @@ GameClass = Annotated[WowClass, BeforeValidator(_lower_class)]
 """A class as the addon sends it: the game's uppercase token (``WARRIOR``), stored as the site's lowercase value."""
 
 MAX_ROSTER_MEMBERS = 1000
+MAX_GUILD_RANKS = 10
 MAX_PROFESSION_PAIRS = 1000
 """A 150-member guild with 2 primaries + 3 fixed secondaries (Cooking/Fishing/First Aid) each sends 750 pairs;
 1000 keeps headroom up to ``MAX_ROSTER_MEMBERS``."""
@@ -110,11 +111,24 @@ class ExportRosterMember(BaseModel):
     last_online_hours: float = 0
 
 
+class ExportRank(BaseModel):
+    """One guild rank in the export payload's ``roster.ranks``.
+
+    ``index`` is 0-based (0 = Guild Master, matching :attr:`ExportRosterMember.rank_index`). ``officer`` is
+    ``null`` when the addon could not read ``C_GuildInfo.GuildControlGetRankFlags`` (requires officer privileges).
+    """
+
+    index: int = Field(ge=0, le=9)
+    name: str = Field(max_length=60)
+    officer: bool | None = None
+
+
 class ExportRoster(BaseModel):
     """The ``roster`` object in the export payload: one sweep, taken at ``taken_at``."""
 
     taken_at: int
     members: list[ExportRosterMember] = Field(default_factory=list, max_length=MAX_ROSTER_MEMBERS)
+    ranks: list[ExportRank] = Field(default_factory=list, max_length=MAX_GUILD_RANKS)
 
 
 class ExportRecipe(BaseModel):
@@ -458,6 +472,27 @@ class GuildRoster(BaseModel):
     unlinked: list[GuildRosterUnlinked]
 
 
+class GuildOfficerRow(BaseModel):
+    """One officer on ``GET /api/guild/officers`` (public)."""
+
+    model_config = ConfigDict(populate_by_name=True, serialize_by_alias=True)
+
+    character: str
+    name: str
+    rank: str
+    rank_index: int
+    wow_class: WowClass | None = Field(default=None, alias="class", serialization_alias="class")
+    level: int
+    online: bool
+    last_seen_at: datetime | None
+
+
+class GuildOfficers(BaseModel):
+    """Response for ``GET /api/guild/officers`` (public), sorted by rank then name."""
+
+    officers: list[GuildOfficerRow]
+
+
 class GuildCrafterRow(BaseModel):
     """One character that knows a matched recipe, in ``GET /api/guild/crafters``."""
 
@@ -670,6 +705,7 @@ __all__ = (
     "LEVEL_MILESTONE_STEP",
     "MAX_ANNOUNCEMENTS_V2",
     "MAX_BANK_ENTRIES",
+    "MAX_GUILD_RANKS",
     "MAX_MEMBER_NOTES_V2",
     "MAX_PROFESSION_PAIRS",
     "MAX_RECIPES_PER_PROFESSION",
@@ -694,6 +730,7 @@ __all__ = (
     "ExportBankEntry",
     "ExportMemberNote",
     "ExportProfession",
+    "ExportRank",
     "ExportRecipe",
     "ExportRecruit",
     "ExportRecruitVote",
@@ -725,6 +762,8 @@ __all__ = (
     "GuildCrafters",
     "GuildNewsItem",
     "GuildNewsPage",
+    "GuildOfficerRow",
+    "GuildOfficers",
     "GuildRoster",
     "GuildRosterCharacter",
     "GuildRosterMember",
