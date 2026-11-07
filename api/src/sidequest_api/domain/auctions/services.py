@@ -169,6 +169,8 @@ class AuctionsService:
         except WowError as exc:
             raise HTTPException(status_code=HTTP_503_SERVICE_UNAVAILABLE, detail=BATTLENET_UNREACHABLE) from exc
         per_item = _aggregate_house(house, commodities)
+        # Battle.net names five houses "Alliance Auction House"; the id is the only thing that tells them apart.
+        house_name = f"{house_ref.name} {house_ref.id}"
         session = self._session
         await session.execute(delete(AuctionHousePriceRow).where(AuctionHousePriceRow.house_id == house_ref.id))
         for item_id, agg in per_item.items():
@@ -176,7 +178,7 @@ class AuctionsService:
                 AuctionHousePriceRow(
                     house_id=house_ref.id,
                     item_id=item_id,
-                    house_name=house_ref.name,
+                    house_name=house_name,
                     unit_price=agg.unit_price,
                     quantity=agg.quantity,
                     listings=agg.listings,
@@ -186,14 +188,14 @@ class AuctionsService:
             cross.quantity_total += agg.quantity
             if cross.unit_price is None or agg.unit_price < cross.unit_price:
                 cross.unit_price = agg.unit_price
-                cross.house_name = house_ref.name
+                cross.house_name = house_name
         state = (
             await session.execute(select(AuctionHouseState).where(AuctionHouseState.house_id == house_ref.id))
         ).scalar_one_or_none()
         if state is None:
-            state = AuctionHouseState(house_id=house_ref.id, house_name=house_ref.name)
+            state = AuctionHouseState(house_id=house_ref.id, house_name=house_name)
             session.add(state)
-        state.house_name = house_ref.name
+        state.house_name = house_name
         state.is_active = True
         state.auctions_count = len(house.auctions)
         state.commodities_count = len(commodities.auctions)
@@ -201,7 +203,7 @@ class AuctionsService:
         await session.commit()
         return AuctionSyncHouse(
             house_id=house_ref.id,
-            house_name=house_ref.name,
+            house_name=house_name,
             auctions=len(house.auctions),
             commodities=len(commodities.auctions),
         )

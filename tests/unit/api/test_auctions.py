@@ -102,6 +102,8 @@ async def test_sync_aggregates_prices_across_faction_houses(auctions_client: Asy
     assert by_house[110]["unit_price"] == 500
     assert by_house[111]["unit_price"] == 450
     assert 113 not in by_house  # Horde house 113 lists this item at 1 copper: never fetched, never priced
+    # Five houses share the name "Alliance Auction House"; members tell them apart by the id.
+    assert by_house[111]["house_name"] == "Alliance Auction House 111"
 
     division = await _price(auctions_client, QTY_DIVISION)
     assert division["unit_price"] == 300  # buyout 900 // quantity 3
