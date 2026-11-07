@@ -702,6 +702,32 @@ async def test_game_import_excludes_incomplete_signup_for_role_kind_event(
     assert event_payload["signups"] == []
 
 
+async def test_game_import_lists_recent_past_events_newest_first(
+    member_client: AsyncTestClient, discord_state: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    """Events that started before the upcoming window, within 30 days and not cancelled, go to past_events."""
+    await _login_officer(member_client, discord_state, discord_id=6615)
+    now = datetime.now(UTC)
+    async with db_sessionmaker() as session:
+        events = {
+            title: GuildEvent(kind="social", title=title, location="", starts_at=now - age, status=status)
+            for title, age, status in (
+                ("Last week", timedelta(days=7), "completed"),
+                ("Yesterday", timedelta(days=1), "scheduled"),
+                ("Called off", timedelta(days=2), "cancelled"),
+                ("Too old", timedelta(days=31), "completed"),
+                ("Tonight", timedelta(hours=1), "scheduled"),
+            )
+        }
+        session.add_all(events.values())
+        await session.commit()
+
+    response = await member_client.get("/api/epgp/game-import")
+    decoded = json.loads(base64.b64decode(response.json()["payload"][len("SQI1:") :]))
+    assert [e["title"] for e in decoded["past_events"]] == ["Yesterday", "Last week"]
+    assert [e["title"] for e in decoded["events"]] == ["Tonight"]
+
+
 async def test_sync_token_authorizes_game_import(
     member_client: AsyncTestClient, discord_state: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
 ) -> None:

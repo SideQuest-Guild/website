@@ -172,6 +172,7 @@ from sidequest_common.schemas import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
     from uuid import UUID
 
     from sqlalchemy.ext.asyncio import AsyncSession
@@ -192,6 +193,8 @@ IMPORT_PREFIX = "SQI1:"
 _EXPORT_STRING_RE = re.compile(r"SQX1:([A-Za-z0-9+/=]+)")
 _GAME_IMPORT_WINDOW_BEFORE = timedelta(hours=6)
 _GAME_IMPORT_WINDOW_AFTER = timedelta(days=14)
+_GAME_IMPORT_PAST_WINDOW = timedelta(days=30)
+_GAME_IMPORT_PAST_LIMIT = 20
 _ROLE_KINDS = tuple(kind.value for kind in ROLE_KINDS)
 _TOKEN_ALPHABET = string.ascii_letters + string.digits + "-_"
 _TOKEN_PREFIX = "sqs_"  # noqa: S105 - not a password, a public token format prefix
@@ -1665,7 +1668,7 @@ class EpgpService:
     # --- Game-import string -----------------------------------------------------------------------------------
 
     async def build_game_import(self, *, now: datetime | None = None) -> EpgpGameImport:
-        """Build the ``SQI1:`` string: rules, standings, killed encounters, and every upcoming scheduled event."""
+        """Build the ``SQI1:`` string: rules, standings, killed encounters, upcoming and recent past events."""
         reference = now or datetime.now(UTC)
         standings = await self.get_standings(now=reference)
         killed_rows = (
@@ -1677,7 +1680,7 @@ class EpgpService:
 
         window_start = reference - _GAME_IMPORT_WINDOW_BEFORE
         window_end = reference + _GAME_IMPORT_WINDOW_AFTER
-        events = (
+        upcoming = (
             (
                 await self._session.execute(
                     select(GuildEvent)
@@ -1692,6 +1695,51 @@ class EpgpService:
             .scalars()
             .all()
         )
+        past = (
+            (
+                await self._session.execute(
+                    select(GuildEvent)
+                    .where(
+                        GuildEvent.status != "cancelled",
+                        GuildEvent.starts_at >= reference - _GAME_IMPORT_PAST_WINDOW,
+                        GuildEvent.starts_at < window_start,
+                    )
+                    .order_by(GuildEvent.starts_at.desc())
+                    .limit(_GAME_IMPORT_PAST_LIMIT)
+                )
+            )
+            .scalars()
+            .all()
+        )
+        game_events = await self._game_import_events(upcoming)
+        past_events = await self._game_import_events(past)
+
+        members, news, sheets, crafters, recipe_names = await self._build_members_news_sheets_crafters(
+            reference, standings
+        )
+        officer = await self._build_officer_game_import(reference)
+        prices = await self._build_prices()
+        payload = GameImportPayload(
+            v=2,
+            generated_at=int(reference.timestamp()),
+            rules=EPGP_RULES,
+            standings=[GameImportStandingsRow.model_validate(row.model_dump()) for row in standings.rows],
+            killed_encounters=killed_encounters,
+            events=game_events,
+            past_events=past_events,
+            members=members,
+            news=news,
+            sheets=sheets,
+            crafters=crafters,
+            recipe_names=recipe_names,
+            prices=prices,
+            officer=officer,
+        )
+        encoded = base64.b64encode(json.dumps(payload.model_dump(mode="json", by_alias=True)).encode()).decode()
+        return EpgpGameImport(payload=f"{IMPORT_PREFIX}{encoded}", generated_at=reference)
+
+    async def _game_import_events(self, events: Sequence[GuildEvent]) -> list[GameImportEvent]:
+        """Game-import rows for ``events``, in the given order, with the sign-ups the game can use."""
         signups_by_event: dict[UUID, list[EventSignup]] = {}
         event_ids = [event.id for event in events]
         if event_ids:
@@ -1734,29 +1782,7 @@ class EpgpService:
                     signups=signups,
                 )
             )
-
-        members, news, sheets, crafters, recipe_names = await self._build_members_news_sheets_crafters(
-            reference, standings
-        )
-        officer = await self._build_officer_game_import(reference)
-        prices = await self._build_prices()
-        payload = GameImportPayload(
-            v=2,
-            generated_at=int(reference.timestamp()),
-            rules=EPGP_RULES,
-            standings=[GameImportStandingsRow.model_validate(row.model_dump()) for row in standings.rows],
-            killed_encounters=killed_encounters,
-            events=game_events,
-            members=members,
-            news=news,
-            sheets=sheets,
-            crafters=crafters,
-            recipe_names=recipe_names,
-            prices=prices,
-            officer=officer,
-        )
-        encoded = base64.b64encode(json.dumps(payload.model_dump(mode="json", by_alias=True)).encode()).decode()
-        return EpgpGameImport(payload=f"{IMPORT_PREFIX}{encoded}", generated_at=reference)
+        return game_events
 
     async def _build_prices(self) -> list[GameImportPrice]:
         """Lowest cross-house auction price and total quantity for every item the guild trades.
