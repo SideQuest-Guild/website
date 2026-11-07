@@ -239,6 +239,12 @@ const articles = [
       Only you and officers can see your wishlist; it's erased when you delete your account.
     </p>
     <p>
+      <strong>Price alerts are private.</strong> On an <a href="/items/">item's page</a>, a guild member can watch an
+      item's auction price with a threshold; we store the item and your threshold against your account, and alert you
+      when the guild's auction houses hit it. Only you and officers can see your price watches; they're erased when you
+      delete your account.
+    </p>
+    <p>
       <strong>Talent builds are stored with your account.</strong> On the <a href="/talents/">talent calculator</a>, a
       guild member can save a build with a name and optional note, and officers can pin a build as a raid
       recommendation. Saved builds are deleted when you delete your account.
@@ -420,12 +426,12 @@ const articles = [
       </li>
       <li>
         <strong>Delete my account</strong> on the same page: your site account, every event sign-up and attendance mark,
-        your voice-minute records, your calendar link, your away dates, your wishlist, your saved talent builds, your
-        own rows on recorded battleground scoreboards, and your Discord XP are erased, and you're signed out. Your
-        group-voice minutes and who you grouped with are erased too; the group sessions themselves and any
-        still-retained chat transcript (auto-purged after 30 days) are kept as shared records, the same as moderation
-        cases. Moderation records stay. The bot strips every Discord role it can manage from you within a minute and
-        puts you back behind #sign-the-ledger, as if you'd just joined.
+        your voice-minute records, your calendar link, your away dates, your wishlist, your price watches and alerts,
+        your saved talent builds, your own rows on recorded battleground scoreboards, and your Discord XP are erased,
+        and you're signed out. Your group-voice minutes and who you grouped with are erased too; the group sessions
+        themselves and any still-retained chat transcript (auto-purged after 30 days) are kept as shared records, the
+        same as moderation cases. Moderation records stay. The bot strips every Discord role it can manage from you
+        within a minute and puts you back behind #sign-the-ledger, as if you'd just joined.
       </li>
       <li>
         Removing SideQuest from <em>Authorized Apps</em> in Discord only stops future sign-ins. It doesn't reach us, so

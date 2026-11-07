@@ -206,6 +206,7 @@ import "../../styles/room-guild.css";
     classLabel,
     copperToGold,
     escapeHtml,
+    fetchAuctionPrices,
     fetchMe,
     normalizeClass,
     onFreshData,
@@ -388,6 +389,7 @@ import "../../styles/room-guild.css";
         <li class="guild-market-row">
           <span class="guild-market-item">${label}${row.crafted ? " (crafted)" : ""}</span>
           <span class="guild-market-detail">${row.qty}\u00d7 \u00b7 ${price}</span>
+          <span class="guild-market-ah" data-item-id="${row.item_id}"></span>
           <span class="guild-market-who">${escapeHtml(row.member_name ?? row.character)}</span>
         </li>`;
   }
@@ -398,6 +400,7 @@ import "../../styles/room-guild.css";
         <li class="guild-market-row">
           <span class="guild-market-item">${label}</span>
           <span class="guild-market-detail">${price}</span>
+          <span class="guild-market-ah" data-item-id="${row.item_id}"></span>
           <span class="guild-market-who">${escapeHtml(row.member_name ?? row.character)}</span>
         </li>`;
   }
@@ -619,6 +622,17 @@ import "../../styles/room-guild.css";
             ? data.requests.map(marketRequestRow).join("")
             : `<li class="ledger-empty">No open requests right now.</li>`;
         refreshWowheadLinks();
+        const ids = [...data.sell.map((row) => row.item_id), ...data.buy.map((row) => row.item_id)];
+        try {
+          const prices = await fetchAuctionPrices(ids, { signal });
+          for (const [itemId, price] of prices) {
+            for (const el of document.querySelectorAll<HTMLElement>(`.guild-market-ah[data-item-id="${itemId}"]`)) {
+              el.textContent = price.unit_price !== null ? `AH ${copperToGold(price.unit_price)}` : "AH: not listed";
+            }
+          }
+        } catch {
+          // The listings themselves still rendered fine; leave the AH columns blank.
+        }
       } catch (err) {
         marketSellListEl.innerHTML = `<li class="ledger-empty">${escapeHtml(statusMessage(err))}</li>`;
       }

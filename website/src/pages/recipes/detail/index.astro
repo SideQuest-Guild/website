@@ -47,6 +47,13 @@ import "../../../styles/room-recipes.css";
       <ul class="recipe-reagent-list" id="recipe-reagent-list" aria-label="Reagents"></ul>
     </section>
 
+    <section class="chamber" aria-labelledby="h-crafting-cost" id="crafting-cost-section" hidden>
+      <h2 class="chamber-title" id="h-crafting-cost">
+        Crafting cost
+      </h2>
+      <div id="crafting-cost-body"></div>
+    </section>
+
     <section class="chamber" aria-labelledby="h-crafters">
       <h2 class="chamber-title" id="h-crafters">
         Guild crafters
@@ -64,13 +71,82 @@ import "../../../styles/room-recipes.css";
   import {
     apiFetch,
     ApiError,
+    copperToGold,
     escapeHtml,
+    fetchAuctionPrices,
     requireElement,
     statusMessage,
+    type ItemPriceSummary,
     type RecipeDetailInfo,
   } from "../../../scripts/api";
   import { itemLink, loadWowheadTooltips, refreshWowheadLinks } from "../../../scripts/items";
   import { onPage } from "../../../scripts/page";
+
+  /** The crafted quantity is free text (e.g. "Makes 2-4"); use the first number in it, or 1 if there isn't one. */
+  function parseCraftedQuantity(text: string | null): number {
+    const match = text ? /(\d+)/.exec(text) : null;
+    return match ? Number(match[1]) : 1;
+  }
+
+  type CraftingCost = {
+    reagentCost: number;
+    missingReagents: string[];
+    craftedQuantity: number;
+    craftedValue: number | null;
+  };
+
+  function computeCraftingCost(recipe: RecipeDetailInfo, prices: Map<number, ItemPriceSummary>): CraftingCost {
+    const missingReagents: string[] = [];
+    let reagentCost = 0;
+    for (const reagent of recipe.reagents) {
+      const price = prices.get(reagent.item_id);
+      if (!price || price.unit_price === null) {
+        missingReagents.push(reagent.name);
+      } else {
+        reagentCost += price.unit_price * reagent.quantity;
+      }
+    }
+    const craftedQuantity = parseCraftedQuantity(recipe.crafted_quantity);
+    const craftedPrice = recipe.crafted_item ? prices.get(recipe.crafted_item.item_id) : undefined;
+    const craftedValue = craftedPrice?.unit_price != null ? craftedPrice.unit_price * craftedQuantity : null;
+    return { reagentCost, missingReagents, craftedQuantity, craftedValue };
+  }
+
+  function renderCraftingCost(recipe: RecipeDetailInfo, prices: Map<number, ItemPriceSummary>): void {
+    const section = requireElement("crafting-cost-section");
+    if (recipe.reagents.length === 0) {
+      section.hidden = true;
+      return;
+    }
+    section.hidden = false;
+    const cost = computeCraftingCost(recipe, prices);
+    const lines: string[] = [];
+    lines.push(
+      `<p class="recipe-cost-line">${cost.missingReagents.length > 0 ? "Reagent cost (priced reagents only)" : "Reagent cost"}: ${copperToGold(cost.reagentCost)}</p>`,
+    );
+    if (cost.missingReagents.length > 0) {
+      lines.push(
+        `<p class="recipe-cost-missing">No AH price for: ${cost.missingReagents.map(escapeHtml).join(", ")}</p>`,
+      );
+    }
+    if (recipe.crafted_item) {
+      if (cost.craftedValue !== null) {
+        lines.push(
+          `<p class="recipe-cost-line">Crafted value (\u00d7${cost.craftedQuantity}): ${copperToGold(cost.craftedValue)}</p>`,
+        );
+        if (cost.missingReagents.length === 0) {
+          const profit = cost.craftedValue - cost.reagentCost;
+          const tone = profit >= 0 ? "profit" : "loss";
+          lines.push(
+            `<p class="recipe-cost-line recipe-cost-${tone}">${profit >= 0 ? "Profit" : "Loss"}: ${copperToGold(Math.abs(profit))}</p>`,
+          );
+        }
+      } else {
+        lines.push(`<p class="recipe-cost-missing">No AH price for the crafted item.</p>`);
+      }
+    }
+    requireElement("crafting-cost-body").innerHTML = lines.join("");
+  }
 
   function renderRecipe(recipe: RecipeDetailInfo): void {
     const icon = recipe.icon_url
@@ -145,6 +221,16 @@ import "../../../styles/room-recipes.css";
         renderRecipe(recipe);
         contentEl.hidden = false;
         statusEl.textContent = "";
+        const ids = [
+          ...recipe.reagents.map((r) => r.item_id),
+          ...(recipe.crafted_item ? [recipe.crafted_item.item_id] : []),
+        ];
+        try {
+          const prices = await fetchAuctionPrices(ids, { signal });
+          renderCraftingCost(recipe, prices);
+        } catch {
+          requireElement("crafting-cost-section").hidden = true;
+        }
       } catch (err) {
         if (err instanceof ApiError && err.status === 404) {
           statusEl.textContent = "There's no such recipe.";

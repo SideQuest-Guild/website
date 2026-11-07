@@ -6,6 +6,8 @@ from typing import TYPE_CHECKING
 from sqlalchemy import select
 
 from sidequest_common.models import (
+    AuctionAlert,
+    AuctionWatch,
     BattlegroundMatch,
     BattlegroundScore,
     EventSignup,
@@ -308,3 +310,34 @@ async def test_delete_account_removes_own_battleground_scores_but_keeps_the_matc
         assert [row.name for row in remaining] == ["Other"]
         kept_match = await session.get(BattlegroundMatch, match_id)
         assert kept_match is not None
+
+
+async def test_delete_account_removes_auction_watches_and_alerts(
+    member_client: AsyncTestClient, discord_state: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    await login_as(member_client, discord_state, discord_id=9012, username="auction-haver")
+    actor_id = (await member_client.get("/api/me")).json()["id"]
+
+    async with db_sessionmaker() as session:
+        watch = AuctionWatch(member_id=actor_id, item_id=2770, max_unit_price=500)
+        session.add(watch)
+        await session.flush()
+        session.add(
+            AuctionAlert(
+                watch_id=watch.id,
+                discord_user_id=9012,
+                member_name="auction-haver",
+                item_id=2770,
+                unit_price=400,
+                max_unit_price=500,
+                quantity=5,
+                house_name="Alliance Auction House",
+            )
+        )
+        await session.commit()
+
+    assert (await member_client.delete("/api/me")).status_code == 204
+
+    async with db_sessionmaker() as session:
+        assert (await session.execute(select(AuctionWatch))).scalars().all() == []
+        assert (await session.execute(select(AuctionAlert))).scalars().all() == []

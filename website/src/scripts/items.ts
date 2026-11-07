@@ -1,7 +1,8 @@
 // Shared helpers for showing a WoW item anywhere on the site: an escaped link styled by quality that also wires up
-// a Wowhead tooltip (see privacy#who-else: the tooltip script is a third party). Imported by any page that shows an
-// item with an `item_id` — /ledger/, /guild/, /items/ and /items/detail/.
-import { escapeHtml } from "./api";
+// a Wowhead tooltip (see privacy#who-else: the tooltip script is a third party), and a tiny inline sparkline for an
+// item's auction house price trend. Imported by any page that shows an item with an `item_id` — /ledger/, /guild/,
+// /items/, /items/detail/ and /recipes/detail/.
+import { escapeHtml, type AuctionTrendPoint } from "./api";
 
 declare global {
   interface Window {
@@ -18,6 +19,35 @@ declare global {
 export function itemLink(itemId: number, name: string, qualityClass?: string): string {
   const cls = qualityClass ? ` q-${qualityClass}` : "";
   return `<a class="item-link${cls}" href="/items/detail/?id=${itemId}" data-wowhead="item=${itemId}&domain=forever">${escapeHtml(name)}</a>`;
+}
+
+/**
+ * A small inline sparkline SVG for an item's auction trend (`ItemAuctionPrice.trend`, oldest first). Returns "" for
+ * fewer than two points — too little to draw a line, the caller should fall back to just the summary line.
+ */
+export function priceTrendSvg(trend: AuctionTrendPoint[]): string {
+  if (trend.length < 2) {
+    return "";
+  }
+  const width = 240;
+  const height = 48;
+  const pad = 4;
+  const prices = trend.map((point) => point.unit_price);
+  const min = Math.min(...prices);
+  const max = Math.max(...prices);
+  const span = max - min || 1;
+  const stepX = (width - pad * 2) / (trend.length - 1);
+  const points = trend
+    .map((point, i) => {
+      const x = pad + i * stepX;
+      const y = height - pad - ((point.unit_price - min) / span) * (height - pad * 2);
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    })
+    .join(" ");
+  return `
+    <svg class="price-trend-svg" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" role="img" aria-label="Price trend, last ${trend.length} days">
+      <polyline points="${points}" fill="none" stroke="var(--gold-2, #c9a24b)" stroke-width="2" />
+    </svg>`;
 }
 
 let wowheadLoad: Promise<void> | null = null;

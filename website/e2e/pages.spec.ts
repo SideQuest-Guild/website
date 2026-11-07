@@ -6,6 +6,7 @@ import {
   ACHIEVEMENTS,
   ADDONS,
   ATTENDANCE_EVENTS,
+  AUCTION_WATCHES,
   CHARACTER_MILESTONES,
   CHARACTER_PAGES,
   CHARACTERS,
@@ -14,6 +15,7 @@ import {
   EVENTS,
   GM,
   GUILD_ANNOUNCEMENTS,
+  GUILD_MARKET,
   GUILD_ROSTER,
   HEROES,
   ITEMS,
@@ -411,10 +413,32 @@ test.describe("account", () => {
     await expect(item).toHaveCount(1);
     await expect(item).toContainText("Glory of the Defender");
     await expect(item).toContainText("For my hunter off-spec");
+    await expect(item.locator(".wish-ah")).toContainText("AH 1g 50s");
 
     await item.locator(".wish-delete-btn").click();
     await expect(page.locator(".wish-item")).toHaveCount(0);
     await expect(page.locator("#wish-list")).toContainText("No wishes yet.");
+  });
+
+  test("lists price alerts with the current AH price, and editing or removing one calls the API", async ({
+    page,
+    site,
+  }) => {
+    site.signIn(MEMBER);
+    await page.goto("/account/#alerts");
+    const item = page.locator(".alert-item");
+    await expect(item).toHaveCount(1);
+    await expect(item).toContainText(AUCTION_WATCHES[0]!.item_name!);
+    await expect(item).toContainText("Current: 1g 50s");
+    await expect(item.locator(".alert-price-input")).toHaveValue("2g 0s 0c");
+
+    await item.locator(".alert-price-input").fill("1g");
+    await item.locator('.alert-edit-form button[type="submit"]').click();
+    await expect(page.locator("#account-status")).toContainText("Alert updated.");
+
+    await item.locator(".alert-delete-btn").click();
+    await expect(page.locator(".alert-item")).toHaveCount(0);
+    await expect(page.locator("#alert-list")).toContainText("No price alerts yet.");
   });
 
   test("lists Companion sign-ins and revoking one calls the API and updates the list", async ({ page, site }) => {
@@ -622,6 +646,39 @@ test.describe("items", () => {
     await expect(page.locator("#wishers-section")).toBeHidden();
     expect(requests).toHaveLength(0);
   });
+
+  test("shows the lowest auction price, per-house table and trend, and a member can set and remove a price alert", async ({
+    page,
+    site,
+  }) => {
+    site.signIn(MEMBER);
+    await page.goto(`/items/detail/?id=${ITEMS[0]!.item_id}`);
+    await expect(page.locator("#auction-summary")).toContainText("1g 50s");
+    await expect(page.locator("#auction-summary")).toContainText("12 listed");
+    const rows = page.locator("#auction-house-rows tr");
+    await expect(rows).toHaveCount(2);
+    await expect(rows.first()).toContainText("Alliance Auction House");
+    await expect(rows.first()).toContainText("1g 50s");
+
+    // AUCTION_WATCHES already has a watch on this item, so the form starts pre-filled with it.
+    await expect(page.locator("#auction-watch-price")).toHaveValue("2g 0s 0c");
+    await expect(page.locator("#auction-watch-remove-btn")).toBeVisible();
+
+    await page.locator("#auction-watch-price").fill("1g");
+    await page.locator("#auction-watch-save-btn").click();
+    await expect(page.locator("#auction-watch-status")).toContainText("tell you when it drops");
+
+    await page.locator("#auction-watch-remove-btn").click();
+    await expect(page.locator("#auction-watch-status")).toContainText("Alert removed.");
+    await expect(page.locator("#auction-watch-remove-btn")).toBeHidden();
+  });
+
+  test("says Not listed right now when nobody is selling it on the auction house", async ({ page, site }) => {
+    site.signIn(null);
+    await page.goto(`/items/detail/?id=${ITEMS[1]!.item_id}`);
+    await expect(page.locator("#auction-empty")).toContainText("Not listed right now.");
+    await expect(page.locator("#auction-listed")).toBeHidden();
+  });
 });
 
 test.describe("quests", () => {
@@ -724,6 +781,26 @@ test.describe("recipe page", () => {
     await page.goto("/recipes/detail/?id=999999999");
     await expect(page.locator("#recipe-detail-status")).toContainText("no such recipe");
     await expect(page.locator("#recipe-detail-content")).toBeHidden();
+  });
+
+  test("shows crafting cost and a profit line when every reagent and the crafted item are priced", async ({
+    page,
+    site,
+  }) => {
+    site.signIn(null);
+    await page.goto(`/recipes/detail/?id=${RECIPES[0]!.recipe_id}`);
+    const body = page.locator("#crafting-cost-body");
+    await expect(body).toContainText("Reagent cost: 0g 9s");
+    await expect(body).toContainText("Crafted value (\u00d71): 0g 20s");
+    await expect(body).toContainText("Profit: 0g 11s");
+  });
+
+  test("says which reagents have no AH price instead of guessing a cost", async ({ page, site }) => {
+    site.signIn(null);
+    await page.goto(`/recipes/detail/?id=${RECIPES[1]!.recipe_id}`);
+    const body = page.locator("#crafting-cost-body");
+    await expect(body).toContainText("No AH price for: Heavy Stone");
+    await expect(body).not.toContainText("Profit");
   });
 });
 
@@ -910,6 +987,15 @@ test.describe("guild hall", () => {
       "href",
       `/recipes/detail/?id=${RECIPES[0]!.recipe_id}`,
     );
+  });
+
+  test("market rows show the auction house price next to the member's own price", async ({ page, site }) => {
+    site.signIn(MEMBER);
+    await page.goto("/guild/#market");
+    const sellRow = page.locator(".guild-market-row", { hasText: GUILD_MARKET.sell[0]!.item_name! });
+    await expect(sellRow.locator(".guild-market-ah")).toContainText("AH 5g");
+    const buyRow = page.locator(".guild-market-row", { hasText: GUILD_MARKET.buy[0]!.item_name! });
+    await expect(buyRow.locator(".guild-market-ah")).toContainText("AH 0g 20s");
   });
 });
 

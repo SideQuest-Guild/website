@@ -333,6 +333,20 @@ class GameImportEvent(BaseModel):
     signups: list[GameImportSignup]
 
 
+class GameImportPrice(BaseModel):
+    """One item's auction price in the game-import payload's ``prices`` section (SQI1, additive).
+
+    The lowest unit price across the guild's faction auction houses, for items the guild trades: directory
+    market sell/buy/request items, wishlist items, guild bank log items, and recipes' crafted items the site
+    already knows the item ID for.
+    """
+
+    item_id: int
+    unit_price: int
+    quantity: int
+    at: int = Field(description="When this price was synced, Unix seconds.")
+
+
 class GameImportStandingsRow(BaseModel):
     """One standings row in the game-import payload."""
 
@@ -369,6 +383,7 @@ class GameImportPayload(BaseModel):
     sheets: dict[str, GameImportSheet] = Field(default_factory=dict)
     crafters: list[GameImportCrafter] = Field(default_factory=list)
     recipe_names: dict[str, str] = Field(default_factory=dict)
+    prices: list[GameImportPrice] = Field(default_factory=list)
     officer: GameImportOfficerPart
 
 

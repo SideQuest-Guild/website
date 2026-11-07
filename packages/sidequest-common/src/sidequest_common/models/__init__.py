@@ -2,6 +2,13 @@
 
 from sidequest_common.models.activity import MemberActivityHour
 from sidequest_common.models.addons import Addon
+from sidequest_common.models.auctions import (
+    AuctionAlert,
+    AuctionDailyHistory,
+    AuctionHousePriceRow,
+    AuctionHouseState,
+    AuctionWatch,
+)
 from sidequest_common.models.audit import OfficerAudit
 from sidequest_common.models.away import MemberAwayRange
 from sidequest_common.models.badges import MemberBadge
@@ -63,6 +70,11 @@ from sidequest_common.models.talents import TalentBuild
 
 __all__ = (
     "Addon",
+    "AuctionAlert",
+    "AuctionDailyHistory",
+    "AuctionHousePriceRow",
+    "AuctionHouseState",
+    "AuctionWatch",
     "BattlegroundMatch",
     "BattlegroundScore",
     "BattlenetCharacter",

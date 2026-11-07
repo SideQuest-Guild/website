@@ -1388,6 +1388,98 @@ export type ItemWisher = {
   trial: boolean;
 };
 
+// ——— Auction house prices: GET /api/auctions/prices/{item_id}[?ids=] (public), GET/POST/DELETE
+// /api/me/auction-watches (member). Mirrors sidequest_common.schemas.auctions. Money is copper; format it with
+// copperToGold, parse user input with parseGoldInput.
+
+export const MAX_AUCTION_WATCHES = 25;
+export const MAX_PRICE_IDS = 200;
+export const AUCTION_TREND_DAYS = 14;
+
+/** One house's current price for an item, on `ItemAuctionPrice.houses`. */
+export type AuctionHousePrice = {
+  house_id: number;
+  house_name: string;
+  unit_price: number;
+  quantity: number;
+  listings: number;
+  updated_at: string;
+};
+
+/** One day's lowest price on `ItemAuctionPrice.trend`, oldest first, last `AUCTION_TREND_DAYS` days. */
+export type AuctionTrendPoint = { day: string; unit_price: number };
+
+/** `GET /api/auctions/prices/{item_id}` (public): the lowest price across the guild's faction houses, every
+ * house's own price, and the recent trend. `unit_price` is null when nobody lists it (still a 200). */
+export type ItemAuctionPrice = {
+  item_id: number;
+  unit_price: number | null;
+  quantity_total: number;
+  houses: AuctionHousePrice[];
+  trend: AuctionTrendPoint[];
+  updated_at: string | null;
+};
+
+/** One entry of `GET /api/auctions/prices?ids=`, in request order. */
+export type ItemPriceSummary = {
+  item_id: number;
+  unit_price: number | null;
+  quantity_total: number;
+  updated_at: string | null;
+};
+
+export type AuctionPriceMap = { prices: ItemPriceSummary[] };
+
+/** One row of `GET /api/me/auction-watches`: a "tell me when it drops below" alert on an item. */
+export type AuctionWatch = {
+  id: string;
+  item_id: number;
+  item_name: string | null;
+  icon_url: string | null;
+  max_unit_price: number;
+  current_unit_price: number | null;
+  created_at: string;
+  last_alerted_at: string | null;
+};
+
+/** `POST /api/me/auction-watches` body: upserts by `item_id`. */
+export type AuctionWatchCreate = { item_id: number; max_unit_price: number };
+
+/** `GET /api/auctions/prices?ids=1,2,3` for up to `MAX_PRICE_IDS` item ids at once, deduped; returns an empty map
+ * without a request for an empty list. Used by the wishlist, recipe crafting cost and guild market panels. */
+export async function fetchAuctionPrices(
+  itemIds: number[],
+  init?: RequestInit,
+): Promise<Map<number, ItemPriceSummary>> {
+  const ids = [...new Set(itemIds)].slice(0, MAX_PRICE_IDS);
+  if (ids.length === 0) {
+    return new Map();
+  }
+  const { prices } = await apiFetch<AuctionPriceMap>(`/api/auctions/prices?ids=${ids.join(",")}`, init);
+  return new Map(prices.map((price) => [price.item_id, price]));
+}
+
+/** Parses a "1g 20s 5c" style price (any subset, with or without spaces, e.g. "1g20s" or "500c") into copper, the
+ * reverse of `copperToGold`. Returns null for empty, malformed, zero or out-of-range (silver/bronze over 99) input. */
+export function parseGoldInput(input: string): number | null {
+  const trimmed = input.trim().toLowerCase();
+  if (!trimmed) {
+    return null;
+  }
+  const match = /^(?:(\d+)\s*g)?\s*(?:(\d+)\s*s)?\s*(?:(\d+)\s*c)?$/.exec(trimmed);
+  if (!match || (!match[1] && !match[2] && !match[3])) {
+    return null;
+  }
+  const gold = Number(match[1] ?? 0);
+  const silver = Number(match[2] ?? 0);
+  const bronze = Number(match[3] ?? 0);
+  if (silver > 99 || bronze > 99) {
+    return null;
+  }
+  const copper = gold * 10000 + silver * 100 + bronze;
+  return copper > 0 ? copper : null;
+}
+
 // ——— Talent calculator: GET /api/talents/{class}, GET/POST/DELETE /api/me/talent-builds[/{id}], GET
 // /api/talent-builds?class=, PUT /api/talent-builds/{id}/pin (officer). A build's `code` holds one digit per
 // talent node (its spent rank), node order sorted by (row, col) within each tree, the three trees joined by `-`.

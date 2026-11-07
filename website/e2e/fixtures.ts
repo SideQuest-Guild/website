@@ -7,6 +7,8 @@ import { test as base, expect, type Page, type Route } from "@playwright/test";
 import type {
   Addon,
   AttendanceMark,
+  AuctionWatch,
+  AuctionWatchCreate,
   AwayRange,
   EpgpAdjustmentCreate,
   EpgpCharacter,
@@ -32,6 +34,8 @@ import {
   ATTENDANCE_EVENTS,
   ATTENDANCE_REPORT,
   ATTENDANCE_TRENDS,
+  AUCTION_PRICES,
+  AUCTION_WATCHES,
   CHARACTER_MILESTONES,
   CHARACTER_PAGES,
   CHARACTERS,
@@ -80,6 +84,7 @@ import {
   TALENTS_DRUID,
   TALENT_BUILDS,
   attendanceDetail,
+  auctionPriceSummary,
   epgpImportResult,
   eventDetail,
   gmMemberDetail,
@@ -221,6 +226,7 @@ export const test = base.extend<{ site: Site }>({
     let guildAnnouncements = GUILD_ANNOUNCEMENTS.map((a) => Object.assign({}, a));
     let myCharacters: EpgpCharacter[] = [];
     let myWishlist: ItemWish[] = [];
+    let myAuctionWatches: AuctionWatch[] = AUCTION_WATCHES.map((w) => Object.assign({}, w));
     let nextCharacterId = 100;
     let talentBuilds: TalentBuild[] = TALENT_BUILDS.map((b) => Object.assign({}, b));
     let nextTalentBuildId = 100;
@@ -578,6 +584,31 @@ export const test = base.extend<{ site: Site }>({
       if (recipeMatch && method === "GET") {
         const recipe = RECIPES.find((r) => r.recipe_id === Number(recipeMatch[1]));
         return recipe ? json(route, recipe) : json(route, { detail: "No such recipe" }, 404);
+      }
+      if (path === "/api/auctions/prices" && method === "GET") {
+        const ids = (url.searchParams.get("ids") ?? "")
+          .split(",")
+          .map((raw) => Number(raw))
+          .filter((id) => Number.isInteger(id) && id > 0);
+        if (ids.length === 0 || ids.length > 200) {
+          return json(route, { detail: "ids must have 1-200 entries" }, 400);
+        }
+        return json(route, { prices: ids.map((id) => auctionPriceSummary(id)) });
+      }
+      const auctionPriceMatch = /^\/api\/auctions\/prices\/(\d+)$/.exec(path);
+      if (auctionPriceMatch && method === "GET") {
+        const itemId = Number(auctionPriceMatch[1]);
+        return json(
+          route,
+          AUCTION_PRICES[itemId] ?? {
+            item_id: itemId,
+            unit_price: null,
+            quantity_total: 0,
+            houses: [],
+            trend: [],
+            updated_at: null,
+          },
+        );
       }
       if (path === "/api/game/classes" && method === "GET") {
         return json(route, GAME_CLASSES);
@@ -993,6 +1024,57 @@ export const test = base.extend<{ site: Site }>({
           return json(route, { detail: "Not signed in" }, 401);
         }
         myWishlist = myWishlist.filter((wish) => wish.item_id !== Number(wishlistDeleteMatch[1]));
+        return route.fulfill({ status: 204 });
+      }
+      if (path === "/api/me/auction-watches" && method === "GET") {
+        if (!me) {
+          return json(route, { detail: "Not signed in" }, 401);
+        }
+        if (!me.is_guild_member) {
+          return json(route, { detail: "Not a guild member" }, 403);
+        }
+        return json(route, myAuctionWatches);
+      }
+      if (path === "/api/me/auction-watches" && method === "POST") {
+        if (!me) {
+          return json(route, { detail: "Not signed in" }, 401);
+        }
+        if (!me.is_guild_member) {
+          return json(route, { detail: "Not a guild member" }, 403);
+        }
+        const body = JSON.parse(request.postData() ?? "{}") as AuctionWatchCreate;
+        const item = ITEMS.find((candidate) => candidate.item_id === body.item_id);
+        const existing = myAuctionWatches.find((watch) => watch.item_id === body.item_id);
+        if (existing) {
+          existing.max_unit_price = body.max_unit_price;
+          return json(route, existing);
+        }
+        if (myAuctionWatches.length >= 25) {
+          return json(route, { detail: "You can only watch 25 items at once." }, 409);
+        }
+        const price = AUCTION_PRICES[body.item_id];
+        const created: AuctionWatch = {
+          id: `watch-${myAuctionWatches.length + 2}`,
+          item_id: body.item_id,
+          item_name: item?.name ?? null,
+          icon_url: item?.icon_url ?? null,
+          max_unit_price: body.max_unit_price,
+          current_unit_price: price?.unit_price ?? null,
+          created_at: new Date().toISOString(),
+          last_alerted_at: null,
+        };
+        myAuctionWatches = [created, ...myAuctionWatches];
+        return json(route, created, 201);
+      }
+      const auctionWatchDeleteMatch = /^\/api\/me\/auction-watches\/(\d+)$/.exec(path);
+      if (auctionWatchDeleteMatch && method === "DELETE") {
+        if (!me) {
+          return json(route, { detail: "Not signed in" }, 401);
+        }
+        if (!myAuctionWatches.some((watch) => watch.item_id === Number(auctionWatchDeleteMatch[1]))) {
+          return json(route, { detail: "No such watch" }, 404);
+        }
+        myAuctionWatches = myAuctionWatches.filter((watch) => watch.item_id !== Number(auctionWatchDeleteMatch[1]));
         return route.fulfill({ status: 204 });
       }
       if (path === "/api/pvp/matches" && method === "GET") {

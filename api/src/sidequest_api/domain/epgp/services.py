@@ -21,11 +21,12 @@ from typing import TYPE_CHECKING
 from litestar.exceptions import HTTPException, NotFoundException, PermissionDeniedException, ValidationException
 from litestar.status_codes import HTTP_409_CONFLICT, HTTP_429_TOO_MANY_REQUESTS
 from pydantic import ValidationError
-from sqlalchemy import delete, func, or_, select
+from sqlalchemy import delete, func, or_, select, union
 
 from sidequest_api.lib.discord import avatar_url
 from sidequest_api.lib.member_auth import is_officer
 from sidequest_common.models import (
+    AuctionHousePriceRow,
     BattlegroundMatch,
     BattlegroundScore,
     BattlenetCharacter,
@@ -49,6 +50,7 @@ from sidequest_common.models import (
     GuildRecruit,
     GuildRosterSnapshot,
     ItemName,
+    ItemWish,
     LootAward,
     Member,
     MemberBadge,
@@ -68,6 +70,7 @@ from sidequest_common.schemas import (
     EP_VALUES,
     EPGP_RULES,
     GP_BY_INVTYPE,
+    IMPORT_PRICES_LIMIT,
     INACTIVE_AFTER_DAYS,
     LEFT_GUILD_AFTER_DAYS,
     LEGENDARY_GP,
@@ -142,6 +145,7 @@ from sidequest_common.schemas import (
     GameImportOfficerPart,
     GameImportOfficerRecruit,
     GameImportPayload,
+    GameImportPrice,
     GameImportSheet,
     GameImportSignup,
     GameImportStandingsRow,
@@ -1719,6 +1723,7 @@ class EpgpService:
             reference, standings
         )
         officer = await self._build_officer_game_import(reference)
+        prices = await self._build_prices()
         payload = GameImportPayload(
             v=2,
             generated_at=int(reference.timestamp()),
@@ -1731,10 +1736,65 @@ class EpgpService:
             sheets=sheets,
             crafters=crafters,
             recipe_names=recipe_names,
+            prices=prices,
             officer=officer,
         )
         encoded = base64.b64encode(json.dumps(payload.model_dump(mode="json", by_alias=True)).encode()).decode()
         return EpgpGameImport(payload=f"{IMPORT_PREFIX}{encoded}", generated_at=reference)
+
+    async def _build_prices(self) -> list[GameImportPrice]:
+        """Lowest cross-house auction price and total quantity for every item the guild trades.
+
+        "Trades" = directory market sell/buy/request items, wishlist items, guild bank log items, and recipes'
+        crafted items the site already knows the item id for. No new Battle.net fetches: only items already
+        resolved from stored directory/recipe data. Only priced items are returned, capped at
+        ``IMPORT_PRICES_LIMIT``.
+        """
+        session = self._session
+        scalar_ids = (
+            (
+                await session.execute(
+                    union(
+                        select(ItemWish.item_id),
+                        select(GuildBankLogEntry.item_id).where(GuildBankLogEntry.item_id.is_not(None)),
+                        select(ProfessionRecipe.item_id).where(ProfessionRecipe.item_id.is_not(None)),
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+        item_ids: set[int] = set(scalar_ids)
+        market_rows = (
+            await session.execute(
+                select(CharacterDirectoryMarket.sell, CharacterDirectoryMarket.buy, CharacterDirectoryMarket.requests)
+            )
+        ).all()
+        for sell, buy, requests in market_rows:
+            item_ids.update(entry["item_id"] for entry in sell)
+            item_ids.update(entry["item_id"] for entry in buy)
+            item_ids.update(entry["item_id"] for entry in requests)
+        if not item_ids:
+            return []
+        price_rows = (
+            await session.execute(
+                select(
+                    AuctionHousePriceRow.item_id,
+                    func.min(AuctionHousePriceRow.unit_price),
+                    func.sum(AuctionHousePriceRow.quantity),
+                    func.max(AuctionHousePriceRow.updated_at),
+                )
+                .where(AuctionHousePriceRow.item_id.in_(item_ids))
+                .group_by(AuctionHousePriceRow.item_id)
+                .limit(IMPORT_PRICES_LIMIT)
+            )
+        ).all()
+        return [
+            GameImportPrice(
+                item_id=item_id, unit_price=unit_price, quantity=int(quantity), at=int(updated_at.timestamp())
+            )
+            for item_id, unit_price, quantity, updated_at in price_rows
+        ]
 
     async def _build_members_news_sheets_crafters(
         self, reference: datetime, standings: EpgpStandings

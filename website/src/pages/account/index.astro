@@ -82,6 +82,9 @@ import "../../styles/room-account.css";
       >
         Wishlist
       </button>
+      <button type="button" role="tab" id="tab-alerts" aria-controls="panel-alerts" aria-selected="false" tabindex="-1">
+        Price alerts
+      </button>
       <button
         type="button"
         role="tab"
@@ -248,6 +251,19 @@ import "../../styles/room-account.css";
       </div>
     </section>
 
+    <section id="panel-alerts" role="tabpanel" aria-labelledby="tab-alerts" tabindex="0" hidden>
+      <div class="chamber" aria-labelledby="alerts-title">
+        <h2 class="chamber-title" id="alerts-title">
+          Price alerts
+        </h2>
+        <p class="aside">
+          We'll DM you on Discord when an item's lowest auction house price drops to or below your target, once a day at
+          most per item. Set one from an item's own page.
+        </p>
+        <ul class="alert-list" id="alert-list" aria-label="Your price alerts"></ul>
+      </div>
+    </section>
+
     <section id="panel-companion" role="tabpanel" aria-labelledby="tab-companion" tabindex="0" hidden>
       <div class="chamber" aria-labelledby="companion-title">
         <h2 class="chamber-title" id="companion-title">
@@ -312,12 +328,16 @@ import "../../styles/room-account.css";
     apiFetch,
     classLabel,
     CLASSES,
+    copperToGold,
     escapeHtml,
+    fetchAuctionPrices,
     fetchMe,
     normalizeClass,
+    parseGoldInput,
     qualityClass,
     requireElement,
     statusMessage,
+    type AuctionWatch,
     type AwayRange,
     type CalendarLink,
     type EpgpCharacter,
@@ -363,6 +383,7 @@ import "../../styles/room-account.css";
         <span class="wish-main">
           ${link}
           <span class="item-meta">${escapeHtml(wish.inventory_type_name)}</span>
+          <span class="wish-ah" data-item-id="${wish.item_id}"></span>
         </span>
         ${wish.note ? `<span class="wish-note">${escapeHtml(wish.note)}</span>` : ""}
         <button
@@ -370,6 +391,38 @@ import "../../styles/room-account.css";
           class="btn-quiet wish-delete-btn"
           data-item-id="${wish.item_id}"
           aria-label="Remove from wishlist"
+        >
+          Remove
+        </button>
+      </li>`;
+  }
+
+  function alertRow(watch: AuctionWatch): string {
+    const link = itemLink(watch.item_id, watch.item_name ?? `Item ${watch.item_id}`);
+    const current = watch.current_unit_price !== null ? copperToGold(watch.current_unit_price) : "Not listed";
+    const lastAlerted = watch.last_alerted_at ? new Date(watch.last_alerted_at).toLocaleDateString() : "Never";
+    return `
+      <li class="alert-item" data-item-id="${watch.item_id}">
+        <span class="alert-main">
+          ${link}
+          <span class="item-meta">Current: ${current} \u00b7 Last alerted: ${lastAlerted}</span>
+        </span>
+        <form class="alert-edit-form" data-item-id="${watch.item_id}">
+          <input
+            type="text"
+            class="alert-price-input"
+            value="${copperToGold(watch.max_unit_price)}"
+            aria-label="Alert me below"
+          />
+          <button type="submit" class="btn-quiet btn-small">
+            Save
+          </button>
+        </form>
+        <button
+          type="button"
+          class="btn-quiet alert-delete-btn"
+          data-item-id="${watch.item_id}"
+          aria-label="Remove alert"
         >
           Remove
         </button>
@@ -450,6 +503,7 @@ import "../../styles/room-account.css";
     const charRealmInput = requireElement<HTMLInputElement>("char-realm");
     const charClassSelect = requireElement<HTMLSelectElement>("char-class");
     const wishList = requireElement("wish-list");
+    const alertList = requireElement("alert-list");
     const statsProfileLink = requireElement("stats-profile-link");
     const statsProfileLinkAnchor = requireElement<HTMLAnchorElement>("stats-profile-link-anchor");
     const logRoot = requireLogElement(document, "data-adventurers-log");
@@ -458,6 +512,7 @@ import "../../styles/room-account.css";
     let currentMe: Me | null = null;
     let statsLoaded = false;
     let wishlistLoaded = false;
+    let alertsLoaded = false;
 
     async function loadStats(): Promise<void> {
       if (!currentMe) {
@@ -485,7 +540,16 @@ import "../../styles/room-account.css";
     }
 
     // ——— Tabs ———
-    const VALID_TABS = new Set(["profile", "stats", "characters", "schedule", "wishlist", "companion", "danger"]);
+    const VALID_TABS = new Set([
+      "profile",
+      "stats",
+      "characters",
+      "schedule",
+      "wishlist",
+      "alerts",
+      "companion",
+      "danger",
+    ]);
 
     function showPanel(name: string): void {
       document.querySelectorAll<HTMLElement>('[role="tabpanel"]').forEach((panel) => {
@@ -502,6 +566,11 @@ import "../../styles/room-account.css";
         wishlistLoaded = true;
         void loadWowheadTooltips();
         void renderWishlist();
+      }
+      if (name === "alerts" && !alertsLoaded) {
+        alertsLoaded = true;
+        void loadWowheadTooltips();
+        void renderAlerts();
       }
     }
 
@@ -648,6 +717,23 @@ import "../../styles/room-account.css";
       }
     }
 
+    async function loadWishPrices(itemIds: number[]): Promise<void> {
+      if (itemIds.length === 0) {
+        return;
+      }
+      try {
+        const prices = await fetchAuctionPrices(itemIds);
+        for (const [itemId, price] of prices) {
+          const el = wishList.querySelector<HTMLElement>(`.wish-ah[data-item-id="${itemId}"]`);
+          if (el) {
+            el.textContent = price.unit_price !== null ? `AH ${copperToGold(price.unit_price)}` : "Not listed";
+          }
+        }
+      } catch {
+        // Wish rows already rendered without a price; leave the AH column blank.
+      }
+    }
+
     async function renderWishlist(): Promise<void> {
       try {
         const wishes = await apiFetch<ItemWish[]>("/api/me/wishlist");
@@ -656,8 +742,22 @@ import "../../styles/room-account.css";
             ? wishes.map(wishRow).join("")
             : '<li class="away-empty">No wishes yet. Find items on <a href="/items/">Items</a>.</li>';
         refreshWowheadLinks();
+        void loadWishPrices(wishes.map((wish) => wish.item_id));
       } catch {
         wishList.innerHTML = '<li class="away-empty">Couldn\u2019t load your wishlist.</li>';
+      }
+    }
+
+    async function renderAlerts(): Promise<void> {
+      try {
+        const watches = await apiFetch<AuctionWatch[]>("/api/me/auction-watches");
+        alertList.innerHTML =
+          watches.length > 0
+            ? watches.map(alertRow).join("")
+            : '<li class="away-empty">No price alerts yet. Set one from an item\u2019s page.</li>';
+        refreshWowheadLinks();
+      } catch {
+        alertList.innerHTML = '<li class="away-empty">Couldn\u2019t load your price alerts.</li>';
       }
     }
 
@@ -896,6 +996,57 @@ import "../../styles/room-account.css";
       try {
         await apiFetch(`/api/me/wishlist/${button.dataset.itemId}`, { method: "DELETE" });
         await renderWishlist();
+      } catch (err) {
+        statusEl.dataset.tone = "error";
+        statusEl.textContent = statusMessage(err);
+        button.disabled = false;
+      }
+    });
+
+    alertList.addEventListener("submit", async (event) => {
+      const form = (event.target as HTMLElement).closest<HTMLFormElement>(".alert-edit-form");
+      if (!form?.dataset.itemId) {
+        return;
+      }
+      event.preventDefault();
+      const input = form.querySelector<HTMLInputElement>(".alert-price-input");
+      const maxUnitPrice = input ? parseGoldInput(input.value) : null;
+      if (maxUnitPrice === null) {
+        statusEl.dataset.tone = "error";
+        statusEl.textContent = "Enter a price like 1g 20s.";
+        return;
+      }
+      const submitBtn = form.querySelector<HTMLButtonElement>('button[type="submit"]');
+      if (submitBtn) {
+        submitBtn.disabled = true;
+      }
+      try {
+        await apiFetch("/api/me/auction-watches", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ item_id: Number(form.dataset.itemId), max_unit_price: maxUnitPrice }),
+        });
+        statusEl.dataset.tone = "";
+        statusEl.textContent = "Alert updated.";
+        await renderAlerts();
+      } catch (err) {
+        statusEl.dataset.tone = "error";
+        statusEl.textContent = statusMessage(err);
+        if (submitBtn) {
+          submitBtn.disabled = false;
+        }
+      }
+    });
+
+    alertList.addEventListener("click", async (event) => {
+      const button = (event.target as HTMLElement).closest<HTMLButtonElement>(".alert-delete-btn");
+      if (!button?.dataset.itemId) {
+        return;
+      }
+      button.disabled = true;
+      try {
+        await apiFetch(`/api/me/auction-watches/${button.dataset.itemId}`, { method: "DELETE" });
+        await renderAlerts();
       } catch (err) {
         statusEl.dataset.tone = "error";
         statusEl.textContent = statusMessage(err);

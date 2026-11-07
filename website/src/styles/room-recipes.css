@@ -108,6 +108,25 @@
   color: var(--mist-2);
 }
 
+/* ——— Crafting cost: reagent cost vs crafted value, from the auction house panel ——— */
+.recipe-cost-line {
+  margin: 10px 0 0;
+}
+.recipe-cost-line:first-child {
+  margin-top: 0;
+}
+.recipe-cost-missing {
+  margin: 6px 0 0;
+  color: var(--mist-2);
+  font-size: 13px;
+}
+.recipe-cost-profit {
+  color: var(--gold);
+}
+.recipe-cost-loss {
+  color: var(--error);
+}
+
 /* ——— Small decorative class/spec icons (src/scripts/art.ts), drawn next to names ——— */
 .class-icon,
 .spec-icon {

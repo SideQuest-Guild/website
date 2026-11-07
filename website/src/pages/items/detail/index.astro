@@ -18,7 +18,11 @@ import "../../../styles/room-items.css";
   <script is:inline slot="head">
     const itemId = new URLSearchParams(location.search).get("id");
     if (itemId) {
-      for (const href of [`/api/items/${itemId}`, `/api/epgp/loot?item_id=${itemId}&limit=50`]) {
+      for (const href of [
+        `/api/items/${itemId}`,
+        `/api/epgp/loot?item_id=${itemId}&limit=50`,
+        `/api/auctions/prices/${itemId}`,
+      ]) {
         const link = document.createElement("link");
         Object.assign(link, { rel: "preload", as: "fetch", href, crossOrigin: "anonymous" });
         document.head.append(link);
@@ -40,6 +44,51 @@ import "../../../styles/room-items.css";
           View on Wowhead
         </a>
       </p>
+    </section>
+
+    <section class="chamber" aria-labelledby="h-auctions">
+      <h2 class="chamber-title" id="h-auctions">
+        Auction house
+      </h2>
+      <p class="status" id="auction-status" role="status" aria-live="polite"></p>
+      <div id="auction-content" hidden>
+        <p class="aside" id="auction-empty" hidden>
+          Not listed right now.
+        </p>
+        <div id="auction-listed" hidden>
+          <p class="auction-summary" id="auction-summary"></p>
+          <div class="auction-trend" id="auction-trend"></div>
+          <div class="auction-table-wrap">
+            <table class="auction-table" id="auction-house-table" aria-label="Prices by house">
+              <thead>
+                <tr>
+                  <th scope="col">House</th>
+                  <th scope="col">Price</th>
+                  <th scope="col">Qty</th>
+                  <th scope="col">Updated</th>
+                </tr>
+              </thead>
+              <tbody id="auction-house-rows"></tbody>
+            </table>
+          </div>
+        </div>
+        <p class="aside" id="auction-watch-signed-out" hidden></p>
+        <div id="auction-watch-member" hidden>
+          <p class="status" id="auction-watch-status" role="status" aria-live="polite"></p>
+          <form id="auction-watch-form" class="wishlist-form">
+            <label>
+              Tell me when it drops below
+              <input type="text" id="auction-watch-price" placeholder="e.g. 1g 20s" required />
+            </label>
+            <button type="submit" class="btn-quiet" id="auction-watch-save-btn">
+              Set alert
+            </button>
+            <button type="button" class="btn-quiet btn-danger" id="auction-watch-remove-btn" hidden>
+              Remove alert
+            </button>
+          </form>
+        </div>
+      </div>
     </section>
 
     <section class="chamber" aria-labelledby="h-wishlist">
@@ -95,17 +144,21 @@ import "../../../styles/room-items.css";
     copperToGold,
     escapeHtml,
     fetchMe,
+    MAX_AUCTION_WATCHES,
+    parseGoldInput,
     qualityClass,
     requireElement,
     statusMessage,
+    type AuctionWatch,
     type EpgpLootItem,
     type EpgpLootPage,
     type Item,
+    type ItemAuctionPrice,
     type ItemWish,
     type ItemWisher,
     type Me,
   } from "../../../scripts/api";
-  import { loadWowheadTooltips, refreshWowheadLinks } from "../../../scripts/items";
+  import { loadWowheadTooltips, priceTrendSvg, refreshWowheadLinks } from "../../../scripts/items";
   import { onPage } from "../../../scripts/page";
 
   const RESPONSE_LABELS: Record<string, string> = {
@@ -192,6 +245,33 @@ import "../../../styles/room-items.css";
         : `<li class="ledger-empty">Nobody has wished for this yet.</li>`;
   }
 
+  function auctionHouseRow(house: ItemAuctionPrice["houses"][number]): string {
+    return `
+      <tr>
+        <td>${escapeHtml(house.house_name)}</td>
+        <td>${copperToGold(house.unit_price)}</td>
+        <td>${house.quantity}</td>
+        <td>${new Date(house.updated_at).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</td>
+      </tr>`;
+  }
+
+  function renderAuctions(data: ItemAuctionPrice): void {
+    const emptyEl = requireElement("auction-empty");
+    const listedEl = requireElement("auction-listed");
+    if (data.unit_price === null) {
+      emptyEl.hidden = false;
+      listedEl.hidden = true;
+      return;
+    }
+    emptyEl.hidden = true;
+    listedEl.hidden = false;
+    const lowestHouse = data.houses.find((house) => house.unit_price === data.unit_price);
+    requireElement("auction-summary").innerHTML =
+      `Lowest ${copperToGold(data.unit_price)}${lowestHouse ? ` at ${escapeHtml(lowestHouse.house_name)}` : ""} \u00b7 ${data.quantity_total} listed`;
+    requireElement("auction-trend").innerHTML = priceTrendSvg(data.trend);
+    requireElement("auction-house-rows").innerHTML = data.houses.map(auctionHouseRow).join("");
+  }
+
   onPage("#item-detail-status", (signal) => {
     const statusEl = requireElement("item-detail-status");
     const contentEl = requireElement("item-detail-content");
@@ -203,8 +283,90 @@ import "../../../styles/room-items.css";
     const wishlistSaveBtn = requireElement<HTMLButtonElement>("wishlist-save-btn");
     const wishlistRemoveBtn = requireElement<HTMLButtonElement>("wishlist-remove-btn");
     const wishersSection = requireElement("wishers-section");
+    const auctionStatusEl = requireElement("auction-status");
+    const auctionContentEl = requireElement("auction-content");
+    const watchSignedOut = requireElement("auction-watch-signed-out");
+    const watchMember = requireElement("auction-watch-member");
+    const watchStatusEl = requireElement("auction-watch-status");
+    const watchForm = requireElement<HTMLFormElement>("auction-watch-form");
+    const watchPriceInput = requireElement<HTMLInputElement>("auction-watch-price");
+    const watchSaveBtn = requireElement<HTMLButtonElement>("auction-watch-save-btn");
+    const watchRemoveBtn = requireElement<HTMLButtonElement>("auction-watch-remove-btn");
     let itemId = "";
     let onList = false;
+    let onWatch = false;
+
+    function applyWatch(watch: AuctionWatch | null): void {
+      onWatch = watch !== null;
+      watchPriceInput.value = watch ? copperToGold(watch.max_unit_price) : "";
+      watchSaveBtn.textContent = onWatch ? "Update alert" : "Set alert";
+      watchRemoveBtn.hidden = !onWatch;
+    }
+
+    async function initAuctionWatch(me: Me | null): Promise<void> {
+      if (!me || !me.is_guild_member) {
+        watchMember.hidden = true;
+        const next = encodeURIComponent(location.pathname + location.search);
+        watchSignedOut.innerHTML = `<a href="/auth/discord/login?next=${next}">Sign in with Discord</a> to get a price alert.`;
+        watchSignedOut.hidden = false;
+        return;
+      }
+      watchSignedOut.hidden = true;
+      watchMember.hidden = false;
+      try {
+        const watches = await apiFetch<AuctionWatch[]>("/api/me/auction-watches", { signal });
+        applyWatch(watches.find((watch) => watch.item_id === Number(itemId)) ?? null);
+      } catch (err) {
+        watchStatusEl.dataset.tone = "error";
+        watchStatusEl.textContent = statusMessage(err);
+      }
+    }
+
+    watchForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const maxUnitPrice = parseGoldInput(watchPriceInput.value);
+      if (maxUnitPrice === null) {
+        watchStatusEl.dataset.tone = "error";
+        watchStatusEl.textContent = "Enter a price like 1g 20s.";
+        return;
+      }
+      watchSaveBtn.disabled = true;
+      try {
+        const watch = await apiFetch<AuctionWatch>("/api/me/auction-watches", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ item_id: Number(itemId), max_unit_price: maxUnitPrice }),
+          signal,
+        });
+        applyWatch(watch);
+        watchStatusEl.dataset.tone = "";
+        watchStatusEl.textContent = "We\u2019ll tell you when it drops below that.";
+      } catch (err) {
+        watchStatusEl.dataset.tone = "error";
+        if (err instanceof ApiError && err.status === 409) {
+          watchStatusEl.textContent = `You can only watch ${MAX_AUCTION_WATCHES} items at once. Remove one first.`;
+        } else {
+          watchStatusEl.textContent = statusMessage(err);
+        }
+      } finally {
+        watchSaveBtn.disabled = false;
+      }
+    });
+
+    watchRemoveBtn.addEventListener("click", async () => {
+      watchRemoveBtn.disabled = true;
+      try {
+        await apiFetch(`/api/me/auction-watches/${itemId}`, { method: "DELETE", signal });
+        applyWatch(null);
+        watchStatusEl.dataset.tone = "";
+        watchStatusEl.textContent = "Alert removed.";
+      } catch (err) {
+        watchStatusEl.dataset.tone = "error";
+        watchStatusEl.textContent = statusMessage(err);
+      } finally {
+        watchRemoveBtn.disabled = false;
+      }
+    });
 
     function applyWish(wish: ItemWish | null): void {
       onList = wish !== null;
@@ -318,9 +480,18 @@ import "../../../styles/room-items.css";
       } catch (err) {
         requireElement("item-loot-list").innerHTML = `<li class="ledger-empty">${escapeHtml(statusMessage(err))}</li>`;
       }
+      try {
+        const auctions = await apiFetch<ItemAuctionPrice>(`/api/auctions/prices/${id}`, { signal });
+        renderAuctions(auctions);
+      } catch (err) {
+        auctionStatusEl.textContent = statusMessage(err);
+      } finally {
+        auctionContentEl.hidden = false;
+      }
       const me = await fetchMe().catch(() => null);
       await initWishlist(me);
       await initWishers(me);
+      await initAuctionWatch(me);
     }
 
     void init();

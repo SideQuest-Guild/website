@@ -123,6 +123,11 @@ TAG_GROUPS: dict[str, dict[str, str]] = {
         "Game data": (
             "Class and specialization art from Battle.net, for the site's small class/spec icons. Anyone may read it."
         ),
+        "Auctions": (
+            "Auction house prices from Battle.net, synced from the guild's faction houses: one item's price "
+            "and trend, a batch price lookup, a signed-in member's own price watches, and the bot's sync and "
+            "alert feed. Price reads are public; watches need a member session; sync and alerts need the bot's key."
+        ),
     },
     "Members": {
         "My account": "The signed-in member's own profile. A member must be signed in.",
