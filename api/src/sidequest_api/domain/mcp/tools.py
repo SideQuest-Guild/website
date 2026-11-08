@@ -326,7 +326,7 @@ async def list_roles() -> list[dict[str, Any]]:
     ctx = get_context()
     token = require_bot_token(ctx)
     roles = await discord_lib.bot_list_guild_roles(ctx.discord_client, token, ctx.guild_id)
-    bot_member = await discord_lib.bot_get_guild_member(ctx.discord_client, token, ctx.guild_id, "@me")
+    bot_member = await discord_lib.bot_get_own_guild_member(ctx.discord_client, token, ctx.guild_id)
     top_position = bot_top_role_position(roles, bot_member.get("roles", []))
     return [
         {
@@ -524,7 +524,7 @@ async def _change_member_role(member_discord_id: str, role_id: str, *, grant: bo
     if role is None:
         msg = f"No role {role_id} on this server"
         raise ToolError(msg)
-    bot_member = await discord_lib.bot_get_guild_member(ctx.discord_client, token, ctx.guild_id, "@me")
+    bot_member = await discord_lib.bot_get_own_guild_member(ctx.discord_client, token, ctx.guild_id)
     top_position = bot_top_role_position(roles, bot_member.get("roles", []))
     block_reason = grant_block_reason(role, guild_id=str(ctx.guild_id), bot_top_position=top_position)
     if block_reason is not None:

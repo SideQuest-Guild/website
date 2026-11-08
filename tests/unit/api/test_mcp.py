@@ -55,7 +55,12 @@ def _bot_discord_transport() -> httpx.MockTransport:
                     {"id": "999", "name": "Bot", "position": 3, "managed": True, "permissions": "0"},
                 ],
             )
+        if path.endswith("/users/@me"):
+            return httpx.Response(200, json={"id": "4242", "username": "SideQuest", "bot": True})
         if path.endswith("/members/@me"):
+            # What Discord answers a bot token: ``@me`` only works for user tokens on this route.
+            return httpx.Response(400, json={"message": "Invalid Form Body", "code": 50035})
+        if path.endswith("/members/4242"):
             return httpx.Response(200, json={"roles": ["999"]})
         if path.endswith("/channels"):
             return httpx.Response(200, json=[{"id": "777", "name": "general", "type": 0, "parent_id": None}])
