@@ -79,7 +79,8 @@ GP_BY_INVTYPE: dict[str, int] = {
 }
 """GP by ``INVTYPE_*`` at main-spec cost. A 1H "main caster weapon" uses the 2H cost (200) by officer toggle; tier
 tokens use the cost of the slot the officer picks; chase items are ``slot cost * CHASE_MULTIPLIER``; legendary
-pieces are flat ``LEGENDARY_GP``. None of those three cases key off ``inv_type`` alone, so they aren't in this map.
+pieces and other special or rare items are flat ``LEGENDARY_GP``. None of those three cases key off ``inv_type``
+alone, so they aren't in this map.
 """
 
 CHASE_MULTIPLIER = 1.5
@@ -117,6 +118,8 @@ EPGP_RULES: dict[str, object] = {
     "min_gp": MIN_GP,
     "decay_percent": DECAY_PERCENT,
     "trial_days": TRIAL_DAYS,
+    "weekly_reset_weekday": WEEKLY_RESET_WEEKDAY,
+    "weekly_reset_hour_utc": WEEKLY_RESET_HOUR_UTC,
 }
 """Exact shape of the ``rules`` object in the ``SQI1:`` import string."""
 
@@ -168,6 +171,8 @@ class CharacterSource(StrEnum):
     OFFICER = "officer"
     SIGNUP = "signup"
     IMPORT = "import"
+    BATTLENET = "battlenet"
+    """Auto-linked because the site proved the member's linked Battle.net account owns this character."""
 
 
 class RaidStatus(StrEnum):
@@ -175,6 +180,21 @@ class RaidStatus(StrEnum):
 
     TRIAL = "trial"
     RAIDER = "raider"
+
+
+class CouncilKind(StrEnum):
+    """Why a council-awarded item qualified: chase (one per boss), legendary/special/rare, or crafted tier."""
+
+    CHASE = "chase"
+    LEGENDARY = "legendary"
+    TIER = "tier"
+
+
+class CouncilLogKind(StrEnum):
+    """Whether a ``#loot-log`` entry is the council decision itself, or a later void of an already-posted one."""
+
+    DECISION = "decision"
+    VOID = "void"
 
 
 # --- Addon export (``SQX1:`` + base64 JSON): the inbound payload the import service validates ---------------------
@@ -252,6 +272,8 @@ class ExportLoot(BaseModel):
     at: int
     officer: str = Field(max_length=MAX_NAME_LENGTH)
     voided: bool = False
+    council_reason: str | None = Field(default=None, max_length=MAX_NOTE_LENGTH)
+    council_kind: CouncilKind | None = None
 
 
 class ExportAward(BaseModel):
@@ -460,6 +482,8 @@ class EpgpRules(BaseModel):
     min_gp: int
     decay_percent: int
     trial_days: int
+    weekly_reset_weekday: int = Field(description="`datetime.weekday()` value the weekly reset lands on (1 = Tuesday).")
+    weekly_reset_hour_utc: int = Field(description="UTC hour the weekly reset lands on.")
 
 
 class EpgpStandingsRow(BaseModel):
@@ -470,6 +494,7 @@ class EpgpStandingsRow(BaseModel):
     member_id: int | None
     name: str
     main: str | None
+    main_name: str | None = Field(default=None, description="The main character's name as the game shows it.")
     wow_class: WowClass | None = Field(alias="class")
     characters: list[str]
     ep: float = Field(description="Effort points (EP, shown as Renown on the site).")
@@ -501,6 +526,7 @@ class EpgpLedgerRow(BaseModel):
     member_name: str | None
     officer: str
     item_name: str | None
+    response: LootResponse | None = Field(description="How the linked loot award was rolled, for a GP charge.")
     voided: bool
 
 
@@ -526,6 +552,8 @@ class EpgpLootRow(BaseModel):
     instance_name: str | None
     encounter_name: str | None
     voided: bool
+    council_reason: str | None = None
+    council_kind: CouncilKind | None = None
 
 
 class EpgpLootPage(BaseModel):
@@ -761,3 +789,37 @@ class EpgpSyncTokenMe(BaseModel):
     is_guild_member: bool
     calendar_url: str | None
     token_name: str
+
+
+class CouncilLogEntry(BaseModel):
+    """One row of ``GET /api/guilds/{guild_id}/loot/council/pending`` (bot, bot-key only).
+
+    ``kind`` is ``"decision"`` for a council row not yet posted, or ``"void"`` for one voided after its decision
+    already posted. ``at`` is the decision time for a decision, or the void time for a void.
+    """
+
+    loot_id: UUID
+    kind: CouncilLogKind
+    item_id: int
+    item_name: str
+    quality: int
+    character: str
+    member_name: str | None
+    gp: int = Field(description="Gear points (GP) this item cost.")
+    council_kind: CouncilKind | None
+    council_reason: str | None
+    instance_name: str | None
+    encounter_name: str | None
+    at: datetime
+
+
+class CouncilLogPage(BaseModel):
+    """Response for ``GET /api/guilds/{guild_id}/loot/council/pending`` (bot), oldest first, capped at 25."""
+
+    items: list[CouncilLogEntry]
+
+
+class CouncilPostedBody(BaseModel):
+    """Body for ``POST /api/guilds/{guild_id}/loot/council/{loot_id}/posted`` (bot). Idempotent."""
+
+    kind: CouncilLogKind

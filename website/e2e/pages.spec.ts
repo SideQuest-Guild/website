@@ -565,7 +565,7 @@ test.describe("ledger", () => {
   test("signed out, standings, rules, loot and progression all show", async ({ page, site }) => {
     site.signIn(null);
     await page.goto("/ledger/");
-    await expect(page.locator("#standings-rows tr")).toHaveCount(4);
+    await expect(page.locator("#standings-rows tr:not(.detail-row)")).toHaveCount(5);
     await expect(page.locator("#rules-body")).toContainText("Boss kill");
     await expect(page.locator("#loot-list")).toContainText("Glory of the Defender");
     await expect(page.locator("#progression-body")).toContainText("Hyjal Summit");
@@ -576,6 +576,57 @@ test.describe("ledger", () => {
     site.signIn(MEMBER);
     await page.goto("/ledger/");
     await expect(page.locator(".ledger-table tr.is-you")).toContainText("Wanderer");
+  });
+
+  test("a rostered member with no raids yet still shows, at 0 EP and the GP floor", async ({ page, site }) => {
+    site.signIn(null);
+    await page.goto("/ledger/");
+    const row = page.locator("#standings-rows tr", { hasText: "Rookie Brightwater" });
+    await expect(row.locator("td").nth(2)).toHaveText("0.0");
+    await expect(row.locator("td").nth(3)).toHaveText("100.0");
+  });
+
+  test("clicking a name's Breakdown opens their EP/GP history", async ({ page, site }) => {
+    site.signIn(null);
+    await page.goto("/ledger/");
+    const row = page.locator("#standings-rows tr", { hasText: "Guideline Brightwater" });
+    await row.getByRole("button", { name: "Breakdown" }).click();
+    const detail = page.locator("#detail-0");
+    await expect(detail).toBeVisible();
+    await expect(detail).toContainText("Current: 185.2 EP");
+    await expect(detail).toContainText("Glory of the Defender");
+    await expect(detail).toContainText("Main spec");
+  });
+
+  test("the calculator projects a next raid's EP/GP/PR and rank", async ({ page, site }) => {
+    site.signIn(null);
+    await page.goto("/ledger/");
+    await page.locator("#calc-a-who").selectOption({ label: "Guideline Brightwater" });
+    await page.locator("#calc-on-time").check();
+    await page.locator("#calc-full-night").check();
+    const result = page.locator("#calc-result");
+    await expect(result).toContainText("167.4");
+    await expect(result).toContainText("287.4");
+    await expect(result).toContainText("0.582");
+    await expect(result).toContainText("#2 of 5");
+  });
+
+  test("the calculator's compare mode picks a winner for a contested drop", async ({ page, site }) => {
+    site.signIn(null);
+    await page.goto("/ledger/");
+    await page.locator("#calc-a-who").selectOption({ label: "Guideline Brightwater" });
+    await page.getByRole("button", { name: "Compare with someone else" }).click();
+    await page.locator("#calc-b-who").selectOption({ label: "Wanderer Brightwater" });
+    await expect(page.locator("#calc-result")).toContainText("Wanderer Brightwater wins a contested main-spec drop");
+  });
+
+  test("the calculator accepts custom EP and GP", async ({ page, site }) => {
+    site.signIn(null);
+    await page.goto("/ledger/");
+    await page.locator("#calc-a-who").selectOption("custom");
+    await page.locator("#calc-a-ep").fill("200");
+    await page.locator("#calc-a-gp").fill("100");
+    await expect(page.locator("#calc-result")).toContainText("170.0"); // 200 * 0.85, no raid ticked
   });
 });
 
@@ -1005,6 +1056,71 @@ test.describe("guild hall", () => {
     await expect(row.getByRole("link", { name: "Recipe" })).toHaveAttribute(
       "href",
       `/recipes/detail/?id=${RECIPES[0]!.recipe_id}`,
+    );
+  });
+
+  test("professions are grouped into one board per profession, ranked by skill", async ({ page, site }) => {
+    site.signIn(MEMBER);
+    await page.goto("/guild/#professions");
+    await expect(page.locator("#tab-professions")).toHaveAttribute("aria-selected", "true");
+    await expect(page.locator("#professions-count")).toContainText("11 professions");
+    await expect(page.locator("#professions-count")).toContainText("9 characters");
+    await expect(page.getByRole("heading", { level: 3, name: "Primary professions" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 3, name: "Secondary professions" })).toBeVisible();
+
+    const mining = page.locator(".guild-profession-board", { has: page.getByRole("heading", { name: "Mining" }) });
+    await expect(mining.locator(".guild-profession-meta")).toContainText("7 guildmates");
+    await expect(mining.locator(".guild-profession-meta")).toContainText("highest 300/300");
+    await expect(mining.locator(".guild-profession-more summary")).toHaveText("Show all 7");
+    // Collapsed by default: only the first 6 (of 7) Mining rows render outside the <details>.
+    await expect(mining.locator("> .guild-profession-members > li")).toHaveCount(6);
+  });
+
+  test("picking a profession from the filter shows only that board, fully expanded", async ({ page, site }) => {
+    site.signIn(MEMBER);
+    await page.goto("/guild/#professions");
+    await page.locator("#professions-filter").selectOption("Mining");
+    await expect(page.locator(".guild-profession-board")).toHaveCount(1);
+    const mining = page.locator(".guild-profession-board");
+    await expect(mining.getByRole("heading", { name: "Mining" })).toBeVisible();
+    await expect(mining.locator(".guild-profession-more")).toHaveCount(0);
+    await expect(mining.locator(".guild-profession-members > li")).toHaveCount(7);
+    await expect(page.locator(".guild-profession-board", { hasText: "Blacksmithing" })).toHaveCount(0);
+  });
+
+  test("the name filter narrows boards to a character's own professions", async ({ page, site }) => {
+    site.signIn(MEMBER);
+    await page.goto("/guild/#professions");
+    await page.locator("#professions-name-filter").fill("Rootmaster");
+    await expect(page.locator(".guild-profession-board", { hasText: "Mining" })).toBeVisible();
+    await expect(page.locator(".guild-profession-board", { hasText: "Herbalism" })).toBeVisible();
+    await expect(page.locator(".guild-profession-board", { hasText: "Fishing" })).toBeVisible();
+    await expect(page.locator(".guild-profession-board", { hasText: "Blacksmithing" })).toHaveCount(0);
+    await expect(page.locator(".guild-profession-board", { hasText: "Tailoring" })).toHaveCount(0);
+
+    await page.locator("#professions-name-filter").fill("Zzzznomatch");
+    await expect(page.locator("#professions-list")).toContainText("No one matches that filter.");
+  });
+
+  test("a character row with a linked member links to their Hall of Heroes profile", async ({ page, site }) => {
+    site.signIn(MEMBER);
+    await page.goto("/guild/#professions");
+    await page.locator("#professions-filter").selectOption("Alchemy");
+    await expect(page.getByRole("link", { name: /Wanderer/ }).first()).toHaveAttribute("href", "/heroes/member/?id=7");
+    // Strayalt-Whitemane has no member_id in the fixture: plain text, no link.
+    await page.locator("#professions-filter").selectOption("Tailoring");
+    await expect(page.locator(".guild-profession-member-name")).toHaveText(/Strayalt-Whitemane/);
+    await expect(page.locator(".guild-profession-member-link")).toHaveCount(0);
+  });
+
+  test("an empty directory explains how the addon shares professions", async ({ page, site }) => {
+    site.signIn(MEMBER);
+    await page.route("**/api/guild/directory", (route) => route.fulfill({ json: { characters: [] } }));
+    await page.goto("/guild/#professions");
+    await expect(page.locator("#professions-list")).toContainText("No one has shared professions yet.");
+    await expect(page.locator("#professions-list a", { hasText: "SideQuest addon" })).toHaveAttribute(
+      "href",
+      "https://docs.sidequest-guild.com/members/addon.html",
     );
   });
 

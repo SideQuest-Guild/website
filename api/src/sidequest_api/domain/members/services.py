@@ -8,6 +8,7 @@ from advanced_alchemy.service import SQLAlchemyAsyncRepositoryService
 from litestar.exceptions import NotFoundException
 from sqlalchemy import delete, or_, select, update
 
+from sidequest_api.domain.characters.services import link_battlenet_characters
 from sidequest_api.lib.battlenet import BattleNetOAuthError
 from sidequest_common.models import (
     AuctionAlert,
@@ -73,10 +74,15 @@ class MembersService(SQLAlchemyAsyncRepositoryService[Member]):
             setattr(member, field, value)
         return await self.update(member, auto_commit=True)
 
-    async def link_battlenet(self, member: Member, *, account_id: int, battletag: str) -> Member:
+    async def link_battlenet(
+        self, member: Member, *, account_id: int, battletag: str, character_ids: list[int] | None = None
+    ) -> Member:
         """Attach a Battle.net account to ``member``; relinking the same account refreshes the BattleTag.
 
-        Raises ``BattleNetOAuthError("battlenet_taken")`` if another member already linked that account.
+        ``character_ids`` (the account's WoW character ids, from the ``wow.profile`` profile fetch) replace any
+        previously stored ids and are matched against roster characters right away; a relink picks up new
+        characters the account has gained since the last link. Raises ``BattleNetOAuthError("battlenet_taken")``
+        if another member already linked that account.
         """
         holder = await self.get_one_or_none(battlenet_id=account_id)
         if holder is not None and holder.id != member.id:
@@ -85,13 +91,23 @@ class MembersService(SQLAlchemyAsyncRepositoryService[Member]):
             raise BattleNetOAuthError(taken, msg)
         member.battlenet_id = account_id
         member.battletag = battletag
+        member.battlenet_character_ids = character_ids or None
         member.battlenet_linked_at = datetime.now(UTC)
-        return await self.update(member, auto_commit=True)
+        updated = await self.update(member, auto_commit=False)
+        if character_ids:
+            await link_battlenet_characters(self.repository.session, member.id, character_ids)
+        await self.repository.session.commit()
+        return updated
 
     async def unlink_battlenet(self, member: Member) -> Member:
-        """Remove the member's Battle.net link."""
+        """Remove the member's Battle.net link.
+
+        Characters already auto-linked by it (``source="battlenet"``) stay linked, same as a claim surviving an
+        unlink; only the ownership proof itself is forgotten.
+        """
         member.battlenet_id = None
         member.battletag = None
+        member.battlenet_character_ids = None
         member.battlenet_linked_at = None
         return await self.update(member, auto_commit=True)
 

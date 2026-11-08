@@ -23,7 +23,7 @@ flowchart LR
 
 | Page | Who sees it | What it's for |
 |---|---|---|
-| `/` | everyone | The next raid, who is in Discord right now, and what the guild is recruiting. |
+| `/` | everyone | The next raid, who is in Discord right now, what the guild is recruiting, and the current officers' character names and ranks, for anyone who wants an in-game invite. |
 | `/events/` | everyone | Upcoming and past events. Members also see who signed up, and can sign up themselves. |
 | `/raids/` | everyone | How raid nights, SQL loot and attendance work. |
 | `/ledger/` | everyone | Loot points for every raider, the loot rules, recent loot and boss kills. |
@@ -31,11 +31,11 @@ flowchart LR
 | `/guild/` | members | The in-game roster, who can craft what, the guild bank log and guild news. |
 | `/pvp/` | members | Battleground match history and PvP boards, recorded by members' addons. |
 | `/addons/` | everyone | The addons the guild uses, with download links. |
-| `/items/` | everyone | Find an item, see its tooltip, and who in the guild has already looted it. Members can keep a wishlist with a note; officers see who wants it next to their loot points. |
+| `/items/` | everyone | Find an item, see its tooltip, its auction house prices across every Alliance house, and who in the guild has already looted it. Members can keep a wishlist with a note and watch an item's price, with a DM alert when it drops to their target; officers see who wants it next to their loot points. |
 | `/characters/` | everyone | The SideQuest roster's gear, item level, spec and last login, straight from Battle.net, each row marked with a small class icon. Search finds any stored character; an exact name and surname looks anyone else up directly, since Battle.net has no name search. A Milestones row shows the latest characters to reach level 40 or 60. |
 | `/talents/` | everyone | A classic talent calculator: pick a class, spend points across its three trees, and copy a share link. Members can save builds with a note; officers can pin a build as a raid recommendation. |
-| `/recipes/` | everyone | Browse every profession and its recipes, straight from Battle.net: what each one makes and the reagents it needs. A recipe's page also lists the guild characters who know it, linked from the Guild Hall's crafter search. |
-| `/account/` | anyone signed in | Link Battle.net, get a calendar link, mark away dates, or delete your account. |
+| `/recipes/` | everyone | Browse every profession and its recipes, straight from Battle.net: what each one makes and the reagents it needs, plus a crafting cost and profit when every reagent is priced. A recipe's page also lists the guild characters who know it, linked from the Guild Hall's crafter search. |
+| `/account/` | anyone signed in | Link Battle.net, get a calendar link, mark away dates, manage your auction price alerts, or delete your account. |
 | `/officers/` | officers | Events, addons, recruiting, attendance, group voice stats, and guild-wide activity stats and leaderboards. Game Masters also get members, the activity log and moderation. |
 | `/officers/sync/` | officers | Move a raid night from the addon to the site, and points back to the addon. Vets recruits: link a recruit's Battle.net character by name and surname to see their level, gear, current guild (flagged if it isn't SideQuest) and last login. |
 | `/rules/`, `/privacy/`, `/terms/` | everyone | Guild rules, what the site keeps about you, and the terms. |

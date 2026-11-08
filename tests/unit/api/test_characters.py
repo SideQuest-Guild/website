@@ -1,5 +1,6 @@
 """Characters from Battle.net: the bot's roster sync, character pages, search, hero boards and raid readiness."""
 
+import zlib
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
 
@@ -8,7 +9,7 @@ from litestar.testing import AsyncTestClient
 from sqlalchemy import select, update
 
 from sidequest_api.app import create_app
-from sidequest_common.models import BattlenetCharacter, GuildEvent, GuildRecruit, WowCharacter
+from sidequest_common.models import BattlenetCharacter, GuildEvent, GuildRecruit, Member, WowCharacter
 from sidequest_common.settings import APISettings, DatabaseSettings, WebSettings
 from tests.conftest import GUILD_ID, TEST_API_KEY
 from tests.unit.api.conftest import OFFICER_ROLE_ID, _discord_transport, login_as
@@ -60,6 +61,7 @@ async def test_the_roster_sync_stores_every_member_and_the_published_profiles(
         "left": [],
         "profiles_refreshed": 1,
         "characters_linked": 0,
+        "members_linked": 0,
     }
     roster = (await characters_client.get("/api/characters/")).json()
     assert [(row["name"], row["guild_rank"]) for row in roster][:3] == [("Zach", 0), ("Legs", 1), ("Terrorskull", 2)]
@@ -111,6 +113,91 @@ async def test_the_sync_links_addon_characters_whose_name_only_one_roster_member
         "brista-whitemane",
     )
     assert rows["Nox"].slug is None
+
+
+async def test_the_sync_auto_links_a_roster_character_the_member_proved_they_own(
+    characters_client: AsyncTestClient, battlenet: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    battlenet["roster"].append(roster_member("Thandor", "Emberfall", rank=6))
+    blizzard_id = zlib.crc32(b"thandor-emberfall")
+    async with db_sessionmaker() as session:
+        member = Member(discord_id=9001, username="owner", is_guild_member=True, battlenet_character_ids=[blizzard_id])
+        session.add(member)
+        await session.flush()
+        session.add(WowCharacter(name="Thandor", realm="Whitemane", key="thandor-whitemane"))
+        await session.commit()
+        member_id = member.id
+
+    report = (await characters_client.post(SYNC, headers=BOT)).json()
+
+    assert report["characters_linked"] == 1
+    assert report["members_linked"] == 1
+    async with db_sessionmaker() as session:
+        character = (
+            await session.execute(select(WowCharacter).where(WowCharacter.key == "thandor-whitemane"))
+        ).scalar_one()
+    assert (character.member_id, character.source) == (member_id, "battlenet")
+
+
+async def test_the_sync_never_links_an_already_claimed_character_by_ownership(
+    characters_client: AsyncTestClient, battlenet: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    battlenet["roster"].append(roster_member("Thandor", "Emberfall", rank=6))
+    blizzard_id = zlib.crc32(b"thandor-emberfall")
+    async with db_sessionmaker() as session:
+        owner = Member(
+            discord_id=9003, username="proven-owner", is_guild_member=True, battlenet_character_ids=[blizzard_id]
+        )
+        claimer = Member(discord_id=9004, username="claimed-first", is_guild_member=True)
+        session.add_all([owner, claimer])
+        await session.flush()
+        session.add(
+            WowCharacter(
+                name="Thandor",
+                realm="Whitemane",
+                key="thandor-whitemane",
+                member_id=claimer.id,
+                source="claim",
+                blizzard_id=blizzard_id,
+            )
+        )
+        await session.commit()
+        claimer_id = claimer.id
+
+    report = (await characters_client.post(SYNC, headers=BOT)).json()
+
+    assert report["members_linked"] == 0
+    async with db_sessionmaker() as session:
+        character = (
+            await session.execute(select(WowCharacter).where(WowCharacter.key == "thandor-whitemane"))
+        ).scalar_one()
+    assert (character.member_id, character.source) == (claimer_id, "claim")
+
+
+async def test_battlenet_ownership_linking_is_idempotent_across_syncs(
+    characters_client: AsyncTestClient, battlenet: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    battlenet["roster"].append(roster_member("Thandor", "Emberfall", rank=6))
+    blizzard_id = zlib.crc32(b"thandor-emberfall")
+    async with db_sessionmaker() as session:
+        member = Member(discord_id=9005, username="owner3", is_guild_member=True, battlenet_character_ids=[blizzard_id])
+        session.add(member)
+        await session.flush()
+        session.add(WowCharacter(name="Thandor", realm="Whitemane", key="thandor-whitemane"))
+        await session.commit()
+        member_id = member.id
+
+    first = (await characters_client.post(SYNC, headers=BOT)).json()
+    second = (await characters_client.post(SYNC, headers=BOT)).json()
+
+    assert first["members_linked"] == 1
+    assert second["members_linked"] == 0
+    async with db_sessionmaker() as session:
+        characters = (
+            (await session.execute(select(WowCharacter).where(WowCharacter.key == "thandor-whitemane"))).scalars().all()
+        )
+    assert len(characters) == 1
+    assert (characters[0].member_id, characters[0].source) == (member_id, "battlenet")
 
 
 async def test_only_the_bot_syncs_and_only_for_the_site_guild(characters_client: AsyncTestClient) -> None:

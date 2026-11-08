@@ -25,6 +25,7 @@ from sidequest_common.models import (
     CharacterMilestone,
     GuildConfig,
     GuildRosterSnapshot,
+    Member,
     WowCharacter,
 )
 from sidequest_common.schemas import (
@@ -49,7 +50,7 @@ from sidequest_common.schemas import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Awaitable
+    from collections.abc import Awaitable, Collection
     from uuid import UUID
 
     from sqlalchemy.ext.asyncio import AsyncSession
@@ -95,6 +96,32 @@ _MISSING_MAX = 1000
 def full_name(name: str, surname: str) -> str:
     """``Name Surname``, as the game shows it."""
     return f"{name} {surname}"
+
+
+def character_display_name(character: WowCharacter) -> str:
+    """``First Surname``, or just the first name until the roster sync has matched a surname from Battle.net."""
+    return full_name(character.name, character.surname) if character.surname else character.name
+
+
+async def link_battlenet_characters(session: AsyncSession, member_id: int, character_ids: Collection[int]) -> int:
+    """Link every still-unlinked :class:`WowCharacter` whose Battle.net id is in ``character_ids`` to ``member_id``.
+
+    ``character_ids`` comes from the member's own Battle.net account profile (``wow.profile`` scope), so a match
+    proves ownership; never overrides an existing claim/officer/signup/battlenet link. Call this both when a
+    member (re)links Battle.net, with their freshly-fetched ids, and during roster sync, with every linked
+    member's stored ids, so characters the addon only just reported still get linked. Returns how many it linked.
+    """
+    if not character_ids:
+        return 0
+    statement = select(WowCharacter).where(
+        WowCharacter.member_id.is_(None), WowCharacter.blizzard_id.in_(character_ids)
+    )
+    linked = 0
+    for character in (await session.execute(statement)).scalars():
+        character.member_id = member_id
+        character.source = "battlenet"
+        linked += 1
+    return linked
 
 
 def _wow_class(name: str | None) -> str | None:
@@ -488,6 +515,7 @@ class CharactersService(SQLAlchemyAsyncRepositoryService[BattlenetCharacter]):
                 left.append(full_name(row.name, row.surname))
         await session.flush()
         linked = await self._link_addon_characters(roster.members)
+        members_linked = await self._link_battlenet_owned_characters()
         await session.commit()
         refreshed = await self._refresh_stalest(game_data, now)
         return RosterSyncReport(
@@ -496,6 +524,7 @@ class CharactersService(SQLAlchemyAsyncRepositoryService[BattlenetCharacter]):
             left=left,
             profiles_refreshed=refreshed,
             characters_linked=linked,
+            members_linked=members_linked,
         )
 
     @staticmethod
@@ -545,6 +574,19 @@ class CharactersService(SQLAlchemyAsyncRepositoryService[BattlenetCharacter]):
             addon_character.surname = character.surname
             addon_character.slug = character.slug
             linked += 1
+        return linked
+
+    async def _link_battlenet_owned_characters(self) -> int:
+        """Link roster characters to a member when that member's linked Battle.net account owns them.
+
+        Every linked member's stored ``battlenet_character_ids`` is checked against every still-unlinked
+        character's ``blizzard_id`` (filled above by :meth:`_link_addon_characters`), so this also catches
+        characters the addon only just reported for a member who linked Battle.net earlier.
+        """
+        statement = select(Member.id, Member.battlenet_character_ids).where(Member.battlenet_character_ids.is_not(None))
+        linked = 0
+        for member_id, character_ids in (await self.repository.session.execute(statement)).all():
+            linked += await link_battlenet_characters(self.repository.session, member_id, character_ids)
         return linked
 
     async def _refresh_stalest(self, game_data: AsyncClient, now: datetime) -> int:

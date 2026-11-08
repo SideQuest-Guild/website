@@ -36,7 +36,7 @@ const articles = [
       <li>
         We keep only what we need to run the guild: who you are on Discord, your event sign-ups, your group-voice
         sessions in #lfg, and what the guild's addon syncs — roster, crafters, bank log, announcements and
-        (officer-only) recruit and member notes. See <a href="#guild-app">The guild app</a> and
+        (officer-only) recruit and member notes. See <a href="#guild-app">The guild app</a> and{" "}
         <a href="#group-voice">Group voice channels</a>.
       </li>
       <li>No ads, no analytics, no trackers. We never sell or share your data with anyone for marketing.</li>
@@ -83,8 +83,14 @@ const articles = [
 
   <Article id="battle-net" n={3} title="Linking Battle.net">
     <p>
-      Linking is optional. It asks Battle.net only for your account ID and BattleTag, and we keep those two plus when
-      you linked. Not your characters, email or real name, and no token is kept.
+      Linking is optional. It asks Battle.net for your account ID and BattleTag, plus the list of character ids on your
+      account (not full character data: just enough to recognise characters you own), and we keep those plus when you
+      linked. Not your email or real name, and no token is kept.
+    </p>
+    <p>
+      <strong>We use the character ids to auto-link</strong>: a roster character whose Battle.net id matches one on your
+      linked account is linked to you automatically, the same as claiming it yourself, so you don't have to. It never
+      overrides a character an officer or you already linked another way, and it never guesses from a name alone.
     </p>
     <p>
       <strong>Character pages</strong> (<a href="/characters/">/characters/</a>) are separate from linking your own
@@ -94,7 +100,10 @@ const articles = [
       stored; it's the same data the Armory already shows.
     </p>
     <p>
-      <strong>Unlinking erases all three right away.</strong>
+      <strong>
+        Unlinking erases your account ID, BattleTag, when you linked and the character id list right away.
+      </strong>
+      A roster character already auto-linked this way stays linked, the same as if you'd claimed it yourself.
     </p>
   </Article>
 
@@ -140,7 +149,7 @@ const articles = [
       up without signing up first (a walk-in). While an event is running, the bot notes how many minutes each member
       spends in the guild's voice channels during that event — minutes only, nothing about what's said — as a hint
       officers can use when marking attendance. Officers and GMs can see this roster on the Officers page; GMs can also
-      see an aggregate attendance report and trend chart across the guild. Attendance feeds your
+      see an aggregate attendance report and trend chart across the guild. Attendance feeds your{" "}
       <a href="#hall-of-heroes">Hall of Heroes</a> stats, Renown and badges.
     </p>
   </Article>
@@ -216,21 +225,23 @@ const articles = [
       SideQuest raids use an in-game addon, <strong>SideQuest</strong>, to track progression loot. Officers upload what
       it records to this site after a raid night: your character's name, realm and class; which raids you were present
       for and when (including standby); which bosses were killed or wiped on; which items were awarded, to whom and for
-      what response (main spec, off spec, alt, council, disenchant or bank); and every EP/GP ledger entry with its
-      reason. A raid import can also mark you attended on a matching sign-up, the same as an officer taking attendance
-      by hand.
+      what response (main spec, off spec, alt, council, disenchant or bank) — a council award also keeps the officers'
+      one-line reason and whether it was a chase, legendary/special/rare, or crafted-tier item, which the Discord bot
+      posts to #loot-log; and every EP/GP ledger entry with its reason. A raid import can also mark you attended on a
+      matching sign-up, the same as an officer taking attendance by hand.
     </p>
     <p>
       On your <a href="/account/">Account</a> page you can link your characters to your SideQuest account yourself;
-      officers can also link an unrecognized character to a member. An officer can create a <strong>sync token</strong>
-      for the <code>sidequest-sync</code> uploader or SideQuest Companion; we store only its salted hash, never the
-      token itself, the same as a password.
+      officers can also link an unrecognized character to a member, and linking Battle.net auto-links any roster
+      character it proves you own. An officer can create a <strong>sync token</strong> for the{" "}
+      <code>sidequest-sync</code> uploader or SideQuest Companion; we store only its salted hash, never the token
+      itself, the same as a password.
     </p>
     <p>
       <strong>Standings, loot and progression are public:</strong> anyone can see the <a href="/ledger/">Ledger</a> —
       every member's EP, GP and priority ratio, recent loot and who won it, and which bosses the guild has killed —
-      without signing in. An unlinked character shows up under its own name until an officer or its owner links it to a
-      member.
+      without signing in. An unlinked character shows up under its own name until an officer, its owner, or Battle.net
+      auto-link connects it to a member.
     </p>
     <p>
       <strong>Wishlists are private.</strong> On an <a href="/items/">item's page</a>, a guild member can keep it on a
@@ -319,11 +330,10 @@ const articles = [
     </p>
     <p>
       <strong>Who sees what:</strong> the roster, professions, crafters directory, market, bank log and news on the{" "}
-      <a href="/guild/">Guild</a>
-      page, and the match history and boards on the <a href="/pvp/">PvP</a> page, are for signed-in members only.
-      Recruit notes, votes and member notes are officer-only, visible on the Officers page and never shown to the member
-      or recruit they're about. The homepage shows current officers' character names and ranks publicly, without signing
-      in, so anyone can find someone to whisper for an invite.
+      <a href="/guild/">Guild</a> page, and the match history and boards on the <a href="/pvp/">PvP</a> page, are for
+      signed-in members only. Recruit notes, votes and member notes are officer-only, visible on the Officers page and
+      never shown to the member or recruit they're about. The homepage shows current officers' character names and ranks
+      publicly, without signing in, so anyone can find someone to whisper for an invite.
     </p>
   </Article>
 

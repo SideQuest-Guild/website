@@ -26,7 +26,7 @@ from sidequest_api.domain.characters.controllers import (
 from sidequest_api.domain.discord_live.controllers import DiscordLiveController, DiscordLivePublicController
 from sidequest_api.domain.discord_online.controllers import DiscordOnlineController
 from sidequest_api.domain.discord_signups.controllers import DiscordSignupsController
-from sidequest_api.domain.epgp.controllers import EpgpController, MyCharactersController
+from sidequest_api.domain.epgp.controllers import EpgpController, LootCouncilController, MyCharactersController
 from sidequest_api.domain.event_series.controllers import EventSeriesController
 from sidequest_api.domain.event_sync.controllers import EventSyncController
 from sidequest_api.domain.events.controllers import EventsController
@@ -87,6 +87,7 @@ guild_controllers = [
     RosterSyncController,
     AuctionsSyncController,
     AuctionBotWatchesController,
+    LootCouncilController,
 ]
 
 public_routes = [

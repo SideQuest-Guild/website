@@ -6,6 +6,7 @@ import json
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
+from uuid import UUID
 
 from sqlalchemy import func, select
 
@@ -16,10 +17,12 @@ from sidequest_common.models import (
     EpgpSyncToken,
     EventSignup,
     GuildEvent,
+    LootAward,
     Member,
     RaidSession,
     WowCharacter,
 )
+from tests.conftest import GUILD_ID
 from tests.unit.api.conftest import OFFICER_ROLE_ID, login_as
 
 if TYPE_CHECKING:
@@ -97,6 +100,28 @@ def _award_row(award_id: str = "A1", **overrides: object) -> dict:
     return row
 
 
+def _loot_row(loot_id: str = "L1", **overrides: object) -> dict:
+    row: dict[str, object] = {
+        "id": loot_id,
+        "session_id": "S1",
+        "encounter_row_id": None,
+        "item_id": 19019,
+        "item_name": "Thunderfury, Blessed Blade of the Windseeker",
+        "quality": 4,
+        "inv_type": "INVTYPE_WEAPONMAINHAND",
+        "character": "Tank1-Whitemane",
+        "response": "council",
+        "gp": 300,
+        "at": 1793491300,
+        "officer": RECORDER,
+        "voided": False,
+        "council_reason": "Best in slot for progression.",
+        "council_kind": "legendary",
+    }
+    row.update(overrides)
+    return row
+
+
 async def _login_officer(client: AsyncTestClient, discord_state: dict, *, discord_id: int = 100) -> None:
     response = await login_as(client, discord_state, discord_id=discord_id, roles=[OFFICER_ROLE_ID])
     assert response.status_code == 302, response.text
@@ -138,6 +163,63 @@ async def test_standings_gp_never_below_floor(
     rows = {row["member_id"]: row for row in response.json()["rows"]}
     row = next(r for r in rows.values() if r["name"] == "lowgp")
     assert row["gp"] == 100.0  # base GP, no GP-kind ledger entries at all
+
+
+async def test_standings_lists_rostered_member_with_no_raids_at_zero_ep_and_pr(
+    client: AsyncTestClient, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    """The "everyone listed" rule: a member on the EPGP roster (``raid_status`` set) with no ledger entries at all
+    still shows up, at 0 EP, the GP floor, and PR 0 — the standings table is never empty while the guild has a
+    rostered member, even before their first raid."""
+    async with db_sessionmaker() as session:
+        member = Member(discord_id=6010, username="norads", is_guild_member=True, raid_status="trial")
+        session.add(member)
+        await session.commit()
+
+    response = await client.get("/api/epgp/standings")
+    assert response.status_code == 200
+    row = next(r for r in response.json()["rows"] if r["name"] == "norads")
+    assert row["ep"] == 0.0
+    assert row["gp"] == 100.0
+    assert row["pr"] == 0.0
+
+
+async def test_standings_list_every_confirmed_guild_member_with_their_main_by_game_name(
+    client: AsyncTestClient, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    """A member confirmed on the guild roster is on the Ledger before any raid or raid-roster status; one who has
+    left the guild isn't. The main shows as the game writes it, ``First Surname``."""
+    confirmed_at = datetime(2026, 11, 1, tzinfo=UTC)
+    async with db_sessionmaker() as session:
+        member = Member(discord_id=6020, username="confirmed", is_guild_member=True, roster_confirmed_at=confirmed_at)
+        departed = Member(discord_id=6021, username="departed", is_guild_member=False, roster_confirmed_at=confirmed_at)
+        session.add_all([member, departed])
+        await session.flush()
+        session.add(
+            WowCharacter(
+                name="Legs",
+                realm="forever",
+                key="legs-behindhead",
+                surname="Behindhead",
+                member_id=member.id,
+                is_main=True,
+            )
+        )
+        await session.commit()
+
+    rows = (await client.get("/api/epgp/standings")).json()["rows"]
+    row = next(r for r in rows if r["name"] == "confirmed")
+    assert (row["ep"], row["gp"], row["pr"]) == (0.0, 100.0, 0.0)
+    assert row["main"] == "legs-behindhead"
+    assert row["main_name"] == "Legs Behindhead"
+    assert all(r["name"] != "departed" for r in rows)
+
+
+async def test_standings_rules_include_weekly_reset_fields(client: AsyncTestClient) -> None:
+    response = await client.get("/api/epgp/standings")
+    rules = response.json()["rules"]
+    assert rules["weekly_reset_weekday"] == 1  # Tuesday, datetime.weekday() convention
+    assert rules["weekly_reset_hour_utc"] == 15
 
 
 async def test_standings_orders_by_pr_descending(
@@ -257,6 +339,120 @@ async def test_voiding_sets_voided_at_and_excludes_from_standings_and_cannot_unv
     async with db_sessionmaker() as session:
         entry = (await session.execute(ledger_stmt)).scalar_one()
         assert entry.voided_at is not None
+
+
+# --- per-person ledger history: filtering, decay, voided entries, loot response ------------------------------
+
+
+async def test_ledger_filters_by_member_id_and_decays_on_read(
+    client: AsyncTestClient, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    async with db_sessionmaker() as session:
+        member = Member(discord_id=6020, username="historied", is_guild_member=True, raid_status="raider")
+        other = Member(discord_id=6021, username="someoneelse", is_guild_member=True, raid_status="raider")
+        session.add_all([member, other])
+        await session.flush()
+        old_award_at = datetime(2026, 11, 3, 14, 0, tzinfo=UTC)
+        session.add_all(
+            [
+                EpgpLedgerEntry(
+                    kind="ep",
+                    amount=100,
+                    reason="boss_kill",
+                    member_id=member.id,
+                    at=old_award_at,
+                    officer="Test",
+                    source="site",
+                ),
+                EpgpLedgerEntry(
+                    kind="ep",
+                    amount=10,
+                    reason="boss_kill",
+                    member_id=other.id,
+                    at=old_award_at,
+                    officer="Test",
+                    source="site",
+                ),
+            ]
+        )
+        await session.commit()
+
+    response = await client.get(f"/api/epgp/ledger?member_id={member.id}")
+    assert response.status_code == 200
+    entries = response.json()["entries"]
+    assert len(entries) == 1
+    assert entries[0]["member_id"] == member.id
+    assert entries[0]["amount"] == 100
+    # Decay is read-time: more than zero resets have landed since `two_resets_ago`, so `decayed` is less than 100.
+    assert entries[0]["decayed"] < 100
+
+
+async def test_ledger_includes_voided_entries_flagged_rather_than_excluded(
+    client: AsyncTestClient, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    async with db_sessionmaker() as session:
+        member = Member(discord_id=6022, username="voidedhistory", is_guild_member=True, raid_status="raider")
+        session.add(member)
+        await session.flush()
+        session.add(
+            EpgpLedgerEntry(
+                kind="ep",
+                amount=10,
+                reason="boss_kill",
+                member_id=member.id,
+                at=PAST,
+                officer="Test",
+                source="site",
+                voided_at=PAST,
+            )
+        )
+        await session.commit()
+
+    response = await client.get(f"/api/epgp/ledger?member_id={member.id}")
+    entries = response.json()["entries"]
+    assert len(entries) == 1  # voiding marks, never removes
+    assert entries[0]["voided"] is True
+
+
+async def test_ledger_gp_charge_reports_the_loot_response(
+    client: AsyncTestClient, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    async with db_sessionmaker() as session:
+        member = Member(discord_id=6023, username="lootwinner", is_guild_member=True, raid_status="raider")
+        session.add(member)
+        await session.flush()
+        loot = LootAward(
+            external_id="loot-history-1",
+            item_id=19019,
+            item_name="Thunderfury, Blessed Blade of the Windseeker",
+            quality=4,
+            inv_type="INVTYPE_WEAPONMAINHAND",
+            response="os",
+            gp=30,
+            at=PAST,
+            officer=RECORDER,
+        )
+        session.add(loot)
+        await session.flush()
+        session.add(
+            EpgpLedgerEntry(
+                kind="gp",
+                amount=30,
+                reason="loot",
+                member_id=member.id,
+                loot_id=loot.id,
+                at=PAST,
+                officer=RECORDER,
+                source="addon",
+            )
+        )
+        await session.commit()
+
+    response = await client.get(f"/api/epgp/ledger?member_id={member.id}")
+    entries = response.json()["entries"]
+    assert len(entries) == 1
+    assert entries[0]["item_name"] == "Thunderfury, Blessed Blade of the Windseeker"
+    assert entries[0]["response"] == "os"
 
 
 async def test_conflicting_recorder_session_is_skipped(
@@ -1088,3 +1284,137 @@ async def test_device_authorization_pending_cap_is_429(member_client: AsyncTestC
         assert response.status_code == 201, response.text
     over_cap = await member_client.post("/api/epgp/device-authorizations", json={"device_name": "One too many"})
     assert over_cap.status_code == 429
+
+
+# --- loot council -----------------------------------------------------------------------------------------
+
+
+async def _add_council_award(
+    db_sessionmaker: async_sessionmaker[AsyncSession],
+    *,
+    external_id: str,
+    at: datetime = PAST,
+    voided_at: datetime | None = None,
+    council_posted_at: datetime | None = None,
+    council_void_posted_at: datetime | None = None,
+) -> UUID:
+    async with db_sessionmaker() as session:
+        row = LootAward(
+            external_id=external_id,
+            item_id=19019,
+            item_name="Thunderfury, Blessed Blade of the Windseeker",
+            quality=4,
+            inv_type="INVTYPE_WEAPONMAINHAND",
+            response="council",
+            gp=300,
+            at=at,
+            officer=RECORDER,
+            voided_at=voided_at,
+            council_reason="Best in slot for progression.",
+            council_kind="legendary",
+            council_posted_at=council_posted_at,
+            council_void_posted_at=council_void_posted_at,
+        )
+        session.add(row)
+        await session.commit()
+        return row.id
+
+
+async def test_import_stores_council_reason_and_kind_and_keeps_posted_stamp_on_reimport(
+    member_client: AsyncTestClient, discord_state: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    await _login_officer(member_client, discord_state)
+    payload = _base_payload(
+        sessions=[_session_row(members=[_member_row("Tank1-Whitemane", "warrior")])], loot=[_loot_row()]
+    )
+    first = await member_client.post("/api/epgp/imports", json={"payload": _export_string(payload)})
+    assert first.status_code == 200, first.text
+
+    async with db_sessionmaker() as session:
+        award = (await session.execute(select(LootAward).where(LootAward.external_id == "L1"))).scalar_one()
+        assert award.council_reason == "Best in slot for progression."
+        assert award.council_kind == "legendary"
+        assert award.council_posted_at is None
+        award.council_posted_at = PAST  # simulate the bot having already posted it
+        await session.commit()
+
+    second = await member_client.post("/api/epgp/imports", json={"payload": _export_string(payload)})
+    assert second.status_code == 200, second.text
+
+    async with db_sessionmaker() as session:
+        award = (await session.execute(select(LootAward).where(LootAward.external_id == "L1"))).scalar_one()
+        assert award.council_reason == "Best in slot for progression."
+        assert award.council_kind == "legendary"
+        assert award.council_posted_at is not None  # a re-import never clears it
+
+
+async def test_pending_council_log_returns_decisions_and_posted_voids_but_skips_voided_before_post(
+    client: AsyncTestClient, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    decision_id = await _add_council_award(db_sessionmaker, external_id="L-decision", at=PAST)
+    await _add_council_award(
+        db_sessionmaker, external_id="L-voided-early", at=PAST, voided_at=PAST + timedelta(minutes=1)
+    )
+    void_id = await _add_council_award(
+        db_sessionmaker,
+        external_id="L-voided-late",
+        at=PAST,
+        voided_at=PAST + timedelta(minutes=5),
+        council_posted_at=PAST,
+    )
+
+    response = await client.get(f"/api/guilds/{GUILD_ID}/loot/council/pending")
+    assert response.status_code == 200, response.text
+    items = response.json()["items"]
+    by_id = {item["loot_id"]: item for item in items}
+    assert set(by_id) == {str(decision_id), str(void_id)}
+    assert by_id[str(decision_id)]["kind"] == "decision"
+    assert by_id[str(decision_id)]["council_reason"] == "Best in slot for progression."
+    assert by_id[str(decision_id)]["council_kind"] == "legendary"
+    assert by_id[str(void_id)]["kind"] == "void"
+
+
+async def test_ack_council_posted_is_idempotent(
+    client: AsyncTestClient, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    loot_id = await _add_council_award(db_sessionmaker, external_id="L-ack")
+
+    first = await client.post(f"/api/guilds/{GUILD_ID}/loot/council/{loot_id}/posted", json={"kind": "decision"})
+    assert first.status_code == 204, first.text
+    second = await client.post(f"/api/guilds/{GUILD_ID}/loot/council/{loot_id}/posted", json={"kind": "decision"})
+    assert second.status_code == 204, second.text
+
+    async with db_sessionmaker() as session:
+        award = await session.get(LootAward, loot_id)
+        assert award is not None
+        assert award.council_posted_at is not None
+
+    pending = await client.get(f"/api/guilds/{GUILD_ID}/loot/council/pending")
+    assert pending.json()["items"] == []
+
+
+async def test_council_log_routes_404_for_another_guild(
+    client: AsyncTestClient, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    loot_id = await _add_council_award(db_sessionmaker, external_id="L-other-guild")
+    other_guild = GUILD_ID + 1
+
+    pending = await client.get(f"/api/guilds/{other_guild}/loot/council/pending")
+    assert pending.status_code == 404
+
+    posted = await client.post(f"/api/guilds/{other_guild}/loot/council/{loot_id}/posted", json={"kind": "decision"})
+    assert posted.status_code == 404
+
+
+async def test_public_loot_api_exposes_council_reason_and_kind(
+    member_client: AsyncTestClient, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    await _add_council_award(db_sessionmaker, external_id="L-public")
+
+    response = await member_client.get("/api/epgp/loot")
+    assert response.status_code == 200, response.text
+    items = response.json()["items"]
+    assert len(items) == 1
+    assert items[0]["response"] == "council"
+    assert items[0]["council_reason"] == "Best in slot for progression."
+    assert items[0]["council_kind"] == "legendary"

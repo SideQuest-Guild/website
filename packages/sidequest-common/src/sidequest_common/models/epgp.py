@@ -23,7 +23,8 @@ class WowCharacter(UUIDAuditBase):
     ``member_id`` links the character to a site member, sharing that member's EP/GP balance; ``source`` records how
     the link happened (``claim``: the member self-claimed it on the account page; ``officer``: an officer set it on
     the characters admin screen; ``signup``: auto-linked because the name matched exactly one member's event sign-up
-    character; ``import``: seen in an addon import with no link yet). ``is_main`` flags the character shown as a
+    character; ``battlenet``: auto-linked because the character's Battle.net id was on a member's linked Battle.net
+    account; ``import``: seen in an addon import with no link yet). ``is_main`` flags the character shown as a
     member's primary on standings.
     """
 
@@ -144,6 +145,14 @@ class LootAward(UUIDAuditBase):
     at: Mapped[datetime] = mapped_column(DateTimeUTC(timezone=True), index=True)
     officer: Mapped[str] = mapped_column(Text)
     voided_at: Mapped[datetime | None] = mapped_column(DateTimeUTC(timezone=True), index=True, default=None)
+    council_reason: Mapped[str | None] = mapped_column(Text, default=None)
+    """A required one-line reason, addon-exported, present only on ``response = "council"`` rows."""
+    council_kind: Mapped[str | None] = mapped_column(String(20), default=None)
+    """``CouncilKind`` value (``chase``/``legendary``/``tier``), present only on ``response = "council"`` rows."""
+    council_posted_at: Mapped[datetime | None] = mapped_column(DateTimeUTC(timezone=True), default=None)
+    """When the bot posted this council decision to ``#loot-log``; never cleared by a re-import."""
+    council_void_posted_at: Mapped[datetime | None] = mapped_column(DateTimeUTC(timezone=True), default=None)
+    """When the bot posted this council award's void to ``#loot-log``; never cleared by a re-import."""
 
 
 class EpgpLedgerEntry(UUIDAuditBase):

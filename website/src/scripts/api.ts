@@ -716,13 +716,20 @@ export type EpgpRules = {
   min_gp: number;
   decay_percent: number;
   trial_days: number;
+  /** Python `datetime.weekday()` value the weekly reset lands on (1 = Tuesday, Monday = 0); see
+   * `epgp-calculator.ts`'s `nextResetAt` for converting to a JS day index. */
+  weekly_reset_weekday: number;
+  weekly_reset_hour_utc: number;
 };
 
 /** One row of `GET /api/epgp/standings`; `member_id: null` means an imported character nobody has linked yet. */
 export type EpgpStandingRow = {
   member_id: number | null;
   name: string;
+  /** The main character's key, for `GET /api/epgp/ledger?character=`. Show `main_name` instead. */
   main: string | null;
+  /** The main character's name as the game shows it (`First Surname`). */
+  main_name: string | null;
   /** As the addon reports it (e.g. `"WARRIOR"`); lowercase before using a `cls-*` color class. */
   class: string | null;
   characters: string[];
@@ -751,12 +758,14 @@ export type EpgpLedgerEntry = {
   member_name: string | null;
   officer: string | null;
   item_name: string | null;
+  response: EpgpLootResponseKind | null;
   voided: boolean;
 };
 
 export type EpgpLedgerPage = { entries: EpgpLedgerEntry[] };
 
 export type EpgpLootResponseKind = "ms" | "os" | "alt" | "council" | "de" | "bank";
+export type EpgpCouncilKind = "chase" | "legendary" | "tier";
 
 /** One row of `GET /api/epgp/loot`, newest first. */
 export type EpgpLootItem = {
@@ -774,6 +783,8 @@ export type EpgpLootItem = {
   instance_name: string | null;
   encounter_name: string | null;
   voided: boolean;
+  council_reason: string | null;
+  council_kind: EpgpCouncilKind | null;
 };
 
 export type EpgpLootPage = { items: EpgpLootItem[] };
@@ -815,7 +826,7 @@ export type EpgpGameImport = { payload: string; generated_at: string };
 
 export type EpgpAdjustmentCreate = { member_id: number; kind: EpgpLedgerKind; amount: number; reason: string };
 
-export type EpgpCharacterSource = "claim" | "officer" | "signup" | "import";
+export type EpgpCharacterSource = "claim" | "officer" | "signup" | "import" | "battlenet";
 
 /** A character linked (or not yet linked) to a member; same shape on `GET /api/epgp/characters` and
  * `GET/POST /api/me/characters`. */

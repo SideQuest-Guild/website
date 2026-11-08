@@ -21,6 +21,10 @@ class Member(BigIntAuditBase):
 
     ``battlenet_id``/``battletag`` are set when the member links Battle.net (one Battle.net account per member, so
     one Blizzard account can't vouch for several Discord accounts); officers compare the BattleTag to the roster.
+    ``battlenet_character_ids`` is the account's WoW character ids, as Battle.net's account profile API (``wow.profile``
+    scope) lists them at link/relink time; ``null`` until the member links, or if they linked before this field
+    existed (they must relink once for the site to have it). Used to auto-link roster characters (``WowCharacter``)
+    the member provably owns, without guessing from the name.
 
     ``officer_notice_posted_at`` is when the bot posted the new-signup notice embed for this member in the
     configured signup-notice channel (``null`` until posted; existing members are backfilled non-null at migration
@@ -42,6 +46,7 @@ class Member(BigIntAuditBase):
     last_login_at: Mapped[datetime | None] = mapped_column(DateTimeUTC(timezone=True), default=None)
     battlenet_id: Mapped[int | None] = mapped_column(BigInteger, unique=True, default=None)
     battletag: Mapped[str | None] = mapped_column(Text, default=None)
+    battlenet_character_ids: Mapped[list[int] | None] = mapped_column(JsonB, default=None)
     battlenet_linked_at: Mapped[datetime | None] = mapped_column(DateTimeUTC(timezone=True), default=None)
     roster_confirmed_at: Mapped[datetime | None] = mapped_column(DateTimeUTC(timezone=True), default=None)
     officer_notice_posted_at: Mapped[datetime | None] = mapped_column(DateTimeUTC(timezone=True), default=None)
