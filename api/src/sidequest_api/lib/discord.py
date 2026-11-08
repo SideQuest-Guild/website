@@ -137,10 +137,16 @@ async def _bot_request(
 async def bot_get_guild_member(
     client: httpx.AsyncClient, bot_token: str, guild_id: int, user_id: int | str
 ) -> dict[str, Any]:
-    """``GET /guilds/{guild_id}/members/{user_id}`` (bot auth). ``user_id="@me"`` gets the bot's own member."""
+    """``GET /guilds/{guild_id}/members/{user_id}`` (bot auth); ``@me`` is rejected, see `bot_get_own_guild_member`."""
     response = await _bot_request(client, bot_token, "GET", f"/guilds/{guild_id}/members/{user_id}")
     result: dict[str, Any] = response.json()
     return result
+
+
+async def bot_get_own_guild_member(client: httpx.AsyncClient, bot_token: str, guild_id: int) -> dict[str, Any]:
+    """The bot's own guild member: ``GET /users/@me`` for its id, then its member (``members/@me`` is user-only)."""
+    response = await _bot_request(client, bot_token, "GET", "/users/@me")
+    return await bot_get_guild_member(client, bot_token, guild_id, response.json()["id"])
 
 
 async def bot_list_guild_roles(client: httpx.AsyncClient, bot_token: str, guild_id: int) -> list[dict[str, Any]]:
