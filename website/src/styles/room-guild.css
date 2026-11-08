@@ -147,6 +147,103 @@ a.guild-member-name:focus-visible {
   grid-area: btn;
 }
 
+/* ——— Professions: one board per profession (primary, then secondary), characters ranked by skill with a
+   compact bar against max skill ——— */
+.guild-profession-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: clamp(20px, 2vw, 28px);
+  margin: 10px 0 28px;
+}
+.guild-profession-grid:last-child {
+  margin-bottom: 0;
+}
+.guild-profession-name {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 14px;
+  letter-spacing: 0.08em;
+  color: var(--ink);
+}
+.guild-profession-meta {
+  margin: 2px 0 10px;
+  font-size: 12px;
+  color: var(--mist-2);
+}
+.guild-profession-members {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.guild-profession-members > li + li {
+  border-top: 1px solid var(--stone-2);
+}
+.guild-profession-member {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 4px 12px;
+  padding: 7px 0;
+  font-size: 14px;
+}
+.guild-profession-member-name {
+  overflow-wrap: anywhere;
+}
+a.guild-profession-member-link {
+  color: inherit;
+  text-decoration: none;
+}
+a.guild-profession-member-link:hover,
+a.guild-profession-member-link:focus-visible {
+  text-decoration: underline;
+  text-decoration-color: var(--gold-2);
+  text-underline-offset: 3px;
+}
+.guild-skill-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.guild-skill-bar {
+  width: 64px;
+  height: 6px;
+  border: 1px solid var(--stone);
+  background: rgba(10, 16, 29, 0.6);
+  overflow: hidden;
+}
+.guild-skill-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--gold-2), var(--gold));
+}
+.guild-skill-bar-label {
+  font-size: 12px;
+  color: var(--mist-2);
+  font-variant-numeric: tabular-nums lining-nums;
+  white-space: nowrap;
+}
+.guild-profession-more {
+  margin-top: 4px;
+}
+.guild-profession-more summary {
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--mist-2);
+  list-style: none;
+}
+.guild-profession-more summary::-webkit-details-marker {
+  display: none;
+}
+.guild-profession-more summary:hover,
+.guild-profession-more summary:focus-visible {
+  color: var(--gold);
+}
+.guild-profession-more[open] summary {
+  margin-bottom: 4px;
+}
+
 /* ——— Market: AH price next to a sell/buy listing's own price ——— */
 .guild-market-ah {
   color: var(--mist-2);
@@ -264,5 +361,9 @@ a.guild-member-name:focus-visible {
   .guild-crafter-row .btn-quiet {
     justify-self: start;
     margin-top: 6px;
+  }
+  .guild-profession-member {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
   }
 }

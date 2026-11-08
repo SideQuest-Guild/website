@@ -131,17 +131,21 @@ import "../../styles/room-guild.css";
     <section id="panel-professions" role="tabpanel" aria-labelledby="tab-professions" tabindex="0" hidden>
       <div class="chamber">
         <h2 class="chamber-title">Professions</h2>
-        <p class="aside">Every character's professions and skill, from the addon's directory.</p>
+        <p class="aside">Who's trained what, and how far along, from the addon's directory.</p>
         <div class="form-row guild-filters">
           <div class="field">
             <label for="professions-filter">Profession</label>
             <select id="professions-filter">
-              <option value="">Any profession</option>
+              <option value="">Every profession</option>
             </select>
+          </div>
+          <div class="field">
+            <label for="professions-name-filter">Name</label>
+            <input id="professions-name-filter" type="search" placeholder="Filter by name" />
           </div>
         </div>
         <p class="count" id="professions-count"></p>
-        <ul class="guild-professions-list" id="professions-list" aria-label="Characters and their professions"></ul>
+        <div id="professions-list" aria-live="polite"></div>
       </div>
     </section>
 
@@ -370,17 +374,92 @@ import "../../styles/room-guild.css";
           <span class="guild-news-when">${new Date(item.at).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</span>
         </li>`;
   }
-  function professionRow(character: GuildDirectoryCharacter, professionFilter: string): string {
-    const professions = (
-      professionFilter ? character.professions.filter((p) => p.name === professionFilter) : character.professions
-    )
-      .map((p) => `<span class="guild-profession-pair">${escapeHtml(p.name)} ${p.skill}/${p.max_skill}</span>`)
-      .join(" \u00b7 ");
+  type ProfessionMember = {
+    character: string;
+    member_id: number | null;
+    member_name: string | null;
+    class: string | null;
+    skill: number;
+    max_skill: number;
+  };
+  type ProfessionGroup = { name: string; members: ProfessionMember[] };
+
+  // Forever has a fixed small set of secondary professions; the directory doesn't tag primary vs. secondary, so
+  // this list (not Battle.net data) decides which group a profession lands in.
+  const SECONDARY_PROFESSIONS = new Set(["Cooking", "Fishing", "First Aid"]);
+  const PROFESSION_PREVIEW = 6;
+  const ADDON_DOCS_URL = "https://docs.sidequest-guild.com/members/addon.html";
+
+  function buildProfessionGroups(characters: GuildDirectoryCharacter[], nameFilter: string): ProfessionGroup[] {
+    const needle = nameFilter.trim().toLowerCase();
+    const groups = new Map<string, ProfessionMember[]>();
+    for (const c of characters) {
+      if (needle && !(c.member_name ?? c.character).toLowerCase().includes(needle)) {
+        continue;
+      }
+      for (const p of c.professions) {
+        const list = groups.get(p.name) ?? [];
+        list.push({
+          character: c.character,
+          member_id: c.member_id,
+          member_name: c.member_name,
+          class: c.class,
+          skill: p.skill,
+          max_skill: p.max_skill,
+        });
+        groups.set(p.name, list);
+      }
+    }
+    return [...groups.entries()]
+      .map(([name, members]) => ({
+        name,
+        members: members.toSorted(
+          (a, b) => b.skill - a.skill || (a.member_name ?? a.character).localeCompare(b.member_name ?? b.character),
+        ),
+      }))
+      .toSorted((a, b) => a.name.localeCompare(b.name));
+  }
+
+  function professionMemberName(m: ProfessionMember): string {
+    const label = `${classSpan(m.class)} ${escapeHtml(m.member_name ?? m.character)}`;
+    return m.member_id !== null
+      ? `<a class="guild-profession-member-link" href="/heroes/member/?id=${m.member_id}">${label}</a>`
+      : label;
+  }
+
+  function professionMemberRow(m: ProfessionMember): string {
+    const pct = m.max_skill > 0 ? Math.min(100, Math.round((m.skill / m.max_skill) * 100)) : 0;
     return `
-        <li class="guild-professions-row">
-          <span class="guild-professions-name">${classSpan(character.class)} ${escapeHtml(character.member_name ?? character.character)}</span>
-          <span class="guild-professions-detail">${professions}</span>
+        <li class="guild-profession-member">
+          <span class="guild-profession-member-name">${professionMemberName(m)}</span>
+          <span class="guild-skill-bar-row">
+            <span class="guild-skill-bar" aria-hidden="true"><span class="guild-skill-bar-fill" style="width:${pct}%"></span></span>
+            <span class="guild-skill-bar-label">${m.skill}/${m.max_skill}</span>
+          </span>
         </li>`;
+  }
+
+  function professionBoard(group: ProfessionGroup, expanded: boolean): string {
+    const highest = group.members[0];
+    const meta = `${group.members.length} guildmate${group.members.length === 1 ? "" : "s"}${
+      highest ? ` \u00b7 highest ${highest.skill}/${highest.max_skill}` : ""
+    }`;
+    const visible = expanded ? group.members : group.members.slice(0, PROFESSION_PREVIEW);
+    const rest = expanded ? [] : group.members.slice(PROFESSION_PREVIEW);
+    const more =
+      rest.length > 0
+        ? `<details class="guild-profession-more">
+            <summary>Show all ${group.members.length}</summary>
+            <ol class="guild-profession-members">${rest.map(professionMemberRow).join("")}</ol>
+          </details>`
+        : "";
+    return `
+        <div class="guild-profession-board">
+          <h4 class="guild-profession-name">${escapeHtml(group.name)}</h4>
+          <p class="guild-profession-meta">${meta}</p>
+          <ol class="guild-profession-members">${visible.map(professionMemberRow).join("")}</ol>
+          ${more}
+        </div>`;
   }
   function marketSellRow(row: GuildMarketSellRow): string {
     const label = row.item_name ? itemLink(row.item_id, row.item_name) : `Item ${row.item_id}`;
@@ -564,6 +643,7 @@ import "../../styles/room-guild.css";
 
     // ——— Professions ———
     const professionsFilterEl = requireElement<HTMLSelectElement>("professions-filter");
+    const professionsNameFilterEl = requireElement<HTMLInputElement>("professions-name-filter");
     const professionsCountEl = requireElement("professions-count");
     const professionsListEl = requireElement("professions-list");
     let directory: GuildDirectory | null = null;
@@ -573,15 +653,32 @@ import "../../styles/room-guild.css";
       if (!directory) {
         return;
       }
-      const filter = professionsFilterEl.value;
-      const rows = directory.characters.filter(
-        (c) => c.professions.length > 0 && (!filter || c.professions.some((p) => p.name === filter)),
-      );
-      professionsCountEl.textContent = `${rows.length} character${rows.length === 1 ? "" : "s"}`;
-      professionsListEl.innerHTML =
-        rows.length > 0
-          ? rows.map((c) => professionRow(c, filter)).join("")
-          : `<li class="ledger-empty">No one has shared professions yet.</li>`;
+      const profFilter = professionsFilterEl.value;
+      const nameFilter = professionsNameFilterEl.value;
+      const allGroups = buildProfessionGroups(directory.characters, nameFilter);
+      const groups = profFilter ? allGroups.filter((g) => g.name === profFilter) : allGroups;
+      const characterCount = new Set(groups.flatMap((g) => g.members.map((m) => m.character))).size;
+      professionsCountEl.textContent =
+        groups.length > 0
+          ? `${groups.length} profession${groups.length === 1 ? "" : "s"} \u00b7 ${characterCount} character${characterCount === 1 ? "" : "s"}`
+          : "";
+      if (groups.length === 0) {
+        const filtered = Boolean(profFilter) || nameFilter.trim().length > 0;
+        professionsListEl.innerHTML = `<p class="ledger-empty">${
+          filtered
+            ? "No one matches that filter."
+            : `No one has shared professions yet. The <a href="${ADDON_DOCS_URL}">SideQuest addon</a> shares them automatically once it's installed and a character's profession windows have been opened.`
+        }</p>`;
+        return;
+      }
+      const expanded = Boolean(profFilter);
+      const primary = groups.filter((g) => !SECONDARY_PROFESSIONS.has(g.name));
+      const secondary = groups.filter((g) => SECONDARY_PROFESSIONS.has(g.name));
+      const section = (label: string, list: ProfessionGroup[]) =>
+        list.length > 0
+          ? `<h3 class="sub-title">${label}</h3><div class="guild-profession-grid">${list.map((g) => professionBoard(g, expanded)).join("")}</div>`
+          : "";
+      professionsListEl.innerHTML = `${section("Primary professions", primary)}${section("Secondary professions", secondary)}`;
     }
 
     async function loadDirectory(): Promise<void> {
@@ -595,10 +692,11 @@ import "../../styles/room-guild.css";
         }
         renderProfessions();
       } catch (err) {
-        professionsListEl.innerHTML = `<li class="ledger-empty">${escapeHtml(statusMessage(err))}</li>`;
+        professionsListEl.innerHTML = `<p class="ledger-empty">${escapeHtml(statusMessage(err))}</p>`;
       }
     }
     professionsFilterEl.addEventListener("change", renderProfessions, { signal });
+    professionsNameFilterEl.addEventListener("input", renderProfessions, { signal });
 
     // ——— Market ———
     const marketSellListEl = requireElement("market-sell-list");

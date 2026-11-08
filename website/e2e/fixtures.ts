@@ -42,6 +42,7 @@ import {
   CHARACTERS,
   EPGP_CHARACTERS,
   EPGP_DEVICE_AUTHORIZATION,
+  EPGP_LEDGER,
   EPGP_LOOT,
   EPGP_MEMBER_NOTES,
   EPGP_PROGRESSION,
@@ -478,6 +479,17 @@ export const test = base.extend<{ site: Site }>({
         const limit = Number(url.searchParams.get("limit") ?? 0) || undefined;
         const items = itemId ? EPGP_LOOT.filter((item) => item.item_id === Number(itemId)) : EPGP_LOOT;
         return json(route, { items: limit ? items.slice(0, limit) : items });
+      }
+      if (path === "/api/epgp/ledger" && method === "GET") {
+        const memberId = url.searchParams.get("member_id");
+        const character = url.searchParams.get("character");
+        let entries = EPGP_LEDGER;
+        if (memberId) {
+          entries = entries.filter((entry) => entry.member_id === Number(memberId));
+        } else if (character) {
+          entries = entries.filter((entry) => entry.character?.toLowerCase() === character.toLowerCase());
+        }
+        return json(route, { entries });
       }
       if (path === "/api/items" && method === "GET") {
         const q = url.searchParams.get("q") ?? "";

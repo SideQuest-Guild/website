@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING
 from litestar.exceptions import NotFoundException
 from sqlalchemy import func, or_, select
 
-from sidequest_api.domain.characters.services import to_summary
+from sidequest_api.domain.characters.services import character_display_name, to_summary
 from sidequest_api.domain.game_reference.services import recipe_id_for
 from sidequest_common.models import (
     BattlenetCharacter,
@@ -152,7 +152,7 @@ class GuildHubService:
             else:
                 unlinked_rows.append(
                     GuildRosterUnlinked(
-                        name=character.name,
+                        name=character_display_name(character),
                         wow_class=WowClass(character.wow_class) if character.wow_class else None,
                         level=snapshot.level,
                         rank=snapshot.rank,
@@ -172,10 +172,10 @@ class GuildHubService:
                     name=member.display_name,
                     rank=snapshot_by_character[main_char.id].rank,
                     raid_status=member.raid_status,
-                    main=main_char.key,
+                    main=character_display_name(main_char),
                     characters=[
                         GuildRosterCharacter(
-                            name=character.key,
+                            name=character_display_name(character),
                             wow_class=WowClass(character.wow_class) if character.wow_class else None,
                             level=snapshot_by_character[character.id].level,
                             zone=snapshot_by_character[character.id].zone,

@@ -23,6 +23,7 @@ from litestar.status_codes import HTTP_409_CONFLICT, HTTP_429_TOO_MANY_REQUESTS
 from pydantic import ValidationError
 from sqlalchemy import delete, func, or_, select, union
 
+from sidequest_api.domain.characters.services import character_display_name
 from sidequest_api.lib.discord import avatar_url
 from sidequest_api.lib.member_auth import is_officer
 from sidequest_common.models import (
@@ -90,6 +91,10 @@ from sidequest_common.schemas import (
     BankImportCounts,
     BattlegroundImportCounts,
     CharacterSource,
+    CouncilKind,
+    CouncilLogEntry,
+    CouncilLogKind,
+    CouncilLogPage,
     DeviceAuthorizationPollStatus,
     DeviceAuthorizationStatus,
     DirCdSection,
@@ -506,6 +511,8 @@ class EpgpService:
             row.gp = item.gp
             row.at = at
             row.officer = item.officer
+            row.council_reason = item.council_reason
+            row.council_kind = item.council_kind.value if item.council_kind else None
             if is_new:
                 self._session.add(row)
                 await self._session.flush()
@@ -1444,8 +1451,21 @@ class EpgpService:
             bucket["ep" if entry.kind == "ep" else "gp"] += decayed
 
         member_ids = set(member_buckets)
+        # Everyone confirmed on the guild roster shows up from day one (0 EP, base GP), as does anyone an officer put
+        # on the raid roster, so the public Ledger lists the whole guild before any raid is recorded.
         roster_members = (
-            (await self._session.execute(select(Member).where(Member.raid_status.is_not(None)))).scalars().all()
+            (
+                await self._session.execute(
+                    select(Member).where(
+                        or_(
+                            Member.raid_status.is_not(None),
+                            Member.roster_confirmed_at.is_not(None) & Member.is_guild_member.is_(True),
+                        )
+                    )
+                )
+            )
+            .scalars()
+            .all()
         )
         member_ids.update(member.id for member in roster_members)
         members: dict[int, Member] = {}
@@ -1482,6 +1502,7 @@ class EpgpService:
                     member_id=member_id,
                     name=member.display_name,
                     main=main_char.key if main_char else None,
+                    main_name=character_display_name(main_char) if main_char else None,
                     wow_class=WowClass(main_char.wow_class) if main_char and main_char.wow_class else None,
                     characters=[character.key for character in member_chars],
                     ep=round(ep_total, 2),
@@ -1501,6 +1522,7 @@ class EpgpService:
                     member_id=None,
                     name=name,
                     main=character.key,
+                    main_name=character_display_name(character),
                     wow_class=WowClass(character.wow_class) if character.wow_class else None,
                     characters=[character.key],
                     ep=round(ep_total, 2),
@@ -1521,6 +1543,8 @@ class EpgpService:
             min_gp=MIN_GP,
             decay_percent=DECAY_PERCENT,
             trial_days=TRIAL_DAYS,
+            weekly_reset_weekday=WEEKLY_RESET_WEEKDAY,
+            weekly_reset_hour_utc=WEEKLY_RESET_HOUR_UTC,
         )
         return EpgpStandings(generated_at=reference, rules=rules, rows=rows)
 
@@ -1529,9 +1553,11 @@ class EpgpService:
         member_id = entry.member_id if entry.member_id is not None else (character.member_id if character else None)
         member = await self._session.get(Member, member_id) if member_id is not None else None
         item_name = None
+        response = None
         if entry.loot_id is not None:
             loot = await self._session.get(LootAward, entry.loot_id)
             item_name = loot.item_name if loot else None
+            response = LootResponse(loot.response) if loot else None
         return EpgpLedgerRow(
             id=entry.id,
             at=entry.at,
@@ -1545,6 +1571,7 @@ class EpgpService:
             member_name=member.display_name if member else None,
             officer=entry.officer,
             item_name=item_name,
+            response=response,
             voided=entry.voided_at is not None,
         )
 
@@ -1611,9 +1638,101 @@ class EpgpService:
                     instance_name=raid_session.instance_name if raid_session else None,
                     encounter_name=encounter.name if encounter else None,
                     voided=row.voided_at is not None,
+                    council_reason=row.council_reason,
+                    council_kind=CouncilKind(row.council_kind) if row.council_kind else None,
                 )
             )
         return EpgpLootPage(items=items)
+
+    # --- bot: council loot log ------------------------------------------------------------------------------
+
+    COUNCIL_LOG_LIMIT = 25
+
+    async def _council_log_entry(self, row: LootAward, *, kind: CouncilLogKind, at: datetime) -> CouncilLogEntry:
+        character = await self._session.get(WowCharacter, row.character_id) if row.character_id else None
+        member = (
+            await self._session.get(Member, character.member_id)
+            if character and character.member_id is not None
+            else None
+        )
+        raid_session = await self._session.get(RaidSession, row.session_id) if row.session_id else None
+        encounter = await self._session.get(Encounter, row.encounter_id) if row.encounter_id else None
+        return CouncilLogEntry(
+            loot_id=row.id,
+            kind=kind,
+            item_id=row.item_id,
+            item_name=row.item_name,
+            quality=row.quality,
+            character=character.key if character else "",
+            member_name=member.display_name if member else None,
+            gp=row.gp,
+            council_kind=CouncilKind(row.council_kind) if row.council_kind else None,
+            council_reason=row.council_reason,
+            instance_name=raid_session.instance_name if raid_session else None,
+            encounter_name=encounter.name if encounter else None,
+            at=at,
+        )
+
+    async def get_pending_council_log(self) -> CouncilLogPage:
+        """Council decisions not yet posted, plus voids of already-posted ones, oldest first, capped at 25.
+
+        A row voided before its decision posted (``council_posted_at`` still null) yields nothing: the bot never
+        saw the decision, so there is nothing to announce voided.
+        """
+        session = self._session
+        decisions = (
+            (
+                await session.execute(
+                    select(LootAward).where(
+                        LootAward.response == LootResponse.COUNCIL.value,
+                        LootAward.voided_at.is_(None),
+                        LootAward.council_posted_at.is_(None),
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+        voids = (
+            (
+                await session.execute(
+                    select(LootAward).where(
+                        LootAward.response == LootResponse.COUNCIL.value,
+                        LootAward.voided_at.is_not(None),
+                        LootAward.council_posted_at.is_not(None),
+                        LootAward.council_void_posted_at.is_(None),
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+        dated: list[tuple[datetime, LootAward, CouncilLogKind]] = [
+            (row.at, row, CouncilLogKind.DECISION) for row in decisions
+        ]
+        dated += [(row.voided_at or row.at, row, CouncilLogKind.VOID) for row in voids]
+        dated.sort(key=lambda entry: entry[0])
+        entries = [
+            await self._council_log_entry(row, kind=kind, at=at) for at, row, kind in dated[: self.COUNCIL_LOG_LIMIT]
+        ]
+        return CouncilLogPage(items=entries)
+
+    async def ack_council_posted(self, loot_id: UUID, kind: CouncilLogKind) -> None:
+        """Stamps ``council_posted_at``/``council_void_posted_at`` for one council loot row. Idempotent.
+
+        404 if ``loot_id`` doesn't exist or isn't a council row.
+        """
+        row = await self._session.get(LootAward, loot_id)
+        if row is None or row.response != LootResponse.COUNCIL.value:
+            msg = f"No council loot {loot_id}"
+            raise NotFoundException(msg)
+        now = datetime.now(UTC)
+        if kind is CouncilLogKind.DECISION:
+            if row.council_posted_at is None:
+                row.council_posted_at = now
+        elif row.council_void_posted_at is None:
+            row.council_void_posted_at = now
+        await self._session.commit()
 
     async def get_progression(self) -> EpgpProgression:
         """Kill/wipe tallies per boss, grouped by instance."""

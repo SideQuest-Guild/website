@@ -204,6 +204,10 @@ TAG_GROUPS: dict[str, dict[str, str]] = {
         "Guild announcements": "The bot's queue of guild announcements still to post. Called by the bot.",
         "Group voice": "Group voice channel session lifecycle, spawned from the #lfg panel. Called by the bot.",
         "Roster sync": "Syncs the guild roster and character profiles from Battle.net. Called by the bot.",
+        "Loot council": (
+            "The bot's council loot-log poll and post ack: pending decisions and voids, and marking them posted "
+            "to #loot-log. Called by the bot with its shared key."
+        ),
     },
 }
 

@@ -13,6 +13,7 @@ from litestar import Controller, Request, get, post
 from litestar.di import NamedDependency, Provide
 from litestar.params import QueryParameter
 from litestar.response import Redirect
+from wow import AsyncClient
 
 from sidequest_api.domain.members.dependencies import provide_members_service
 from sidequest_api.domain.members.services import MembersService
@@ -20,9 +21,11 @@ from sidequest_api.lib.battlenet import (
     BattleNetOAuthError,
     build_authorize_url,
     exchange_code,
+    fetch_account_character_ids,
     fetch_userinfo,
     provide_battlenet_client,
 )
+from sidequest_api.lib.game_data import provide_optional_game_data
 from sidequest_api.lib.member_auth import provide_optional_member, safe_next_path
 from sidequest_api.lib.openapi import NOT_SIGNED_IN, SECURITY_SESSION
 from sidequest_common.models import Member
@@ -46,6 +49,7 @@ class BattleNetController(Controller):
         "battlenet_client": Provide(provide_battlenet_client),
         "members_service": Provide(provide_members_service),
         "optional_member": Provide(provide_optional_member),
+        "optional_game_data": Provide(provide_optional_game_data),
     }
 
     @get(
@@ -88,6 +92,7 @@ class BattleNetController(Controller):
         optional_member: NamedDependency[Member | None],
         battlenet_client: NamedDependency[httpx.AsyncClient],
         members_service: NamedDependency[MembersService],
+        optional_game_data: NamedDependency[AsyncClient | None],
         code: Annotated[str | None, QueryParameter()] = None,
         oauth_state: Annotated[str | None, QueryParameter(name="state")] = None,
         oauth_error: Annotated[str | None, QueryParameter(name="error")] = None,
@@ -112,7 +117,12 @@ class BattleNetController(Controller):
                 code=code,
             )
             account_id, battletag = await fetch_userinfo(battlenet_client, token)
-            await members_service.link_battlenet(optional_member, account_id=account_id, battletag=battletag)
+            character_ids = (
+                await fetch_account_character_ids(optional_game_data, token) if optional_game_data is not None else []
+            )
+            await members_service.link_battlenet(
+                optional_member, account_id=account_id, battletag=battletag, character_ids=character_ids
+            )
         except BattleNetOAuthError as exc:
             return _back(exc.code)
         return Redirect(next_path)

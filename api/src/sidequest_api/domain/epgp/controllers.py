@@ -10,7 +10,9 @@ from uuid import UUID
 
 from litestar import Controller, delete, get, post, put
 from litestar.di import NamedDependency, Provide
+from litestar.exceptions import NotFoundException
 from litestar.params import JSONBody, Parameter, QueryParameter
+from litestar.status_codes import HTTP_204_NO_CONTENT
 
 from sidequest_api.domain.calendar.dependencies import provide_calendar_service
 from sidequest_api.domain.calendar.services import CalendarService
@@ -25,10 +27,13 @@ from sidequest_api.lib.openapi import (
     SECURITY_SESSION,
     SECURITY_SESSION_OR_SYNC_TOKEN,
     SECURITY_SYNC_TOKEN,
+    GuildIdPath,
     ResponseSpec,
 )
 from sidequest_common.models import EpgpSyncToken, Member
 from sidequest_common.schemas import (
+    CouncilLogPage,
+    CouncilPostedBody,
     EpgpAdjustmentCreate,
     EpgpCharacter,
     EpgpCharacterList,
@@ -560,3 +565,68 @@ class MyCharactersController(Controller):
         epgp_service: NamedDependency[EpgpService],
     ) -> None:
         await epgp_service.delete_my_character(current_member, character_id)
+
+
+def _require_site_guild(guild_id: int, web_settings: WebSettings) -> None:
+    if guild_id != web_settings.GUILD_ID:
+        msg = f"No guild {guild_id}"
+        raise NotFoundException(msg)
+
+
+class LootCouncilController(Controller):
+    """``/api/guilds/{guild_id}/loot/council``: the bot's council loot-log poll and post ack, bot-key only.
+
+    404s for any ``guild_id`` other than ``WebSettings.GUILD_ID`` (same rule as ``badges``/``member_links``).
+    """
+
+    path = "/loot/council"
+    tags = ["Loot council"]
+    dependencies = {"epgp_service": Provide(provide_epgp_service)}
+
+    @get(
+        "/pending",
+        operation_id="GetPendingCouncilLog",
+        summary="List pending council loot-log entries",
+        description=(
+            "Returns council loot decisions not yet posted, plus voids of already-posted decisions, oldest "
+            "first, capped at 25. Returns 404 for any guild_id other than the SideQuest server."
+        ),
+        response_description="The pending council loot-log entries.",
+        responses={404: ResponseSpec(None, description="This guild_id is not the SideQuest server.")},
+    )
+    async def get_pending(
+        self,
+        guild_id: GuildIdPath,
+        epgp_service: NamedDependency[EpgpService],
+        web_settings: NamedDependency[WebSettings],
+    ) -> CouncilLogPage:
+        _require_site_guild(guild_id, web_settings)
+        return await epgp_service.get_pending_council_log()
+
+    @post(
+        "/{loot_id:uuid}/posted",
+        operation_id="AckCouncilLogPosted",
+        status_code=HTTP_204_NO_CONTENT,
+        summary="Ack a council loot-log entry",
+        description=(
+            "Marks a council decision or void as posted to #loot-log, so it drops off the pending queue. "
+            "Idempotent. Returns 404 for any guild_id other than the SideQuest server, or an unknown/non-council "
+            "loot_id."
+        ),
+        response_description="The entry was acked.",
+        responses={
+            404: ResponseSpec(
+                None, description="This guild_id is not the SideQuest server, or no such council loot award."
+            )
+        },
+    )
+    async def ack_posted(
+        self,
+        guild_id: GuildIdPath,
+        loot_id: Annotated[UUID, Parameter(description="The loot award's ID.")],
+        data: JSONBody[CouncilPostedBody],
+        epgp_service: NamedDependency[EpgpService],
+        web_settings: NamedDependency[WebSettings],
+    ) -> None:
+        _require_site_guild(guild_id, web_settings)
+        await epgp_service.ack_council_posted(loot_id, data.kind)

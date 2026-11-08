@@ -149,13 +149,20 @@
   text-align: right;
   white-space: nowrap;
 }
+.loot-reason {
+  grid-column: 1 / -1;
+  color: var(--mist-2);
+  font-size: 12px;
+  font-style: italic;
+}
 @media (max-width: 680px) {
   .loot-row {
     grid-template-columns: minmax(0, 1fr) auto;
     grid-template-areas:
       "item when"
       "winner winner"
-      "meta meta";
+      "meta meta"
+      "reason reason";
     row-gap: 4px;
   }
   .loot-item {
@@ -169,6 +176,9 @@
   }
   .loot-meta {
     grid-area: meta;
+  }
+  .loot-reason {
+    grid-area: reason;
   }
 }
 
@@ -205,4 +215,88 @@
 .progression-meta {
   color: var(--mist-2);
   font-size: 13px;
+}
+
+/* ——— Breakdown: a toggle under a standings name opens an EP/GP history row beneath it ——— */
+.row-toggle {
+  display: block;
+  margin-top: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--mist-2);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  cursor: pointer;
+  transition: color 0.3s;
+}
+.row-toggle:hover,
+.row-toggle:focus-visible {
+  color: var(--gold);
+  text-decoration-color: var(--gold-2);
+}
+.detail-row td {
+  background: rgba(10, 16, 29, 0.4);
+}
+.history-body {
+  padding: 6px 0;
+}
+.history-list {
+  display: grid;
+  gap: 2px;
+  margin-top: 8px;
+}
+.history-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 16px;
+  padding: 6px 2px;
+  border-bottom: 1px solid var(--stone-2);
+  font-size: 13px;
+}
+.history-row.is-voided {
+  opacity: 0.45;
+  text-decoration: line-through;
+}
+.history-amount {
+  color: var(--gold);
+  font-variant-numeric: tabular-nums lining-nums;
+  white-space: nowrap;
+}
+.history-when {
+  color: var(--mist-2);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+/* ——— Calculator: next-raid EP/GP/PR projection, one or two result cards side by side ——— */
+#calc-form fieldset + fieldset {
+  margin-top: clamp(18px, 1.8vw, 24px);
+}
+.calc-compare {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: clamp(16px, 2vw, 28px);
+  margin-top: 12px;
+}
+@media (max-width: 640px) {
+  .calc-compare {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.calc-card {
+  border: 1px solid var(--stone-2);
+  padding: 14px 16px;
+  background: rgba(10, 16, 29, 0.4);
+}
+.calc-winner {
+  margin-top: clamp(14px, 1.6vw, 20px);
+  color: var(--gold);
+}
+#calc-result {
+  margin-top: clamp(14px, 1.6vw, 20px);
 }

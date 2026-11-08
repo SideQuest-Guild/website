@@ -89,3 +89,7 @@ class GuildConfig(UUIDAuditBase):
     # Raid readiness
     raid_min_item_level: Mapped[int | None] = mapped_column(Integer, default=None)
     """Sign-ups below this equipped item level are marked on the raid chart; ``None`` marks nobody. Officers set it."""
+
+    # Loot council
+    loot_log_channel_id: Mapped[int | None] = mapped_column(BigInteger, default=None)
+    """Where the bot posts council loot decisions and voids; officers set it."""

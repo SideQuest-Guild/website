@@ -951,10 +951,24 @@ async def test_guild_roster_endpoint_groups_alts_under_their_linked_member(
         session.add(member)
         await session.flush()
         main_char = WowCharacter(
-            name="Main", realm="Whitemane", key="main-whitemane", member_id=member.id, is_main=True, source="claim"
+            name="Main",
+            realm="Whitemane",
+            key="main-whitemane",
+            member_id=member.id,
+            is_main=True,
+            source="claim",
+            surname="Steelheart",
+            slug="main-steelheart",
         )
         alt_char = WowCharacter(
-            name="Alt", realm="Whitemane", key="alt-whitemane", member_id=member.id, is_main=False, source="claim"
+            name="Alt",
+            realm="Whitemane",
+            key="alt-whitemane",
+            member_id=member.id,
+            is_main=False,
+            source="claim",
+            surname="Steelheart",
+            slug="alt-steelheart",
         )
         session.add_all([main_char, alt_char])
         await session.flush()
@@ -982,8 +996,8 @@ async def test_guild_roster_endpoint_groups_alts_under_their_linked_member(
     body = response.json()
     assert len(body["members"]) == 1
     row = body["members"][0]
-    assert row["main"] == "main-whitemane"
-    assert {c["name"] for c in row["characters"]} == {"main-whitemane", "alt-whitemane"}
+    assert row["main"] == "Main Steelheart"
+    assert {c["name"] for c in row["characters"]} == {"Main Steelheart", "Alt Steelheart"}
     assert body["unlinked"] == []
 
 

@@ -1,8 +1,10 @@
 """Battle.net OAuth2 for linking a member's Blizzard account (BattleTag) to their Discord-backed profile.
 
-Only the ``openid`` scope is requested: it proves account ownership and yields the account id and BattleTag via
-``/userinfo``. Character data (``wow.profile``) is left out until Blizzard publishes World of Warcraft: Forever in
-its Profile API. ``oauth.battle.net`` serves the US region.
+Requests ``openid`` (proves account ownership, yields the account id and BattleTag via ``/userinfo``) and
+``wow.profile`` (lets the site read the account's WoW Forever characters via ``AsyncAccount.profile()``, a
+community-probed, undocumented endpoint — Blizzard has not published a Forever profile API). A failure to read
+the profile never blocks linking: the BattleTag proof still succeeds, just without character ids to auto-link
+against. ``oauth.battle.net`` serves the US region.
 """
 
 from collections.abc import AsyncIterator  # noqa: TC003 - provide_battlenet_client is a Litestar DI target
@@ -10,9 +12,10 @@ from urllib.parse import urlencode
 
 import httpx
 from litestar.datastructures import State  # noqa: TC002 - provide_battlenet_client is a Litestar DI target
+from wow import AsyncClient, WowError
 
 BATTLENET_OAUTH_BASE = "https://oauth.battle.net"
-BATTLENET_SCOPES = "openid"
+BATTLENET_SCOPES = "openid wow.profile"
 BATTLENET_TRANSPORT_STATE_KEY = "battlenet_transport"
 
 
@@ -80,3 +83,17 @@ async def provide_battlenet_client(state: State) -> AsyncIterator[httpx.AsyncCli
     transport = state.get(BATTLENET_TRANSPORT_STATE_KEY)
     async with httpx.AsyncClient(base_url=BATTLENET_OAUTH_BASE, timeout=10.0, transport=transport) as client:
         yield client
+
+
+async def fetch_account_character_ids(game_data: AsyncClient, access_token: str) -> list[int]:
+    """The Battle.net ids of every WoW Forever character on the account that owns ``access_token``.
+
+    Uses the app's game-data client with the user's token swapped in (``wow.profile`` scope), so it needs no
+    separate HTTP client or region handling. Best-effort: returns an empty list rather than raising if Battle.net
+    fails or the undocumented profile shape doesn't parse, so a flaky profile read never blocks linking.
+    """
+    try:
+        profile = await game_data.with_options(access_token=access_token).account.profile()
+    except WowError:
+        return []
+    return [character.id for account in profile.wow_accounts for character in account.characters]

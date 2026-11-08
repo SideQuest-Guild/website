@@ -22,6 +22,10 @@ import "../../styles/room-ledger.css";
       EP, GP and Priority Ratio (PR = EP &divide; GP), sorted by PR. GP never falls below 100, and both EP and GP decay
       15% at each weekly reset — the numbers below already account for that.
     </p>
+    <p class="aside">
+      Click a name below for their EP/GP history, or use the <a href="#h-calculator">calculator</a> to plan your next
+      raid.
+    </p>
     <div class="ledger-table-wrap">
       <table class="ledger-table" id="standings-table">
         <thead>
@@ -36,6 +40,136 @@ import "../../styles/room-ledger.css";
         <tbody id="standings-rows"></tbody>
       </table>
     </div>
+  </section>
+
+  <section class="chamber" aria-labelledby="h-calculator" id="h-calculator">
+    <h2 class="chamber-title" id="h-calculator-title">
+      Calculator
+    </h2>
+    <p class="aside">
+      Pick someone from the standings (or enter your own EP and GP), say what you'll do at the next raid, and see your
+      EP, GP and PR after the next weekly reset — and where that lands you. Everything here runs in your browser from
+      the numbers above; nothing is saved.
+    </p>
+    <form class="form" id="calc-form">
+      <fieldset>
+        <legend>Person A</legend>
+        <div class="form-row">
+          <div class="field">
+            <label for="calc-a-who">Who</label>
+            <select id="calc-a-who"></select>
+          </div>
+          <div class="field" id="calc-a-custom-field" hidden>
+            <label for="calc-a-ep">Current EP</label>
+            <input id="calc-a-ep" type="number" min="0" step="0.1" value="0" />
+          </div>
+          <div class="field" id="calc-a-custom-gp-field" hidden>
+            <label for="calc-a-gp">Current GP</label>
+            <input id="calc-a-gp" type="number" min="0" step="0.1" value="100" />
+          </div>
+        </div>
+      </fieldset>
+
+      <p class="form-actions">
+        <button
+          type="button"
+          class="btn-quiet btn-small"
+          id="calc-compare-toggle"
+          aria-expanded="false"
+          aria-controls="calc-b-fieldset"
+        >
+          Compare with someone else
+        </button>
+      </p>
+
+      <fieldset id="calc-b-fieldset" hidden>
+        <legend>Person B</legend>
+        <div class="form-row">
+          <div class="field">
+            <label for="calc-b-who">Who</label>
+            <select id="calc-b-who"></select>
+          </div>
+          <div class="field" id="calc-b-custom-field" hidden>
+            <label for="calc-b-ep">Current EP</label>
+            <input id="calc-b-ep" type="number" min="0" step="0.1" value="0" />
+          </div>
+          <div class="field" id="calc-b-custom-gp-field" hidden>
+            <label for="calc-b-gp">Current GP</label>
+            <input id="calc-b-gp" type="number" min="0" step="0.1" value="100" />
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Next raid</legend>
+        <div class="form-row">
+          <div class="field">
+            <label for="calc-on-time">
+              <input id="calc-on-time" type="checkbox" />
+              On time
+            </label>
+          </div>
+          <div class="field">
+            <label for="calc-full-night">
+              <input id="calc-full-night" type="checkbox" />
+              Full night
+            </label>
+          </div>
+          <div class="field">
+            <label for="calc-boss-kills">Boss kills</label>
+            <input id="calc-boss-kills" type="number" min="0" max="40" step="1" value="0" />
+          </div>
+          <div class="field">
+            <label for="calc-progress">Progress (new-boss wipes)</label>
+            <input id="calc-progress" type="number" min="0" max="40" step="1" value="0" />
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>
+          <label for="calc-loot-toggle">
+            <input id="calc-loot-toggle" type="checkbox" />
+            Loot
+          </label>
+        </legend>
+        <div class="form-row" id="calc-loot-fields" hidden>
+          <div class="field">
+            <label for="calc-loot-slot">Slot</label>
+            <select id="calc-loot-slot"></select>
+          </div>
+          <div class="field">
+            <label for="calc-loot-response">Response</label>
+            <select id="calc-loot-response">
+              <option value="ms">Main spec</option>
+              <option value="os">Off spec</option>
+              <option value="alt">Alt fill</option>
+              <option value="de">Disenchanted</option>
+              <option value="bank">Banked</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="calc-loot-chase">
+              <input id="calc-loot-chase" type="checkbox" />
+              Chase item
+            </label>
+          </div>
+          <div class="field">
+            <label for="calc-loot-weapon">
+              <input id="calc-loot-weapon" type="checkbox" />
+              Main caster weapon (1H, priced as 2H)
+            </label>
+          </div>
+          <div class="field">
+            <label for="calc-loot-legendary">
+              <input id="calc-loot-legendary" type="checkbox" />
+              Legendary, special or rare
+            </label>
+          </div>
+        </div>
+      </fieldset>
+    </form>
+    <div id="calc-result" aria-live="polite"></div>
   </section>
 
   <section class="chamber" aria-labelledby="h-rules">
@@ -75,6 +209,8 @@ import "../../styles/room-ledger.css";
     capitalize,
     classLabel,
     normalizeClass,
+    type EpgpLedgerEntry,
+    type EpgpLedgerPage,
     type EpgpLootItem,
     type EpgpProgressionInstance,
     type EpgpRules,
@@ -84,6 +220,15 @@ import "../../styles/room-ledger.css";
     type EpgpProgression,
     type Me,
   } from "../../scripts/api";
+  import {
+    compareWinner,
+    projectMember,
+    rankAmong,
+    type LootPlan,
+    type LootResponse,
+    type ProjectedMember,
+    type RaidPlan,
+  } from "../../scripts/epgp-calculator";
   import { itemLink, loadWowheadTooltips, refreshWowheadLinks } from "../../scripts/items";
   import { onPage } from "../../scripts/page";
 
@@ -138,9 +283,41 @@ import "../../styles/room-ledger.css";
     );
   }
 
-  function standingsRow(row: EpgpStandingRow, meId: number | null): string {
+  const REASON_LABELS: Record<string, string> = {
+    boss_kill: "Boss kill",
+    progress: "Progress",
+    on_time: "On time",
+    full_night: "Full night",
+    standby: "Standby",
+    loot: "Loot",
+    adjust: "Adjustment",
+  };
+
+  function ledgerRow(entry: EpgpLedgerEntry): string {
+    const when = new Date(entry.at).toLocaleDateString(undefined, {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+    const label =
+      entry.kind === "gp" && entry.item_name
+        ? `${escapeHtml(entry.item_name)}${entry.response ? ` \u00b7 ${escapeHtml(RESPONSE_LABELS[entry.response] ?? entry.response)}` : ""}`
+        : escapeHtml(REASON_LABELS[entry.reason] ?? entry.reason);
+    const decayed =
+      Math.abs(entry.decayed - entry.amount) >= 0.01
+        ? ` <span class="history-decayed">(now ${entry.decayed.toFixed(2)})</span>`
+        : "";
+    return `
+      <li class="history-row${entry.voided ? " is-voided" : ""}">
+        <span class="history-label">${label}</span>
+        <span class="history-amount">${entry.amount > 0 ? "+" : ""}${entry.amount} ${entry.kind.toUpperCase()}${decayed}</span>
+        <span class="history-when">${when}${entry.voided ? " \u00b7 voided" : ""}</span>
+      </li>`;
+  }
+
+  function standingsRow(row: EpgpStandingRow, meId: number | null, idx: number): string {
     const you = row.member_id !== null && row.member_id === meId;
-    const name = escapeHtml(row.main ?? row.name);
+    const name = escapeHtml(row.main_name ?? row.name);
     const trial = row.trial ? `<span class="trial-tag">Trial</span>` : "";
     const clsClass = normalizeClass(row.class);
     return `
@@ -148,11 +325,19 @@ import "../../styles/room-ledger.css";
         <td>
           <span class="ledger-name">${row.member_id !== null ? `<a href="/heroes/member/?id=${row.member_id}">${name}</a>` : name}</span>
           ${trial}
+          <button type="button" class="row-toggle" data-idx="${idx}" aria-expanded="false" aria-controls="detail-${idx}">
+            Breakdown
+          </button>
         </td>
         <td class="${clsClass ? `cls-${clsClass}` : ""}">${escapeHtml(classLabel(row.class))}</td>
         <td class="num">${row.ep.toFixed(1)}</td>
         <td class="num">${row.gp.toFixed(1)}</td>
         <td class="num pr">${row.pr.toFixed(3)}</td>
+      </tr>
+      <tr class="detail-row" id="detail-${idx}" hidden>
+        <td colspan="5">
+          <div class="history-body" id="detail-body-${idx}"></div>
+        </td>
       </tr>`;
   }
 
@@ -160,7 +345,7 @@ import "../../styles/room-ledger.css";
     const tbody = requireElement("standings-rows");
     tbody.innerHTML =
       rows.length > 0
-        ? rows.map((row) => standingsRow(row, meId)).join("")
+        ? rows.map((row, idx) => standingsRow(row, meId, idx)).join("")
         : `<tr><td colspan="5" class="ledger-empty">No raids recorded yet. Standings show up once an officer syncs a raid night.</td></tr>`;
   }
 
@@ -194,7 +379,7 @@ import "../../styles/room-ledger.css";
         <div><dt>Base / minimum GP</dt><dd>${rules.base_gp} / ${rules.min_gp}</dd></div>
         <div><dt>Off-spec pays</dt><dd>${rules.os_percent}%</dd></div>
         <div><dt>Chase item multiplier</dt><dd>&times;${rules.chase_multiplier}</dd></div>
-        <div><dt>Legendary piece</dt><dd>${rules.legendary_gp} GP</dd></div>
+        <div><dt>Legendary, special or rare item</dt><dd>${rules.legendary_gp} GP</dd></div>
         <div><dt>Weekly decay</dt><dd>${rules.decay_percent}% of EP and GP</dd></div>
         <div><dt>Trial window</dt><dd>${rules.trial_days} days</dd></div>
       </dl>`;
@@ -204,11 +389,16 @@ import "../../styles/room-ledger.css";
     const quality = QUALITY_NAMES[item.quality] ?? "common";
     const where = [item.instance_name, item.encounter_name].filter(Boolean).join(" \u2013 ");
     const winner = escapeHtml(item.member_name ?? item.character);
+    const reason =
+      item.response === "council" && item.council_reason
+        ? `<span class="loot-reason">Reason: ${escapeHtml(item.council_reason)}</span>`
+        : "";
     return `
       <li class="loot-row${item.voided ? " is-voided" : ""}">
         <span class="loot-item">${itemLink(item.item_id, item.item_name, quality)}</span>
         <span class="loot-winner">${winner}</span>
         <span class="loot-meta">${escapeHtml(RESPONSE_LABELS[item.response] ?? item.response)} \u00b7 ${item.gp} GP${where ? ` \u00b7 ${escapeHtml(where)}` : ""}</span>
+        ${reason}
         <span class="loot-when">${new Date(item.at).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</span>
       </li>`;
   }
@@ -251,15 +441,187 @@ import "../../styles/room-ledger.css";
         : `<p class="ledger-empty">No raids recorded yet. Progression shows up here once an officer syncs a raid night.</p>`;
   }
 
+  async function toggleDetail(idx: number, row: EpgpStandingRow, signal: AbortSignal): Promise<void> {
+    const button = document.querySelector<HTMLButtonElement>(`.row-toggle[data-idx="${idx}"]`);
+    const detailRow = document.getElementById(`detail-${idx}`);
+    const body = document.getElementById(`detail-body-${idx}`);
+    if (!button || !detailRow || !body) {
+      return;
+    }
+    const expanded = button.getAttribute("aria-expanded") === "true";
+    button.setAttribute("aria-expanded", expanded ? "false" : "true");
+    detailRow.hidden = expanded;
+    if (expanded || body.dataset.loaded === "true") {
+      return;
+    }
+    body.textContent = "Loading…";
+    try {
+      const query =
+        row.member_id !== null
+          ? `member_id=${row.member_id}`
+          : `character=${encodeURIComponent(row.main ?? row.characters[0] ?? "")}`;
+      const data = await apiFetch<EpgpLedgerPage>(`/api/epgp/ledger?${query}&limit=200`, { signal });
+      body.innerHTML = `
+        <p class="aside">Current: ${row.ep.toFixed(1)} EP, ${row.gp.toFixed(1)} GP, ${row.pr.toFixed(3)} PR.</p>
+        <ul class="history-list">
+          ${data.entries.length > 0 ? data.entries.map(ledgerRow).join("") : `<li class="ledger-empty">No history yet.</li>`}
+        </ul>`;
+      body.dataset.loaded = "true";
+    } catch (err) {
+      body.textContent = statusMessage(err);
+    }
+  }
+
+  function populateWhoSelect(prefix: "a" | "b", rows: EpgpStandingRow[]): void {
+    const select = requireElement<HTMLSelectElement>(`calc-${prefix}-who`);
+    const previous = select.value;
+    select.innerHTML =
+      rows.map((row, idx) => `<option value="${idx}">${escapeHtml(row.main_name ?? row.name)}</option>`).join("") +
+      `<option value="custom">Custom…</option>`;
+    select.value = [...select.options].some((opt) => opt.value === previous)
+      ? previous
+      : rows.length > 0
+        ? "0"
+        : "custom";
+    const isCustom = select.value === "custom";
+    requireElement(`calc-${prefix}-custom-field`).hidden = !isCustom;
+    requireElement(`calc-${prefix}-custom-gp-field`).hidden = !isCustom;
+  }
+
+  function populateLootSlotSelect(rules: EpgpRules): void {
+    const select = requireElement<HTMLSelectElement>("calc-loot-slot");
+    const previous = select.value;
+    const entries = Object.entries(rules.gp)
+      .filter(([, value]) => value > 0)
+      .toSorted((a, b) => a[1] - b[1] || invTypeLabel(a[0]).localeCompare(invTypeLabel(b[0])));
+    select.innerHTML = entries
+      .map(([key, value]) => `<option value="${key}">${escapeHtml(invTypeLabel(key))} (${value} GP)</option>`)
+      .join("");
+    if (entries.some(([key]) => key === previous)) {
+      select.value = previous;
+    }
+  }
+
+  function readWho(
+    prefix: "a" | "b",
+    rows: EpgpStandingRow[],
+  ): { current: { ep: number; gp: number }; label: string; excludeIdx: number | null } | null {
+    const select = requireElement<HTMLSelectElement>(`calc-${prefix}-who`);
+    if (select.value === "custom") {
+      const ep = Number(requireElement<HTMLInputElement>(`calc-${prefix}-ep`).value) || 0;
+      const gp = Number(requireElement<HTMLInputElement>(`calc-${prefix}-gp`).value) || 0;
+      return { current: { ep, gp }, label: "Custom", excludeIdx: null };
+    }
+    const idx = Number(select.value);
+    const row = rows[idx];
+    return row ? { current: { ep: row.ep, gp: row.gp }, label: row.main_name ?? row.name, excludeIdx: idx } : null;
+  }
+
+  function readPlan(): RaidPlan {
+    return {
+      onTime: requireElement<HTMLInputElement>("calc-on-time").checked,
+      fullNight: requireElement<HTMLInputElement>("calc-full-night").checked,
+      bossKills: Number(requireElement<HTMLInputElement>("calc-boss-kills").value) || 0,
+      progressAwards: Number(requireElement<HTMLInputElement>("calc-progress").value) || 0,
+    };
+  }
+
+  function readLoot(): LootPlan | null {
+    if (!requireElement<HTMLInputElement>("calc-loot-toggle").checked) {
+      return null;
+    }
+    return {
+      slot: requireElement<HTMLSelectElement>("calc-loot-slot").value,
+      response: requireElement<HTMLSelectElement>("calc-loot-response").value as LootResponse,
+      chase: requireElement<HTMLInputElement>("calc-loot-chase").checked,
+      mainCasterWeapon: requireElement<HTMLInputElement>("calc-loot-weapon").checked,
+      legendary: requireElement<HTMLInputElement>("calc-loot-legendary").checked,
+    };
+  }
+
+  function resultCard(label: string, projected: ProjectedMember, rank: number | null, total: number): string {
+    const state = projected.postLoot;
+    return `
+      <div class="calc-card">
+        <h3 class="sub-title">${escapeHtml(label)}</h3>
+        <dl class="rules-list">
+          <div><dt>EP</dt><dd>${state.ep.toFixed(1)}</dd></div>
+          <div><dt>GP</dt><dd>${state.gp.toFixed(1)}</dd></div>
+          <div><dt>PR</dt><dd>${state.pr.toFixed(3)}</dd></div>
+          ${rank !== null ? `<div><dt>Rank</dt><dd>#${rank} of ${total}</dd></div>` : ""}
+        </dl>
+      </div>`;
+  }
+
+  function recompute(rows: EpgpStandingRow[], rules: EpgpRules | null): void {
+    const resultEl = requireElement("calc-result");
+    if (!rules) {
+      return;
+    }
+    const a = readWho("a", rows);
+    if (!a) {
+      resultEl.innerHTML = `<p class="ledger-empty">Pick someone, or enter custom EP and GP.</p>`;
+      return;
+    }
+    const plan = readPlan();
+    const loot = readLoot();
+    const projectedA = projectMember(a.current, plan, loot, rules);
+    const othersFor = (excludeIdx: number | null): { ep: number; gp: number }[] =>
+      rows.filter((_, idx) => idx !== excludeIdx).map((row) => ({ ep: row.ep, gp: row.gp }));
+    const compareOn = requireElement<HTMLButtonElement>("calc-compare-toggle").getAttribute("aria-expanded") === "true";
+
+    if (!compareOn) {
+      const rank = rankAmong(projectedA.postLoot, othersFor(a.excludeIdx), rules);
+      resultEl.innerHTML = resultCard(a.label, projectedA, rank, rows.length);
+      return;
+    }
+
+    const b = readWho("b", rows);
+    const cardA = resultCard(
+      a.label,
+      projectedA,
+      rankAmong(projectedA.postLoot, othersFor(a.excludeIdx), rules),
+      rows.length,
+    );
+    if (!b) {
+      resultEl.innerHTML = `${cardA}<p class="ledger-empty">Pick a second person, or enter custom EP and GP, to compare.</p>`;
+      return;
+    }
+    const projectedB = projectMember(b.current, plan, loot, rules);
+    const cardB = resultCard(
+      b.label,
+      projectedB,
+      rankAmong(projectedB.postLoot, othersFor(b.excludeIdx), rules),
+      rows.length,
+    );
+    const winner = compareWinner(projectedA.preLoot, projectedB.preLoot);
+    const tiedPr = projectedA.preLoot.pr === projectedB.preLoot.pr;
+    const winnerText =
+      winner === "tie"
+        ? "Tied on PR and EP \u2014 no clear winner."
+        : `${escapeHtml(winner === "a" ? a.label : b.label)} wins a contested main-spec drop (higher PR${tiedPr ? ", tied PR broken by EP" : ""}).`;
+    resultEl.innerHTML = `
+      <p class="aside calc-winner">${winnerText}</p>
+      <div class="calc-compare">${cardA}${cardB}</div>`;
+  }
+
   onPage("#ledger-status", (signal) => {
     const statusEl = requireElement("ledger-status");
     let meId: number | null = null;
+    let currentRows: EpgpStandingRow[] = [];
+    let currentRules: EpgpRules | null = null;
 
     async function loadStandings(): Promise<void> {
       try {
         const data = await apiFetch<EpgpStandings>("/api/epgp/standings", { signal });
+        currentRows = data.rows;
+        currentRules = data.rules;
         renderRules(data.rules);
         renderStandings(data.rows, meId);
+        populateWhoSelect("a", currentRows);
+        populateWhoSelect("b", currentRows);
+        populateLootSlotSelect(currentRules);
+        recompute(currentRows, currentRules);
       } catch (err) {
         statusEl.textContent = statusMessage(err);
       }
@@ -281,6 +643,77 @@ import "../../styles/room-ledger.css";
       } catch (err) {
         statusEl.textContent = statusMessage(err);
       }
+    }
+
+    requireElement("standings-rows").addEventListener(
+      "click",
+      (event) => {
+        const button = (event.target as HTMLElement).closest<HTMLButtonElement>(".row-toggle");
+        const idx = button ? Number(button.dataset.idx) : NaN;
+        const row = currentRows[idx];
+        if (button && row) {
+          void toggleDetail(idx, row, signal);
+        }
+      },
+      { signal },
+    );
+
+    const recomputeNow = (): void => recompute(currentRows, currentRules);
+    requireElement("calc-form").addEventListener("submit", (event) => event.preventDefault(), { signal });
+    for (const prefix of ["a", "b"] as const) {
+      requireElement(`calc-${prefix}-who`).addEventListener(
+        "change",
+        () => {
+          const select = requireElement<HTMLSelectElement>(`calc-${prefix}-who`);
+          const isCustom = select.value === "custom";
+          requireElement(`calc-${prefix}-custom-field`).hidden = !isCustom;
+          requireElement(`calc-${prefix}-custom-gp-field`).hidden = !isCustom;
+          recomputeNow();
+        },
+        { signal },
+      );
+    }
+    const compareToggle = requireElement<HTMLButtonElement>("calc-compare-toggle");
+    const bFieldset = requireElement("calc-b-fieldset");
+    compareToggle.addEventListener(
+      "click",
+      () => {
+        const expanded = compareToggle.getAttribute("aria-expanded") === "true";
+        compareToggle.setAttribute("aria-expanded", expanded ? "false" : "true");
+        bFieldset.hidden = expanded;
+        compareToggle.textContent = expanded ? "Compare with someone else" : "Stop comparing";
+        recomputeNow();
+      },
+      { signal },
+    );
+    const lootToggle = requireElement<HTMLInputElement>("calc-loot-toggle");
+    const lootFields = requireElement("calc-loot-fields");
+    lootToggle.addEventListener(
+      "change",
+      () => {
+        lootFields.hidden = !lootToggle.checked;
+        recomputeNow();
+      },
+      { signal },
+    );
+    for (const id of [
+      "calc-a-ep",
+      "calc-a-gp",
+      "calc-b-ep",
+      "calc-b-gp",
+      "calc-on-time",
+      "calc-full-night",
+      "calc-boss-kills",
+      "calc-progress",
+      "calc-loot-slot",
+      "calc-loot-response",
+      "calc-loot-chase",
+      "calc-loot-weapon",
+      "calc-loot-legendary",
+    ]) {
+      const field = requireElement(id);
+      field.addEventListener("input", recomputeNow, { signal });
+      field.addEventListener("change", recomputeNow, { signal });
     }
 
     onFreshData("/api/epgp/standings", () => void loadStandings());
