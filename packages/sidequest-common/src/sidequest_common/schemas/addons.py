@@ -23,6 +23,25 @@ ADDON_ORIGIN_LABELS: dict[AddonOrigin, str] = {
 }
 
 
+class AddonCategory(StrEnum):
+    """Who the guild suggests an addon for, and whether raiders must run it."""
+
+    RAID_REQUIRED = "raid_required"
+    RAID = "raid"
+    GENERAL = "general"
+    LEVELING = "leveling"
+    PVP = "pvp"
+
+
+ADDON_CATEGORY_LABELS: dict[AddonCategory, str] = {
+    AddonCategory.RAID_REQUIRED: "Required for raids",
+    AddonCategory.RAID: "Suggested for raids",
+    AddonCategory.GENERAL: "Suggested for everyone",
+    AddonCategory.LEVELING: "Suggested for leveling",
+    AddonCategory.PVP: "Suggested for PvP",
+}
+
+
 def _validate_https_url(value: str | None) -> str | None:
     if value is not None and not value.startswith("https://"):
         msg = "must be an https:// URL"
@@ -43,6 +62,7 @@ class AddonSchema(BaseModel):
     download_url: str
     homepage_url: str | None
     origin: AddonOrigin = AddonOrigin.COMMUNITY
+    category: AddonCategory = AddonCategory.GENERAL
     updated_at: datetime
 
 
@@ -56,6 +76,7 @@ class AddonCreate(BaseModel):
     download_url: str = Field(max_length=2000)
     homepage_url: str | None = Field(default=None, max_length=2000)
     origin: AddonOrigin = AddonOrigin.COMMUNITY
+    category: AddonCategory = AddonCategory.GENERAL
 
     @field_validator("slug")
     @classmethod
@@ -85,6 +106,7 @@ class AddonUpdate(BaseModel):
     download_url: str | None = Field(default=None, max_length=2000)
     homepage_url: str | None = Field(default=None, max_length=2000)
     origin: AddonOrigin | None = Field(default=None)
+    category: AddonCategory | None = Field(default=None)
 
     @field_validator("download_url")
     @classmethod

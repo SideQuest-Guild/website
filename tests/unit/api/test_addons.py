@@ -151,3 +151,65 @@ async def test_duplicate_slug_is_409(member_client: AsyncTestClient, discord_sta
     assert first.status_code == 201
     second = await member_client.post("/api/addons", json=body)
     assert second.status_code == 409
+
+
+async def test_addon_create_defaults_to_general_category(member_client: AsyncTestClient, discord_state: dict) -> None:
+    await login_as(member_client, discord_state, discord_id=3009, roles=[OFFICER_ROLE_ID])
+    response = await member_client.post(
+        "/api/addons",
+        json={
+            "slug": "pawn",
+            "name": "Pawn",
+            "summary": "Gear scoring",
+            "version": "1.0.0",
+            "download_url": "https://example.com/pawn.zip",
+            "homepage_url": None,
+        },
+    )
+    assert response.status_code == 201
+    assert response.json()["category"] == "general"
+
+
+async def test_addon_create_and_update_round_trip_category(member_client: AsyncTestClient, discord_state: dict) -> None:
+    await login_as(member_client, discord_state, discord_id=3010, roles=[OFFICER_ROLE_ID])
+    create_response = await member_client.post(
+        "/api/addons",
+        json={
+            "slug": "deadly-boss-mods-required",
+            "name": "Deadly Boss Mods",
+            "summary": "Raid warnings",
+            "version": "1.0.0",
+            "download_url": "https://example.com/dbm.zip",
+            "homepage_url": None,
+            "category": "raid_required",
+        },
+    )
+    assert create_response.status_code == 201
+    assert create_response.json()["category"] == "raid_required"
+    addon_id = create_response.json()["id"]
+
+    update_response = await member_client.patch(f"/api/addons/{addon_id}", json={"category": "pvp"})
+    assert update_response.status_code == 200
+    assert update_response.json()["category"] == "pvp"
+
+    list_response = await member_client.get("/api/addons")
+    assert list_response.status_code == 200
+    addon = next(a for a in list_response.json() if a["slug"] == "deadly-boss-mods-required")
+    assert addon["category"] == "pvp"
+
+
+async def test_addon_invalid_category_is_rejected(member_client: AsyncTestClient, discord_state: dict) -> None:
+    await login_as(member_client, discord_state, discord_id=3011, roles=[OFFICER_ROLE_ID])
+    response = await member_client.post(
+        "/api/addons",
+        json={
+            "slug": "bad-category-addon",
+            "name": "Bad Category Addon",
+            "summary": "Should be rejected",
+            "version": "1.0.0",
+            "download_url": "https://example.com/bad.zip",
+            "homepage_url": None,
+            "category": "endgame",
+        },
+    )
+    assert response.status_code == 400

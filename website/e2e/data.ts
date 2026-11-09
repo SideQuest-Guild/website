@@ -214,6 +214,7 @@ export const ADDONS: Addon[] = [
     download_url: "https://example.com/questie.zip",
     homepage_url: "https://example.com/questie",
     origin: "community",
+    category: "leveling",
     updated_at: inDays(-10),
   },
   {
@@ -225,6 +226,7 @@ export const ADDONS: Addon[] = [
     download_url: "https://example.com/sq.zip",
     homepage_url: null,
     origin: "guild",
+    category: "raid_required",
     updated_at: inDays(-2),
   },
 ];

@@ -8,6 +8,11 @@
   align-items: start;
 }
 
+.addon-groups {
+  display: grid;
+  gap: clamp(36px, 3.6vw, 52px);
+}
+
 /* Companion's window: the courier loft's painting fills the frame and fades into night behind the copy. */
 .pairing {
   position: relative;

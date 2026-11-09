@@ -18,3 +18,4 @@ class Addon(UUIDAuditBase):
     download_url: Mapped[str] = mapped_column(Text)
     homepage_url: Mapped[str | None] = mapped_column(Text, default=None)
     origin: Mapped[str] = mapped_column(String(20), default="community")
+    category: Mapped[str] = mapped_column(String(20), default="general", server_default="general")
