@@ -102,8 +102,9 @@ const crest = await getImage({ src: guildCrest, width: 112, format: "webp" });
         );
         return;
       }
+      // An API pod or service-worker copy from before categories sends none; those addons are "general", as on the API.
       list.innerHTML = ADDON_CATEGORIES.map(
-        (category) => [category, addons.filter((addon) => addon.category === category)] as const,
+        (category) => [category, addons.filter((addon) => (addon.category ?? "general") === category)] as const,
       )
         .filter(([, group]) => group.length > 0)
         .map(([category, group]) => addonGroup(category, group, list.dataset.crest))

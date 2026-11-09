@@ -1,16 +1,20 @@
-/* The Armory: the guild's addons racked as item tooltips (addon-tooltip.css) beside a window onto the courier loft,
-   where SideQuest Companion keeps them up to date. */
+/* The Armory: the guild's addons racked as item tooltips (addon-tooltip.css), one rack per category across the full
+   width, above a window onto the courier loft, where SideQuest Companion keeps them up to date. */
 
 .armory-layout {
   display: grid;
-  grid-template-columns: minmax(0, 28rem) minmax(0, 1fr);
-  gap: clamp(28px, 3.4vw, 56px);
-  align-items: start;
+  grid-template-columns: minmax(0, 1fr);
+  gap: clamp(36px, 3.6vw, 52px);
 }
 
 .addon-groups {
   display: grid;
   gap: clamp(36px, 3.6vw, 52px);
+}
+/* A category's rack fills the row with as many tooltips as fit, so two dozen addons don't stack into one column. */
+.addon-groups .addon-rack {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 21rem), 1fr));
+  align-items: start;
 }
 
 /* Companion's window: the courier loft's painting fills the frame and fades into night behind the copy. */
@@ -19,7 +23,7 @@
   isolation: isolate;
   display: grid;
   align-content: end;
-  min-height: 100%;
+  min-height: clamp(320px, 30vw, 420px);
   overflow: hidden;
   border: 1px solid var(--stone);
   background: var(--night);
@@ -89,9 +93,6 @@
 }
 
 @media (max-width: 900px) {
-  .armory-layout {
-    grid-template-columns: minmax(0, 1fr);
-  }
   .pairing::after {
     background: linear-gradient(to top, rgba(8, 12, 22, 0.96) 0, rgba(8, 12, 22, 0.82) 45%, rgba(8, 12, 22, 0.05) 85%);
   }
