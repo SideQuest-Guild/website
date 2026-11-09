@@ -294,6 +294,19 @@ test.describe("addons", () => {
     await expect(cards.first()).toContainText("Made by SideQuest");
     await expect(cards.nth(1)).toContainText("Community pick");
   });
+
+  test("addons are grouped by category, in contract order, each with a heading", async ({ page, site }) => {
+    site.signIn(null);
+    await page.goto("/addons/");
+    const groups = page.locator("#addons-list .addon-group");
+    await expect(groups).toHaveCount(2);
+    await expect(groups.nth(0).locator(".sub-title")).toHaveText("Required for raids");
+    await expect(groups.nth(0).locator(".tooltip-card")).toHaveCount(1);
+    await expect(groups.nth(0).locator(".tooltip-card")).toContainText("SideQuest Raid Helper");
+    await expect(groups.nth(1).locator(".sub-title")).toHaveText("Suggested for leveling");
+    await expect(groups.nth(1).locator(".tooltip-card")).toHaveCount(1);
+    await expect(groups.nth(1).locator(".tooltip-card")).toContainText("Questie");
+  });
 });
 
 test.describe("raids", () => {

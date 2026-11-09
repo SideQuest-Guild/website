@@ -187,6 +187,20 @@ export const ADDON_ORIGIN_LABELS: Record<AddonOrigin, string> = {
   community: "Community pick",
 };
 
+export type AddonCategory = "raid_required" | "raid" | "general" | "leveling" | "pvp";
+
+/** Contract (display) order: matches `AddonCategory` in sidequest_common. */
+export const ADDON_CATEGORIES: AddonCategory[] = ["raid_required", "raid", "general", "leveling", "pvp"];
+
+/** Mirrors `ADDON_CATEGORY_LABELS` in sidequest_common. */
+export const ADDON_CATEGORY_LABELS: Record<AddonCategory, string> = {
+  raid_required: "Required for raids",
+  raid: "Suggested for raids",
+  general: "Suggested for everyone",
+  leveling: "Suggested for leveling",
+  pvp: "Suggested for PvP",
+};
+
 export type Addon = {
   id: string;
   slug: string;
@@ -196,6 +210,7 @@ export type Addon = {
   download_url: string;
   homepage_url: string | null;
   origin: AddonOrigin;
+  category: AddonCategory;
   updated_at: string;
 };
 

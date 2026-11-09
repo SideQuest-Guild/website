@@ -237,6 +237,16 @@ import "../../styles/activity.css";
                   <option value="community">Community pick</option>
                 </select>
               </div>
+              <div class="field">
+                <label for="a-category">Category</label>
+                <select id="a-category" required>
+                  <option value="raid_required">Required for raids</option>
+                  <option value="raid">Suggested for raids</option>
+                  <option value="general">Suggested for everyone</option>
+                  <option value="leveling">Suggested for leveling</option>
+                  <option value="pvp">Suggested for PvP</option>
+                </select>
+              </div>
             </div>
             <div class="field">
               <label for="a-summary">Summary</label>
@@ -695,9 +705,11 @@ import "../../styles/activity.css";
     MAX_EVENT_EP,
     ROLE_KINDS,
     ADDON_ORIGIN_LABELS,
+    ADDON_CATEGORY_LABELS,
     CLASSES,
     ROLES,
     type Addon,
+    type AddonCategory,
     type AddonOrigin,
     type EventKind,
     type GroupDuoStat,
@@ -787,7 +799,7 @@ import "../../styles/activity.css";
       <li>
         <button type="button" class="item-row" data-edit-addon="${a.id}">
           <span class="item-title">${escapeHtml(a.name)}</span>
-          <span class="item-meta">v${escapeHtml(a.version)} · ${escapeHtml(a.slug)} · ${escapeHtml(ADDON_ORIGIN_LABELS[a.origin])}</span>
+          <span class="item-meta">v${escapeHtml(a.version)} · ${escapeHtml(a.slug)} · ${escapeHtml(ADDON_ORIGIN_LABELS[a.origin])} · ${escapeHtml(ADDON_CATEGORY_LABELS[a.category])}</span>
         </button>
       </li>`;
   }
@@ -1444,6 +1456,7 @@ import "../../styles/activity.css";
     const addonDownload = requireElement<HTMLInputElement>("a-download");
     const addonHomepage = requireElement<HTMLInputElement>("a-homepage");
     const addonOrigin = requireElement<HTMLSelectElement>("a-origin");
+    const addonCategory = requireElement<HTMLSelectElement>("a-category");
     const addonSummary = requireElement<HTMLTextAreaElement>("a-summary");
     const addonResetBtn = requireElement<HTMLButtonElement>("addon-reset");
     const addonDeleteBtn = requireElement<HTMLButtonElement>("addon-delete");
@@ -1458,6 +1471,7 @@ import "../../styles/activity.css";
       editingAddonId = null;
       addonLegend.textContent = "New addon";
       addonOrigin.value = "community";
+      addonCategory.value = "general";
       addonDeleteBtn.hidden = true;
       addonFormStatus.textContent = "";
     }
@@ -1472,6 +1486,7 @@ import "../../styles/activity.css";
       addonHomepage.value = addon.homepage_url ?? "";
       addonSummary.value = addon.summary;
       addonOrigin.value = addon.origin;
+      addonCategory.value = addon.category;
       addonDeleteBtn.hidden = false;
       addonFormStatus.textContent = "";
     }
@@ -1509,6 +1524,7 @@ import "../../styles/activity.css";
         download_url: addonDownload.value.trim(),
         homepage_url: homepage.length > 0 ? homepage : undefined,
         origin: addonOrigin.value as AddonOrigin,
+        category: addonCategory.value as AddonCategory,
       };
       addonFormStatus.textContent = "Saving…";
       try {

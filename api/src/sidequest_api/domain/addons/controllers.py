@@ -29,7 +29,7 @@ class AddonsController(Controller):
         operation_id="ListAddons",
         tags=["Addons"],
         summary="List addons",
-        description="Returns every recommended addon, sorted by name.",
+        description="Returns every recommended addon, sorted by name. Each has a category; clients group by it.",
         response_description="The addons.",
     )
     async def list_addons(self, addons_service: NamedDependency[AddonsService]) -> list[AddonSchema]:

@@ -1,6 +1,14 @@
 """Pydantic request/response schemas shared by the API and the bot's API client."""
 
-from sidequest_common.schemas.addons import ADDON_ORIGIN_LABELS, AddonCreate, AddonOrigin, AddonSchema, AddonUpdate
+from sidequest_common.schemas.addons import (
+    ADDON_CATEGORY_LABELS,
+    ADDON_ORIGIN_LABELS,
+    AddonCategory,
+    AddonCreate,
+    AddonOrigin,
+    AddonSchema,
+    AddonUpdate,
+)
 from sidequest_common.schemas.attendance import (
     AttendanceDetail,
     AttendanceEventSummary,
@@ -529,6 +537,7 @@ from sidequest_common.schemas.talents import (
 from sidequest_common.schemas.weekly_board import BoardSignup, WeeklyBoardEvent, WeeklyBoardMessage
 
 __all__ = (
+    "ADDON_CATEGORY_LABELS",
     "ADDON_ORIGIN_LABELS",
     "ANNOUNCEMENT_TEXT_MAX",
     "AUCTION_ALERT_COOLDOWN_HOURS",
@@ -644,6 +653,7 @@ __all__ = (
     "AchievementSchema",
     "AchievementSummary",
     "ActivityAck",
+    "AddonCategory",
     "AddonCreate",
     "AddonOrigin",
     "AddonSchema",

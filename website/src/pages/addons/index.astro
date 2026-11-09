@@ -14,9 +14,9 @@ const crest = await getImage({ src: guildCrest, width: 112, format: "webp" });
 
 <Room
   title="Addons · SideQuest"
-  description="Download SideQuest's guild addons for World of Warcraft: Forever."
+  description="Download SideQuest's guild addon and the community addons it suggests for World of Warcraft: Forever."
   heading="ADDONS"
-  lede="The guild's own addons, so everyone raids on the same setup. New versions are announced in the Discord."
+  lede="The guild's own addon, plus the community addons it asks raiders to run or suggests for raiding, leveling and PvP. New versions are announced in the Discord."
   art={armory}
   current="addons"
 >
@@ -25,7 +25,7 @@ const crest = await getImage({ src: guildCrest, width: 112, format: "webp" });
       The Armory
     </h2>
     <div class="armory-layout">
-      <ul class="addon-rack" id="addons-list" aria-live="polite" data-crest={crest.src}></ul>
+      <div class="addon-groups" id="addons-list" aria-live="polite" data-crest={crest.src}></div>
       <aside class="pairing" aria-labelledby="h-pairing">
         <Art
           src={courierLoft}
@@ -59,29 +59,56 @@ const crest = await getImage({ src: guildCrest, width: 112, format: "webp" });
 </Room>
 
 <script>
-  import { apiFetch, onFreshData, escapeHtml, requireElement, statusMessage, type Addon } from "../../scripts/api";
+  import {
+    apiFetch,
+    onFreshData,
+    escapeHtml,
+    requireElement,
+    statusMessage,
+    ADDON_CATEGORIES,
+    ADDON_CATEGORY_LABELS,
+    type Addon,
+    type AddonCategory,
+  } from "../../scripts/api";
   import { addonTooltip } from "../../scripts/addon-card";
   import { onPage } from "../../scripts/page";
 
   function emptySlot(label: string, text: string): string {
-    return `<li class="armory-empty"><p class="armory-empty-label">${escapeHtml(label)}</p><p>${escapeHtml(text)}</p></li>`;
+    return `<div class="armory-empty"><p class="armory-empty-label">${escapeHtml(label)}</p><p>${escapeHtml(text)}</p></div>`;
+  }
+
+  // One rack per category, in contract order; guild-made addons first within a rack, then the API's name order.
+  function addonGroup(category: AddonCategory, addons: Addon[], crestSrc: string | undefined): string {
+    const headingId = `h-addons-${category}`;
+    const cards = addons
+      .toSorted((a, b) => Number(b.origin === "guild") - Number(a.origin === "guild"))
+      .map((addon) => addonTooltip(addon, crestSrc))
+      .join("");
+    return `
+      <section class="addon-group" aria-labelledby="${headingId}">
+        <h3 class="sub-title" id="${headingId}">${escapeHtml(ADDON_CATEGORY_LABELS[category])}</h3>
+        <ul class="addon-rack">${cards}</ul>
+      </section>`;
   }
 
   async function loadAddons(): Promise<void> {
     const list = requireElement("addons-list");
     try {
       const addons = await apiFetch<Addon[]>("/api/addons");
-      // Guild-made addons rack first, then community picks; each group keeps the API's name order.
-      list.innerHTML =
-        addons.length > 0
-          ? addons
-              .toSorted((a, b) => Number(b.origin === "guild") - Number(a.origin === "guild"))
-              .map((addon) => addonTooltip(addon, list.dataset.crest))
-              .join("")
-          : emptySlot(
-              "Empty",
-              "The racks stand empty for now. The guild's addons will be posted here, and announced in the Discord, once they're ready.",
-            );
+      if (addons.length === 0) {
+        list.innerHTML = emptySlot(
+          "Empty",
+          "The racks stand empty for now. The guild's addons will be posted here, and announced in the Discord, once they're ready.",
+        );
+        return;
+      }
+      // An API pod or service-worker copy from before categories sends none; those addons are "general", as on the API.
+      list.innerHTML = ADDON_CATEGORIES.map(
+        (category) => [category, addons.filter((addon) => (addon.category ?? "general") === category)] as const,
+      )
+        .filter(([, group]) => group.length > 0)
+        .map(([category, group]) => addonGroup(category, group, list.dataset.crest))
+        .join("");
     } catch (err) {
       list.innerHTML = emptySlot("Unavailable", statusMessage(err));
     }
