@@ -15,8 +15,8 @@
     "test:unit": "node --test src/scripts/*.test.ts"
   },
   "dependencies": {
-    "@scalar/api-reference": "1.76.3",
-    "astro": "^7.4.2"
+    "@scalar/api-reference": "1.76.4",
+    "astro": "^7.4.5"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.12",
@@ -24,8 +24,8 @@
     "@playwright/test": "1.64.1",
     "@scalar/types": "0.26.0",
     "@types/node": "^24.19.2",
-    "litestar-vite-plugin": "^0.32.0",
-    "oxfmt": "^0.75.0",
+    "litestar-vite-plugin": "^0.33.0",
+    "oxfmt": "^0.76.0",
     "oxlint": "^1.90.0",
     "typescript": "^6.0.3"
   },
