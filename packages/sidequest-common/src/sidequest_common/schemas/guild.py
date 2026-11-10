@@ -59,6 +59,8 @@ class GuildConfigSchema(BaseModel):
     lfg_channel_id: int | None = None
     lfg_panel_message_id: int | None = None
     lfg_ping_role_ids: dict[str, int] = Field(default_factory=dict)
+    pug_role_id: int | None = None
+    """Role every PUG invite grants: hides the server but #sign-the-ledger; each PUG group adds its own role."""
 
     loot_log_channel_id: int | None = None
 
@@ -123,6 +125,7 @@ class GuildConfigUpdate(BaseModel):
     lfg_channel_id: int | None = None
     lfg_panel_message_id: int | None = None
     lfg_ping_role_ids: dict[str, int] | None = None
+    pug_role_id: int | None = None
 
     loot_log_channel_id: int | None = None
 

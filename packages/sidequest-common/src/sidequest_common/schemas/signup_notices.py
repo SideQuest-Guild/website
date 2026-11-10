@@ -10,6 +10,8 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
+from sidequest_common.schemas.member_profiles import MemberProfileIn
+
 
 class SignupNoticeCandidate(BaseModel):
     """One member who has never had a signup notice posted for them, oldest first."""
@@ -21,6 +23,8 @@ class SignupNoticeCandidate(BaseModel):
     avatar_hash: str | None
     battletag: str | None
     roster_confirmed: bool
+    confirmed_from_roster: bool = False
+    """Confirmed automatically: one of the member's Battle.net characters is in the in-game guild."""
     created_at: datetime
 
 
@@ -36,6 +40,8 @@ class SignupNoticeResolution(BaseModel):
         description="The Quest Guide's display name as recorded in the officer audit log for the confirmation, "
         "if found."
     )
+    confirmed_from_roster: bool = False
+    """Confirmed automatically from the Battle.net guild roster, not by a Quest Master (``confirmed_by`` is null)."""
 
 
 class SignupNoticesPage(BaseModel):
@@ -62,3 +68,13 @@ class ConfirmByDiscordRequest(BaseModel):
 
     actor_discord_id: str
     actor_name: str
+
+
+class DiscordRosterConfirmRequest(ConfirmByDiscordRequest):
+    """Bot -> API: a Quest Master confirms a Discord member on the guild roster from Discord (**Confirm in guild**).
+
+    ``profile`` is the target's current Discord profile; it creates their ``Member`` row (never signed in, so
+    ``last_login_at`` stays null) if they have none, or refreshes it like a ``member-profiles`` push if they do.
+    """
+
+    profile: MemberProfileIn

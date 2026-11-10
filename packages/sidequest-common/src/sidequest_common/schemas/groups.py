@@ -130,6 +130,8 @@ class GroupSessionCreate(BaseModel):
     cap: int | None = Field(default=None, ge=1, le=MAX_GROUP_CAP)
     event_id: UUID | None = None
     card_message_id: str | None = None
+    pug_role_id: str | None = None
+    """Set for a PUG group: the temporary Discord role its invite grants to outside players."""
 
 
 class GroupSessionUpdate(BaseModel):
@@ -180,6 +182,7 @@ class GroupSessionSchema(BaseModel):
     owner_discord_id: str
     event_id: UUID | None
     card_message_id: str | None
+    pug_role_id: str | None = None
     started_at: datetime
     ended_at: datetime | None
     end_reason: GroupEndReason | None

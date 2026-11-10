@@ -21,6 +21,9 @@ class GroupSession(UUIDAuditBase):
     scheduled guild event. ``peak_size`` and ``grouped_minutes`` (minutes with two or more members present) only
     ever rise; a session counts toward stats when ``peak_size >= 2`` and ``grouped_minutes >=
     COUNTED_GROUP_MINUTES``.
+
+    ``pug_role_id`` is set for a PUG group: the temporary Discord role its invite link grants to outside players,
+    allowed into this channel only. The bot deletes the role when the group ends.
     """
 
     __tablename__ = "group_session"
@@ -39,6 +42,7 @@ class GroupSession(UUIDAuditBase):
         ForeignKey("guild_event.id", ondelete="SET NULL"), index=True, default=None
     )
     card_message_id: Mapped[int | None] = mapped_column(BigInteger, default=None)
+    pug_role_id: Mapped[int | None] = mapped_column(BigInteger, default=None)
     started_at: Mapped[datetime] = mapped_column(DateTimeUTC(timezone=True), index=True)
     ended_at: Mapped[datetime | None] = mapped_column(DateTimeUTC(timezone=True), index=True, default=None)
     end_reason: Mapped[str | None] = mapped_column(String(20), default=None)

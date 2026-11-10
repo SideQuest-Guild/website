@@ -305,7 +305,12 @@ async def test_log_merges_all_kinds_newest_first_filters_by_kind_before_is_stric
 
     event = await _seed_event(db_sessionmaker, title="Icecrown Citadel")
     async with db_sessionmaker() as session:
-        member_sign_in = Member(discord_id=7101, username="Newbie", created_at=base - timedelta(seconds=60))
+        member_sign_in = Member(
+            discord_id=7101,
+            username="Newbie",
+            created_at=base - timedelta(seconds=60),
+            last_login_at=base - timedelta(seconds=60),
+        )
         member_bnet = Member(
             discord_id=7102,
             username="Linker",

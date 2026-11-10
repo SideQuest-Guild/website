@@ -70,3 +70,20 @@ async def test_list_empty_when_no_members_signed_in(client: AsyncTestClient) -> 
     response = await client.get(LINKS_PATH)
     assert response.status_code == 200
     assert response.json() == []
+
+
+async def test_list_reports_signed_in_false_for_a_discord_only_confirmed_member(
+    client: AsyncTestClient, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    async with db_sessionmaker() as session:
+        session.add_all(
+            [
+                Member(discord_id=111, username="signed-in", is_guild_member=True, last_login_at=datetime.now(UTC)),
+                Member(discord_id=222, username="discord-only", is_guild_member=True, last_login_at=None),
+            ]
+        )
+        await session.commit()
+
+    response = await client.get(LINKS_PATH)
+    assert response.status_code == 200
+    assert {link["discord_id"]: link["signed_in"] for link in response.json()} == {111: True, 222: False}

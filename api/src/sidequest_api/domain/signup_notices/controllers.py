@@ -1,4 +1,4 @@
-"""New-signup officer notice outbox, and bot-key roster confirmation from a notice's Approve button.
+"""New-signup officer notice outbox, bot-key roster confirmation, and Discord-only confirmation ("Confirm in guild").
 
 Bot-key only, mounted at ``/api/guilds/{guild_id}``. Every route 404s for any ``guild_id`` other than
 ``WebSettings.GUILD_ID`` (same rule as ``event_sync``/``discord_live``).
@@ -8,13 +8,17 @@ The ``signup-notices/{member_id}/roster-confirmation`` routes do the same thing 
 notice: the target is the notice's site member id (carried in the button's ``custom_id``), and the actor is
 identified by Discord id instead of a cookie session, so the API independently checks the actor's last-known roles
 (it never trusts the bot's own Discord-side role check alone).
+
+``discord-members/{discord_id}/roster-confirmation`` is the same idea for a member who has never signed in: the
+target is a Discord id (there may be no ``Member`` row yet), carried in a Quest Master's **Confirm in guild**
+Discord command.
 """
 
 from typing import Annotated
 
 from litestar import Controller, delete, get, post, put
 from litestar.di import NamedDependency, Provide
-from litestar.exceptions import NotFoundException, PermissionDeniedException
+from litestar.exceptions import NotFoundException, PermissionDeniedException, ValidationException
 from litestar.openapi.datastructures import ResponseSpec
 from litestar.params import JSONBody, Parameter
 from sqlalchemy import select
@@ -28,6 +32,7 @@ from sidequest_api.lib.openapi import GuildIdPath
 from sidequest_common.models import Member, OfficerAudit
 from sidequest_common.schemas import (
     ConfirmByDiscordRequest,
+    DiscordRosterConfirmRequest,
     MemberListing,
     SignupNoticeAck,
     SignupNoticeCandidate,
@@ -52,6 +57,7 @@ def _to_candidate(member: Member) -> SignupNoticeCandidate:
         avatar_hash=member.avatar_hash,
         battletag=member.battletag,
         roster_confirmed=member.roster_confirmed_at is not None,
+        confirmed_from_roster=member.roster_confirmed_via == "battlenet",
         created_at=member.created_at,
     )
 
@@ -97,7 +103,7 @@ def _require_gm_actor(actor: Member | None, gm_role_ids: list[int]) -> Member:
 
 
 class SignupNoticesController(Controller):
-    """``/api/guilds/{guild_id}/signup-notices`` and ``/signup-notices/{member_id}/roster-confirmation``."""
+    """``/api/guilds/{guild_id}/signup-notices`` and its roster-confirmation routes: notice-based, and Discord-only."""
 
     path = ""
     tags = ["Signup notices"]
@@ -134,6 +140,7 @@ class SignupNoticesController(Controller):
                     channel_id=str(member.officer_notice_channel_id),
                     message_id=str(member.officer_notice_message_id),
                     confirmed_by=confirmed_by.get(member.id),
+                    confirmed_from_roster=member.roster_confirmed_via == "battlenet",
                 )
                 for member in resolved_members
             ],
@@ -247,5 +254,48 @@ class SignupNoticesController(Controller):
             subject_type="member",
             subject_id=str(member.id),
             summary=f"Removed {member.display_name} from the roster",
+        )
+        return _to_listing(member, web_settings)
+
+    @put(
+        "/discord-members/{discord_id:int}/roster-confirmation",
+        operation_id="ConfirmDiscordMember",
+        summary="Confirm a Discord member on the roster",
+        description=(
+            "A Quest Master's **Confirm in guild** command on someone who has never signed in. Creates their "
+            "Member row from the given Discord profile if they have none, or refreshes it like a member-profiles "
+            "push, then confirms them on the roster. Returns 403 unless the actor has a signed-in Member row "
+            "holding a Quest Master role. Returns 404 for any guild_id other than the SideQuest server. Returns "
+            "400 if the profile's discord_id doesn't match the path's. Idempotent."
+        ),
+        response_description="The member's updated listing.",
+        responses={
+            400: ResponseSpec(None, description="profile.discord_id does not match discord_id."),
+            403: ResponseSpec(None, description="The actor is not a Quest Master."),
+            404: ResponseSpec(None, description="This guild_id is not the SideQuest server."),
+        },
+    )
+    async def confirm_discord_member(
+        self,
+        guild_id: GuildIdPath,
+        discord_id: Annotated[int, Parameter(description="The target's Discord snowflake.")],
+        data: JSONBody[DiscordRosterConfirmRequest],
+        members_service: NamedDependency[MembersService],
+        web_settings: NamedDependency[WebSettings],
+    ) -> MemberListing:
+        _require_site_guild(guild_id, web_settings)
+        actor = await members_service.get_one_or_none(discord_id=int(data.actor_discord_id))
+        actor = _require_gm_actor(actor, web_settings.GM_ROLE_IDS)
+        if data.profile.discord_id != discord_id:
+            msg = "profile.discord_id does not match discord_id"
+            raise ValidationException(msg)
+        member = await members_service.confirm_from_discord(discord_id, data.profile)
+        await record_officer_audit(
+            members_service.repository.session,
+            actor=actor,
+            action="roster.confirm",
+            subject_type="member",
+            subject_id=str(member.id),
+            summary=f"Confirmed {member.display_name} on the roster",
         )
         return _to_listing(member, web_settings)

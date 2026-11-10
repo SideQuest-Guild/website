@@ -13,10 +13,10 @@ class MemberLinksRepository(SQLAlchemyAsyncRepository[Member]):
 
 
 class MemberLinksService(SQLAlchemyAsyncRepositoryService[Member]):
-    """Reports every signed-in member's Battle.net link status."""
+    """Reports every known member's sign-in and Battle.net link status."""
 
     repository_type = MemberLinksRepository
 
     async def list_links(self) -> list[Member]:
-        """Every member who has signed in (one row exists per Discord user who has completed OAuth)."""
+        """Every known member: signed in, or confirmed from Discord without ever signing in."""
         return list(await self.get_many())

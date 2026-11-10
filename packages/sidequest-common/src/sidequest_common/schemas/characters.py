@@ -163,6 +163,8 @@ class RosterSyncReport(BaseModel):
     """Addon characters (``WowCharacter``) newly matched to their Battle.net character."""
     members_linked: int
     """Roster characters (``WowCharacter``) newly auto-linked to a member by proven Battle.net ownership."""
+    members_confirmed: int = 0
+    """Members newly confirmed on the guild roster because one of their Battle.net characters is in it."""
 
 
 class RaidReadinessSettings(BaseModel):

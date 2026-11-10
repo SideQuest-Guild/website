@@ -83,6 +83,7 @@ def _session_schema(
         owner_discord_id=str(session.owner_discord_id),
         event_id=session.event_id,
         card_message_id=str(session.card_message_id) if session.card_message_id is not None else None,
+        pug_role_id=str(session.pug_role_id) if session.pug_role_id is not None else None,
         started_at=session.started_at,
         ended_at=session.ended_at,
         end_reason=GroupEndReason(session.end_reason) if session.end_reason is not None else None,
@@ -129,6 +130,7 @@ class GroupsService:
             owner_discord_id=int(data.creator_discord_id),
             event_id=data.event_id,
             card_message_id=int(data.card_message_id) if data.card_message_id is not None else None,
+            pug_role_id=int(data.pug_role_id) if data.pug_role_id is not None else None,
             started_at=datetime.now(UTC),
         )
         self._session.add(session)

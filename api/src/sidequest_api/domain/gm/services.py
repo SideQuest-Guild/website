@@ -175,7 +175,10 @@ class GmService:
     # --- Members -------------------------------------------------------------------------------------------------
 
     async def list_members(self) -> list[GmMember]:
-        """Every signed-in member, Discord members first, then display name (casefold)."""
+        """Every known member, Discord members first, then display name (casefold).
+
+        Signed in, or confirmed from Discord without signing in.
+        """
         members = list((await self._session.execute(select(Member))).scalars().all())
         members.sort(key=lambda m: (not m.is_guild_member, m.display_name.casefold()))
         roles_by_id = await self._roles_by_id()
@@ -340,7 +343,13 @@ class GmService:
         return entries
 
     async def _sign_in_log(self, *, before: datetime | None, limit: int) -> list[LogEntry]:
-        statement = select(Member).order_by(Member.created_at.desc()).limit(limit)
+        """Members' first sign-in, oldest-exclusion aside.
+
+        Skips a member confirmed from Discord who never signed in: they never had a "first sign-in" to log.
+        """
+        statement = (
+            select(Member).where(Member.last_login_at.is_not(None)).order_by(Member.created_at.desc()).limit(limit)
+        )
         if before is not None:
             statement = statement.where(Member.created_at < before)
         members = (await self._session.execute(statement)).scalars().all()

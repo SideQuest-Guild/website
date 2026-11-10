@@ -62,6 +62,7 @@ async def test_the_roster_sync_stores_every_member_and_the_published_profiles(
         "profiles_refreshed": 1,
         "characters_linked": 0,
         "members_linked": 0,
+        "members_confirmed": 0,
     }
     roster = (await characters_client.get("/api/characters/")).json()
     assert [(row["name"], row["guild_rank"]) for row in roster][:3] == [("Zach", 0), ("Legs", 1), ("Terrorskull", 2)]
@@ -198,6 +199,72 @@ async def test_battlenet_ownership_linking_is_idempotent_across_syncs(
         )
     assert len(characters) == 1
     assert (characters[0].member_id, characters[0].source) == (member_id, "battlenet")
+
+
+async def test_sync_confirms_a_member_whose_battlenet_character_is_in_roster(
+    characters_client: AsyncTestClient, battlenet: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    battlenet["roster"].append(roster_member("Thandor", "Emberfall", rank=6))
+    blizzard_id = zlib.crc32(b"thandor-emberfall")
+    async with db_sessionmaker() as session:
+        member = Member(discord_id=9101, username="owner4", is_guild_member=True, battlenet_character_ids=[blizzard_id])
+        session.add(member)
+        await session.commit()
+        member_id = member.id
+
+    report = (await characters_client.post(SYNC, headers=BOT)).json()
+
+    assert report["members_confirmed"] == 1
+    async with db_sessionmaker() as session:
+        confirmed = (await session.execute(select(Member).where(Member.id == member_id))).scalar_one()
+    assert confirmed.roster_confirmed_at is not None
+    assert confirmed.roster_confirmed_via == "battlenet"
+    assert confirmed.roster_removed_at is None
+
+
+async def test_sync_never_auto_confirms_a_member_an_officer_removed(
+    characters_client: AsyncTestClient, battlenet: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    battlenet["roster"].append(roster_member("Thandor", "Emberfall", rank=6))
+    blizzard_id = zlib.crc32(b"thandor-emberfall")
+    async with db_sessionmaker() as session:
+        member = Member(
+            discord_id=9102,
+            username="removed",
+            is_guild_member=True,
+            battlenet_character_ids=[blizzard_id],
+            roster_removed_at=datetime.now(UTC),
+        )
+        session.add(member)
+        await session.commit()
+        member_id = member.id
+
+    report = (await characters_client.post(SYNC, headers=BOT)).json()
+
+    assert report["members_confirmed"] == 0
+    async with db_sessionmaker() as session:
+        still_removed = (await session.execute(select(Member).where(Member.id == member_id))).scalar_one()
+    assert still_removed.roster_confirmed_at is None
+    assert still_removed.roster_removed_at is not None
+
+
+async def test_sync_does_not_confirm_a_member_whose_character_is_not_in_roster(
+    characters_client: AsyncTestClient, battlenet: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    async with db_sessionmaker() as session:
+        member = Member(
+            discord_id=9103, username="not-in-roster", is_guild_member=True, battlenet_character_ids=[424242]
+        )
+        session.add(member)
+        await session.commit()
+        member_id = member.id
+
+    report = (await characters_client.post(SYNC, headers=BOT)).json()
+
+    assert report["members_confirmed"] == 0
+    async with db_sessionmaker() as session:
+        unconfirmed = (await session.execute(select(Member).where(Member.id == member_id))).scalar_one()
+    assert unconfirmed.roster_confirmed_at is None
 
 
 async def test_only_the_bot_syncs_and_only_for_the_site_guild(characters_client: AsyncTestClient) -> None:

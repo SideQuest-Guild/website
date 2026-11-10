@@ -94,3 +94,36 @@ async def test_gm_unconfirms_member_roster(member_client: AsyncTestClient, disco
     response = await member_client.delete(f"/api/members/{member_id}/roster-confirmation")
     assert response.status_code == 200
     assert response.json()["roster_confirmed"] is False
+
+
+async def test_unconfirm_sets_removed_at_and_clears_via(
+    member_client: AsyncTestClient, discord_state: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    member_id = await _signed_in_member_id(member_client, discord_state, discord_id=7015)
+    await login_as(member_client, discord_state, discord_id=7016, username="gm", roles=[GM_ROLE_ID])
+    await member_client.put(f"/api/members/{member_id}/roster-confirmation")
+
+    await member_client.delete(f"/api/members/{member_id}/roster-confirmation")
+
+    async with db_sessionmaker() as session:
+        member = (await session.scalars(select(Member).where(Member.id == member_id))).one()
+    assert member.roster_confirmed_at is None
+    assert member.roster_confirmed_via is None
+    assert member.roster_removed_at is not None
+
+
+async def test_officer_reconfirm_clears_removed_at(
+    member_client: AsyncTestClient, discord_state: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    member_id = await _signed_in_member_id(member_client, discord_state, discord_id=7017)
+    await login_as(member_client, discord_state, discord_id=7018, username="gm", roles=[GM_ROLE_ID])
+    await member_client.put(f"/api/members/{member_id}/roster-confirmation")
+    await member_client.delete(f"/api/members/{member_id}/roster-confirmation")
+
+    await member_client.put(f"/api/members/{member_id}/roster-confirmation")
+
+    async with db_sessionmaker() as session:
+        member = (await session.scalars(select(Member).where(Member.id == member_id))).one()
+    assert member.roster_confirmed_at is not None
+    assert member.roster_confirmed_via == "officer"
+    assert member.roster_removed_at is None

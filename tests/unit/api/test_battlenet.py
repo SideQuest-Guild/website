@@ -8,7 +8,7 @@ from litestar.testing import AsyncTestClient
 from sqlalchemy import select
 
 from sidequest_api.app import create_app
-from sidequest_common.models import Member, WowCharacter
+from sidequest_common.models import BattlenetCharacter, Member, WowCharacter
 from sidequest_common.settings import APISettings, DatabaseSettings, WebSettings
 from tests.conftest import TEST_API_KEY
 from tests.unit.api.conftest import _battlenet_transport, _discord_transport, link_battlenet, login_as
@@ -190,6 +190,30 @@ async def test_linking_auto_links_a_battlenet_owned_roster_character(
     assert character.member_id is not None
     me = await battlenet_profile_client.get("/api/me")
     assert character.member_id == me.json()["id"]
+
+
+async def test_linking_confirms_a_member_who_already_owns_a_roster_character(
+    battlenet_profile_client: AsyncTestClient,
+    discord_state: dict,
+    battlenet_state: dict,
+    owned_characters: list[dict],
+    db_sessionmaker: async_sessionmaker[AsyncSession],
+) -> None:
+    async with db_sessionmaker() as session:
+        session.add(
+            BattlenetCharacter(
+                slug="nox-whitemane", blizzard_id=4343, name="Nox", surname="Zul", level=60, in_roster=True
+            )
+        )
+        await session.commit()
+    owned_characters.append({"id": 4343, "name": "Nox", "surname": "Zul"})
+
+    await login_as(battlenet_profile_client, discord_state, discord_id=5102)
+    response = await link_battlenet(battlenet_profile_client, battlenet_state, account_id=202, battletag="Nox#2222")
+    assert response.status_code == 302
+
+    me = await battlenet_profile_client.get("/api/me")
+    assert me.json()["roster_confirmed"] is True
 
 
 async def test_linking_never_overrides_a_claimed_or_officer_linked_character(

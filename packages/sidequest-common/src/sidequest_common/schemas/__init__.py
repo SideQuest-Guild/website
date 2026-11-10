@@ -504,6 +504,7 @@ from sidequest_common.schemas.role_resets import RoleResetCandidate
 from sidequest_common.schemas.signup_by_discord import SignupByDiscord, SignupDefaults
 from sidequest_common.schemas.signup_notices import (
     ConfirmByDiscordRequest,
+    DiscordRosterConfirmRequest,
     SignupNoticeAck,
     SignupNoticeCandidate,
     SignupNoticeResolution,
@@ -745,6 +746,7 @@ __all__ = (
     "DiscordOnline",
     "DiscordOnlineMember",
     "DiscordPushAck",
+    "DiscordRosterConfirmRequest",
     "DiscordSyncPending",
     "EarnedBadge",
     "EpgpAdjustmentCreate",

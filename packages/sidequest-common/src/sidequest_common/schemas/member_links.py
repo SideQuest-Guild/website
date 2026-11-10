@@ -4,13 +4,16 @@ from pydantic import BaseModel
 
 
 class MemberLink(BaseModel):
-    """One signed-in member's link status (``GET /api/guilds/{guild_id}/member-links``), bot-facing.
+    """One known member's link status (``GET /api/guilds/{guild_id}/member-links``), bot-facing.
 
     ``discord_id`` is an ``int`` here (unlike the public ``Me`` schema, which carries it as a string): this
     route is bot-key only and the bot already works with Discord ids as integers.
+
+    ``signed_in`` is false for a member a Quest Master confirmed from Discord who has never signed in on the site.
     """
 
     discord_id: int
     battlenet_linked: bool
     # Defaulted so a bot newer than the API still parses (same reasoning as GuildConfigSchema's role ids).
     roster_confirmed: bool = False
+    signed_in: bool = True

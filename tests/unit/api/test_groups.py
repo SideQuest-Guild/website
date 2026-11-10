@@ -133,6 +133,25 @@ async def test_create_session_returns_schema(client: AsyncTestClient) -> None:
     assert body["members"] == []
 
 
+async def test_create_pug_session_persists_and_returns_pug_role_id(client: AsyncTestClient) -> None:
+    response = await client.post(
+        f"{GROUPS_PATH}",
+        json={
+            "discord_channel_id": "103",
+            "channel_name": "pug-1",
+            "kind": "dungeon",
+            "creator_discord_id": "43",
+            "pug_role_id": "555555",
+        },
+    )
+    assert response.status_code == 201
+    assert response.json()["pug_role_id"] == "555555"
+
+    session_id = response.json()["id"]
+    fetched = await client.get(f"{GROUPS_PATH}/{session_id}")
+    assert fetched.json()["pug_role_id"] == "555555"
+
+
 async def test_create_session_duplicate_channel_is_409(client: AsyncTestClient) -> None:
     body = {"discord_channel_id": "102", "channel_name": "dungeon-2", "kind": "dungeon", "creator_discord_id": "1"}
     first = await client.post(f"{GROUPS_PATH}", json=body)

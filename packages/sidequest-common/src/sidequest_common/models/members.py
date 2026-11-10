@@ -4,12 +4,12 @@ from datetime import datetime  # SQLAlchemy resolves Mapped[] annotations at run
 
 from advanced_alchemy.base import BigIntAuditBase
 from advanced_alchemy.types import DateTimeUTC, JsonB
-from sqlalchemy import BigInteger, Boolean, Text
+from sqlalchemy import BigInteger, Boolean, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 
 class Member(BigIntAuditBase):
-    """One Discord user who has logged into the member hub.
+    """One Discord user who has logged into the member hub, or whom a Quest Master confirmed from Discord.
 
     ``id`` is a small internal integer (the contract's ``Me.id``), distinct from ``discord_id`` (Discord's
     64-bit snowflake, carried as a string in JSON). ``username``/``global_name``/``roles``/``guild_nick``/
@@ -31,6 +31,14 @@ class Member(BigIntAuditBase):
     so prod isn't flooded). ``officer_notice_channel_id``/``officer_notice_message_id`` locate that message so it
     can be edited later. ``officer_notice_resolved_at`` is set once the posted message accurately reflects the
     member's current roster status (approved via the embed's button, or edited after a site confirmation).
+
+    ``last_login_at`` is ``null`` for a member who has never signed in on the site: a Quest Master confirmed them
+    from Discord (the bot's **Confirm in guild** command), which creates the row from their Discord profile.
+    ``roster_confirmed_via`` says who confirmed ``roster_confirmed_at``: ``"officer"`` (a Quest Master, on the site,
+    the signup notice, Discord or MCP) or ``"battlenet"`` (the roster sync found one of the member's Battle.net
+    characters in the in-game guild). ``null`` while unconfirmed. ``roster_removed_at`` is when a Quest Master last
+    removed the member's confirmation; while set, the roster sync never confirms them again on its own (Battle.net's
+    roster can lag an in-game kick), and an officer confirming them clears it.
     """
 
     __tablename__ = "member"
@@ -49,6 +57,8 @@ class Member(BigIntAuditBase):
     battlenet_character_ids: Mapped[list[int] | None] = mapped_column(JsonB, default=None)
     battlenet_linked_at: Mapped[datetime | None] = mapped_column(DateTimeUTC(timezone=True), default=None)
     roster_confirmed_at: Mapped[datetime | None] = mapped_column(DateTimeUTC(timezone=True), default=None)
+    roster_confirmed_via: Mapped[str | None] = mapped_column(String(20), default=None)
+    roster_removed_at: Mapped[datetime | None] = mapped_column(DateTimeUTC(timezone=True), default=None)
     officer_notice_posted_at: Mapped[datetime | None] = mapped_column(DateTimeUTC(timezone=True), default=None)
     officer_notice_resolved_at: Mapped[datetime | None] = mapped_column(DateTimeUTC(timezone=True), default=None)
     officer_notice_channel_id: Mapped[int | None] = mapped_column(BigInteger, default=None)

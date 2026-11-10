@@ -1,7 +1,8 @@
 """Member link status, bot-key only. ``/api/guilds/{guild_id}/member-links``.
 
-Every ``Member`` row is someone who has signed in on the site; the bot uses this to grant/revoke the signed-in
-and Battle.net-linked roles. 404s for any ``guild_id`` other than ``WebSettings.GUILD_ID`` (same rule as
+Most ``Member`` rows are someone who has signed in on the site; one exists without signing in when a Quest Master
+confirms them from Discord (``signed_in`` is false for those). The bot uses this to grant/revoke the signed-in and
+Battle.net-linked roles. 404s for any ``guild_id`` other than ``WebSettings.GUILD_ID`` (same rule as
 ``event_sync``/``discord_live``).
 """
 
@@ -24,7 +25,7 @@ def _require_site_guild(guild_id: int, web_settings: WebSettings) -> None:
 
 
 class MemberLinksController(Controller):
-    """``/api/guilds/{guild_id}/member-links``: who has signed in, and who has also linked Battle.net."""
+    """``/api/guilds/{guild_id}/member-links``: sign-in and Battle.net link status for every known member."""
 
     path = "/member-links"
     tags = ["Member links"]
@@ -35,9 +36,9 @@ class MemberLinksController(Controller):
         operation_id="ListMemberLinks",
         summary="List member link status",
         description=(
-            "Returns every signed-in member's Discord ID, whether they have linked Battle.net, and whether a "
-            "Game Master confirmed their roster status. Returns 404 for any guild_id other than the SideQuest "
-            "server."
+            "Returns every known member's Discord ID, whether they have signed in on the site, whether they have "
+            "linked Battle.net, and whether a Game Master confirmed their roster status. Returns 404 for any "
+            "guild_id other than the SideQuest server."
         ),
         response_description="The guild's member link statuses.",
         responses={404: ResponseSpec(None, description="This guild_id is not the SideQuest server.")},
@@ -54,6 +55,7 @@ class MemberLinksController(Controller):
                 discord_id=member.discord_id,
                 battlenet_linked=member.battlenet_id is not None,
                 roster_confirmed=member.roster_confirmed_at is not None,
+                signed_in=member.last_login_at is not None,
             )
             for member in await member_links_service.list_links()
         ]

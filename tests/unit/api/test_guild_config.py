@@ -67,6 +67,13 @@ async def test_gate_role_id_round_trips_and_clears(client: AsyncTestClient[Lites
     assert cleared["gate_role_id"] is None
 
 
+async def test_pug_role_id_round_trips_and_clears(client: AsyncTestClient[Litestar]) -> None:
+    updated = await _update_guild_config(client, GUILD_ID, pug_role_id=444)
+    assert updated["pug_role_id"] == 444
+    cleared = await _update_guild_config(client, GUILD_ID, pug_role_id=None)
+    assert cleared["pug_role_id"] is None
+
+
 async def test_xp_min_above_stored_max_rejected(client: AsyncTestClient[Litestar]) -> None:
     body = GuildConfigUpdate(xp_min=30).model_dump(mode="json", exclude_unset=True)
     response = await client.patch(f"/api/guilds/{GUILD_ID}/config", json=body)

@@ -20,6 +20,7 @@ from litestar.status_codes import HTTP_503_SERVICE_UNAVAILABLE
 from sqlalchemy import func, or_, select
 from wow import NotFoundError, WowError
 
+from sidequest_api.lib.roster import confirm_roster
 from sidequest_common.models import (
     BattlenetCharacter,
     CharacterMilestone,
@@ -516,6 +517,7 @@ class CharactersService(SQLAlchemyAsyncRepositoryService[BattlenetCharacter]):
         await session.flush()
         linked = await self._link_addon_characters(roster.members)
         members_linked = await self._link_battlenet_owned_characters()
+        members_confirmed = await self._confirm_battlenet_owned_members()
         await session.commit()
         refreshed = await self._refresh_stalest(game_data, now)
         return RosterSyncReport(
@@ -525,6 +527,7 @@ class CharactersService(SQLAlchemyAsyncRepositoryService[BattlenetCharacter]):
             profiles_refreshed=refreshed,
             characters_linked=linked,
             members_linked=members_linked,
+            members_confirmed=members_confirmed,
         )
 
     @staticmethod
@@ -588,6 +591,30 @@ class CharactersService(SQLAlchemyAsyncRepositoryService[BattlenetCharacter]):
         for member_id, character_ids in (await self.repository.session.execute(statement)).all():
             linked += await link_battlenet_characters(self.repository.session, member_id, character_ids)
         return linked
+
+    async def _confirm_battlenet_owned_members(self) -> int:
+        """Auto-confirm an unconfirmed member whose linked Battle.net account owns an in-game roster character.
+
+        Runs after :meth:`_link_battlenet_owned_characters`, so a character the addon only just reported this
+        sync still counts. Never touches a member already confirmed, nor one an officer removed
+        (``roster_removed_at`` set): they stay unconfirmed until an officer confirms them again.
+        """
+        session = self.repository.session
+        roster_ids_statement = select(BattlenetCharacter.blizzard_id).where(BattlenetCharacter.in_roster.is_(True))
+        roster_ids = {row for row in (await session.execute(roster_ids_statement)).scalars() if row is not None}
+        if not roster_ids:
+            return 0
+        statement = select(Member).where(
+            Member.roster_confirmed_at.is_(None),
+            Member.roster_removed_at.is_(None),
+            Member.battlenet_character_ids.is_not(None),
+        )
+        confirmed = 0
+        for member in (await session.execute(statement)).scalars():
+            if roster_ids.intersection(member.battlenet_character_ids or ()):
+                confirm_roster(member, via="battlenet")
+                confirmed += 1
+        return confirmed
 
     async def _refresh_stalest(self, game_data: AsyncClient, now: datetime) -> int:
         """Refresh up to ``SYNC_PROFILE_BATCH`` stale profiles, roster first. Stops early if Battle.net fails."""

@@ -1,7 +1,7 @@
 """Member persistence, Discord-driven upserts, and Battle.net linking."""
 
 from datetime import UTC, datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from advanced_alchemy.repository import SQLAlchemyAsyncRepository
 from advanced_alchemy.service import SQLAlchemyAsyncRepositoryService
@@ -10,10 +10,12 @@ from sqlalchemy import delete, or_, select, update
 
 from sidequest_api.domain.characters.services import link_battlenet_characters
 from sidequest_api.lib.battlenet import BattleNetOAuthError
+from sidequest_api.lib.roster import confirm_roster, unconfirm_roster
 from sidequest_common.models import (
     AuctionAlert,
     AuctionWatch,
     BattlegroundScore,
+    BattlenetCharacter,
     EventSignup,
     EventSignupActivity,
     EventVoicePresence,
@@ -31,6 +33,9 @@ from sidequest_common.models import (
     WowCharacter,
     XPGrant,
 )
+
+if TYPE_CHECKING:
+    from sidequest_common.schemas import MemberProfileIn
 
 SIGNUP_NOTICE_LIMIT = 25
 
@@ -93,6 +98,12 @@ class MembersService(SQLAlchemyAsyncRepositoryService[Member]):
         member.battletag = battletag
         member.battlenet_character_ids = character_ids or None
         member.battlenet_linked_at = datetime.now(UTC)
+        if character_ids and member.roster_confirmed_at is None and member.roster_removed_at is None:
+            in_roster_statement = select(BattlenetCharacter.blizzard_id).where(
+                BattlenetCharacter.in_roster.is_(True), BattlenetCharacter.blizzard_id.in_(character_ids)
+            )
+            if (await self.repository.session.execute(in_roster_statement)).first() is not None:
+                confirm_roster(member, via="battlenet")
         updated = await self.update(member, auto_commit=False)
         if character_ids:
             await link_battlenet_characters(self.repository.session, member.id, character_ids)
@@ -185,22 +196,61 @@ class MembersService(SQLAlchemyAsyncRepositoryService[Member]):
             raise NotFoundException(msg)
         return member
 
-    async def confirm_roster(self, member: Member) -> Member:
-        """Mark ``member`` confirmed on the in-game guild roster. Idempotent: keeps the first confirmation time."""
-        if member.roster_confirmed_at is None:
-            member.roster_confirmed_at = datetime.now(UTC)
-            return await self.update(member, auto_commit=True)
-        return member
+    async def confirm_roster(self, member: Member, *, via: str = "officer") -> Member:
+        """Mark ``member`` confirmed on the in-game guild roster. Idempotent: keeps the first confirmation time.
+
+        ``via`` is ``"officer"`` (every session/MCP/Discord caller) or ``"battlenet"`` (the roster sync's
+        auto-confirm). An officer confirmation clears a prior removal.
+        """
+        confirm_roster(member, via=via)
+        return await self.update(member, auto_commit=True)
 
     async def unconfirm_roster(self, member: Member) -> Member:
-        """Clear ``member``'s roster confirmation."""
-        member.roster_confirmed_at = None
+        """Clear ``member``'s roster confirmation and mark it officer-removed.
+
+        While ``roster_removed_at`` is set, the roster sync's Battle.net auto-confirm skips this member until an
+        officer confirms them again.
+        """
+        unconfirm_roster(member)
+        return await self.update(member, auto_commit=True)
+
+    async def confirm_from_discord(self, discord_id: int, profile: MemberProfileIn) -> Member:
+        """Create or refresh ``discord_id``'s ``Member`` row from their Discord profile, then confirm the roster.
+
+        Creates the row if missing (never signed in, so ``last_login_at`` stays null), else refreshes it like a
+        ``member-profiles`` push. Either way confirms via ``"officer"`` and clears a prior removal. Idempotent:
+        a second call for an already-confirmed member just refreshes their profile.
+        """
+        member = await self.get_one_or_none(discord_id=discord_id)
+        fields = {
+            "discord_id": discord_id,
+            "username": profile.username,
+            "global_name": profile.global_name,
+            "avatar_hash": profile.avatar_hash,
+            "guild_nick": profile.guild_nick,
+            "roles": profile.roles,
+            "is_guild_member": True,
+        }
+        if member is None:
+            member = await self.create(Member(**fields), auto_commit=False)
+        else:
+            for field, value in fields.items():
+                setattr(member, field, value)
+        confirm_roster(member, via="officer")
         return await self.update(member, auto_commit=True)
 
     async def list_unnoticed(self, limit: int = SIGNUP_NOTICE_LIMIT) -> list[Member]:
-        """Signed-in members with no signup notice posted yet, oldest first, capped at ``limit``."""
+        """Signed-in members with no signup notice posted yet, oldest first, capped at ``limit``.
+
+        Skips a member who has never signed in (``last_login_at`` null, created by a Discord confirm): posting a
+        notice for them would ask an officer to approve someone already confirmed. If they later sign in, this
+        picks them up like any other member.
+        """
         statement = (
-            select(Member).where(Member.officer_notice_posted_at.is_(None)).order_by(Member.created_at).limit(limit)
+            select(Member)
+            .where(Member.officer_notice_posted_at.is_(None), Member.last_login_at.is_not(None))
+            .order_by(Member.created_at)
+            .limit(limit)
         )
         return list((await self.repository.session.execute(statement)).scalars())
 
