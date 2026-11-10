@@ -92,6 +92,27 @@ BADGE_LIST: tuple[BadgeDefinition, ...] = (
         icon="🚩",
         color=0xE0533D,
     ),
+    BadgeDefinition(
+        id="open_road",
+        name="Open Road",
+        description="Hosted a first PUG group from #lfg: outside players grouped with the guild for ten minutes.",
+        icon="🪧",
+        color=0xC8A165,
+    ),
+    BadgeDefinition(
+        id="crossroads_host",
+        name="Crossroads Host",
+        description="Hosted 10 PUG groups from #lfg that outside players joined.",
+        icon="🧭",
+        color=0x2FB7A3,
+    ),
+    BadgeDefinition(
+        id="caravan_master",
+        name="Caravan Master",
+        description="Hosted 25 PUG groups from #lfg that outside players joined.",
+        icon="🐫",
+        color=0xD4AF37,
+    ),
 )
 
 BADGES: dict[str, BadgeDefinition] = {badge.id: badge for badge in BADGE_LIST}

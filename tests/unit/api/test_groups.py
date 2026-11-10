@@ -31,6 +31,8 @@ async def _seed_session(
     end_reason: str | None = None,
     peak_size: int = 0,
     grouped_minutes: int = 0,
+    pug_role_id: int | None = None,
+    pug_minutes: int = 0,
 ) -> str:
     async with db_sessionmaker() as session:
         row = GroupSession(
@@ -45,11 +47,13 @@ async def _seed_session(
             owner_discord_id=owner_discord_id if owner_discord_id is not None else creator_discord_id,
             event_id=None,
             card_message_id=None,
+            pug_role_id=pug_role_id,
             started_at=started_at,
             ended_at=ended_at,
             end_reason=end_reason,
             peak_size=peak_size,
             grouped_minutes=grouped_minutes,
+            pug_minutes=pug_minutes,
         )
         session.add(row)
         await session.commit()
@@ -202,6 +206,7 @@ async def test_presence_push_is_idempotent_and_tracks_the_max(client: AsyncTestC
     report = {
         "peak_size": 2,
         "grouped_minutes": 15,
+        "pug_minutes": 10,
         "members": [
             {"discord_id": "1", "display_name": "Alice", "minutes": 15},
             {"discord_id": "2", "display_name": "Bob", "minutes": 15},
@@ -218,6 +223,7 @@ async def test_presence_push_is_idempotent_and_tracks_the_max(client: AsyncTestC
         json={
             "peak_size": 1,
             "grouped_minutes": 1,
+            "pug_minutes": 1,
             "members": [{"discord_id": "1", "display_name": "Alice", "minutes": 1}],
             "pairs": [],
         },
@@ -228,6 +234,7 @@ async def test_presence_push_is_idempotent_and_tracks_the_max(client: AsyncTestC
     body = fetched.json()
     assert body["peak_size"] == 2  # never lowered
     assert body["grouped_minutes"] == 15
+    assert body["pug_minutes"] == 10  # never lowered
     members_by_id = {m["discord_id"]: m["minutes"] for m in body["members"]}
     assert members_by_id == {"1": 15, "2": 15}
     assert body["pairs"] == [{"discord_id_a": "1", "discord_id_b": "2", "minutes": 15}]
@@ -241,7 +248,7 @@ async def test_close_session_sets_ended_at_and_stores_transcript(client: AsyncTe
     session_id = created.json()["id"]
     close_body = {
         "end_reason": "owner",
-        "presence": {"peak_size": 2, "grouped_minutes": 20, "members": [], "pairs": []},
+        "presence": {"peak_size": 2, "grouped_minutes": 20, "pug_minutes": 5, "members": [], "pairs": []},
         "transcript": [
             {
                 "author_discord_id": "1",
@@ -259,6 +266,7 @@ async def test_close_session_sets_ended_at_and_stores_transcript(client: AsyncTe
     assert body["ended_at"] is not None
     assert body["end_reason"] == "owner"
     assert body["peak_size"] == 2
+    assert body["pug_minutes"] == 5
 
 
 async def test_close_session_is_idempotent_and_keeps_the_first_end_reason(client: AsyncTestClient) -> None:
@@ -569,3 +577,119 @@ async def test_party_leader_awarded_at_threshold(
     assert response.status_code == 200
     role_state = {row["discord_id"]: row["badge_ids"] for row in response.json()["role_state"]}
     assert "party_leader" in role_state[6201]
+
+
+# --- badges: open_road / crossroads_host / caravan_master (PUG hosting) ----------------------------------------
+
+
+async def test_open_road_awarded_for_first_counted_pug_group(
+    client: AsyncTestClient, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    await _seed_member(db_sessionmaker, discord_id=6301, display_name="FirstTimer")
+    await _seed_session(
+        db_sessionmaker,
+        discord_channel_id=900,
+        creator_discord_id=6301,
+        pug_role_id=999900,
+        pug_minutes=10,
+    )
+    response = await client.get(f"{GROUPS_PATH.replace('/groups', '')}/badges/sync")
+    assert response.status_code == 200
+    role_state = {row["discord_id"]: row["badge_ids"] for row in response.json()["role_state"]}
+    assert "open_road" in role_state[6301]
+    assert "crossroads_host" not in role_state[6301]
+
+
+async def test_crossroads_host_awarded_at_threshold(
+    client: AsyncTestClient, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    await _seed_member(db_sessionmaker, discord_id=6401, display_name="Crossroads")
+    for channel_id in range(1000, 1010):  # 10 counted PUG groups created by Crossroads
+        await _seed_session(
+            db_sessionmaker,
+            discord_channel_id=channel_id,
+            creator_discord_id=6401,
+            pug_role_id=999901,
+            pug_minutes=10,
+        )
+    response = await client.get(f"{GROUPS_PATH.replace('/groups', '')}/badges/sync")
+    assert response.status_code == 200
+    role_state = {row["discord_id"]: row["badge_ids"] for row in response.json()["role_state"]}
+    assert "open_road" in role_state[6401]
+    assert "crossroads_host" in role_state[6401]
+    assert "caravan_master" not in role_state[6401]
+
+
+async def test_caravan_master_awarded_at_threshold(
+    client: AsyncTestClient, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    await _seed_member(db_sessionmaker, discord_id=6501, display_name="Caravan")
+    for channel_id in range(1100, 1125):  # 25 counted PUG groups created by Caravan
+        await _seed_session(
+            db_sessionmaker,
+            discord_channel_id=channel_id,
+            creator_discord_id=6501,
+            pug_role_id=999902,
+            pug_minutes=10,
+        )
+    response = await client.get(f"{GROUPS_PATH.replace('/groups', '')}/badges/sync")
+    assert response.status_code == 200
+    role_state = {row["discord_id"]: row["badge_ids"] for row in response.json()["role_state"]}
+    assert "caravan_master" in role_state[6501]
+
+
+async def test_pug_group_under_counted_minutes_does_not_earn_open_road(
+    client: AsyncTestClient, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    await _seed_member(db_sessionmaker, discord_id=6601, display_name="TooShort")
+    await _seed_session(
+        db_sessionmaker,
+        discord_channel_id=1200,
+        creator_discord_id=6601,
+        pug_role_id=999903,
+        pug_minutes=9,  # one short of COUNTED_GROUP_MINUTES
+    )
+    response = await client.get(f"{GROUPS_PATH.replace('/groups', '')}/badges/sync")
+    assert response.status_code == 200
+    role_state = {row["discord_id"]: row["badge_ids"] for row in response.json()["role_state"]}
+    assert "open_road" not in role_state.get(6601, [])
+
+
+async def test_non_pug_group_does_not_earn_open_road(
+    client: AsyncTestClient, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    await _seed_member(db_sessionmaker, discord_id=6701, display_name="RegularHost")
+    await _seed_session(
+        db_sessionmaker,
+        discord_channel_id=1300,
+        creator_discord_id=6701,
+        pug_role_id=None,  # not a PUG group, even with plenty of pug_minutes somehow set
+        pug_minutes=50,
+    )
+    response = await client.get(f"{GROUPS_PATH.replace('/groups', '')}/badges/sync")
+    assert response.status_code == 200
+    role_state = {row["discord_id"]: row["badge_ids"] for row in response.json()["role_state"]}
+    assert "open_road" not in role_state.get(6701, [])
+
+
+async def test_only_the_creator_earns_the_pug_host_badge(
+    client: AsyncTestClient, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    await _seed_member(db_sessionmaker, discord_id=6801, display_name="Host")
+    joiner_id = await _seed_member(db_sessionmaker, discord_id=6802, display_name="Joiner")
+    assert joiner_id is not None
+    session_id = await _seed_session(
+        db_sessionmaker,
+        discord_channel_id=1400,
+        creator_discord_id=6801,
+        pug_role_id=999904,
+        pug_minutes=10,
+    )
+    await _seed_member_minutes(
+        db_sessionmaker, session_id=session_id, discord_id=6802, display_name="Joiner", minutes=10
+    )
+    response = await client.get(f"{GROUPS_PATH.replace('/groups', '')}/badges/sync")
+    assert response.status_code == 200
+    role_state = {row["discord_id"]: row["badge_ids"] for row in response.json()["role_state"]}
+    assert "open_road" in role_state[6801]
+    assert "open_road" not in role_state.get(6802, [])

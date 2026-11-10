@@ -474,6 +474,9 @@ export const BADGE_INFO: Record<string, { name: string }> = {
   top_helper: { name: "Top Helper" },
   party_animal: { name: "Party Animal" },
   party_leader: { name: "Party Leader" },
+  open_road: { name: "Open Road" },
+  crossroads_host: { name: "Crossroads Host" },
+  caravan_master: { name: "Caravan Master" },
 };
 
 /** Badge id -> the `Sprites.astro` symbol id for its gold sigil (e.g. `raid_veteran` -> `i-badge-raid-veteran`). */

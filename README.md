@@ -141,6 +141,9 @@ ticked already. Every number about who came (Hall of Heroes, badges, Renown, the
 | Top Helper | Come to the most dungeons and leveling groups last month. It moves to the next winner each month. |
 | Party Animal | Group up from `#lfg` 50 times, ten minutes or more with at least one other member. |
 | Party Leader | Start 25 groups from `#lfg` that others joined. |
+| Open Road | Host a first PUG group from `#lfg`: outside players grouped with the guild for ten minutes. |
+| Crossroads Host | Host 10 PUG groups from `#lfg` that outside players joined. |
+| Caravan Master | Host 25 PUG groups from `#lfg` that outside players joined. |
 
 **Discord roles from the site.** Signing in gives *Signed the Ledger*, and linking Battle.net gives *Battle-Tagged*.
 New people who haven't signed in get *At the Gate*. Once a member is confirmed on the in-game roster they get *New
@@ -166,7 +169,8 @@ signed the ledger or got confirmed; signing it or being confirmed lifts the PUG 
 each group to the API: who started it, what kind, who was in it and for how long, and who grouped with whom.
 Officers see it all on `/officers/#groups`: most grouped, best duos, busiest hours, what gets run most, and a list of
 groups with their chat (kept 30 days for moderation, then deleted). Everyone sees a "most grouped" board on
-`/heroes/`, and the *Party Animal* and *Party Leader* badges come from it too. The Discord side is
+`/heroes/`, and the *Party Animal* and *Party Leader* badges come from it too, as do the *Open Road*, *Crossroads
+Host* and *Caravan Master* badges for hosting PUG groups outside players join. The Discord side is
 `plugins/group_finder.py` in the bot repo; the API side is `api/src/sidequest_api/domain/groups/`.
 
 **Your data.** If you start keeping something new about members, add it to `/privacy/` and make `delete_account` in

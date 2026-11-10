@@ -32,7 +32,13 @@ from sidequest_common.schemas.badges import (
     RAID_REGULAR_THRESHOLD,
     RAID_VETERAN_THRESHOLD,
 )
-from sidequest_common.schemas.groups import COUNTED_GROUP_MINUTES, PARTY_ANIMAL_THRESHOLD, PARTY_LEADER_THRESHOLD
+from sidequest_common.schemas.groups import (
+    CARAVAN_MASTER_THRESHOLD,
+    COUNTED_GROUP_MINUTES,
+    CROSSROADS_HOST_THRESHOLD,
+    PARTY_ANIMAL_THRESHOLD,
+    PARTY_LEADER_THRESHOLD,
+)
 
 GUILD_TZ = ZoneInfo("America/Chicago")
 FOUNDING_MEMBER_CUTOFF = datetime.fromisoformat(FOUNDING_MEMBER_CUTOFF_ISO)
@@ -197,6 +203,23 @@ class BadgeService:
         by_discord_id = dict((await self._session.execute(statement)).tuples().all())
         return {member.id: by_discord_id.get(member.discord_id, 0) for member in members}
 
+    async def _pug_host_counts(self, members: list[Member]) -> dict[int, int]:
+        """Member id -> count of counted PUG group sessions (all time) they created."""
+        discord_ids = [member.discord_id for member in members]
+        if not discord_ids:
+            return {}
+        statement = (
+            select(GroupSession.creator_discord_id, func.count(GroupSession.id))
+            .where(
+                GroupSession.creator_discord_id.in_(discord_ids),
+                GroupSession.pug_role_id.is_not(None),
+                GroupSession.pug_minutes >= COUNTED_GROUP_MINUTES,
+            )
+            .group_by(GroupSession.creator_discord_id)
+        )
+        by_discord_id = dict((await self._session.execute(statement)).tuples().all())
+        return {member.id: by_discord_id.get(member.discord_id, 0) for member in members}
+
     async def _award_permanent(self, member_id: int, badge_id: str, *, now: datetime) -> None:
         existing = (
             await self._session.execute(
@@ -229,6 +252,7 @@ class BadgeService:
         level_by_discord_id: dict[int, int],
         party_animal_counts: dict[int, int],
         party_leader_counts: dict[int, int],
+        pug_host_counts: dict[int, int],
         now: datetime,
     ) -> None:
         """Award every threshold-based permanent badge one member currently qualifies for."""
@@ -251,6 +275,17 @@ class BadgeService:
             await self._award_permanent(member.id, "party_animal", now=now)
         if party_leader_counts.get(member.id, 0) >= PARTY_LEADER_THRESHOLD:
             await self._award_permanent(member.id, "party_leader", now=now)
+        await self._award_pug_host_badges(member, pug_host_counts=pug_host_counts, now=now)
+
+    async def _award_pug_host_badges(self, member: Member, *, pug_host_counts: dict[int, int], now: datetime) -> None:
+        """Award Open Road / Crossroads Host / Caravan Master based on counted PUG groups hosted."""
+        pug_host_count = pug_host_counts.get(member.id, 0)
+        if pug_host_count >= 1:
+            await self._award_permanent(member.id, "open_road", now=now)
+        if pug_host_count >= CROSSROADS_HOST_THRESHOLD:
+            await self._award_permanent(member.id, "crossroads_host", now=now)
+        if pug_host_count >= CARAVAN_MASTER_THRESHOLD:
+            await self._award_permanent(member.id, "caravan_master", now=now)
 
     async def sync(
         self, *, guild_id: int, now: datetime | None = None
@@ -265,6 +300,7 @@ class BadgeService:
         top_helper_winner = await self._top_helper_winner(member_ids, now=reference)
         party_animal_counts = await self._party_animal_counts(members)
         party_leader_counts = await self._party_leader_counts(members)
+        pug_host_counts = await self._pug_host_counts(members)
 
         level_rows = (
             (
@@ -285,6 +321,7 @@ class BadgeService:
                 level_by_discord_id=level_by_discord_id,
                 party_animal_counts=party_animal_counts,
                 party_leader_counts=party_leader_counts,
+                pug_host_counts=pug_host_counts,
                 now=reference,
             )
 

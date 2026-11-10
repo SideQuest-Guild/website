@@ -89,6 +89,7 @@ def _session_schema(
         end_reason=GroupEndReason(session.end_reason) if session.end_reason is not None else None,
         peak_size=session.peak_size,
         grouped_minutes=session.grouped_minutes,
+        pug_minutes=session.pug_minutes,
         members=[
             GroupMemberMinutes(
                 discord_id=str(member.discord_id), display_name=member.display_name, minutes=member.minutes
@@ -227,6 +228,7 @@ class GroupsService:
     async def _merge_presence(self, session: GroupSession, report: GroupPresenceReport) -> None:
         session.peak_size = max(session.peak_size, report.peak_size)
         session.grouped_minutes = max(session.grouped_minutes, report.grouped_minutes)
+        session.pug_minutes = max(session.pug_minutes, report.pug_minutes)
 
         member_discord_ids = [int(entry.discord_id) for entry in report.members]
         existing_members: dict[int, GroupSessionMember] = {}

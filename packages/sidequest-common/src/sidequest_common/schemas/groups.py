@@ -70,6 +70,12 @@ PARTY_ANIMAL_THRESHOLD = 50
 PARTY_LEADER_THRESHOLD = 25
 """Counted groups a member must start for the Party Leader badge."""
 
+CROSSROADS_HOST_THRESHOLD = 10
+"""Counted PUG groups a member must start for the Crossroads Host badge (the first one earns Open Road)."""
+
+CARAVAN_MASTER_THRESHOLD = 25
+"""Counted PUG groups a member must start for the Caravan Master badge."""
+
 MAX_GROUP_NAME_LENGTH = 80
 MAX_GROUP_NOTE_LENGTH = 200
 MAX_TRANSCRIPT_MESSAGES = 2000
@@ -113,6 +119,8 @@ class GroupPresenceReport(BaseModel):
 
     peak_size: int = Field(ge=0)
     grouped_minutes: int = Field(ge=0)
+    pug_minutes: int = Field(default=0, ge=0)
+    """Minutes with at least one guild member and one outside player (PUG role holder) present together."""
     members: list[GroupMemberMinutes] = Field(default_factory=list)
     pairs: list[GroupPairMinutes] = Field(default_factory=list)
 
@@ -188,6 +196,7 @@ class GroupSessionSchema(BaseModel):
     end_reason: GroupEndReason | None
     peak_size: int
     grouped_minutes: int
+    pug_minutes: int = 0
     members: list[GroupMemberMinutes]
     pairs: list[GroupPairMinutes]
 

@@ -23,7 +23,9 @@ class GroupSession(UUIDAuditBase):
     COUNTED_GROUP_MINUTES``.
 
     ``pug_role_id`` is set for a PUG group: the temporary Discord role its invite link grants to outside players,
-    allowed into this channel only. The bot deletes the role when the group ends.
+    allowed into this channel only. The bot deletes the role when the group ends. ``pug_minutes`` (only ever rises)
+    counts minutes with at least one guild member and one of those outside players present together; a PUG group
+    counts toward its creator's PUG-host badges once it reaches ``COUNTED_GROUP_MINUTES``.
     """
 
     __tablename__ = "group_session"
@@ -48,6 +50,7 @@ class GroupSession(UUIDAuditBase):
     end_reason: Mapped[str | None] = mapped_column(String(20), default=None)
     peak_size: Mapped[int] = mapped_column(Integer, default=0)
     grouped_minutes: Mapped[int] = mapped_column(Integer, default=0)
+    pug_minutes: Mapped[int] = mapped_column(Integer, default=0)
 
 
 class GroupSessionMember(UUIDAuditBase):
