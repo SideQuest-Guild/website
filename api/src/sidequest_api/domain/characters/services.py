@@ -779,7 +779,15 @@ class CharactersService(SQLAlchemyAsyncRepositoryService[BattlenetCharacter]):
         return confirmed
 
     async def _refresh_stalest(self, game_data: AsyncClient, now: datetime) -> int:
-        """Refresh up to ``SYNC_PROFILE_BATCH`` stale profiles, roster first. Stops early if Battle.net fails."""
+        """Refresh up to ``SYNC_PROFILE_BATCH`` stale profiles, roster first. Stops early if Battle.net fails.
+
+        Stays sequential: every ``_refresh`` call reads and writes through ``self.repository.session``, one
+        request-scoped ``AsyncSession`` shared by the whole service. SQLAlchemy's ``AsyncSession`` isn't safe for
+        concurrent use from multiple tasks (overlapping ``execute``/``commit``/``rollback`` calls on one session
+        corrupt its transaction state), so fanning these out with a semaphore or ``TaskGroup`` would race on that
+        one session rather than actually run the Battle.net fetches in parallel. Giving each task its own session
+        would need a sessionmaker threaded into this service, a bigger change than this batch touches.
+        """
         model = BattlenetCharacter
         statement = (
             select(model)
@@ -801,7 +809,10 @@ class CharactersService(SQLAlchemyAsyncRepositoryService[BattlenetCharacter]):
         return refreshed
 
     async def hero_boards(self) -> HeroBoards:
-        """The roster's top ten by equipped item level, honorable kills, PvP rank and achievement points."""
+        """The roster's top ten by item level, honorable kills, PvP rank, achievement points, and collections.
+
+        Collections (mounts/pets/toys) counts come from the stored character sheet, no new Battle.net calls.
+        """
         statement = select(BattlenetCharacter).where(BattlenetCharacter.in_roster.is_(True))
         roster = list((await self.repository.session.execute(statement)).scalars())
 
@@ -821,11 +832,22 @@ class CharactersService(SQLAlchemyAsyncRepositoryService[BattlenetCharacter]):
                 for row in ranked[:HERO_BOARD_SIZE]
             ]
 
+        def sheet_board(key: str) -> list[HeroBoardEntry]:
+            counts = [(row, (row.sheet or {}).get(key) or 0) for row in roster]
+            ranked = sorted((pair for pair in counts if pair[1] > 0), key=lambda pair: (-pair[1], pair[0].name))
+            return [
+                HeroBoardEntry(slug=row.slug, name=row.name, surname=row.surname, wow_class=row.wow_class, value=value)
+                for row, value in ranked[:HERO_BOARD_SIZE]
+            ]
+
         return HeroBoards(
             item_level=board("item_level"),
             honorable_kills=board("honorable_kills"),
             pvp_rank=board("pvp_rank"),
             achievement_points=board("achievement_points"),
+            mounts=sheet_board("mounts"),
+            pets=sheet_board("pets"),
+            toys=sheet_board("toys"),
         )
 
 

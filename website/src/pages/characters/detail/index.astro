@@ -148,6 +148,7 @@ import "../../../styles/room-characters.css";
       c.achievement_points !== null ? `${c.achievement_points} achievement points` : null,
       c.honorable_kills !== null ? `${c.honorable_kills} honorable kills` : null,
       c.pvp_rank !== null ? `PvP rank ${c.pvp_rank}` : null,
+      c.fetched_at ? `Battle.net data from ${relativeTime(c.fetched_at)}` : null,
     ].filter((part): part is string => Boolean(part));
     return `
       <p class="char-detail-name${clsClass}">${icon}${escapeHtml(c.name)} ${escapeHtml(c.surname)}</p>

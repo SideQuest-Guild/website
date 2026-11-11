@@ -448,6 +448,10 @@ async def test_game_import_prices_covers_every_source_and_skips_unpriced_items(
             )
         )
         session.add(ItemWish(member_id=member_id, item_id=wish_item))
+        second_wisher = Member(discord_id=8309, username="SecondWisher", is_guild_member=True)
+        session.add(second_wisher)
+        await session.flush()
+        session.add(ItemWish(member_id=second_wisher.id, item_id=wish_item))
         session.add(
             GuildBankLogEntry(
                 external_id="bank-1", at=datetime.now(UTC), kind="deposit", item_id=bank_item, count=1, money=0
@@ -500,7 +504,9 @@ async def test_game_import_prices_covers_every_source_and_skips_unpriced_items(
     assert by_item[buy_item]["unit_price"] == 2000
     assert by_item[request_item]["unit_price"] == 3000
     assert by_item[wish_item]["unit_price"] == 4000
+    assert by_item[wish_item]["wanted"] == 2  # two distinct members wished for it
     assert by_item[bank_item]["unit_price"] == 5000
+    assert by_item[bank_item]["wanted"] == 0
     assert by_item[recipe_item]["unit_price"] == 6000
 
 

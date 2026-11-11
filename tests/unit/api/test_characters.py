@@ -402,6 +402,9 @@ async def test_the_hero_boards_rank_roster_characters_with_a_profile(
     assert [(entry["slug"], entry["value"]) for entry in boards["item_level"]] == [(TERRORSKULL, 6)]
     # Terrorskull has no honorable kills or achievement points yet; zeros don't make a board.
     assert boards["honorable_kills"] == boards["achievement_points"] == []
+    assert [(entry["slug"], entry["value"]) for entry in boards["mounts"]] == [(TERRORSKULL, 2)]
+    assert [(entry["slug"], entry["value"]) for entry in boards["pets"]] == [(TERRORSKULL, 6)]
+    assert [(entry["slug"], entry["value"]) for entry in boards["toys"]] == [(TERRORSKULL, 2)]
 
 
 async def test_raid_signups_show_readiness_against_the_officers_minimum_item_level(

@@ -2086,7 +2086,8 @@ export const CHARACTER_PAGES: CharacterPage[] = [
   },
 ];
 
-// Honorable kills and PvP rank are left empty on purpose, to exercise a board's "No one yet" state.
+// Honorable kills, PvP rank and the collection boards are left empty on purpose, to exercise a board's "No one
+// yet" state.
 export const HERO_BOARDS: HeroBoards = {
   item_level: CHARACTERS.filter((c) => c.in_roster && c.item_level !== null)
     .toSorted((a, b) => (b.item_level ?? 0) - (a.item_level ?? 0))
@@ -2096,6 +2097,9 @@ export const HERO_BOARDS: HeroBoards = {
   achievement_points: CHARACTERS.filter((c) => c.in_roster && c.achievement_points !== null)
     .toSorted((a, b) => (b.achievement_points ?? 0) - (a.achievement_points ?? 0))
     .map((c) => ({ slug: c.slug, name: c.name, surname: c.surname, class: c.class, value: c.achievement_points ?? 0 })),
+  mounts: [],
+  pets: [],
+  toys: [],
 };
 
 // ——— PvP: battleground match history and boards, built from the addon's recorded scoreboards ———

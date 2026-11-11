@@ -816,9 +816,9 @@ async def test_game_import_inactive_list_uses_battlenet_last_login(
 ) -> None:
     now = datetime.now(UTC)
     async with db_sessionmaker() as session:
-        for discord_id, slug, last_login in (
-            (7711, "recent-player", now - timedelta(days=1)),
-            (7712, "gone-player", now - timedelta(days=40)),
+        for discord_id, slug, last_login, item_level in (
+            (7711, "recent-player", now - timedelta(days=1), 450),
+            (7712, "gone-player", now - timedelta(days=40), None),
         ):
             member = Member(discord_id=discord_id, username=slug, is_guild_member=True)
             session.add(member)
@@ -837,6 +837,7 @@ async def test_game_import_inactive_list_uses_battlenet_last_login(
                     surname=surname.title(),
                     level=60,
                     last_login_at=last_login,
+                    item_level=item_level,
                 )
             )
         await session.commit()
@@ -849,6 +850,11 @@ async def test_game_import_inactive_list_uses_battlenet_last_login(
     assert "recent-player" not in inactive
     assert inactive["gone-player"]["last_seen_at"] == int((now - timedelta(days=40)).timestamp())
     assert inactive["gone-player"]["level"] == 60
+    characters_by_name = {
+        character["name"]: character for member in decoded["members"] for character in member["characters"]
+    }
+    assert characters_by_name["recent-whitemane"]["item_level"] == 450
+    assert characters_by_name["gone-whitemane"]["item_level"] is None
 
 
 async def test_game_import_unseen_member_is_not_listed_inactive(

@@ -1163,13 +1163,15 @@ test.describe("hall of heroes", () => {
     site.signIn(null);
     await page.goto("/heroes/");
     const boards = page.locator("#hero-boards-grid .hero-board");
-    await expect(boards).toHaveCount(4);
+    await expect(boards).toHaveCount(7);
     const itemLevelBoard = page.locator("#hero-boards-grid .hero-board", { hasText: "Item level" });
     const topRow = itemLevelBoard.locator(".groups-board-row").first();
     await expect(topRow).toContainText(`${CHARACTERS[0]!.name} ${CHARACTERS[0]!.surname}`);
     await expect(topRow.locator("a")).toHaveAttribute("href", `/characters/detail/?slug=${CHARACTERS[0]!.slug}`);
     const killsBoard = page.locator("#hero-boards-grid .hero-board", { hasText: "Honorable kills" });
     await expect(killsBoard.locator(".hero-board-empty")).toContainText("No one yet");
+    const mountsBoard = page.locator("#hero-boards-grid .hero-board", { hasText: "Mounts" });
+    await expect(mountsBoard.locator(".hero-board-empty")).toContainText("No one yet");
   });
   test("members see the leaderboard ranked by Renown, and can switch season and sort", async ({ page, site }) => {
     site.signIn(MEMBER);

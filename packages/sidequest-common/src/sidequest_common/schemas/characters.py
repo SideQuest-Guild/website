@@ -203,6 +203,9 @@ class HeroBoards(BaseModel):
     honorable_kills: list[HeroBoardEntry]
     pvp_rank: list[HeroBoardEntry]
     achievement_points: list[HeroBoardEntry]
+    mounts: list[HeroBoardEntry]
+    pets: list[HeroBoardEntry]
+    toys: list[HeroBoardEntry]
 
 
 class CharacterMilestoneSchema(BaseModel):

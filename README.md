@@ -27,7 +27,7 @@ flowchart LR
 | `/events/` | everyone | Upcoming and past events. Members also see who signed up, and can sign up themselves. |
 | `/raids/` | everyone | How raid nights, SQL loot and attendance work. |
 | `/ledger/` | everyone | Loot points for every raider, the loot rules, recent loot and boss kills. |
-| `/heroes/` | everyone (the rest is members) | The Hall of Heroes: a public "most grouped" board and four character hero boards (item level, honorable kills, PvP rank, achievement points), each name shown with a small class icon, plus Renown, raids attended, chat level and badges for each member. A member's profile also shows a MEE6-style activity section: level, XP bar, message and voice stats, streaks and activity charts. |
+| `/heroes/` | everyone (the rest is members) | The Hall of Heroes: a public "most grouped" board and seven character hero boards (item level, honorable kills, PvP rank, achievement points, mounts, pets and toys collected), each name shown with a small class icon, plus Renown, raids attended, chat level and badges for each member. A member's profile also shows a MEE6-style activity section: level, XP bar, message and voice stats, streaks and activity charts. |
 | `/guild/` | members | The in-game roster, who can craft what (from the addon, or Battle.net's profile for members who don't run it), the guild bank log and guild news. |
 | `/pvp/` | members | Battleground match history and PvP boards, recorded by members' addons. |
 | `/addons/` | everyone | The addons the guild uses, with download links, grouped into required for raids and suggested for raids, everyone, leveling and PvP. |

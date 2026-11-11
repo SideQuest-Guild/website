@@ -294,6 +294,9 @@ class GameImportCharacter(BaseModel):
     wow_class: WowClass | None = Field(default=None, alias="class")
     level: int
     is_main: bool
+    item_level: int | None = Field(
+        default=None, description="Battle.net equipped average item level, when a profile has been fetched."
+    )
 
 
 class GameImportBadgeRef(BaseModel):
