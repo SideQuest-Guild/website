@@ -72,6 +72,13 @@ import "../../../styles/room-characters.css";
       <ul class="char-achievements-list" id="char-achievements-list"></ul>
     </section>
 
+    <section class="chamber" id="char-hunter-pets-section" aria-labelledby="h-hunter-pets" hidden>
+      <h2 class="chamber-title" id="h-hunter-pets">
+        Hunter pets
+      </h2>
+      <ul class="char-hunter-pets-list" id="char-hunter-pets-list"></ul>
+    </section>
+
     <section class="chamber" id="char-collections-section" aria-labelledby="h-collections" hidden>
       <h2 class="chamber-title" id="h-collections">
         Collections
@@ -97,6 +104,7 @@ import "../../../styles/room-characters.css";
     requireElement,
     type CharacterAchievement,
     type CharacterGearSlot,
+    type CharacterHunterPet,
     type CharacterPage,
     type CharacterProfession,
     type CharacterReputation,
@@ -182,6 +190,11 @@ import "../../../styles/room-characters.css";
     return `<li><span>${name}</span><span>${new Date(a.completed_at).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}</span></li>`;
   }
 
+  function hunterPetRow(p: CharacterHunterPet): string {
+    const activeLabel = p.active ? ` <span class="char-hunter-pet-active">Active</span>` : "";
+    return `<li><span>${escapeHtml(p.name)} (${escapeHtml(p.creature)})</span><span>Level ${p.level}${activeLabel}</span></li>`;
+  }
+
   onPage("#character-status", (signal) => {
     const statusEl = requireElement("character-status");
     const contentEl = requireElement("character-content");
@@ -204,6 +217,10 @@ import "../../../styles/room-characters.css";
       achievements: {
         section: requireElement("char-achievements-section"),
         list: requireElement("char-achievements-list"),
+      },
+      hunterPets: {
+        section: requireElement("char-hunter-pets-section"),
+        list: requireElement("char-hunter-pets-list"),
       },
       collections: {
         section: requireElement("char-collections-section"),
@@ -259,6 +276,9 @@ import "../../../styles/room-characters.css";
         sheet.recent_achievements.length > 0
           ? sheet.recent_achievements.map(achievementRow).join("")
           : `<li class="aside">No recent achievements.</li>`;
+
+      sections.hunterPets.section.hidden = sheet.hunter_pets.length === 0;
+      sections.hunterPets.list.innerHTML = sheet.hunter_pets.map(hunterPetRow).join("");
 
       sections.collections.section.hidden = false;
       sections.collections.list.innerHTML = `

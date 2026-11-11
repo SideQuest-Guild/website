@@ -128,6 +128,16 @@ class CharacterAchievementLine(BaseModel):
     id: int | None = Field(None, description="The achievement's game ID, linking to its reference page.")
 
 
+class CharacterHunterPet(BaseModel):
+    """One tamed pet in a hunter's stable. Active first, then by slot; empty for non-hunters."""
+
+    name: str
+    level: int
+    creature: str = Field(description="The tamed beast's name, such as 'Great Goretusk'.")
+    creature_id: int
+    active: bool = Field(default=False, description="Whether this is the pet in the hunter's active pet slot.")
+
+
 class CharacterSheet(BaseModel):
     """Everything the character page shows beyond the summary, as Battle.net published it at ``fetched_at``.
 
@@ -140,6 +150,7 @@ class CharacterSheet(BaseModel):
     professions: list[CharacterProfessionSkill]
     reputations: list[CharacterReputationLine]
     recent_achievements: list[CharacterAchievementLine]
+    hunter_pets: list[CharacterHunterPet] = []
     mounts: int
     pets: int
     toys: int

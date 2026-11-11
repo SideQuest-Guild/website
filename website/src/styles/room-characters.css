@@ -135,11 +135,12 @@
   color: var(--ink);
 }
 
-/* ——— Talents, professions, reputations, achievements, collections: plain rows ——— */
+/* ——— Talents, professions, reputations, achievements, hunter pets, collections: plain rows ——— */
 .char-talents-list,
 .char-professions-list,
 .char-reputations-list,
 .char-achievements-list,
+.char-hunter-pets-list,
 .char-collections-list {
   list-style: none;
   margin: 0;
@@ -152,10 +153,15 @@
 .char-professions-list li,
 .char-reputations-list li,
 .char-achievements-list li,
+.char-hunter-pets-list li,
 .char-collections-list li {
   display: flex;
   justify-content: space-between;
   gap: 12px;
+}
+.char-hunter-pet-active {
+  color: var(--mist-2);
+  font-size: 0.82rem;
 }
 
 @media (max-width: 560px) {

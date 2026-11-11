@@ -2056,6 +2056,7 @@ function characterSheet(overrides: Partial<CharacterPage["sheet"]> = {}): NonNul
       { faction: "Argent Dawn", standing: "Honored", value: 18000, max: 21000 },
     ],
     recent_achievements: [{ id: ACHIEVEMENTS[0]!.id, name: "Onyxia's Downfall", completed_at: inDays(-3) }],
+    hunter_pets: [],
     mounts: 12,
     pets: 5,
     toys: 3,
@@ -2073,6 +2074,10 @@ export const CHARACTER_PAGES: CharacterPage[] = [
       professions: [],
       reputations: [],
       recent_achievements: [],
+      hunter_pets: [
+        { name: "Boar", level: 60, creature: "Great Goretusk", creature_id: 547, active: true },
+        { name: "Wolf", level: 58, creature: "Prowler", creature_id: 118, active: false },
+      ],
       mounts: 2,
       pets: 0,
       toys: 0,

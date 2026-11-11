@@ -40,6 +40,7 @@ from sidequest_common.schemas import (
     RECENT_MILESTONES,
     CharacterAchievementLine,
     CharacterGear,
+    CharacterHunterPet,
     CharacterPage,
     CharacterProfessionSkill,
     CharacterReputationLine,
@@ -64,6 +65,7 @@ if TYPE_CHECKING:
     from wow.models import (
         CharacterAchievements,
         CharacterEquipment,
+        CharacterHunterPets,
         CharacterProfessions,
         CharacterReputations,
         CharacterSpecializations,
@@ -251,6 +253,22 @@ def _recent_achievements(achievements: CharacterAchievements | None) -> list[Cha
     ]
 
 
+def _hunter_pets(hunter_pets: CharacterHunterPets | None) -> list[CharacterHunterPet]:
+    """A hunter's tamed pets, active first then by slot. Empty for non-hunters (Battle.net 404s the document)."""
+    if hunter_pets is None:
+        return []
+    return [
+        CharacterHunterPet(
+            name=pet.name,
+            level=pet.level,
+            creature=pet.creature.name,
+            creature_id=pet.creature.id,
+            active=pet.is_active,
+        )
+        for pet in sorted(hunter_pets.hunter_pets, key=lambda pet: (not pet.is_active, pet.slot))
+    ]
+
+
 async def _optional[T](request: Awaitable[T]) -> T | None:
     """The document, or ``None`` if Battle.net has none (404). Any other Battle.net error propagates."""
     try:
@@ -282,6 +300,7 @@ async def fetch_character(game_data: AsyncClient, slug: str) -> tuple[dict[str, 
             pets = group.create_task(_optional(characters.pets(slug)))
             toys = group.create_task(_optional(characters.toys(slug)))
             completed = group.create_task(_optional(characters.completed_quests(slug)))
+            pet_stable = group.create_task(_optional(characters.hunter_pets(slug)))
     except* WowError as failures:
         # Callers catch the WowError itself, not the ExceptionGroup a TaskGroup wraps it in.
         raise failures.exceptions[0] from None
@@ -294,6 +313,7 @@ async def fetch_character(game_data: AsyncClient, slug: str) -> tuple[dict[str, 
         professions=_professions(professions.result()),
         reputations=_reputations(reputations.result()),
         recent_achievements=_recent_achievements(achievements.result()),
+        hunter_pets=_hunter_pets(pet_stable.result()),
         mounts=len(mounts_doc.mounts) if mounts_doc is not None else 0,
         pets=len(pets_doc.pets) if pets_doc is not None else 0,
         toys=len(toys_doc.toys) if toys_doc is not None else 0,

@@ -297,6 +297,51 @@ async def test_a_character_page_is_fetched_once_then_served_from_the_database(
     assert [line["label"] for line in sheet["stats"]][:2] == ["Health", "Energy"]
     assert {skill["name"] for skill in sheet["professions"]} >= {"Leatherworking", "Skinning"}
     assert (sheet["mounts"], sheet["toys"]) == (2, 2)
+    assert sheet["hunter_pets"] == []
+
+
+async def test_a_hunters_sheet_lists_tamed_pets_active_first(
+    characters_client: AsyncTestClient, battlenet: dict
+) -> None:
+    """Battle.net's ``hunter-pets`` document, with the active pet sorted first regardless of slot order."""
+    battlenet["profile_overrides"][TERRORSKULL] = {
+        "hunter-pets": {
+            "_links": {"self": {"href": "https://example/hunter-pets"}},
+            "character": {
+                "id": 3888895,
+                "name": "Terrorskull",
+                "surname": "Gloomstep",
+                "slug": TERRORSKULL,
+                "key": {"href": "https://example/character"},
+            },
+            "hunter_pets": [
+                {
+                    "name": "Wolf",
+                    "level": 13,
+                    "slot": 1,
+                    "creature": {"id": 118, "name": "Prowler", "key": {"href": "https://example/creature/118"}},
+                    "creature_display": {"id": 11415, "key": {"href": "https://example/creature-display/11415"}},
+                },
+                {
+                    "name": "Boar",
+                    "level": 19,
+                    "slot": 0,
+                    "creature": {"id": 547, "name": "Great Goretusk", "key": {"href": "https://example/creature/547"}},
+                    "creature_display": {"id": 3035, "key": {"href": "https://example/creature-display/3035"}},
+                    "is_active": True,
+                    "is_summoned": True,
+                },
+            ],
+        }
+    }
+
+    response = await characters_client.get(f"/api/characters/{TERRORSKULL}")
+
+    assert response.status_code == 200
+    assert response.json()["sheet"]["hunter_pets"] == [
+        {"name": "Boar", "level": 19, "creature": "Great Goretusk", "creature_id": 547, "active": True},
+        {"name": "Wolf", "level": 13, "creature": "Prowler", "creature_id": 118, "active": False},
+    ]
 
 
 async def test_a_character_battlenet_has_not_published_is_404_and_not_asked_for_again_soon(
