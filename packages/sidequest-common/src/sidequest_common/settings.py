@@ -50,6 +50,15 @@ class DiscordSettings(BaseSettings):
     TOKEN: SecretStr
     GUILD_ID: int | None = None
 
+    @field_validator("TOKEN")
+    @classmethod
+    def _token_must_not_be_empty(cls, value: SecretStr) -> SecretStr:
+        """Reject an empty token, such as a blank ``DISCORD_TOKEN=`` line in ``.env``, as if it were unset."""
+        if not value.get_secret_value():
+            msg = "DISCORD_TOKEN must not be empty"
+            raise ValueError(msg)
+        return value
+
 
 class WebSettings(BaseSettings):
     """Member hub / website settings (``WEB_*``).
