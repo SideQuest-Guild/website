@@ -1930,9 +1930,15 @@ class EpgpService:
                 .limit(IMPORT_PRICES_LIMIT)
             )
         ).all()
+        wanted_rows = (await session.execute(select(ItemWish.item_id, func.count()).group_by(ItemWish.item_id))).all()
+        wanted_by_item = {item_id: count for item_id, count in wanted_rows}  # noqa: C416 - dict() fails pyrefly here
         return [
             GameImportPrice(
-                item_id=item_id, unit_price=unit_price, quantity=int(quantity), at=int(updated_at.timestamp())
+                item_id=item_id,
+                unit_price=unit_price,
+                quantity=int(quantity),
+                at=int(updated_at.timestamp()),
+                wanted=wanted_by_item.get(item_id, 0),
             )
             for item_id, unit_price, quantity, updated_at in price_rows
         ]
@@ -1968,6 +1974,13 @@ class EpgpService:
         for character in characters:
             if character.member_id is not None:
                 chars_by_member.setdefault(character.member_id, []).append(character)
+        battlenet_item_levels = {
+            slug: item_level
+            for slug, item_level in (
+                await self._session.execute(select(BattlenetCharacter.slug, BattlenetCharacter.item_level))
+            ).all()
+            if item_level is not None
+        }
         snapshots = {
             row.character_id: row for row in (await self._session.execute(select(GuildRosterSnapshot))).scalars().all()
         }
@@ -2026,6 +2039,7 @@ class EpgpService:
                             wow_class=WowClass(character.wow_class) if character.wow_class else None,
                             level=snapshots[character.id].level if character.id in snapshots else 0,
                             is_main=character.is_main,
+                            item_level=battlenet_item_levels.get(character.slug or ""),
                         )
                         for character in member_chars
                     ],

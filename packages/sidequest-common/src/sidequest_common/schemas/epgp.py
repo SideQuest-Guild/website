@@ -367,6 +367,7 @@ class GameImportPrice(BaseModel):
     unit_price: int
     quantity: int
     at: int = Field(description="When this price was synced, Unix seconds.")
+    wanted: int = Field(default=0, description="Distinct guild members with this item on their wishlist.")
 
 
 class GameImportStandingsRow(BaseModel):
