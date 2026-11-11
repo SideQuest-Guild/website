@@ -41,6 +41,7 @@ from sidequest_api.domain.guild_hub.controllers import (
     EpgpMemberNotesController,
     EpgpRecruitsController,
     GuildAnnouncementsBotController,
+    GuildCraftersBotController,
     GuildHubController,
 )
 from sidequest_api.domain.guild_roles.controllers import GuildRolesController
@@ -84,6 +85,7 @@ guild_controllers = [
     BadgesController,
     GroupVoiceController,
     GuildAnnouncementsBotController,
+    GuildCraftersBotController,
     RosterSyncController,
     AuctionsSyncController,
     AuctionBotWatchesController,

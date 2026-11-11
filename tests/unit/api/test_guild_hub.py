@@ -24,6 +24,7 @@ from sidequest_common.models import (
     SessionCharacterPresence,
     WowCharacter,
 )
+from tests.conftest import GUILD_ID, TEST_API_KEY
 from tests.unit.api.conftest import OFFICER_ROLE_ID, login_as
 
 if TYPE_CHECKING:
@@ -33,6 +34,7 @@ if TYPE_CHECKING:
 RECORDER = "Officername-Whitemane"
 EXPORTED_AT = 1793500000
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
+BOT = {"X-API-Key": TEST_API_KEY}
 
 
 def _export_string(payload: dict) -> str:
@@ -423,6 +425,41 @@ async def test_crafters_search_matches_profession_substring(
     search = await member_client.get("/api/guild/crafters", params={"profession": "Tailoring"})
     assert search.status_code == 200, search.text
     assert any(row["profession"] == "Tailoring" for row in search.json()["professions"])
+
+
+async def test_bot_crafters_route_matches_the_member_route(member_client: AsyncTestClient, discord_state: dict) -> None:
+    await _login_officer(member_client, discord_state, discord_id=7005)
+    payload = _base_payload(
+        professions=[
+            {
+                "character": "Smith-Whitemane",
+                "profession": "Blacksmithing",
+                "skill": 100,
+                "max_skill": 150,
+                "scanned_at": EXPORTED_AT,
+                "recipes": [{"id": 2662, "name": "Copper Chain Pants", "item_id": 2852}],
+            }
+        ]
+    )
+    import_response = await member_client.post("/api/epgp/imports", json={"payload": _export_string(payload)})
+    assert import_response.status_code == 200, import_response.text
+
+    member_route = await member_client.get("/api/guild/crafters", params={"q": "Copper Chain Pants"})
+    bot_route = await member_client.get(
+        f"/api/guilds/{GUILD_ID}/crafters", params={"q": "Copper Chain Pants"}, headers=BOT
+    )
+
+    assert bot_route.status_code == 200, bot_route.text
+    assert bot_route.json() == member_route.json()
+
+
+async def test_bot_crafters_route_requires_the_bot_key(member_client: AsyncTestClient) -> None:
+    assert (await member_client.get(f"/api/guilds/{GUILD_ID}/crafters")).status_code == 401
+
+
+async def test_bot_crafters_route_404s_for_another_guild(member_client: AsyncTestClient) -> None:
+    response = await member_client.get(f"/api/guilds/{GUILD_ID + 1}/crafters", headers=BOT)
+    assert response.status_code == 404
 
 
 # --- signups: newest-wins, unlinked skipped -----------------------------------------------------------------------

@@ -419,3 +419,42 @@ class GuildAnnouncementsBotController(Controller):
     ) -> AnnouncementPostedResult:
         _require_site_guild(guild_id, web_settings)
         return await guild_hub_service.mark_announcement_posted(announcement_id, data.message_id)
+
+
+class GuildCraftersBotController(Controller):
+    """``/api/guilds/{guild_id}/crafters``: the bot's crafter search, bot-key only.
+
+    Same results as ``GET /api/guild/crafters`` (the member route). 404s for any ``guild_id`` other than
+    ``WebSettings.GUILD_ID`` (same rule as ``badges``/``member_links``).
+    """
+
+    path = "/crafters"
+    tags = ["Guild hub"]
+    dependencies = {
+        "guild_hub_service": Provide(provide_guild_hub_service),
+        "optional_game_data": Provide(provide_optional_game_data),
+    }
+
+    @get(
+        "/",
+        operation_id="GetGuildCraftersBot",
+        summary="Search guild crafters (bot)",
+        description=(
+            "Returns characters that know a recipe matching the search term or profession, the same results as "
+            "GET /api/guild/crafters. Returns 404 for any guild_id other than the SideQuest server."
+        ),
+        response_description="Characters matching the search.",
+        responses={404: ResponseSpec(None, description="This guild_id is not the SideQuest server.")},
+    )
+    async def get_crafters(
+        self,
+        guild_id: GuildIdPath,
+        guild_hub_service: NamedDependency[GuildHubService],
+        optional_game_data: NamedDependency[AsyncClient | None],
+        web_settings: NamedDependency[WebSettings],
+        *,
+        q: Annotated[str | None, Parameter(description="A recipe or item name to search for.")] = None,
+        profession: Annotated[str | None, Parameter(description="A profession to filter by.")] = None,
+    ) -> GuildCrafters:
+        _require_site_guild(guild_id, web_settings)
+        return await guild_hub_service.get_crafters(q=q, profession=profession, game_data=optional_game_data)
