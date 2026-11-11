@@ -37,7 +37,10 @@ def game_data_lifespan(
             yield
             return
         http = httpx.AsyncClient(transport=transport) if transport is not None else None
-        async with AsyncClient(client_id, client_secret.get_secret_value(), http_client=http) as client:
+        static_version = web_settings.BATTLENET_STATIC_VERSION
+        async with AsyncClient(
+            client_id, client_secret.get_secret_value(), http_client=http, static_version=static_version
+        ) as client:
             app.state[GAME_DATA_STATE_KEY] = client
             try:
                 yield

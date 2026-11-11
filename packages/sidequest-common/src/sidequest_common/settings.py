@@ -59,6 +59,11 @@ class WebSettings(BaseSettings):
     bot's ``DISCORD_TOKEN``); when either is unset the app still boots, but ``/auth/discord/login`` returns 503.
     ``BATTLENET_CLIENT_ID``/``BATTLENET_CLIENT_SECRET`` (a develop.battle.net API client) let signed-in members link
     their Battle.net account; when unset, linking redirects back to the account page with an explanation.
+    ``BATTLENET_STATIC_VERSION`` pins Battle.net's static game data (playable classes, items, talents and the
+    rest of what only changes with a patch) to one build, such as ``"1.60.1_70399"``, instead of Battle.net's
+    current static namespace; unset (the default) keeps today's behavior. Opt-in because whether Blizzard keeps
+    an old static namespace reachable after a patch is unknown, so forcing a pin could 404 the whole site once
+    one ships.
     """
 
     model_config = SettingsConfigDict(env_prefix="WEB_", **_BASE_CONFIG)
@@ -69,6 +74,7 @@ class WebSettings(BaseSettings):
     DISCORD_CLIENT_SECRET: SecretStr | None = None
     BATTLENET_CLIENT_ID: str | None = None
     BATTLENET_CLIENT_SECRET: SecretStr | None = None
+    BATTLENET_STATIC_VERSION: str | None = None
     GUILD_ID: int = 1564671275316543508
     # Defaults are the SideQuest server's Quest Master (GM) and Quest Guide roles, like GUILD_ID above; the env vars
     # override them. NoDecode: parsed by _parse_role_ids, so both `123,456` and `[123,456]` work in .env.
