@@ -64,7 +64,8 @@ import "../../styles/room-heroes.css";
       Hero boards
     </h2>
     <p class="aside">
-      The guild's top 10 roster characters by item level, honorable kills, PvP rank and achievement points.
+      The guild's top 10 roster characters by item level, honorable kills, PvP rank, achievement points, and collections
+      (mounts, pets and toys).
     </p>
     <div class="hero-boards-grid" id="hero-boards-grid"></div>
   </section>
@@ -183,6 +184,9 @@ import "../../styles/room-heroes.css";
     honorable_kills: "Honorable kills",
     pvp_rank: "PvP rank",
     achievement_points: "Achievement points",
+    mounts: "Mounts",
+    pets: "Pets",
+    toys: "Toys",
   };
   let gameClasses: Awaited<ReturnType<typeof loadGameArt>> = [];
 

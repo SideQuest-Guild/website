@@ -1282,12 +1282,15 @@ export type CharacterPage = CharacterSummary & { sheet: CharacterSheet | null };
 export type HeroBoardEntry = { slug: string; name: string; surname: string; class: CharClass | null; value: number };
 
 /** `GET /api/characters/boards` (public): the guild's top 10 roster characters by item level, honorable kills,
- * PvP rank and achievement points. Any list may be empty. */
+ * PvP rank, achievement points, and collections (mounts/pets/toys). Any list may be empty. */
 export type HeroBoards = {
   item_level: HeroBoardEntry[];
   honorable_kills: HeroBoardEntry[];
   pvp_rank: HeroBoardEntry[];
   achievement_points: HeroBoardEntry[];
+  mounts: HeroBoardEntry[];
+  pets: HeroBoardEntry[];
+  toys: HeroBoardEntry[];
 };
 
 /** One row of `GET /api/characters/milestones` (public): a roster character that reached level 40 or 60. */
