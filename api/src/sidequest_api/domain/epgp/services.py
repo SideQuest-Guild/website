@@ -23,7 +23,7 @@ from litestar.status_codes import HTTP_409_CONFLICT, HTTP_429_TOO_MANY_REQUESTS
 from pydantic import ValidationError
 from sqlalchemy import delete, func, or_, select, union
 
-from sidequest_api.domain.characters.services import character_display_name
+from sidequest_api.domain.characters.services import character_display_name, upsert_character_profession
 from sidequest_api.lib.discord import avatar_url
 from sidequest_api.lib.member_auth import is_officer
 from sidequest_common.models import (
@@ -826,35 +826,15 @@ class EpgpService:
         for entry in professions:
             scanned_at = datetime.fromtimestamp(entry.scanned_at, tz=UTC)
             character = await self._get_or_create_character(character_cache, entry.character, None, scanned_at)
-            row = (
-                await self._session.execute(
-                    select(CharacterProfession).where(
-                        CharacterProfession.character_id == character.id,
-                        CharacterProfession.profession == entry.profession,
-                    )
-                )
-            ).scalar_one_or_none()
-            is_new = row is None
-            row = row or CharacterProfession(character_id=character.id, profession=entry.profession)
-            row.skill = entry.skill
-            row.max_skill = entry.max_skill
-            row.scanned_at = scanned_at
-            if is_new:
-                self._session.add(row)
-            await self._session.flush()
-            await self._session.execute(delete(CharacterRecipeLink).where(CharacterRecipeLink.profession_id == row.id))
-            for recipe in entry.recipes:
-                recipe_row = (
-                    await self._session.execute(select(ProfessionRecipe).where(ProfessionRecipe.recipe_id == recipe.id))
-                ).scalar_one_or_none()
-                if recipe_row is None:
-                    recipe_row = ProfessionRecipe(recipe_id=recipe.id, name=recipe.name, item_id=recipe.item_id)
-                    self._session.add(recipe_row)
-                    await self._session.flush()
-                else:
-                    recipe_row.name = recipe.name
-                    recipe_row.item_id = recipe.item_id
-                self._session.add(CharacterRecipeLink(profession_id=row.id, recipe_id=recipe_row.id))
+            await upsert_character_profession(
+                self._session,
+                character.id,
+                entry.profession,
+                skill=entry.skill,
+                max_skill=entry.max_skill,
+                scanned_at=scanned_at,
+                recipes=((recipe.id, recipe.name, recipe.item_id) for recipe in entry.recipes),
+            )
             counts.updated += 1
         await self._session.flush()
         return counts

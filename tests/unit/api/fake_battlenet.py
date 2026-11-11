@@ -267,10 +267,12 @@ def battlenet() -> dict:
     ruleset); see ``guild_document``. ``auction_houses`` maps house id to ``{"name": str, "auctions": [...],
     "commodities": [...]}`` for the ruleset auctions index/house/commodities routes; see ``auction_entry`` and
     ``commodity_entry`` to build real-shaped listings, and ``_default_auction_houses`` for the defaults (several
-    Alliance houses plus one Horde and one Blackwater house, to prove faction filtering). ``documents`` maps any
     other API path (such as ``/data/wow/talent-tree/1089/playable-specialization/574``) to the JSON body to answer
     it with; see ``recorded_document`` for loading one recorded under ``fixtures/battlenet/``. ``down`` makes every
     request answer 503; ``failing`` makes only the paths ending with one of its strings answer 503.
+    ``profile_overrides`` maps a slug to ``{document_part: body}`` (such as ``{"professions": {...}}``), taking
+    priority over the Terrorskull recording for that one document; a body of ``None`` answers 404 for it, so a
+    test can give a character its own professions document, or make Battle.net 404 just one document part.
     """
     return {
         "version": BETA,
@@ -278,6 +280,7 @@ def battlenet() -> dict:
         "search": [(19019, THUNDERFURY)],
         "roster": copy.deepcopy(ROSTER["members"]),
         "profiles": {TERRORSKULL},
+        "profile_overrides": {},
         "guild": guild_document(),
         "auction_houses": _default_auction_houses(),
         "documents": {},
@@ -300,10 +303,16 @@ def forget_battlenet_state() -> None:
 
 
 def _profile_document(path: str, battlenet: dict) -> httpx.Response:
-    """A character profile document: Terrorskull Gloomstep's recording, under the requested character's name."""
+    """A character profile document: Terrorskull Gloomstep's recording, under the requested character's name,
+    unless ``battlenet["profile_overrides"]`` has a body (or ``None``, for a 404) for this slug and document part.
+    """
     slug, _, part = path.removeprefix("/profile/wow/character/").partition("/")
     if slug not in battlenet["profiles"]:
         return httpx.Response(404, json={"code": 404})
+    overrides = battlenet["profile_overrides"].get(slug, {})
+    if part in overrides:
+        body = overrides[part]
+        return httpx.Response(404, json={"code": 404}) if body is None else httpx.Response(200, json=body)
     recorded = RECORDED / "wow" / "character" / (f"{TERRORSKULL}/{part}.json" if part else f"{TERRORSKULL}.json")
     if not recorded.exists():
         return httpx.Response(404, json={"code": 404})

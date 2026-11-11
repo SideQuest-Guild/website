@@ -17,16 +17,20 @@ from advanced_alchemy.repository import SQLAlchemyAsyncRepository
 from advanced_alchemy.service import SQLAlchemyAsyncRepositoryService
 from litestar.exceptions import HTTPException, NotFoundException
 from litestar.status_codes import HTTP_503_SERVICE_UNAVAILABLE
-from sqlalchemy import func, or_, select
+from sqlalchemy import delete, func, or_, select
 from wow import NotFoundError, WowError
 
+from sidequest_api.domain.characters.battlenet_recipes import translate_recipe
 from sidequest_api.lib.roster import confirm_roster
 from sidequest_common.models import (
     BattlenetCharacter,
     CharacterMilestone,
+    CharacterProfession,
+    CharacterRecipeLink,
     GuildConfig,
     GuildRosterSnapshot,
     Member,
+    ProfessionRecipe,
     WowCharacter,
 )
 from sidequest_common.schemas import (
@@ -48,10 +52,11 @@ from sidequest_common.schemas import (
     RosterSyncReport,
     SignupReadiness,
     WowClass,
+    character_key,
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Awaitable, Collection
+    from collections.abc import Awaitable, Collection, Iterable
     from uuid import UUID
 
     from sqlalchemy.ext.asyncio import AsyncSession
@@ -254,8 +259,11 @@ async def _optional[T](request: Awaitable[T]) -> T | None:
         return None
 
 
-async def fetch_character(game_data: AsyncClient, slug: str) -> dict[str, object]:
+async def fetch_character(game_data: AsyncClient, slug: str) -> tuple[dict[str, object], CharacterProfessions | None]:
     """A character's column values and character sheet, built from all its profile documents.
+
+    Also returns the raw professions document (for the roster sync's crafter-directory fill-in; ``None`` if
+    Battle.net has none).
 
     Raises ``NotFoundError`` if Battle.net has no profile for ``slug``.
     """
@@ -313,7 +321,58 @@ async def fetch_character(game_data: AsyncClient, slug: str) -> dict[str, object
         "sheet": sheet.model_dump(mode="json"),
         "fetched_at": datetime.now(UTC),
     }
-    return values
+    return values, professions.result()
+
+
+async def upsert_character_profession(
+    session: AsyncSession,
+    character_id: UUID,
+    profession: str,
+    *,
+    skill: int,
+    max_skill: int,
+    scanned_at: datetime,
+    recipes: Iterable[tuple[int, str, int | None]],
+) -> None:
+    """Upsert one character's profession skill and wholesale-replace its known recipes.
+
+    Shared by the addon's ``SQX1:`` import (:meth:`EpgpService._import_professions`) and the Battle.net roster
+    sync (:meth:`CharactersService._sync_crafter_professions`). ``recipes`` is ``(recipe_id, name, item_id)`` in
+    the game's own recipe-id space (the addon contract's ``recipes[].id`` and Battle.net's skill-tier endpoint
+    share this space; only Battle.net's character-professions endpoint answers in a different one). A recipe
+    already known under this id keeps its stored ``item_id`` when the new data has none, never downgrading a
+    known item to unknown.
+    """
+    row = (
+        await session.execute(
+            select(CharacterProfession).where(
+                CharacterProfession.character_id == character_id, CharacterProfession.profession == profession
+            )
+        )
+    ).scalar_one_or_none()
+    is_new = row is None
+    row = row or CharacterProfession(character_id=character_id, profession=profession)
+    row.skill = skill
+    row.max_skill = max_skill
+    row.scanned_at = scanned_at
+    if is_new:
+        session.add(row)
+    await session.flush()
+    await session.execute(delete(CharacterRecipeLink).where(CharacterRecipeLink.profession_id == row.id))
+    for recipe_id, name, item_id in recipes:
+        recipe_row = (
+            await session.execute(select(ProfessionRecipe).where(ProfessionRecipe.recipe_id == recipe_id))
+        ).scalar_one_or_none()
+        if recipe_row is None:
+            recipe_row = ProfessionRecipe(recipe_id=recipe_id, name=name, item_id=item_id)
+            session.add(recipe_row)
+            await session.flush()
+        else:
+            recipe_row.name = name
+            if item_id is not None:
+                recipe_row.item_id = item_id
+        session.add(CharacterRecipeLink(profession_id=row.id, recipe_id=recipe_row.id))
+    await session.flush()
 
 
 def to_summary(character: BattlenetCharacter, rank_names: dict[int, str] | None = None) -> CharacterSummary:
@@ -392,20 +451,24 @@ class CharactersService(SQLAlchemyAsyncRepositoryService[BattlenetCharacter]):
         self, slug: str, stored: BattlenetCharacter | None, game_data: AsyncClient
     ) -> BattlenetCharacter:
         """Fetch the character and store it. Raises ``NotFoundError``/``WowError`` from Battle.net."""
-        values = await fetch_character(game_data, slug)
+        values, professions = await fetch_character(game_data, slug)
         if stored is None:
             try:
-                return await self.create(BattlenetCharacter(**values), auto_commit=True)
+                row = await self.create(BattlenetCharacter(**values), auto_commit=True)
             except IntegrityError:
                 # Another request stored the same character first; theirs is as fresh as ours.
                 await self.repository.session.rollback()
                 return await self.get_one(slug=slug)
-        previous_level = stored.level
-        for field, value in values.items():
-            setattr(stored, field, value)
-        if stored.in_roster:
-            await self._note_milestone(stored, previous_level)
-        return await self.update(stored, auto_commit=True)
+        else:
+            previous_level = stored.level
+            for field, value in values.items():
+                setattr(stored, field, value)
+            if stored.in_roster:
+                await self._note_milestone(stored, previous_level)
+            row = await self.update(stored, auto_commit=True)
+        await self._sync_crafter_professions(row, professions, row.last_login_at)
+        await self.repository.session.commit()
+        return row
 
     async def _note_milestone(self, row: BattlenetCharacter, previous_level: int) -> None:
         """Queue a milestone if the character just passed level 40 or 60 (the higher one, if both)."""
@@ -428,6 +491,85 @@ class CharactersService(SQLAlchemyAsyncRepositoryService[BattlenetCharacter]):
                     reached_at=datetime.now(UTC),
                 )
             )
+
+    async def _sync_crafter_professions(
+        self, character: BattlenetCharacter, professions: CharacterProfessions | None, as_of: datetime | None
+    ) -> None:
+        """Fill the crafter directory from Battle.net, for a roster member the addon has never scanned.
+
+        Writes one profession at a time, each only when there's no stored row for this character/profession yet,
+        or the stored row's ``scanned_at`` is older than ``as_of`` (the character's last logout, Battle.net's own
+        freshness bound for this document): an addon scan newer than Battle.net's data is never overwritten.
+        Known recipes with no entry in :func:`translate_recipe`'s map are skipped, never invented. No-ops without
+        a professions document (character under level 10, or Battle.net hasn't published one since last logout)
+        or without ``as_of`` (no logout recorded yet).
+        """
+        if professions is None or as_of is None:
+            return
+        session = self.repository.session
+        wow_character = await self._get_or_create_crafter_character(character)
+        for profession in (*professions.primaries, *professions.secondaries):
+            best = max(profession.tiers, key=lambda tier: tier.max_skill_points, default=None)
+            if best is None:
+                continue
+            existing_scanned_at = (
+                await session.execute(
+                    select(CharacterProfession.scanned_at).where(
+                        CharacterProfession.character_id == wow_character.id,
+                        CharacterProfession.profession == profession.profession.name,
+                    )
+                )
+            ).scalar_one_or_none()
+            if existing_scanned_at is not None and existing_scanned_at >= as_of:
+                continue
+            recipes = [
+                (translated.recipe_id, recipe.name, translated.item_id)
+                for recipe in best.known_recipes
+                if (translated := translate_recipe(recipe.id)) is not None
+            ]
+            await upsert_character_profession(
+                session,
+                wow_character.id,
+                profession.profession.name,
+                skill=best.skill_points,
+                max_skill=best.max_skill_points,
+                scanned_at=as_of,
+                recipes=recipes,
+            )
+
+    async def _get_or_create_crafter_character(self, character: BattlenetCharacter) -> WowCharacter:
+        """The ``WowCharacter`` row to hang ``character``'s professions on.
+
+        Matched first by ``blizzard_id``, then by the addon's own key (``character_key`` of ``Name-Surname``), so
+        a character the addon has never scanned gets one new row keyed exactly as the addon would key it: a later
+        addon import for the same character lands on this row instead of creating a duplicate.
+        """
+        session = self.repository.session
+        if character.blizzard_id is not None:
+            existing = (
+                await session.execute(select(WowCharacter).where(WowCharacter.blizzard_id == character.blizzard_id))
+            ).scalar_one_or_none()
+            if existing is not None:
+                return existing
+        key = character_key(full_name(character.name, character.surname))
+        existing = (await session.execute(select(WowCharacter).where(WowCharacter.key == key))).scalar_one_or_none()
+        if existing is not None:
+            existing.blizzard_id = existing.blizzard_id or character.blizzard_id
+            existing.slug = existing.slug or character.slug
+            existing.surname = existing.surname or character.surname
+            return existing
+        row = WowCharacter(
+            name=character.name,
+            realm="",
+            key=key,
+            source="import",
+            blizzard_id=character.blizzard_id,
+            surname=character.surname,
+            slug=character.slug,
+        )
+        session.add(row)
+        await session.flush()
+        return row
 
     async def pending_milestones(self) -> list[CharacterMilestone]:
         """Milestones the bot has not posted yet, oldest first."""
