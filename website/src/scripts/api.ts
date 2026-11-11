@@ -1251,7 +1251,13 @@ export type CharacterProfession = { name: string; skill: number; max_skill: numb
 export type CharacterReputation = { faction: string; standing: string; value: number; max: number };
 export type CharacterAchievement = { id: number | null; name: string; completed_at: string };
 /** One tamed pet on a hunter's `CharacterSheet`; empty for non-hunters. */
-export type CharacterHunterPet = { name: string; level: number; creature: string; creature_id: number; active: boolean };
+export type CharacterHunterPet = {
+  name: string;
+  level: number;
+  creature: string;
+  creature_id: number;
+  active: boolean;
+};
 
 /** The Battle.net-fetched half of `CharacterPage`; `null` when `profile_found` is false. */
 export type CharacterSheet = {
