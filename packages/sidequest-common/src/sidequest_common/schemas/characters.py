@@ -112,12 +112,17 @@ class CharacterProfessionSkill(BaseModel):
 
 
 class CharacterReputationLine(BaseModel):
-    """Standing with one faction. ``value`` is progress within the standing, out of ``max``."""
+    """Standing with one faction. ``value`` is progress within the standing, out of ``max``.
+
+    ``faction_id`` and ``tier`` are ``None`` for sheets stored before these were added; they refresh within 6h.
+    """
 
     faction: str
     standing: str
     value: int
     max: int
+    faction_id: int | None = Field(default=None, description="Battle.net faction id.")
+    tier: int | None = Field(default=None, description="Battle.net standing tier, counting up from Hated at 0.")
 
 
 class CharacterAchievementLine(BaseModel):

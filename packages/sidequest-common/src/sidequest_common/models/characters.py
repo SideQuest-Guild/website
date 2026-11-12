@@ -6,6 +6,7 @@ its row then carries only what the roster says (level, class, race, rank).
 """
 
 from datetime import datetime  # SQLAlchemy resolves Mapped[] annotations at runtime
+from typing import Any
 
 from advanced_alchemy.base import UUIDAuditBase
 from advanced_alchemy.types import DateTimeUTC, JsonB
@@ -46,7 +47,7 @@ class BattlenetCharacter(UUIDAuditBase):
     pvp_rank: Mapped[int | None] = mapped_column(Integer, default=None)
     spec: Mapped[str | None] = mapped_column(Text, default=None)
     last_login_at: Mapped[datetime | None] = mapped_column(DateTimeUTC(timezone=True), default=None)
-    sheet: Mapped[dict[str, object] | None] = mapped_column(JsonB, default=None)
+    sheet: Mapped[dict[str, Any] | None] = mapped_column(JsonB, default=None)
     fetched_at: Mapped[datetime | None] = mapped_column(DateTimeUTC(timezone=True), index=True, default=None)
     """When the profile was last asked for, found or not. ``None`` until the first try."""
 

@@ -285,6 +285,27 @@ class MemberNoteImportCounts(BaseModel):
 # --- Site import v2 (``SQI1:``, additions): public, on-demand, and officer-only parts ----------------------------
 
 
+class GameImportProfession(BaseModel):
+    """One character's profession and skill, from its stored Battle.net sheet."""
+
+    name: str
+    skill: int
+    max_skill: int
+
+
+class GameImportReputation(BaseModel):
+    """One character's standing with a faction, from its stored Battle.net sheet.
+
+    ``faction_id`` matches the addon's ``SideQuest.Data.REPUTATIONS`` table. ``standing`` is the WoW reaction index
+    (1 Hated .. 8 Exalted); ``value``/``max`` are progress within that standing.
+    """
+
+    faction_id: int
+    standing: int
+    value: int
+    max: int
+
+
 class GameImportCharacter(BaseModel):
     """One of a member's characters in the ``members`` game-import section."""
 
@@ -296,6 +317,13 @@ class GameImportCharacter(BaseModel):
     is_main: bool
     item_level: int | None = Field(
         default=None, description="Battle.net equipped average item level, when a profile has been fetched."
+    )
+    spec: str | None = Field(default=None, description="Battle.net active specialization, when a profile exists.")
+    professions: list[GameImportProfession] = Field(
+        default_factory=list, description="Battle.net professions, when a profile exists."
+    )
+    reputations: list[GameImportReputation] = Field(
+        default_factory=list, description="Battle.net tracked reputations, when a profile exists."
     )
 
 
@@ -751,6 +779,8 @@ __all__ = (
     "GameImportOfficerNote",
     "GameImportOfficerPart",
     "GameImportOfficerRecruit",
+    "GameImportProfession",
+    "GameImportReputation",
     "GameImportSheet",
     "GameImportUnseenMember",
     "GuildAnnouncementCreate",
