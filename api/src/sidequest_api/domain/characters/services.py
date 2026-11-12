@@ -230,6 +230,8 @@ def _reputations(reputations: CharacterReputations | None) -> list[CharacterRepu
             standing=reputation.standing.name,
             value=reputation.standing.value,
             max=reputation.standing.max,
+            faction_id=reputation.faction.id,
+            tier=reputation.standing.tier,
         )
         for reputation in ordered
     ]

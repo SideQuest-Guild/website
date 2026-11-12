@@ -296,6 +296,8 @@ async def test_a_character_page_is_fetched_once_then_served_from_the_database(
     assert sheet["talents"] == [{"name": "Combat", "points": 4}]
     assert [line["label"] for line in sheet["stats"]][:2] == ["Health", "Energy"]
     assert {skill["name"] for skill in sheet["professions"]} >= {"Leatherworking", "Skinning"}
+    argent_dawn = next(line for line in sheet["reputations"] if line["faction"] == "Argent Dawn")
+    assert (argent_dawn["faction_id"], argent_dawn["tier"]) == (529, 3)
     assert (sheet["mounts"], sheet["toys"]) == (2, 2)
     assert sheet["hunter_pets"] == []
 

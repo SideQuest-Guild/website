@@ -857,6 +857,134 @@ async def test_game_import_inactive_list_uses_battlenet_last_login(
     assert characters_by_name["gone-whitemane"]["item_level"] is None
 
 
+async def test_game_import_characters_carry_stored_battlenet_spec_professions_and_reputations(
+    member_client: AsyncTestClient, discord_state: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    """A character with no addon data falls back to its stored Battle.net spec, professions and reputations;
+    a character with no stored profile at all gets the defaults."""
+    async with db_sessionmaker() as session:
+        member = Member(discord_id=7721, username="profiled-player", is_guild_member=True)
+        session.add(member)
+        await session.flush()
+        session.add(
+            WowCharacter(
+                name="Profiled", realm="Whitemane", key="profiled-whitemane", member_id=member.id, slug="profiled"
+            )
+        )
+        session.add(
+            WowCharacter(
+                name="Unprofiled",
+                realm="Whitemane",
+                key="unprofiled-whitemane",
+                member_id=member.id,
+                slug="unprofiled",
+            )
+        )
+        session.add(
+            BattlenetCharacter(
+                slug="profiled",
+                blizzard_id=7721,
+                name="Profiled",
+                surname="Whitemane",
+                level=60,
+                spec="Fire",
+                sheet={
+                    "gear": [],
+                    "stats": [],
+                    "talents": [],
+                    "professions": [
+                        {"name": "Tailoring", "skill": 300, "max_skill": 300, "recipes": 0},
+                        {"name": "Cooking", "skill": 150, "max_skill": 300, "recipes": 0},
+                    ],
+                    "reputations": [
+                        {
+                            "faction": "Argent Dawn",
+                            "standing": "Neutral",
+                            "value": 686,
+                            "max": 3000,
+                            "faction_id": 529,
+                            "tier": 3,
+                        }
+                    ],
+                    "recent_achievements": [],
+                    "hunter_pets": [],
+                    "mounts": 0,
+                    "pets": 0,
+                    "toys": 0,
+                    "quests_completed": None,
+                },
+            )
+        )
+        await session.commit()
+    await _login_officer(member_client, discord_state, discord_id=7720)
+
+    response = await member_client.get("/api/epgp/game-import")
+    assert response.status_code == 200, response.text
+    decoded = json.loads(base64.b64decode(response.json()["payload"].removeprefix("SQI1:")))
+    characters_by_name = {
+        character["name"]: character for member in decoded["members"] for character in member["characters"]
+    }
+    profiled = characters_by_name["profiled-whitemane"]
+    assert profiled["spec"] == "Fire"
+    assert profiled["professions"] == [
+        {"name": "Tailoring", "skill": 300, "max_skill": 300},
+        {"name": "Cooking", "skill": 150, "max_skill": 300},
+    ]
+    assert profiled["reputations"] == [{"faction_id": 529, "standing": 4, "value": 686, "max": 3000}]
+    unprofiled = characters_by_name["unprofiled-whitemane"]
+    assert unprofiled["spec"] is None
+    assert unprofiled["professions"] == []
+    assert unprofiled["reputations"] == []
+
+
+async def test_game_import_skips_reputation_lines_missing_faction_id(
+    member_client: AsyncTestClient, discord_state: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    """A reputation line stored before ``faction_id``/``tier`` were added (older sheet) is left out of the import,
+    rather than sent with a wrong standing."""
+    async with db_sessionmaker() as session:
+        member = Member(discord_id=7731, username="stale-sheet-player", is_guild_member=True)
+        session.add(member)
+        await session.flush()
+        session.add(
+            WowCharacter(
+                name="Stalesheet", realm="Whitemane", key="stalesheet-whitemane", member_id=member.id, slug="stale"
+            )
+        )
+        session.add(
+            BattlenetCharacter(
+                slug="stale",
+                blizzard_id=7731,
+                name="Stalesheet",
+                surname="Whitemane",
+                level=60,
+                sheet={
+                    "gear": [],
+                    "stats": [],
+                    "talents": [],
+                    "professions": [],
+                    "reputations": [{"faction": "Argent Dawn", "standing": "Neutral", "value": 686, "max": 3000}],
+                    "recent_achievements": [],
+                    "hunter_pets": [],
+                    "mounts": 0,
+                    "pets": 0,
+                    "toys": 0,
+                    "quests_completed": None,
+                },
+            )
+        )
+        await session.commit()
+    await _login_officer(member_client, discord_state, discord_id=7730)
+
+    response = await member_client.get("/api/epgp/game-import")
+    assert response.status_code == 200, response.text
+    decoded = json.loads(base64.b64decode(response.json()["payload"].removeprefix("SQI1:")))
+    characters_by_name = {
+        character["name"]: character for member in decoded["members"] for character in member["characters"]
+    }
+    assert characters_by_name["stalesheet-whitemane"]["reputations"] == []
+
+
 async def test_game_import_unseen_member_is_not_listed_inactive(
     member_client: AsyncTestClient, discord_state: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
 ) -> None:

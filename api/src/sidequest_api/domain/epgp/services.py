@@ -16,7 +16,7 @@ import re
 import secrets
 import string
 from datetime import UTC, datetime, timedelta
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from litestar.exceptions import HTTPException, NotFoundException, PermissionDeniedException, ValidationException
 from litestar.status_codes import HTTP_409_CONFLICT, HTTP_429_TOO_MANY_REQUESTS
@@ -152,6 +152,8 @@ from sidequest_common.schemas import (
     GameImportOfficerRecruit,
     GameImportPayload,
     GameImportPrice,
+    GameImportProfession,
+    GameImportReputation,
     GameImportSheet,
     GameImportSignup,
     GameImportStandingsRow,
@@ -238,6 +240,54 @@ def resets_since(at: datetime, now: datetime) -> int:
 def decayed_amount(amount: int, at: datetime, now: datetime) -> float:
     """``amount`` after applying ``DECAY_PERCENT`` weekly decay for every reset since ``at``."""
     return amount * ((1 - DECAY_PERCENT / 100) ** resets_since(at, now))
+
+
+def _import_professions(sheet: dict[str, Any] | None) -> list[GameImportProfession]:
+    """A character's professions from its stored Battle.net sheet, for the addon's item-level-style fallback."""
+    if sheet is None:
+        return []
+    return [
+        GameImportProfession(name=profession["name"], skill=profession["skill"], max_skill=profession["max_skill"])
+        for profession in sheet.get("professions", [])
+    ]
+
+
+def _import_reputations(sheet: dict[str, Any] | None) -> list[GameImportReputation]:
+    """A character's tracked reputations from its stored Battle.net sheet.
+
+    Lines stored before ``faction_id``/``tier`` were added (refreshed within 6h) are skipped.
+    """
+    if sheet is None:
+        return []
+    reputations = []
+    for reputation in sheet.get("reputations", []):
+        faction_id = reputation.get("faction_id")
+        tier = reputation.get("tier")
+        if faction_id is None or tier is None:
+            continue
+        reputations.append(
+            GameImportReputation(
+                faction_id=faction_id, standing=tier + 1, value=reputation["value"], max=reputation["max"]
+            )
+        )
+    return reputations
+
+
+def _game_import_character(
+    character: WowCharacter, level: int, battlenet: tuple[int | None, str | None, dict[str, Any] | None] | None
+) -> GameImportCharacter:
+    """One character's game-import row: live roster data plus its stored Battle.net fallback fields."""
+    item_level, spec, sheet = battlenet if battlenet is not None else (None, None, None)
+    return GameImportCharacter(
+        name=character.key,
+        wow_class=WowClass(character.wow_class) if character.wow_class else None,
+        level=level,
+        is_main=character.is_main,
+        item_level=item_level,
+        spec=spec,
+        professions=_import_professions(sheet),
+        reputations=_import_reputations(sheet),
+    )
 
 
 _character_key = character_key
@@ -1974,12 +2024,18 @@ class EpgpService:
         for character in characters:
             if character.member_id is not None:
                 chars_by_member.setdefault(character.member_id, []).append(character)
-        battlenet_item_levels = {
-            slug: item_level
-            for slug, item_level in (
-                await self._session.execute(select(BattlenetCharacter.slug, BattlenetCharacter.item_level))
+        battlenet_by_slug = {
+            slug: (item_level, spec, sheet)
+            for slug, item_level, spec, sheet in (
+                await self._session.execute(
+                    select(
+                        BattlenetCharacter.slug,
+                        BattlenetCharacter.item_level,
+                        BattlenetCharacter.spec,
+                        BattlenetCharacter.sheet,
+                    )
+                )
             ).all()
-            if item_level is not None
         }
         snapshots = {
             row.character_id: row for row in (await self._session.execute(select(GuildRosterSnapshot))).scalars().all()
@@ -2034,12 +2090,10 @@ class EpgpService:
                     events_attended=events_attended,
                     badges=badges_by_member.get(member_id, []),
                     characters=[
-                        GameImportCharacter(
-                            name=character.key,
-                            wow_class=WowClass(character.wow_class) if character.wow_class else None,
-                            level=snapshots[character.id].level if character.id in snapshots else 0,
-                            is_main=character.is_main,
-                            item_level=battlenet_item_levels.get(character.slug or ""),
+                        _game_import_character(
+                            character,
+                            snapshots[character.id].level if character.id in snapshots else 0,
+                            battlenet_by_slug.get(character.slug or ""),
                         )
                         for character in member_chars
                     ],
