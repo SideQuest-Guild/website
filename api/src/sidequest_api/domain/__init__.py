@@ -16,6 +16,7 @@ from sidequest_api.domain.auth.controllers import AuthController
 from sidequest_api.domain.away.controllers import AwayController, AwayNowController
 from sidequest_api.domain.badges.controllers import BadgesController
 from sidequest_api.domain.battlenet.controllers import BattleNetController
+from sidequest_api.domain.beasts.controllers import BeastsController
 from sidequest_api.domain.calendar.controllers import CalendarFeedController, CalendarLinkController
 from sidequest_api.domain.cases.controllers import CasesController
 from sidequest_api.domain.characters.controllers import (
@@ -126,6 +127,7 @@ public_routes = [
     RaidReadinessController,
     QuestsController,
     AchievementsController,
+    BeastsController,
     PvpController,
     TalentsController,
     TalentBuildsController,

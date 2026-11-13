@@ -119,6 +119,10 @@ TAG_GROUPS: dict[str, dict[str, str]] = {
         "Talents": (
             "Talent trees from Battle.net for the calculator, and officer-pinned raid builds. Anyone may read them."
         ),
+        "Beasts": (
+            "Tameable beasts from Battle.net: every tameable beast's family and display render, and the beast "
+            "families list. Anyone may read them."
+        ),
         "Recipes": (
             "Professions and recipes from Battle.net: profession list, skill tiers, and a recipe's reagents, "
             "crafted item and guild crafters. Anyone may read them."

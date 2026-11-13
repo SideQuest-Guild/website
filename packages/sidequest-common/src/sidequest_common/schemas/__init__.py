@@ -53,6 +53,7 @@ from sidequest_common.schemas.badges import (
     EarnedBadge,
     PendingBadgeAnnouncement,
 )
+from sidequest_common.schemas.beasts import BeastFamilySchema, BeastSchema
 from sidequest_common.schemas.characters import (
     CHARACTER_SEARCH_LIMIT,
     CHARACTER_SEARCH_MIN_LENGTH,
@@ -756,6 +757,8 @@ __all__ = (
     "BattlegroundFaction",
     "BattlegroundImportCounts",
     "BattlegroundWinner",
+    "BeastFamilySchema",
+    "BeastSchema",
     "BoardSignup",
     "CalendarLink",
     "CaseAction",
