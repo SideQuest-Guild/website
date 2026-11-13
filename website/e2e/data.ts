@@ -1393,14 +1393,7 @@ export const RECIPES: RecipeDetailInfo[] = [
 export const BEASTS: Beast[] = [
   { id: 416, name: "Ashamane", family_id: 2, family: "Cat", image_url: null, display_id: 2001 },
   { id: 417, name: "Barkskin Lynx", family_id: 2, family: "Cat", image_url: null, display_id: null },
-  {
-    id: 30,
-    name: "Forest Spider",
-    family_id: 1,
-    family: "Spider",
-    image_url: "https://render.worldofwarcraft.com/forever-us/npcs/zoom/creature-display-382.jpg",
-    display_id: 382,
-  },
+  { id: 30, name: "Forest Spider", family_id: 1, family: "Spider", image_url: null, display_id: 382 },
   { id: 250063, name: "Grizzled Timbermaw Bear", family_id: 4, family: "Bear", image_url: null, display_id: 822 },
   { id: 729, name: "Silverback Patriarch", family_id: 4, family: "Bear", image_url: null, display_id: null },
   { id: 1234, name: "Winterspring Wolf", family_id: 3, family: "Wolf", image_url: null, display_id: 3003 },
@@ -2380,7 +2373,7 @@ export const TALENTS_DRUID: ClassTalents = {
           talent_id: 100,
           name: "Starlight Wrath",
           requires: null,
-          icon_url: "https://render.worldofwarcraft.com/forever-us/icons/56/135846.jpg",
+          icon_url: null,
           ranks: [1, 2, 3, 4, 5].map((rank) => ({
             spell_id: 9100 + rank,
             description: `Reduces the cast time of Wrath and Starfire by ${rank}%.`,
