@@ -196,6 +196,7 @@ import "../../styles/room-talents.css";
             aria-label="${escapeHtml(node.name)}, rank ${rank} of ${node.max_rank}"
             ${canAdd ? "" : "disabled"}
           >
+            ${node.icon_url ? `<img class="talent-node-icon" src="${escapeHtml(node.icon_url)}" alt="" width="20" height="20" loading="lazy" />` : ""}
             <span class="talent-node-name" style="--widest-word:${widestWord}">${escapeHtml(node.name)}</span>
             <span class="talent-node-rank">${rank}/${node.max_rank}</span>
           </button>

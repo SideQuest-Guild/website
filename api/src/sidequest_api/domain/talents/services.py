@@ -50,11 +50,13 @@ _TREE_HREF = re.compile(r"/talent-tree/(\d+)$")
 _SPEC_HREF = re.compile(r"/talent-tree/(\d+)/playable-specialization/(\d+)$")
 
 _tree_cache: dict[str, ClassTalents] = {}
+_spell_icon_cache: dict[int, str | None] = {}
+_SPELL_ICON_CONCURRENCY = 8
 TREE_ROWS = 7
 TREE_COLUMNS = 4
 
 
-def _node_schema(node: TalentTreeNode, rows: dict[int, int], first_col: int) -> TalentNode:
+def _node_schema(node: TalentTreeNode, rows: dict[int, int], first_col: int, icon_url: str | None) -> TalentNode:
     """One talent node, with its prerequisite.
 
     Battle.net links some prerequisite pairs both ways in ``locked_by``; the prerequisite is the one in an earlier row.
@@ -67,6 +69,7 @@ def _node_schema(node: TalentTreeNode, rows: dict[int, int], first_col: int) -> 
         max_rank=len(node.ranks),
         talent_id=first.id,
         name=first.name or "",
+        icon_url=icon_url,
         ranks=[
             TalentRank(spell_id=rank.tooltip.spell_tooltip.spell.id, description=rank.tooltip.spell_tooltip.description)
             for rank in node.ranks
@@ -77,7 +80,7 @@ def _node_schema(node: TalentTreeNode, rows: dict[int, int], first_col: int) -> 
     )
 
 
-def _tree_schema(tree: TalentTree, icon_url: str | None) -> TalentTreeSchema:
+def _tree_schema(tree: TalentTree, icon_url: str | None, node_icons: dict[int, str | None]) -> TalentTreeSchema:
     """One spec's tree, with columns counted from 1.
 
     Battle.net numbers columns across the whole class window (the three trees sit side by side, e.g. 1-4, 7-10 and
@@ -100,7 +103,7 @@ def _tree_schema(tree: TalentTree, icon_url: str | None) -> TalentTreeSchema:
         spec_id=tree.playable_specialization.id,
         name=tree.name,
         icon_url=icon_url,
-        nodes=[_node_schema(n, rows, first_col) for n in nodes],
+        nodes=[_node_schema(n, rows, first_col, node_icons.get(n.id)) for n in nodes],
     )
 
 
@@ -110,6 +113,21 @@ async def _spec_icon_url(spec_id: int, game_data: AsyncClient) -> str | None:
     except WowError:
         return None
     return next((asset.value for asset in media.assets if asset.key == "icon"), None)
+
+
+async def _spell_icon_url(spell_id: int, game_data: AsyncClient, semaphore: asyncio.Semaphore) -> str | None:
+    """A talent rank's spell icon, cached process-wide. ``None`` if Battle.net has none or did not answer."""
+    if spell_id in _spell_icon_cache:
+        return _spell_icon_cache[spell_id]
+    async with semaphore:
+        try:
+            media = await game_data.spells.media(spell_id)
+        except WowError:
+            _spell_icon_cache[spell_id] = None
+            return None
+    url = next((asset.value for asset in media.assets if asset.key == "icon"), None)
+    _spell_icon_cache[spell_id] = url
+    return url
 
 
 async def get_class_talents(wow_class: WowClass, game_data: AsyncClient) -> ClassTalents:
@@ -150,7 +168,27 @@ async def get_class_talents(wow_class: WowClass, game_data: AsyncClient) -> Clas
             ]
     except* WowError as exc:
         raise HTTPException(status_code=HTTP_503_SERVICE_UNAVAILABLE, detail=BATTLENET_UNREACHABLE) from exc
-    trees = [_tree_schema(tree.result(), icon.result()) for tree, icon in tasks]
+    raw_trees = [tree.result() for tree, _ in tasks]
+    spell_ids = list(
+        {
+            node.ranks[0].tooltip.spell_tooltip.spell.id
+            for raw_tree in raw_trees
+            for node in raw_tree.spec_talent_nodes
+            if node.ranks
+        }
+    )
+    icon_semaphore = asyncio.Semaphore(_SPELL_ICON_CONCURRENCY)
+    icon_urls = await asyncio.gather(*(_spell_icon_url(spell_id, game_data, icon_semaphore) for spell_id in spell_ids))
+    icon_by_spell = dict(zip(spell_ids, icon_urls, strict=True))
+    node_icons = {
+        node.id: icon_by_spell.get(node.ranks[0].tooltip.spell_tooltip.spell.id)
+        for raw_tree in raw_trees
+        for node in raw_tree.spec_talent_nodes
+        if node.ranks
+    }
+    trees = [
+        _tree_schema(raw_tree, icon.result(), node_icons) for raw_tree, (_, icon) in zip(raw_trees, tasks, strict=True)
+    ]
     result = ClassTalents(wow_class=wow_class, trees=trees)
     _tree_cache[wow_class.value] = result
     return result
