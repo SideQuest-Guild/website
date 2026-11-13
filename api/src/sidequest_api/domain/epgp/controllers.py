@@ -16,9 +16,14 @@ from litestar.status_codes import HTTP_204_NO_CONTENT
 
 from sidequest_api.domain.calendar.dependencies import provide_calendar_service
 from sidequest_api.domain.calendar.services import CalendarService
-from sidequest_api.domain.epgp.dependencies import provide_epgp_service, provide_import_actor, provide_sync_token_row
+from sidequest_api.domain.epgp.dependencies import (
+    provide_epgp_service,
+    provide_import_actor,
+    provide_import_member,
+    provide_sync_token_row,
+)
 from sidequest_api.domain.epgp.services import EpgpService
-from sidequest_api.lib.member_auth import provide_optional_member
+from sidequest_api.lib.member_auth import is_officer, provide_optional_member
 from sidequest_api.lib.openapi import (
     BAD_SYNC_OR_SESSION,
     NOT_A_MEMBER,
@@ -76,6 +81,7 @@ class EpgpController(Controller):
         "epgp_service": Provide(provide_epgp_service),
         "optional_member": Provide(provide_optional_member),
         "import_actor": Provide(provide_import_actor),
+        "import_member": Provide(provide_import_member),
         "sync_token_row": Provide(provide_sync_token_row),
         "calendar_service": Provide(provide_calendar_service),
     }
@@ -89,29 +95,38 @@ class EpgpController(Controller):
         summary="Import an addon EPGP export",
         description=(
             "Decodes and upserts one `SQX1:` export string from the addon. An officer session or a valid "
-            "Bearer sync token works."
+            "Bearer sync token works, in which case the officer's token/session applies every section. A "
+            "non-officer guild member's session or sync token also works: only `directory` entries and "
+            "`signups` rows for the holder's own linked characters are applied; every other section is "
+            "ignored without error, and the response's `scope` field says which happened."
         ),
         response_description="A summary of the rows the import created or updated.",
         responses={
             401: BAD_SYNC_OR_SESSION,
-            403: ResponseSpec(None, description="The sync token's officer lost officer access."),
+            403: ResponseSpec(None, description="The sync token's holder is not a guild member."),
             400: ResponseSpec(None, description="The `SQX1:` export string is missing or not valid."),
         },
     )
     async def import_payload(
         self,
         data: JSONBody[EpgpImportBody],
-        import_actor: NamedDependency[Member],
+        import_member: NamedDependency[Member],
         epgp_service: NamedDependency[EpgpService],
+        web_settings: NamedDependency[WebSettings],
     ) -> EpgpImportResult:
-        return await epgp_service.import_payload(data.payload, import_actor)
+        acting_as_officer = is_officer(import_member, web_settings.OFFICER_ROLE_IDS)
+        return await epgp_service.import_payload(data.payload, import_member, acting_as_officer=acting_as_officer)
 
     @get(
         "/standings",
         operation_id="GetEpgpStandings",
         tags=["Loot ledger"],
+        security=SECURITY_SESSION_OR_SYNC_TOKEN,
         summary="Get SQL standings",
-        description="Returns decayed-on-read EP/GP standings, highest PR first.",
+        description=(
+            "Returns decayed-on-read EP/GP standings, highest PR first. Public; a signed-in session or a sync "
+            "token both work too, with no difference in the response."
+        ),
         response_description="The SQL (SideQuest Loot) standings.",
     )
     async def get_standings(self, epgp_service: NamedDependency[EpgpService]) -> EpgpStandings:

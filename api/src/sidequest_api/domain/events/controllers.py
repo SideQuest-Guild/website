@@ -14,9 +14,15 @@ from litestar.params import JSONBody, Parameter
 
 from sidequest_api.domain.events.dependencies import provide_event_signups_service, provide_events_service
 from sidequest_api.domain.events.services import EventSignupsService, EventsService
-from sidequest_api.lib.member_auth import provide_optional_member
+from sidequest_api.lib.member_auth import provide_optional_member_or_sync_token
 from sidequest_api.lib.officer_audit import record_officer_audit
-from sidequest_api.lib.openapi import NOT_A_MEMBER, NOT_AN_OFFICER, NOT_SIGNED_IN, SECURITY_SESSION
+from sidequest_api.lib.openapi import (
+    NOT_A_MEMBER,
+    NOT_AN_OFFICER,
+    NOT_SIGNED_IN,
+    SECURITY_SESSION,
+    SECURITY_SESSION_OR_SYNC_TOKEN,
+)
 from sidequest_common.models import Member
 from sidequest_common.schemas import (
     ChartUpdate,
@@ -40,17 +46,19 @@ class EventsController(Controller):
     dependencies = {
         "events_service": Provide(provide_events_service),
         "event_signups_service": Provide(provide_event_signups_service),
-        "optional_member": Provide(provide_optional_member),
+        "optional_member": Provide(provide_optional_member_or_sync_token),
     }
 
     @get(
         "/",
         operation_id="ListEvents",
         tags=["Events"],
+        security=SECURITY_SESSION_OR_SYNC_TOKEN,
         summary="List events",
         description=(
             "Returns events for the given window. Anonymous visitors without a session or bot API key get only "
-            "the headline fields; the `counts` field is null."
+            "the headline fields; the `counts` field is null. A guild member's session or sync token both get "
+            "the full fields."
         ),
         response_description="The matching events, newest first.",
     )
@@ -69,11 +77,12 @@ class EventsController(Controller):
         "/{event_id:uuid}",
         operation_id="GetEvent",
         tags=["Events"],
+        security=SECURITY_SESSION_OR_SYNC_TOKEN,
         summary="Get an event",
         description=(
             "Returns an event with its full roster. Anonymous visitors without a session or bot API key get only "
             "the headline fields; `notes`, `counts`, and `discord_interest` are null, and `signups`/`my_signup` "
-            "are empty."
+            "are empty. A guild member's session or sync token both get the full fields."
         ),
         response_description="The event. `my_signup` is the caller's own signup, if any.",
         responses={404: ResponseSpec(None, description="No event with that ID.")},

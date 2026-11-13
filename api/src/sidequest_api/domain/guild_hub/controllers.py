@@ -27,7 +27,15 @@ from sidequest_api.domain.characters.services import CharactersService
 from sidequest_api.domain.guild_hub.dependencies import provide_guild_hub_service
 from sidequest_api.domain.guild_hub.services import GuildHubService
 from sidequest_api.lib.game_data import provide_optional_game_data
-from sidequest_api.lib.openapi import NOT_A_MEMBER, NOT_AN_OFFICER, NOT_SIGNED_IN, SECURITY_SESSION, GuildIdPath
+from sidequest_api.lib.openapi import (
+    BAD_SYNC_OR_SESSION,
+    NOT_A_MEMBER,
+    NOT_AN_OFFICER,
+    NOT_SIGNED_IN,
+    SECURITY_SESSION,
+    SECURITY_SESSION_OR_SYNC_TOKEN,
+    GuildIdPath,
+)
 from sidequest_api.lib.website import EDGE_CACHE_HEADER, SKIP_SESSION
 from sidequest_common.models import Member
 from sidequest_common.schemas import (
@@ -82,16 +90,19 @@ class GuildHubController(Controller):
         "/roster",
         operation_id="GetGuildRoster",
         tags=["Guild hub"],
-        security=SECURITY_SESSION,
+        security=SECURITY_SESSION_OR_SYNC_TOKEN,
         summary="Get the guild roster",
-        description="Returns the current roster. Alts are grouped under their linked member.",
+        description=(
+            "Returns the current roster. Alts are grouped under their linked member. A guild member's session "
+            "or sync token works."
+        ),
         response_description="The current roster.",
-        responses={401: NOT_SIGNED_IN, 403: NOT_A_MEMBER},
+        responses={401: BAD_SYNC_OR_SESSION, 403: NOT_A_MEMBER},
     )
     async def get_roster(
-        self, current_member: NamedDependency[Member], guild_hub_service: NamedDependency[GuildHubService]
+        self, member_or_sync_token: NamedDependency[Member], guild_hub_service: NamedDependency[GuildHubService]
     ) -> GuildRoster:
-        del current_member
+        del member_or_sync_token
         return await guild_hub_service.get_roster()
 
     @get(
@@ -111,21 +122,24 @@ class GuildHubController(Controller):
         "/crafters",
         operation_id="GetGuildCrafters",
         tags=["Guild hub"],
-        security=SECURITY_SESSION,
+        security=SECURITY_SESSION_OR_SYNC_TOKEN,
         summary="Search guild crafters",
-        description="Returns characters that know a recipe matching the search term or profession.",
+        description=(
+            "Returns characters that know a recipe matching the search term or profession. A guild member's "
+            "session or sync token works."
+        ),
         response_description="Characters matching the search.",
-        responses={401: NOT_SIGNED_IN, 403: NOT_A_MEMBER},
+        responses={401: BAD_SYNC_OR_SESSION, 403: NOT_A_MEMBER},
     )
     async def get_crafters(
         self,
-        current_member: NamedDependency[Member],
+        member_or_sync_token: NamedDependency[Member],
         guild_hub_service: NamedDependency[GuildHubService],
         optional_game_data: NamedDependency[AsyncClient | None],
         q: Annotated[str | None, Parameter(description="A recipe or item name to search for.")] = None,
         profession: Annotated[str | None, Parameter(description="A profession to filter by.")] = None,
     ) -> GuildCrafters:
-        del current_member
+        del member_or_sync_token
         return await guild_hub_service.get_crafters(q=q, profession=profession, game_data=optional_game_data)
 
     @get(
@@ -151,16 +165,19 @@ class GuildHubController(Controller):
         "/market",
         operation_id="GetGuildMarket",
         tags=["Guild hub"],
-        security=SECURITY_SESSION,
+        security=SECURITY_SESSION_OR_SYNC_TOKEN,
         summary="Get the guild market",
-        description="Returns everyone's sell/buy listings and open material requests, with item names and prices.",
+        description=(
+            "Returns everyone's sell/buy listings and open material requests, with item names and prices. A "
+            "guild member's session or sync token works."
+        ),
         response_description="The guild's sell/buy listings and requests.",
-        responses={401: NOT_SIGNED_IN, 403: NOT_A_MEMBER},
+        responses={401: BAD_SYNC_OR_SESSION, 403: NOT_A_MEMBER},
     )
     async def get_market(
-        self, current_member: NamedDependency[Member], guild_hub_service: NamedDependency[GuildHubService]
+        self, member_or_sync_token: NamedDependency[Member], guild_hub_service: NamedDependency[GuildHubService]
     ) -> GuildMarket:
-        del current_member
+        del member_or_sync_token
         return await guild_hub_service.get_market()
 
     @get(

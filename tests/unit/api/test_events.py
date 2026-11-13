@@ -4,7 +4,7 @@ from uuid import UUID
 
 from sqlalchemy import select
 
-from sidequest_common.models import EventDiscordInterest, EventSignupActivity, GuildEvent
+from sidequest_common.models import EventDiscordInterest, EventSignupActivity, GuildEvent, Member
 from tests.conftest import TEST_API_KEY
 from tests.unit.api.conftest import OFFICER_ROLE_ID, login_as
 
@@ -42,6 +42,24 @@ async def _seed_event(
 
 def _signup_body(character: str = "Thrall", role: str = "dps", status: str = "signed") -> dict:
     return {"character": character, "class": "warrior", "role": role, "status": status, "comment": None}
+
+
+async def _create_member_sync_token(
+    client: AsyncTestClient, discord_state: dict, *, discord_id: int, name: str = "Companion"
+) -> str:
+    """Any guild member's device-sign-in flow (no officer role needed): create, self-approve, and poll for the
+    token, same as SideQuest Companion does."""
+    created = await client.post("/api/epgp/device-authorizations", json={"device_name": name})
+    assert created.status_code == 201, created.text
+    await login_as(client, discord_state, discord_id=discord_id, roles=[])
+    approve = await client.post(f"/api/epgp/device-authorizations/{created.json()['user_code']}/approve")
+    assert approve.status_code == 204, approve.text
+    poll = await client.post(
+        "/api/epgp/device-authorizations/token", json={"device_code": created.json()["device_code"]}
+    )
+    assert poll.status_code == 200, poll.text
+    assert poll.json()["status"] == "approved", poll.text
+    return poll.json()["token"]
 
 
 async def test_non_member_gets_403_on_signup(
@@ -522,3 +540,50 @@ async def test_signed_in_guest_sees_full_roster(
     body = response.json()
     assert body["counts"] is not None
     assert [s["character"] for s in body["signups"]] == ["Confirmed"]
+
+
+# --- SideQuest Companion's sync token: same personalization as a session, scoped to guild membership --------------
+
+
+async def test_sync_token_holder_gets_full_list_counts_and_own_my_signup(
+    member_client: AsyncTestClient, discord_state: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    event_id = await _seed_event(db_sessionmaker)
+    token = await _create_member_sync_token(member_client, discord_state, discord_id=6901)
+    signup = await member_client.put(f"/api/events/{event_id}/signup", json=_signup_body(character="Tokenholder"))
+    assert signup.status_code == 200, signup.text
+    await member_client.post("/auth/logout")
+
+    headers = {"Authorization": f"Bearer {token}"}
+    list_response = await member_client.get("/api/events", params={"when": "upcoming"}, headers=headers)
+    assert list_response.status_code == 200, list_response.text
+    summary = next(event for event in list_response.json() if event["id"] == event_id)
+    assert summary["counts"] is not None
+    assert summary["counts"]["signed"] == 1
+
+    detail_response = await member_client.get(f"/api/events/{event_id}", headers=headers)
+    assert detail_response.status_code == 200, detail_response.text
+    body = detail_response.json()
+    assert body["my_signup"]["character"] == "Tokenholder"
+
+
+async def test_non_member_sync_token_is_403_on_events(
+    member_client: AsyncTestClient, discord_state: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    event_id = await _seed_event(db_sessionmaker)
+    token = await _create_member_sync_token(member_client, discord_state, discord_id=6902)
+    async with db_sessionmaker() as session:
+        member = (await session.execute(select(Member).where(Member.discord_id == 6902))).scalar_one()
+        member.is_guild_member = False
+        await session.commit()
+    await member_client.post("/auth/logout")
+
+    headers = {"Authorization": f"Bearer {token}"}
+    assert (await member_client.get("/api/events", headers=headers)).status_code == 403
+    assert (await member_client.get(f"/api/events/{event_id}", headers=headers)).status_code == 403
+
+
+async def test_unknown_sync_token_is_401_on_events(member_client: AsyncTestClient) -> None:
+    headers = {"Authorization": "Bearer sqs_not-a-real-token"}
+    assert (await member_client.get("/api/events", headers=headers)).status_code == 401
+    assert (await member_client.get(f"/api/events/{UUID(int=0)}", headers=headers)).status_code == 401

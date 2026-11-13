@@ -9,12 +9,14 @@ own database session (it reuses the request's ``db_session``).
 import hashlib
 import logging
 import secrets
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 from litestar import Request  # noqa: TC002 - these providers are Litestar DI targets, need real types
 from litestar.di import NamedDependency  # noqa: TC002
 from litestar.exceptions import NotAuthorizedException, PermissionDeniedException
 from litestar.middleware.session.client_side import CookieBackendConfig
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession  # noqa: TC002
 
 if TYPE_CHECKING:
@@ -23,12 +25,14 @@ if TYPE_CHECKING:
     from sidequest_common.settings import WebSettings
 
 from sidequest_api.lib.auth import is_valid_api_key
-from sidequest_common.models import Member
+from sidequest_common.models import EpgpSyncToken, Member
 
 logger = logging.getLogger(__name__)
 
 SESSION_COOKIE_KEY = "sq_session"
 SESSION_MAX_AGE = 60 * 60 * 24 * 30  # 30 days
+AUTH_HEADER = "Authorization"
+BEARER_PREFIX = "Bearer "
 _NO_SESSION_MESSAGE = "Not authenticated"
 _NOT_A_MEMBER_MESSAGE = "Not a guild member"
 _NOT_AN_OFFICER_MESSAGE = "Officers only"
@@ -80,6 +84,70 @@ async def provide_current_member(authenticated_member: NamedDependency[Member]) 
 
 async def provide_optional_member(request: Request, db_session: NamedDependency[AsyncSession]) -> Member | None:
     """The signed-in member if there is one, else ``None``. Never raises; for public endpoints that personalize."""
+    member_id = request.session.get("member_id")
+    if member_id is None:
+        return None
+    return await db_session.get(Member, int(member_id))
+
+
+async def _resolve_sync_token_holder(request: Request, db_session: AsyncSession) -> Member | None:
+    """The sync token's holder, for a request carrying a ``Bearer`` sync token; ``None`` if there is no such header.
+
+    401s if the header is present but the token is unknown or revoked. Does not check guild membership; callers
+    decide. Shares the sync-token lookup used by ``domain/epgp/dependencies.py``'s import/game-import guards.
+    """
+    auth_header = request.headers.get(AUTH_HEADER, "")
+    if not auth_header.startswith(BEARER_PREFIX):
+        return None
+    token = auth_header[len(BEARER_PREFIX) :].strip()
+    token_hash = hashlib.sha256(token.encode()).hexdigest()
+    row = (
+        await db_session.execute(select(EpgpSyncToken).where(EpgpSyncToken.token_hash == token_hash))
+    ).scalar_one_or_none()
+    if row is None or row.revoked_at is not None:
+        raise NotAuthorizedException(_NO_SESSION_MESSAGE)
+    holder = await db_session.get(Member, row.member_id)
+    if holder is None:
+        raise NotAuthorizedException(_NO_SESSION_MESSAGE)
+    row.last_used_at = datetime.now(UTC)
+    await db_session.commit()
+    return holder
+
+
+async def provide_member_or_sync_token(request: Request, db_session: NamedDependency[AsyncSession]) -> Member:
+    """The "member or sync token" guard: a guild member's session, or a valid ``Bearer`` sync token.
+
+    401 if neither is present, 403 if the session's member (or the token's holder) is not a guild member. Used
+    in place of ``current_member`` by routes SideQuest Companion also reads with its sync token.
+    """
+    holder = await _resolve_sync_token_holder(request, db_session)
+    if holder is not None:
+        if not holder.is_guild_member:
+            raise PermissionDeniedException(_NOT_A_MEMBER_MESSAGE)
+        return holder
+    member_id = request.session.get("member_id")
+    member = await db_session.get(Member, int(member_id)) if member_id is not None else None
+    if member is None:
+        raise NotAuthorizedException(_NO_SESSION_MESSAGE)
+    if not member.is_guild_member:
+        raise PermissionDeniedException(_NOT_A_MEMBER_MESSAGE)
+    return member
+
+
+async def provide_optional_member_or_sync_token(
+    request: Request, db_session: NamedDependency[AsyncSession]
+) -> Member | None:
+    """The signed-in member or sync token holder if there is one, else ``None``.
+
+    For public GET routes that personalize for both a session and SideQuest Companion's sync token. 403s if a
+    valid token's holder is no longer a guild member (same rule as ``provide_member_or_sync_token``); an
+    anonymous/plain-session visitor is left to the route's own membership check, same as ``optional_member``.
+    """
+    holder = await _resolve_sync_token_holder(request, db_session)
+    if holder is not None:
+        if not holder.is_guild_member:
+            raise PermissionDeniedException(_NOT_A_MEMBER_MESSAGE)
+        return holder
     member_id = request.session.get("member_id")
     if member_id is None:
         return None

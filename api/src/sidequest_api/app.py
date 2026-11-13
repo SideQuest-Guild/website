@@ -55,6 +55,7 @@ def create_app(
         create_member_or_bot_provider,
         provide_authenticated_member,
         provide_current_member,
+        provide_member_or_sync_token,
     )
     from sidequest_api.lib.openapi import (
         SECURITY_API_KEY,
@@ -104,6 +105,7 @@ def create_app(
             "web_settings": Provide(lambda: web_settings, sync_to_thread=False),
             "authenticated_member": Provide(provide_authenticated_member),
             "current_member": Provide(provide_current_member),
+            "member_or_sync_token": Provide(provide_member_or_sync_token),
             "full_access": Provide(create_full_access_provider(api_settings.KEY.get_secret_value())),
             "member_or_bot": Provide(create_member_or_bot_provider(api_settings.KEY.get_secret_value())),
             "current_officer": Provide(create_current_officer_provider(web_settings.OFFICER_ROLE_IDS)),

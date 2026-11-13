@@ -6,13 +6,14 @@ import json
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from sqlalchemy import func, select
 
 from sidequest_api.domain.epgp.services import decayed_amount, resets_since
 from sidequest_common.models import (
     EpgpDeviceAuthorization,
+    EpgpImportAudit,
     EpgpLedgerEntry,
     EpgpSyncToken,
     EventSignup,
@@ -125,6 +126,24 @@ def _loot_row(loot_id: str = "L1", **overrides: object) -> dict:
 async def _login_officer(client: AsyncTestClient, discord_state: dict, *, discord_id: int = 100) -> None:
     response = await login_as(client, discord_state, discord_id=discord_id, roles=[OFFICER_ROLE_ID])
     assert response.status_code == 302, response.text
+
+
+async def _create_member_sync_token(
+    client: AsyncTestClient, discord_state: dict, *, discord_id: int, name: str = "Companion"
+) -> str:
+    """Any guild member's device-sign-in flow (no officer role needed): create, self-approve, and poll for the
+    token, same as SideQuest Companion does."""
+    created = await client.post("/api/epgp/device-authorizations", json={"device_name": name})
+    assert created.status_code == 201, created.text
+    await login_as(client, discord_state, discord_id=discord_id, roles=[])
+    approve = await client.post(f"/api/epgp/device-authorizations/{created.json()['user_code']}/approve")
+    assert approve.status_code == 204, approve.text
+    poll = await client.post(
+        "/api/epgp/device-authorizations/token", json={"device_code": created.json()["device_code"]}
+    )
+    assert poll.status_code == 200, poll.text
+    assert poll.json()["status"] == "approved", poll.text
+    return poll.json()["token"]
 
 
 # --- decay math -----------------------------------------------------------------------------------------------
@@ -627,10 +646,24 @@ async def test_import_malformed_base64_is_400(member_client: AsyncTestClient, di
     assert response.status_code == 400
 
 
-async def test_import_requires_officer_or_token(member_client: AsyncTestClient, discord_state: dict) -> None:
-    await login_as(member_client, discord_state, discord_id=6301, roles=[])
+async def test_import_requires_a_session_or_token(member_client: AsyncTestClient) -> None:
+    response = await member_client.post("/api/epgp/imports", json={"payload": _export_string(_base_payload())})
+    assert response.status_code == 401
+
+
+async def test_import_rejects_a_signed_in_non_member(member_client: AsyncTestClient, discord_state: dict) -> None:
+    await login_as(member_client, discord_state, discord_id=6301, is_guild_member=False)
     response = await member_client.post("/api/epgp/imports", json={"payload": _export_string(_base_payload())})
     assert response.status_code == 403
+
+
+async def test_import_accepts_a_signed_in_non_officer_member_in_member_scope(
+    member_client: AsyncTestClient, discord_state: dict
+) -> None:
+    await login_as(member_client, discord_state, discord_id=6302, roles=[])
+    response = await member_client.post("/api/epgp/imports", json={"payload": _export_string(_base_payload())})
+    assert response.status_code == 200, response.text
+    assert response.json()["scope"] == "member"
 
 
 # --- sync-token auth --------------------------------------------------------------------------------------------
@@ -669,9 +702,11 @@ async def test_revoked_sync_token_is_401(member_client: AsyncTestClient, discord
     assert response.status_code == 401
 
 
-async def test_sync_token_holder_no_longer_officer_is_403(
+async def test_sync_token_holder_demoted_from_officer_still_imports_member_scope(
     member_client: AsyncTestClient, discord_state: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
 ) -> None:
+    """Losing officer roles doesn't stop a sync token from importing: the addon import now accepts any guild
+    member, scoped to their own linked characters' directory/signups."""
     await _login_officer(member_client, discord_state, discord_id=6403)
     created = await member_client.post("/api/epgp/sync-tokens", json={"name": "Demote me"})
     token = created.json()["token"]
@@ -686,7 +721,165 @@ async def test_sync_token_holder_no_longer_officer_is_403(
         json={"payload": _export_string(_base_payload())},
         headers={"Authorization": f"Bearer {token}"},
     )
+    assert response.status_code == 200, response.text
+    assert response.json()["scope"] == "member"
+
+
+async def test_sync_token_holder_no_longer_a_guild_member_is_403_for_imports(
+    member_client: AsyncTestClient, discord_state: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    await _login_officer(member_client, discord_state, discord_id=6404)
+    created = await member_client.post("/api/epgp/sync-tokens", json={"name": "Leave guild"})
+    token = created.json()["token"]
+
+    async with db_sessionmaker() as session:
+        member = (await session.execute(select(Member).where(Member.discord_id == 6404))).scalar_one()
+        member.is_guild_member = False
+        await session.commit()
+
+    response = await member_client.post(
+        "/api/epgp/imports",
+        json={"payload": _export_string(_base_payload())},
+        headers={"Authorization": f"Bearer {token}"},
+    )
     assert response.status_code == 403
+
+
+# --- member-scoped import: applies only the holder's own linked characters' directory/signups ---------------------
+
+
+async def test_member_import_applies_only_own_linked_directory_and_signups(
+    member_client: AsyncTestClient, discord_state: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    await login_as(member_client, discord_state, discord_id=6901, roles=[])
+    async with db_sessionmaker() as session:
+        event = GuildEvent(
+            kind="raid", title="Member Import Raid", location="", starts_at=datetime.now(UTC), status="scheduled"
+        )
+        session.add(event)
+        await session.flush()
+        member = (await session.execute(select(Member).where(Member.discord_id == 6901))).scalar_one()
+        session.add(
+            WowCharacter(name="Mine", realm="Whitemane", key="mine-whitemane", member_id=member.id, source="claim")
+        )
+        await session.commit()
+        event_id = event.id
+
+    char_section = {"v": "aaaaaaaa", "at": 1793500000, "d": {"level": 60, "class": "MAGE", "race": "Human"}}
+    payload = _base_payload(
+        sessions=[_session_row(members=[_member_row("Someoneelse-Whitemane", "warrior")])],
+        awards=[_award_row(character="Someoneelse-Whitemane")],
+        directory=[
+            {"character": "Mine-Whitemane", "sections": {"char": char_section}},
+            {"character": "Someoneelse-Whitemane", "sections": {"char": char_section}},
+        ],
+        signups=[
+            {
+                "id": "su-mine",
+                "event_id": str(event_id),
+                "character": "Mine-Whitemane",
+                "status": "signed",
+                "at": 1793500000,
+            },
+            {
+                "id": "su-other",
+                "event_id": str(event_id),
+                "character": "Someoneelse-Whitemane",
+                "status": "signed",
+                "at": 1793500000,
+            },
+        ],
+    )
+    response = await member_client.post("/api/epgp/imports", json={"payload": _export_string(payload)})
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["scope"] == "member"
+    assert body["directory"]["char"] == {"updated": 1, "skipped": 0}
+    assert body["signups"] == {"applied": 1, "skipped_older": 0, "unlinked": 0}
+    assert body["sessions"] == {"new": 0, "updated": 0}
+    assert body["awards"] == {"new": 0, "updated": 0, "voided": 0}
+    assert body["conflicts"] == []
+    assert body["attendance"] == {"event_id": None, "marked": 0}
+
+    async with db_sessionmaker() as session:
+        audit_count = (await session.execute(select(func.count()).select_from(EpgpImportAudit))).scalar_one()
+        assert audit_count == 0, "a member import leaves no officer-import audit row"
+        other_char = (
+            await session.execute(select(WowCharacter).where(WowCharacter.key == "someoneelse-whitemane"))
+        ).scalar_one_or_none()
+        assert other_char is None, "the member import never touches a character it doesn't own"
+        session_count = (await session.execute(select(func.count()).select_from(RaidSession))).scalar_one()
+        assert session_count == 0
+
+
+async def test_member_import_with_no_linked_characters_returns_zero_counts(
+    member_client: AsyncTestClient, discord_state: dict
+) -> None:
+    await login_as(member_client, discord_state, discord_id=6902, roles=[])
+    payload = _base_payload(
+        directory=[
+            {
+                "character": "Stray-Whitemane",
+                "sections": {
+                    "char": {"v": "aaaaaaaa", "at": 1793500000, "d": {"level": 60, "class": "MAGE", "race": "Human"}}
+                },
+            }
+        ],
+        signups=[
+            {
+                "id": "su-stray",
+                "event_id": str(uuid4()),
+                "character": "Stray-Whitemane",
+                "status": "signed",
+                "at": 1793500000,
+            }
+        ],
+    )
+    response = await member_client.post("/api/epgp/imports", json={"payload": _export_string(payload)})
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["scope"] == "member"
+    assert body["directory"]["char"] == {"updated": 0, "skipped": 0}
+    assert body["signups"] == {"applied": 0, "skipped_older": 0, "unlinked": 0}
+
+
+async def test_member_sync_token_imports_member_scope(
+    member_client: AsyncTestClient, discord_state: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    token = await _create_member_sync_token(member_client, discord_state, discord_id=6903)
+    async with db_sessionmaker() as session:
+        member = (await session.execute(select(Member).where(Member.discord_id == 6903))).scalar_one()
+        session.add(
+            WowCharacter(name="Tok", realm="Whitemane", key="tok-whitemane", member_id=member.id, source="claim")
+        )
+        await session.commit()
+
+    payload = _base_payload(
+        directory=[
+            {
+                "character": "Tok-Whitemane",
+                "sections": {
+                    "char": {"v": "aaaaaaaa", "at": 1793500000, "d": {"level": 60, "class": "MAGE", "race": "Human"}}
+                },
+            }
+        ],
+    )
+    response = await member_client.post(
+        "/api/epgp/imports",
+        json={"payload": _export_string(payload)},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["scope"] == "member"
+    assert body["directory"]["char"] == {"updated": 1, "skipped": 0}
+
+
+async def test_officer_import_has_scope_officer(member_client: AsyncTestClient, discord_state: dict) -> None:
+    await _login_officer(member_client, discord_state, discord_id=6904)
+    response = await member_client.post("/api/epgp/imports", json={"payload": _export_string(_base_payload())})
+    assert response.status_code == 200, response.text
+    assert response.json()["scope"] == "officer"
 
 
 # --- guild members manage their own sync tokens; manual creation stays officer-only ------------------------------
@@ -1219,10 +1412,11 @@ async def test_device_authorization_approver_left_guild_before_poll_is_denied(
     assert tokens_after == tokens_before
 
 
-async def test_device_authorization_member_approval_token_is_403_on_import_and_game_import(
+async def test_device_authorization_member_approval_token_imports_member_scope_but_not_game_import(
     member_client: AsyncTestClient, discord_state: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
 ) -> None:
-    """A member (non-officer) can approve a sign-in; the minted token works for Companion but not for sync."""
+    """A member (non-officer) can approve a sign-in; the minted token imports in member scope, but still can't
+    read the officer-only game-import string."""
     created = await _create_device_authorization(member_client, device_name="Member's PC")
     device_code = created["device_code"]
     user_code = created["user_code"]
@@ -1242,7 +1436,8 @@ async def test_device_authorization_member_approval_token_is_403_on_import_and_g
         json={"payload": _export_string(_base_payload())},
         headers={"Authorization": f"Bearer {token}"},
     )
-    assert import_response.status_code == 403
+    assert import_response.status_code == 200, import_response.text
+    assert import_response.json()["scope"] == "member"
 
     game_import_response = await member_client.get(
         "/api/epgp/game-import", headers={"Authorization": f"Bearer {token}"}

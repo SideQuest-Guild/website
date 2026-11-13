@@ -71,6 +71,24 @@ async def _login_officer(client: AsyncTestClient, discord_state: dict, *, discor
     assert response.status_code == 302, response.text
 
 
+async def _create_member_sync_token(
+    client: AsyncTestClient, discord_state: dict, *, discord_id: int, name: str = "Companion"
+) -> str:
+    """Any guild member's device-sign-in flow (no officer role needed): create, self-approve, and poll for the
+    token, same as SideQuest Companion does."""
+    created = await client.post("/api/epgp/device-authorizations", json={"device_name": name})
+    assert created.status_code == 201, created.text
+    await login_as(client, discord_state, discord_id=discord_id, roles=[])
+    approve = await client.post(f"/api/epgp/device-authorizations/{created.json()['user_code']}/approve")
+    assert approve.status_code == 204, approve.text
+    poll = await client.post(
+        "/api/epgp/device-authorizations/token", json={"device_code": created.json()["device_code"]}
+    )
+    assert poll.status_code == 200, poll.text
+    assert poll.json()["status"] == "approved", poll.text
+    return poll.json()["token"]
+
+
 # --- roster: level-up milestones, left_guild_at sweep -----------------------------------------------------------
 
 
@@ -1170,6 +1188,49 @@ async def test_guild_roster_endpoint_groups_alts_under_their_linked_member(
     assert row["main"] == "Main Steelheart"
     assert {c["name"] for c in row["characters"]} == {"Main Steelheart", "Alt Steelheart"}
     assert body["unlinked"] == []
+
+
+# --- roster/crafters/market: a guild member's sync token works the same as their session --------------------------
+
+
+async def test_roster_crafters_market_accept_a_member_sync_token(
+    member_client: AsyncTestClient, discord_state: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    token = await _create_member_sync_token(member_client, discord_state, discord_id=7810)
+    async with db_sessionmaker() as session:
+        member = (await session.execute(select(Member).where(Member.discord_id == 7810))).scalar_one()
+        session.add(WowCharacter(name="Tokroster", realm="Whitemane", key="tokroster-whitemane", member_id=member.id))
+        await session.commit()
+
+    headers = {"Authorization": f"Bearer {token}"}
+    roster = await member_client.get("/api/guild/roster", headers=headers)
+    assert roster.status_code == 200, roster.text
+    crafters = await member_client.get("/api/guild/crafters", headers=headers)
+    assert crafters.status_code == 200, crafters.text
+    market = await member_client.get("/api/guild/market", headers=headers)
+    assert market.status_code == 200, market.text
+
+
+async def test_roster_crafters_market_reject_a_non_member_sync_token(
+    member_client: AsyncTestClient, discord_state: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    token = await _create_member_sync_token(member_client, discord_state, discord_id=7811)
+    async with db_sessionmaker() as session:
+        member = (await session.execute(select(Member).where(Member.discord_id == 7811))).scalar_one()
+        member.is_guild_member = False
+        await session.commit()
+
+    headers = {"Authorization": f"Bearer {token}"}
+    assert (await member_client.get("/api/guild/roster", headers=headers)).status_code == 403
+    assert (await member_client.get("/api/guild/crafters", headers=headers)).status_code == 403
+    assert (await member_client.get("/api/guild/market", headers=headers)).status_code == 403
+
+
+async def test_roster_crafters_market_reject_an_unknown_sync_token(member_client: AsyncTestClient) -> None:
+    headers = {"Authorization": "Bearer sqs_not-a-real-token"}
+    assert (await member_client.get("/api/guild/roster", headers=headers)).status_code == 401
+    assert (await member_client.get("/api/guild/crafters", headers=headers)).status_code == 401
+    assert (await member_client.get("/api/guild/market", headers=headers)).status_code == 401
 
 
 # --- enum validation: bad recruit status/vote/bank kind are rejected -----------------------------------------------

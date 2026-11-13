@@ -1,6 +1,7 @@
 """DI providers for the EPGP domain.
 
-Includes the shared officer-session-or-sync-token guard used by the addon import and game-import routes.
+Includes the officer-session-or-sync-token guard used by the game-import route, and the member-or-sync-token
+guard used by the addon import route (any guild member; the service scopes what a non-officer's import applies).
 """
 
 from __future__ import annotations
@@ -23,6 +24,7 @@ AUTH_HEADER = "Authorization"
 BEARER_PREFIX = "Bearer "
 _NO_TOKEN_MESSAGE = "Missing or invalid sync token"  # noqa: S105 - not a password, an error message
 _NOT_AN_OFFICER_MESSAGE = "Officers only"
+_NOT_A_MEMBER_MESSAGE = "Not a guild member"
 
 
 async def provide_epgp_service(db_session: NamedDependency[AsyncSession]) -> EpgpService:
@@ -60,6 +62,39 @@ async def provide_import_actor(
         raise NotAuthorizedException(_NO_TOKEN_MESSAGE)
     if not is_officer(optional_member, web_settings.OFFICER_ROLE_IDS):
         raise PermissionDeniedException(_NOT_AN_OFFICER_MESSAGE)
+    return optional_member
+
+
+async def provide_import_member(
+    request: Request,
+    optional_member: NamedDependency[Member | None],
+    db_session: NamedDependency[AsyncSession],
+) -> Member:
+    """The shared guard for ``POST /api/epgp/imports``: a guild member's session, or a valid ``Bearer`` sync token.
+
+    Unlike ``provide_import_actor`` (officer-only, also used by ``GET /api/epgp/game-import``), any guild
+    member's token or session works; the service decides how much of the payload a non-officer's import applies.
+    401 if neither is present/valid, 403 if the member (or a valid token's holder) is not a guild member.
+    """
+    auth_header = request.headers.get(AUTH_HEADER, "")
+    if auth_header.startswith(BEARER_PREFIX):
+        token = auth_header[len(BEARER_PREFIX) :].strip()
+        token_hash = hashlib.sha256(token.encode()).hexdigest()
+        row = (
+            await db_session.execute(select(EpgpSyncToken).where(EpgpSyncToken.token_hash == token_hash))
+        ).scalar_one_or_none()
+        if row is None or row.revoked_at is not None:
+            raise NotAuthorizedException(_NO_TOKEN_MESSAGE)
+        holder = await db_session.get(Member, row.member_id)
+        if holder is None or not holder.is_guild_member:
+            raise PermissionDeniedException(_NOT_A_MEMBER_MESSAGE)
+        row.last_used_at = datetime.now(UTC)
+        await db_session.commit()
+        return holder
+    if optional_member is None:
+        raise NotAuthorizedException(_NO_TOKEN_MESSAGE)
+    if not optional_member.is_guild_member:
+        raise PermissionDeniedException(_NOT_A_MEMBER_MESSAGE)
     return optional_member
 
 

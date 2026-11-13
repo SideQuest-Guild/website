@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy import select
 
-from sidequest_common.models import GuildEvent, RecruitmentRecruit
+from sidequest_common.models import GuildEvent, Member, RecruitmentRecruit
 from sidequest_common.schemas import DRIVE_PRIZE_COPPER, DRIVE_SETTLE_DAYS
 from tests.unit.api.conftest import OFFICER_ROLE_ID, login_as
 
@@ -23,6 +23,24 @@ NOW = datetime.now(UTC)
 async def _login_officer(client: AsyncTestClient, discord_state: dict, *, discord_id: int = 7700) -> None:
     response = await login_as(client, discord_state, discord_id=discord_id, roles=[OFFICER_ROLE_ID])
     assert response.status_code == 302, response.text
+
+
+async def _create_member_sync_token(
+    client: AsyncTestClient, discord_state: dict, *, discord_id: int, name: str = "Companion"
+) -> str:
+    """Any guild member's device-sign-in flow (no officer role needed): create, self-approve, and poll for the
+    token, same as SideQuest Companion does."""
+    created = await client.post("/api/epgp/device-authorizations", json={"device_name": name})
+    assert created.status_code == 201, created.text
+    await login_as(client, discord_state, discord_id=discord_id, roles=[])
+    approve = await client.post(f"/api/epgp/device-authorizations/{created.json()['user_code']}/approve")
+    assert approve.status_code == 204, approve.text
+    poll = await client.post(
+        "/api/epgp/device-authorizations/token", json={"device_code": created.json()["device_code"]}
+    )
+    assert poll.status_code == 200, poll.text
+    assert poll.json()["status"] == "approved", poll.text
+    return poll.json()["token"]
 
 
 async def _seed_drive(
@@ -124,6 +142,34 @@ async def test_member_can_read_a_drive(
     assert body["totals"] == {"invited": 0, "joined": 0, "counting": 0, "qualified": 0, "disqualified": 0, "paid": 0}
     assert body["leaders"] == []
     assert body["recruits"] == []
+
+
+async def test_member_sync_token_can_read_a_drive(
+    member_client: AsyncTestClient, discord_state: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    event_id = await _seed_drive(db_sessionmaker, starts_at=NOW - timedelta(days=1), ends_at=NOW + timedelta(days=13))
+    token = await _create_member_sync_token(member_client, discord_state, discord_id=7706)
+    await member_client.post("/auth/logout")
+    response = await member_client.get(
+        f"/api/events/{event_id}/recruitment", headers={"Authorization": f"Bearer {token}"}
+    )
+    assert response.status_code == 200, response.text
+    assert response.json()["event_id"] == event_id
+
+
+async def test_non_member_sync_token_cannot_read_a_drive(
+    member_client: AsyncTestClient, discord_state: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    event_id = await _seed_drive(db_sessionmaker, starts_at=NOW - timedelta(days=1), ends_at=NOW + timedelta(days=13))
+    token = await _create_member_sync_token(member_client, discord_state, discord_id=7707)
+    async with db_sessionmaker() as session:
+        member = (await session.execute(select(Member).where(Member.discord_id == 7707))).scalar_one()
+        member.is_guild_member = False
+        await session.commit()
+    response = await member_client.get(
+        f"/api/events/{event_id}/recruitment", headers={"Authorization": f"Bearer {token}"}
+    )
+    assert response.status_code == 403
 
 
 async def test_signed_out_visitor_cannot_read_a_drive(

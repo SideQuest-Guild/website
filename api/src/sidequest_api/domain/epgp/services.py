@@ -453,7 +453,7 @@ class EpgpService:
         return row_id
 
     async def import_payload(  # noqa: C901, PLR0912, PLR0915 - one linear upsert pass per contract section
-        self, raw_text: str, actor: Member
+        self, raw_text: str, actor: Member, *, acting_as_officer: bool = True
     ) -> EpgpImportResult:
         """Decode, validate, and upsert one ``SQX1:`` export string. Readable ``ValidationException`` on bad input.
 
@@ -463,6 +463,9 @@ class EpgpService:
         """
         payload = self._decode_payload(raw_text)
         character_cache: dict[str, WowCharacter] = {}
+
+        if not acting_as_officer:
+            return await self._import_member_scope(payload, actor, character_cache)
 
         session_counts = ImportCounts()
         session_id_map: dict[str, UUID | None] = {}
@@ -799,6 +802,37 @@ class EpgpService:
             battlegrounds=battleground_counts,
             guild_log=guild_log_counts,
             recruit_payouts_paid=recruit_payout_counts,
+        )
+
+    async def _import_member_scope(
+        self, payload: ExportPayload, actor: Member, character_cache: dict[str, WowCharacter]
+    ) -> EpgpImportResult:
+        """The non-officer import path: apply only the holder's own linked characters' ``directory``/``signups``.
+
+        Every other section is ignored without error. No ``EpgpImportAudit`` row is written (no officer-import
+        side effects), and no recruitment evaluation or attendance hand-off runs. If the holder has no linked
+        characters, every count is zero.
+        """
+        own_keys = set(
+            (await self._session.execute(select(WowCharacter.key).where(WowCharacter.member_id == actor.id)))
+            .scalars()
+            .all()
+        )
+        directory = [entry for entry in payload.directory if _character_key(entry.character) in own_keys]
+        signups = [entry for entry in payload.signups if _character_key(entry.character) in own_keys]
+        directory_counts = await self._import_directory(directory, payload.recipe_names, character_cache)
+        signup_counts = await self._import_signups_v2(signups, character_cache)
+        await self._session.commit()
+        return EpgpImportResult(
+            recorder=payload.recorder,
+            sessions=ImportCounts(),
+            encounters=ImportCounts(),
+            loot=LootImportCounts(),
+            awards=AwardImportCounts(),
+            attendance=ImportAttendanceResult(event_id=None, marked=0),
+            directory=directory_counts,
+            signups=signup_counts,
+            scope="member",
         )
 
     # --- Import v2: guild hub sections ------------------------------------------------------------------------

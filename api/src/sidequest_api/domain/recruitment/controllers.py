@@ -16,7 +16,14 @@ from litestar.params import JSONBody, Parameter
 from sidequest_api.domain.recruitment.dependencies import provide_recruitment_service
 from sidequest_api.domain.recruitment.services import RecruitmentService
 from sidequest_api.lib.officer_audit import record_officer_audit
-from sidequest_api.lib.openapi import NOT_A_MEMBER, NOT_AN_OFFICER, NOT_SIGNED_IN, SECURITY_SESSION
+from sidequest_api.lib.openapi import (
+    BAD_SYNC_OR_SESSION,
+    NOT_A_MEMBER,
+    NOT_AN_OFFICER,
+    NOT_SIGNED_IN,
+    SECURITY_SESSION,
+    SECURITY_SESSION_OR_SYNC_TOKEN,
+)
 from sidequest_common.models import Member
 from sidequest_common.schemas import RecruitmentDrive, RecruitPayout, RecruitPayoutMarkPaid
 
@@ -33,15 +40,15 @@ class RecruitmentController(Controller):
         "/events/{event_id:uuid}/recruitment",
         operation_id="GetRecruitmentDrive",
         tags=["Recruitment drives"],
-        security=SECURITY_SESSION,
+        security=SECURITY_SESSION_OR_SYNC_TOKEN,
         summary="Get a recruitment drive",
         description=(
             "Returns a recruitment drive's totals, leaderboard, and recruit rows, freshly evaluated. A guild "
-            "member must be signed in. 404 if the event is not a recruitment drive."
+            "member's session or sync token works. 404 if the event is not a recruitment drive."
         ),
         response_description="The drive's totals, leaderboard, and recruit rows.",
         responses={
-            401: NOT_SIGNED_IN,
+            401: BAD_SYNC_OR_SESSION,
             403: NOT_A_MEMBER,
             404: ResponseSpec(None, description="No recruitment drive with that event ID."),
         },
@@ -50,9 +57,9 @@ class RecruitmentController(Controller):
         self,
         event_id: _EVENT_ID,
         recruitment_service: NamedDependency[RecruitmentService],
-        current_member: NamedDependency[Member],
+        member_or_sync_token: NamedDependency[Member],
     ) -> RecruitmentDrive:
-        del current_member
+        del member_or_sync_token
         return await recruitment_service.get_drive(event_id)
 
     @get(

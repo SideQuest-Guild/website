@@ -65,7 +65,9 @@ SECURITY_SCHEMES: dict[str, Reference | SecurityScheme] = {
 
 SECURITY_SESSION: list[dict[str, list[str]]] = [{SECURITY_SCHEME_SESSION: []}]
 SECURITY_API_KEY: list[dict[str, list[str]]] = [{SECURITY_SCHEME_API_KEY: []}]
-# The import endpoint accepts either an officer's session or a sync token.
+# A member's/officer's session, or a valid sync token, both work: member reads a sync token can also read
+# (standings, events, the roster/crafters/market, a recruitment drive), and the addon import (any guild member,
+# scoped to officer vs. member by who is importing) and game-import (officer-only) routes.
 SECURITY_SESSION_OR_SYNC_TOKEN: list[dict[str, list[str]]] = [
     {SECURITY_SCHEME_SESSION: []},
     {SECURITY_SCHEME_SYNC_TOKEN: []},
@@ -84,7 +86,7 @@ NOT_AN_OFFICER = ResponseSpec(None, description="You are not an officer.")
 NOT_A_GM = ResponseSpec(None, description="You are not a Quest Master or Quest Guide.")
 BAD_API_KEY = ResponseSpec(None, description="The `X-API-Key` header is missing or wrong.")
 BAD_SYNC_OR_SESSION = ResponseSpec(
-    None, description="You are not signed in as an officer, and the sync token is missing, wrong, or revoked."
+    None, description="You are not signed in, and the sync token is missing, wrong, or revoked."
 )
 
 # ---------------------------------------------------------------------------------------------------------------

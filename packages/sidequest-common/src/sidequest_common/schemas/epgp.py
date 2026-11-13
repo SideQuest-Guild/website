@@ -6,6 +6,7 @@ Rules constants, the addon export/import wire shapes, and the HTTP API's request
 
 from datetime import datetime  # pydantic needs it at runtime
 from enum import StrEnum
+from typing import Literal
 from uuid import UUID  # pydantic needs it at runtime
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -492,6 +493,13 @@ class EpgpImportResult(BaseModel):
     battlegrounds: BattlegroundImportCounts = Field(default_factory=BattlegroundImportCounts)
     guild_log: GuildLogImportCounts = Field(default_factory=GuildLogImportCounts)
     recruit_payouts_paid: RecruitPayoutImportCounts = Field(default_factory=RecruitPayoutImportCounts)
+    scope: Literal["officer", "member"] = Field(
+        default="officer",
+        description=(
+            "Whether this import applied as an officer (every section) or a member (only their linked "
+            "characters' directory and signups). Defaults to `officer` for older clients that predate this field."
+        ),
+    )
 
 
 class EpgpRules(BaseModel):

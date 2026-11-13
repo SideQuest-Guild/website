@@ -303,7 +303,10 @@ const articles = [
   <Article id="guild-app" n={10} title="The guild app">
     <p>
       SideQuest's addon has grown into the guild's app, keeping everything on this site in step with the game. Officers
-      sync the following with the same export/import strings used for raids and loot:
+      sync the following with the same export/import strings used for raids and loot. A member running{" "}
+      <strong>SideQuest Companion</strong> also sends this for their own linked characters whenever the addon writes its
+      save file, without an officer needing to be online: the directory entries below (professions, character basics,
+      craft cooldowns, market listings and crafting material counts) and in-game sign-ups.
     </p>
     <ul>
       <li>
@@ -342,7 +345,8 @@ const articles = [
       </li>
       <li>
         <strong>In-game sign-ups:</strong> Going/Maybe/Can't answers given in the addon for the same events you can sign
-        up for on this site; whichever answer came last wins.
+        up for on this site; whichever answer came last wins. A member's own companion can send their own sign-ups even
+        when no officer is online.
       </li>
       <li>
         <strong>Announcements:</strong> text an officer writes, in game or on this site, that reaches every member's
