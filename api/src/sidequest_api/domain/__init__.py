@@ -55,6 +55,7 @@ from sidequest_api.domain.member_profiles.controllers import MemberProfilesContr
 from sidequest_api.domain.members.controllers import MembersController
 from sidequest_api.domain.pvp.controllers import PvpController
 from sidequest_api.domain.recruiting.controllers import RecruitingController
+from sidequest_api.domain.recruitment.controllers import RecruitmentController
 from sidequest_api.domain.reference.controllers import AchievementsController, QuestsController
 from sidequest_api.domain.role_menus.controllers import RoleMenusController
 from sidequest_api.domain.role_resets.controllers import RoleResetsController
@@ -104,6 +105,7 @@ public_routes = [
     DiscordOnlineController,
     GmController,
     RecruitingController,
+    RecruitmentController,
     CalendarLinkController,
     CalendarFeedController,
     AwayController,

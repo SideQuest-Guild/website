@@ -109,6 +109,9 @@ addon's sync tool, MCP, and the Discord bot).
   `packages/sidequest-common/src/sidequest_common/schemas/` (`epgp.py` and `guild_hub.py`).
 - **The bot pins `sidequest-common` to a commit of this repo.** If you change a schema the bot uses, keep the old
   fields working until the bot moves to the new commit.
+- **Recruitment drives are additive.** The bot must deploy on a `sidequest-common` commit that has
+  `EventKind.RECRUITMENT` before anyone creates a drive on the site; an older bot parses `kind` as a fixed enum and
+  fails on an unrecognized value.
 
 ## How the features work
 
@@ -116,6 +119,16 @@ addon's sync tool, MCP, and the Discord bot).
 and Can't buttons, so members can sign up from either place. Edits on the site reach Discord in about 15 seconds,
 and edits in Discord reach the site at once. A repeating event keeps its next 14 days filled in as ordinary events,
 each with its own sign-ups.
+
+**Recruitment drives.** A drive is a 14-day event (`kind: "recruitment"`) with no sign-ups: invites come from the
+in-game guild log, which officers' addons read on their roster sweep and send in their export, so members don't need
+the addon. The thread's starter post shows a live
+leaderboard instead of Going/Maybe/Can't buttons, and the bot shouts out a recruit once they qualify. A recruit
+qualifies after staying 7 days, reaching level 10, being new to the guild, and not being the inviter's own alt;
+payouts (1g per recruit) settle 7 days after the drive ends and show on the Officers page's Recruitment tab with a
+"Mark paid" button, or via the addon's mail-send button. The qualification engine is
+`RecruitmentService.evaluate()` in `api/src/sidequest_api/domain/recruitment/services.py`; it reruns after every
+addon import, after the roster sync, and before serving a drive or the payouts list, so it's always safe to call.
 
 **Two kinds of points.** *Renown* is for the Hall of Heroes. Each event is worth some: a raid 10, a dungeon or world
 boss 5, leveling and PvP 3, anything else 2, and an officer can change it for one event. *EP and GP* are the SQL loot

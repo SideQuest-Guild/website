@@ -62,6 +62,47 @@ import "../../../styles/room-event.css";
       <p class="signup-invite" id="signed-out-message"></p>
     </section>
 
+    <section class="chamber" aria-labelledby="h-drive" id="drive-section" hidden>
+      <h2 class="chamber-title" id="h-drive">
+        Recruitment drive
+      </h2>
+      <p class="status" id="drive-status" role="status" aria-live="polite"></p>
+      <p class="signup-invite" id="drive-gate-message" hidden></p>
+      <div id="drive-content" hidden>
+        <p class="aside" id="drive-rules"></p>
+        <dl class="drive-dates" id="drive-dates"></dl>
+        <div class="drive-stats" id="drive-stats"></div>
+        <h3 class="sub-title">Leaderboard</h3>
+        <div class="drive-table-wrap">
+          <table class="drive-table" id="drive-leaders-table" aria-label="Recruitment drive leaderboard">
+            <thead>
+              <tr>
+                <th scope="col">Inviter</th>
+                <th scope="col">Invited</th>
+                <th scope="col">Joined</th>
+                <th scope="col">Counting</th>
+                <th scope="col">Qualified</th>
+              </tr>
+            </thead>
+            <tbody id="drive-leaders-body"></tbody>
+          </table>
+        </div>
+        <h3 class="sub-title">Recruits</h3>
+        <div class="drive-table-wrap">
+          <table class="drive-table" id="drive-recruits-table" aria-label="Recruits">
+            <thead>
+              <tr>
+                <th scope="col">Recruit</th>
+                <th scope="col">Inviter</th>
+                <th scope="col">Status</th>
+              </tr>
+            </thead>
+            <tbody id="drive-recruits-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
     <section class="chamber" aria-labelledby="h-chart" id="chart-section">
       <h2 class="chamber-title" id="h-chart">
         Raid chart
@@ -159,11 +200,15 @@ import "../../../styles/room-event.css";
     ROLES,
     ROLE_KINDS,
     EVENT_KIND_LABELS,
+    RECRUITMENT_RULES_LINE,
     type EventDetail,
     type Me,
     type RaidReadiness,
     type Role,
     type Signup,
+    type RecruitmentDrive,
+    type DriveRecruit,
+    type DriveRecruitReason,
   } from "../../../scripts/api";
   import { onPage } from "../../../scripts/page";
   import { weekdayPhrase } from "../../../scripts/series";
@@ -314,6 +359,15 @@ import "../../../styles/room-event.css";
     const signupSection = requireElement("signup-section");
     const signedOutSection = requireElement("signed-out-section");
     const signedOutMessage = requireElement("signed-out-message");
+    const driveSection = requireElement("drive-section");
+    const driveStatus = requireElement("drive-status");
+    const driveGateMessage = requireElement("drive-gate-message");
+    const driveContent = requireElement("drive-content");
+    const driveRules = requireElement("drive-rules");
+    const driveDates = requireElement("drive-dates");
+    const driveStats = requireElement("drive-stats");
+    const driveLeadersBody = requireElement("drive-leaders-body");
+    const driveRecruitsBody = requireElement("drive-recruits-body");
     const signupForm = requireElement<HTMLFormElement>("signup-form");
     const withdrawBtn = requireElement<HTMLButtonElement>("withdraw-btn");
     const signupStatus = requireElement("signup-status");
@@ -740,6 +794,114 @@ import "../../../styles/room-event.css";
       }
     }
 
+    const DRIVE_DISQUALIFY_REASON_TEXT: Record<DriveRecruitReason, string> = {
+      returning: "was in the guild before",
+      own_alt: "inviter's own alt",
+      left: "left during the week",
+      low_level: "below level 10",
+      never_joined: "never joined",
+    };
+
+    function driveRecruitStatusText(r: DriveRecruit): string {
+      if (r.paid_at) {
+        return "Paid";
+      }
+      if (r.status === "disqualified") {
+        return `Didn't count: ${DRIVE_DISQUALIFY_REASON_TEXT[r.reason ?? "left"]}`;
+      }
+      if (r.status === "qualified") {
+        return "Qualified";
+      }
+      if (r.status === "counting") {
+        if (!r.qualifies_at) {
+          return "Counting";
+        }
+        const daysLeft = Math.max(0, Math.ceil((new Date(r.qualifies_at).getTime() - Date.now()) / 86_400_000));
+        return `Counting, ${daysLeft} day${daysLeft === 1 ? "" : "s"} left`;
+      }
+      return "Invited, not joined yet";
+    }
+
+    function renderDriveContent(drive: RecruitmentDrive): void {
+      driveRules.textContent = RECRUITMENT_RULES_LINE;
+      driveDates.innerHTML = (
+        [
+          ["Starts", drive.starts_at],
+          ["Ends", drive.ends_at],
+          ["Payouts settle", drive.settles_at],
+        ] as const
+      )
+        .map(
+          ([label, iso]) =>
+            `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(dateFormat.format(new Date(iso)))}</dd></div>`,
+        )
+        .join("");
+      driveStats.innerHTML = (
+        [
+          ["Invited", drive.totals.invited],
+          ["Joined", drive.totals.joined],
+          ["Counting", drive.totals.counting],
+          ["Qualified", drive.totals.qualified],
+          ["Disqualified", drive.totals.disqualified],
+          ["Paid", drive.totals.paid],
+        ] as const
+      )
+        .map(
+          ([label, value]) =>
+            `<div><span class="drive-stat-label">${escapeHtml(label)}</span><span class="drive-stat-value">${value}</span></div>`,
+        )
+        .join("");
+      driveLeadersBody.innerHTML =
+        drive.leaders.length > 0
+          ? drive.leaders
+              .map(
+                (l) => `
+          <tr>
+            <td>${escapeHtml(l.member_name ?? l.inviter)}</td>
+            <td>${l.invited}</td>
+            <td>${l.joined}</td>
+            <td>${l.counting}</td>
+            <td>${l.qualified}</td>
+          </tr>`,
+              )
+              .join("")
+          : `<tr><td colspan="5" class="quest-empty">No invites yet.</td></tr>`;
+      driveRecruitsBody.innerHTML =
+        drive.recruits.length > 0
+          ? drive.recruits
+              .map(
+                (r) => `
+          <tr>
+            <td>${escapeHtml(r.recruit)}</td>
+            <td>${escapeHtml(r.inviter)}</td>
+            <td>${escapeHtml(driveRecruitStatusText(r))}</td>
+          </tr>`,
+              )
+              .join("")
+          : `<tr><td colspan="3" class="quest-empty">No recruits yet.</td></tr>`;
+    }
+
+    async function renderDrive(detail: EventDetail): Promise<void> {
+      driveGateMessage.hidden = true;
+      driveContent.hidden = true;
+      if (!me) {
+        driveStatus.textContent = "";
+        const next = encodeURIComponent(location.pathname + location.search);
+        driveGateMessage.innerHTML = `The recruit list and leaderboard are for guild members. <a href="/auth/discord/login?next=${next}">Sign in with Discord</a> to see them.`;
+        driveGateMessage.hidden = false;
+        return;
+      }
+      driveStatus.textContent = "Loading…";
+      try {
+        const drive = await apiFetch<RecruitmentDrive>(`/api/events/${detail.id}/recruitment`);
+        driveStatus.textContent = "";
+        driveContent.hidden = false;
+        renderDriveContent(drive);
+      } catch (err) {
+        driveStatus.textContent = statusMessage(err);
+      }
+    }
+
     async function refresh(): Promise<void> {
       if (!eventId) {
         statusEl.textContent = "No event specified.";
@@ -780,6 +942,17 @@ import "../../../styles/room-event.css";
       ]
         .filter(Boolean)
         .join(" · ");
+      if (event.kind === "recruitment") {
+        rosterChamber.hidden = true;
+        signupSection.hidden = true;
+        signedOutSection.hidden = true;
+        chartSection.hidden = true;
+        awaySection.hidden = true;
+        driveSection.hidden = false;
+        await renderDrive(event);
+        return;
+      }
+      driveSection.hidden = true;
       const signedOut = event.counts === null;
       rosterChamber.hidden = signedOut;
       signupSection.hidden = signedOut;

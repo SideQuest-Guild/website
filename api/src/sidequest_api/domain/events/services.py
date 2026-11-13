@@ -25,6 +25,7 @@ from sidequest_common.models import (
     MemberAwayRange,
 )
 from sidequest_common.schemas import (
+    NO_SIGNUP_KINDS,
     ROLE_KINDS,
     ChartUpdate,
     DiscordInterest,
@@ -105,6 +106,7 @@ def _to_signup_schema(signup: EventSignup, member: Member, readiness: SignupRead
 
 
 _ROLE_KIND_VALUES = {kind.value for kind in ROLE_KINDS}
+_NO_SIGNUP_KIND_VALUES = {kind.value for kind in NO_SIGNUP_KINDS}
 _ROLE_LABELS = {"tank": "Tank", "healer": "Healer", "dps": "DPS"}
 _ACTIVITY_ACTION_BY_STATUS = {"signed": "going", "tentative": "maybe", "absent": "not_going"}
 
@@ -249,7 +251,14 @@ class EventsService(SQLAlchemyAsyncRepositoryService[GuildEvent]):
         return event
 
     async def create_event(self, data: EventCreate) -> GuildEvent:
-        """Create a scheduled guild event."""
+        """Create a scheduled guild event.
+
+        400 for a recruitment drive that has already started: Discord can't post an event whose start is past, and
+        the drive would then never get its Discord event or forum thread.
+        """
+        if data.kind == EventKind.RECRUITMENT and data.starts_at <= datetime.now(UTC):
+            msg = "A recruitment drive has to start in the future, so Discord can post it"
+            raise ValidationException(msg)
         event = GuildEvent(
             kind=data.kind.value,
             title=data.title,
@@ -265,6 +274,7 @@ class EventsService(SQLAlchemyAsyncRepositoryService[GuildEvent]):
     async def update_event(self, event_id: UUID, data: EventUpdate) -> GuildEvent:
         """Apply the present fields of ``data``. 400 if the resulting ``ends_at`` isn't after ``starts_at``.
 
+        400 if the resulting kind is ``recruitment`` and the resulting ``ends_at`` is ``None``.
         Editing a series occurrence detaches it: series-wide content/schedule edits stop touching it afterward.
         """
         event = await self.get_event_or_404(event_id)
@@ -273,6 +283,10 @@ class EventsService(SQLAlchemyAsyncRepositoryService[GuildEvent]):
         ends_at = changes.get("ends_at", event.ends_at)
         if ends_at is not None and ends_at <= starts_at:
             msg = "ends_at must be after starts_at"
+            raise ValidationException(msg)
+        kind = changes.get("kind", event.kind)
+        if kind == EventKind.RECRUITMENT.value and ends_at is None:
+            msg = "ends_at is required for a recruitment drive"
             raise ValidationException(msg)
         for field, value in changes.items():
             setattr(event, field, value)
@@ -384,6 +398,7 @@ class EventSignupsService(SQLAlchemyAsyncRepositoryService[EventSignup]):
     async def upsert_signup(self, event_id: UUID, member: Member, data: SignupUpsert) -> Signup:
         """Create or replace the member's signup for ``event_id``. 409 if the event isn't scheduled.
 
+        409 (same error) if the event's kind is in ``NO_SIGNUP_KINDS`` (e.g. a recruitment drive has no roster).
         400 if the event's kind is ``raid``/``dungeon`` and ``character``/``class``/``role`` aren't all present,
         unless ``status`` is ``absent`` (a "can't make it" never needs a character to go with it).
         Writes an ``EventSignupActivity`` row when the sign-up is created, its status changes, or its comment changes
@@ -394,7 +409,7 @@ class EventSignupsService(SQLAlchemyAsyncRepositoryService[EventSignup]):
         if event is None:
             msg = f"No event {event_id}"
             raise NotFoundException(msg)
-        if event.status != "scheduled":
+        if event.status != "scheduled" or event.kind in _NO_SIGNUP_KIND_VALUES:
             msg = "Event is not open for signups"
             raise HTTPException(status_code=HTTP_409_CONFLICT, detail=msg)
         if (

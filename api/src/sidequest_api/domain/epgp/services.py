@@ -24,6 +24,7 @@ from pydantic import ValidationError
 from sqlalchemy import delete, func, or_, select, union
 
 from sidequest_api.domain.characters.services import character_display_name, upsert_character_profession
+from sidequest_api.domain.recruitment.services import RecruitmentService
 from sidequest_api.lib.discord import avatar_url
 from sidequest_api.lib.member_auth import is_officer
 from sidequest_common.models import (
@@ -47,6 +48,7 @@ from sidequest_common.models import (
     GuildAnnouncement,
     GuildBankLogEntry,
     GuildEvent,
+    GuildLogEntry,
     GuildNewsEvent,
     GuildRank,
     GuildRecruit,
@@ -59,6 +61,7 @@ from sidequest_common.models import (
     MemberNote,
     ProfessionRecipe,
     RaidSession,
+    RecruitmentRecruit,
     RecruitVote,
     SessionCharacterPresence,
     WowCharacter,
@@ -80,7 +83,9 @@ from sidequest_common.schemas import (
     MAX_DEVICE_NAME_LENGTH,
     MAX_IMPORT_BYTES,
     MIN_GP,
+    NO_SIGNUP_KINDS,
     OS_PERCENT,
+    RECRUIT_REWARD_COPPER,
     ROLE_KINDS,
     SAME_MATCH_SECONDS,
     TRIAL_DAYS,
@@ -136,7 +141,9 @@ from sidequest_common.schemas import (
     EventKind,
     ExportBattleground,
     ExportDirectoryEntry,
+    ExportGuildLogEntry,
     ExportPayload,
+    ExportRecruitPayoutPaid,
     ExportRecruitVote,
     GameImportBadgeRef,
     GameImportCharacter,
@@ -153,11 +160,13 @@ from sidequest_common.schemas import (
     GameImportPayload,
     GameImportPrice,
     GameImportProfession,
+    GameImportRecruitPayout,
     GameImportReputation,
     GameImportSheet,
     GameImportSignup,
     GameImportStandingsRow,
     GameImportUnseenMember,
+    GuildLogImportCounts,
     ImportAttendanceResult,
     ImportCounts,
     LedgerKind,
@@ -169,6 +178,7 @@ from sidequest_common.schemas import (
     RaidStatus,
     RecruitChecklist,
     RecruitImportCounts,
+    RecruitPayoutImportCounts,
     RosterImportCounts,
     SignupImportCounts,
     SignupRole,
@@ -291,6 +301,7 @@ def _game_import_character(
 
 
 _character_key = character_key
+_NO_SIGNUP_KIND_VALUES = {kind.value for kind in NO_SIGNUP_KINDS}
 
 
 class EpgpService:
@@ -643,6 +654,9 @@ class EpgpService:
         await self._import_item_names(payload.item_names)
         directory_counts = await self._import_directory(payload.directory, payload.recipe_names, character_cache)
         battleground_counts = await self._import_battlegrounds(payload.battlegrounds, payload.recorder)
+        guild_log_counts = await self._import_guild_log(payload.guild_log, payload.recorder)
+        recruit_payout_counts = await self._import_recruit_payouts_paid(payload.recruit_payouts_paid)
+        await RecruitmentService(self._session).evaluate()
 
         hand_off_event_id: UUID | None = None
         total_marked = 0
@@ -715,6 +729,9 @@ class EpgpService:
                     "recruits": recruit_counts.model_dump(),
                     "member_notes": note_counts.model_dump(),
                     "directory": directory_counts.model_dump(),
+                    "battlegrounds": battleground_counts.model_dump(),
+                    "guild_log": guild_log_counts.model_dump(),
+                    "recruit_payouts_paid": recruit_payout_counts.model_dump(),
                 },
             )
         )
@@ -739,6 +756,8 @@ class EpgpService:
             member_notes=note_counts,
             directory=directory_counts,
             battlegrounds=battleground_counts,
+            guild_log=guild_log_counts,
+            recruit_payouts_paid=recruit_payout_counts,
         )
 
     # --- Import v2: guild hub sections ------------------------------------------------------------------------
@@ -892,7 +911,11 @@ class EpgpService:
     async def _import_signups_v2(
         self, signups: list[ExportSignupV2], character_cache: dict[str, WowCharacter]
     ) -> SignupImportCounts:
-        """Relay in-game sign-ups into ``EventSignup``: newest ``at`` wins, unlinked characters are skipped."""
+        """Relay in-game sign-ups into ``EventSignup``: newest ``at`` wins, unlinked characters are skipped.
+
+        Rows for an event whose kind is in ``NO_SIGNUP_KINDS`` (e.g. a recruitment drive) are skipped: those
+        events have no roster, so the in-game addon never offers a sign-up for them, but an older addon might.
+        """
         counts = SignupImportCounts()
         for entry in signups:
             key = _character_key(entry.character)
@@ -911,7 +934,7 @@ class EpgpService:
                 counts.unlinked += 1
                 continue
             event = await self._session.get(GuildEvent, entry.event_id)
-            if event is None:
+            if event is None or event.kind in _NO_SIGNUP_KIND_VALUES:
                 continue
             at = datetime.fromtimestamp(entry.at, tz=UTC)
             existing = (
@@ -1447,6 +1470,84 @@ class EpgpService:
         await self._session.flush()
         return counts
 
+    async def _import_guild_log(self, entries: list[ExportGuildLogEntry], recorder: str) -> GuildLogImportCounts:
+        """Insert-only guild log rows.
+
+        A kind+actor+target match within the dedupe window of a stored row is the same entry (re-uploads change
+        nothing).
+        """
+        counts = GuildLogImportCounts()
+        window = timedelta(hours=2)
+        for entry in entries:
+            at = datetime.fromtimestamp(entry.at, tz=UTC)
+            nearby = (
+                await self._session.execute(
+                    select(GuildLogEntry.id).where(
+                        GuildLogEntry.kind == entry.kind.value,
+                        GuildLogEntry.actor == entry.actor,
+                        GuildLogEntry.target == entry.target,
+                        GuildLogEntry.at >= at - window,
+                        GuildLogEntry.at <= at + window,
+                    )
+                )
+            ).scalar_one_or_none()
+            if nearby is not None:
+                counts.merged += 1
+                continue
+            self._session.add(
+                GuildLogEntry(kind=entry.kind.value, actor=entry.actor, target=entry.target, at=at, recorder=recorder)
+            )
+            counts.new += 1
+        await self._session.flush()
+        return counts
+
+    async def _import_recruit_payouts_paid(self, entries: list[ExportRecruitPayoutPaid]) -> RecruitPayoutImportCounts:
+        """Mark qualified recruits paid via the addon's mail-send button; idempotent per (event, inviter).
+
+        The mail only covers what was qualified, unpaid, and mailed by the time it was sent: mark at most as many
+        rows as the mailed copper buys, oldest ``qualified_at`` first, and only rows that had already qualified by
+        ``entry.at``. A recruit who qualifies later (or who qualified after the mail was already sent) stays
+        unpaid for the next payout.
+        """
+        counts = RecruitPayoutImportCounts()
+        for entry in entries:
+            at = datetime.fromtimestamp(entry.at, tz=UTC)
+            rows = (
+                (
+                    await self._session.execute(
+                        select(RecruitmentRecruit)
+                        .where(
+                            RecruitmentRecruit.event_id == entry.event_id,
+                            RecruitmentRecruit.inviter_name == entry.inviter,
+                            RecruitmentRecruit.status == "qualified",
+                            RecruitmentRecruit.paid_at.is_(None),
+                            RecruitmentRecruit.qualified_at <= at,
+                        )
+                        .order_by(RecruitmentRecruit.qualified_at.asc())
+                    )
+                )
+                .scalars()
+                .all()
+            )
+            remaining = entry.copper
+            paid_rows = []
+            for row in rows:
+                reward = row.reward_copper or RECRUIT_REWARD_COPPER
+                if reward <= 0 or remaining < reward:
+                    break
+                remaining -= reward
+                paid_rows.append(row)
+            if not paid_rows:
+                counts.already_paid += 1
+                continue
+            for row in paid_rows:
+                row.paid_at = at
+                row.paid_by = entry.officer
+                row.paid_via = "addon"
+            counts.new += 1
+        await self._session.flush()
+        return counts
+
     # --- Standings / ledger / loot / progression reads --------------------------------------------------------
 
     async def get_standings(self, *, now: datetime | None = None) -> EpgpStandings:  # noqa: C901, PLR0912
@@ -1844,6 +1945,28 @@ class EpgpService:
             .scalars()
             .all()
         )
+        # A running recruitment drive (started, not yet ended) stays in the upcoming window even once its
+        # ``starts_at`` falls outside it, so the addon can still post the end announcement.
+        running_drives = (
+            (
+                await self._session.execute(
+                    select(GuildEvent).where(
+                        GuildEvent.kind == EventKind.RECRUITMENT.value,
+                        GuildEvent.status == "scheduled",
+                        GuildEvent.starts_at <= reference,
+                        GuildEvent.ends_at.is_not(None),
+                        GuildEvent.ends_at > reference,
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+        upcoming_ids = {event.id for event in upcoming}
+        upcoming = sorted(
+            (*upcoming, *(drive for drive in running_drives if drive.id not in upcoming_ids)),
+            key=lambda event: event.starts_at,
+        )
         past = (
             (
                 await self._session.execute(
@@ -1927,6 +2050,7 @@ class EpgpService:
                     title=event.title,
                     kind=EventKind(event.kind),
                     starts_at=int(event.starts_at.timestamp()),
+                    ends_at=int(event.ends_at.timestamp()) if event.ends_at is not None else None,
                     size=event.size,
                     signups=signups,
                 )
@@ -2194,12 +2318,13 @@ class EpgpService:
         return members, news, sheets, crafters, recipe_names
 
     async def _build_officer_game_import(self, reference: datetime) -> GameImportOfficerPart:
-        """The officer-only ``recruits``/``member_notes``/``inactive``/``unseen`` section of the game-import payload.
+        """The officer-only part of the game-import payload: recruits, notes, inactive/unseen members, and payouts.
 
         A member's last activity is the latest of their roster-sweep ``last_seen``, Battle.net last login, and raid
         presence. ``inactive`` flags a member whose last activity is known and older than ``INACTIVE_AFTER_DAYS``
         days; a member with no activity on record at all is never inactive (raid absence alone never flags anyone)
         and goes in ``unseen`` instead, so officers can tell "never recorded" from "actually gone quiet".
+        ``recruit_payouts`` is settled drives' qualified, unpaid recruits, grouped per (event, inviter).
         """
         recruit_rows = (await self._session.execute(select(GuildRecruit))).scalars().all()
         vote_rows = (await self._session.execute(select(RecruitVote))).scalars().all()
@@ -2307,8 +2432,25 @@ class EpgpService:
                         level=level,
                     )
                 )
+        payouts = await RecruitmentService(self._session).list_payouts(now=reference)
+        recruit_payouts = [
+            GameImportRecruitPayout(
+                event_id=payout.event_id,
+                title=payout.title,
+                inviter=payout.inviter,
+                copper=payout.copper,
+                recruits=payout.recruits,
+                settles_at=int(payout.settles_at.timestamp()),
+            )
+            for payout in payouts
+            if payout.paid_at is None
+        ]
         return GameImportOfficerPart(
-            recruits=officer_recruits, member_notes=officer_notes, inactive=inactive, unseen=unseen
+            recruits=officer_recruits,
+            member_notes=officer_notes,
+            inactive=inactive,
+            unseen=unseen,
+            recruit_payouts=recruit_payouts,
         )
 
     # --- Officer: adjustments ----------------------------------------------------------------------------------

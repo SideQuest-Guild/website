@@ -81,6 +81,11 @@ const eventKinds = Object.keys(EVENT_KIND_LABELS);
             Other
           </a>
         </li>
+        <li>
+          <a href="/events/?kind=recruitment" data-kind="recruitment">
+            Recruitment
+          </a>
+        </li>
       </ul>
     </nav>
     <ul class="quest-log" id="events-upcoming" aria-live="polite"></ul>
@@ -145,7 +150,7 @@ const eventKinds = Object.keys(EVENT_KIND_LABELS);
     function eventRow(event: EventSummary): string {
       const start = new Date(event.starts_at);
       const counts = (() => {
-        if (!event.counts) {
+        if (!event.counts || event.kind === "recruitment") {
           return "";
         }
         const signupCounts = ROLE_KINDS.includes(event.kind)
@@ -161,6 +166,11 @@ const eventKinds = Object.keys(EVENT_KIND_LABELS);
         event.status === "scheduled" ? "" : ` · ${event.status === "cancelled" ? "Cancelled" : "Completed"}`;
       const seriesText = event.series ? weekdayPhrase(event.series.weekdays, event.series.interval_weeks) : "";
       const meta = [EVENT_KIND_LABELS[event.kind], event.location, seriesText, counts].filter(Boolean).join(" · ");
+      // A drive spans weeks, so it shows its date range instead of a single start time.
+      const end = event.kind === "recruitment" && event.ends_at ? new Date(event.ends_at) : null;
+      const whenHtml = end
+        ? `${escapeHtml(dayFormat.format(start))}<small>&ndash; ${escapeHtml(dayFormat.format(end))}</small>`
+        : `${escapeHtml(timeFormat.format(start))}<small>${escapeHtml(dayFormat.format(start))}</small>`;
       return `
       <li>
         <a class="quest" href="/events/detail/?id=${event.id}">
@@ -169,7 +179,7 @@ const eventKinds = Object.keys(EVENT_KIND_LABELS);
             <span class="quest-name">${escapeHtml(event.title)}${escapeHtml(statusSuffix)}</span>
             <span class="quest-meta">${escapeHtml(meta)}</span>
           </span>
-          <span class="quest-when">${escapeHtml(timeFormat.format(start))}<small>${escapeHtml(dayFormat.format(start))}</small></span>
+          <span class="quest-when">${whenHtml}</span>
         </a>
       </li>`;
     }

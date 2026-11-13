@@ -71,6 +71,10 @@ import type {
   QuestArea,
   RecipeDetailInfo,
   Recruiting,
+  RecruitLeader,
+  DriveRecruit,
+  RecruitmentDrive,
+  RecruitPayout,
   Signup,
   StatsPerson,
   TalentBuild,
@@ -151,6 +155,21 @@ export const EVENTS: EventSummary[] = [
     counts: { ...counts, signed: 6, tank: 0, healer: 0, dps: 0 },
     series: null,
   },
+  {
+    id: "44444444-4444-4444-8444-444444444444",
+    kind: "recruitment",
+    title: "Autumn Recruitment Drive",
+    location: "",
+    starts_at: inDays(2),
+    ends_at: inDays(16),
+    size: null,
+    ep: 0,
+    ep_override: null,
+    status: "scheduled",
+    notes: null,
+    counts: null,
+    series: null,
+  },
 ];
 
 const signup = (id: string, name: string, overrides: Partial<Signup>): Signup => ({
@@ -203,6 +222,105 @@ export function eventDetail(event: EventSummary, minItemLevel: number | null = M
     min_item_level: minItemLevel,
   };
 }
+
+const DRIVE_EVENT = EVENTS[3]!;
+
+export const RECRUITMENT_LEADERS: RecruitLeader[] = [
+  {
+    inviter: "Brannoc",
+    member_name: "Brannoc",
+    discord_id: "700000000000000007",
+    invited: 4,
+    joined: 3,
+    counting: 1,
+    qualified: 2,
+  },
+  { inviter: "Fenwick", member_name: null, discord_id: null, invited: 2, joined: 1, counting: 0, qualified: 1 },
+];
+
+export const RECRUITMENT_RECRUITS: DriveRecruit[] = [
+  {
+    recruit: "Newblood",
+    inviter: "Brannoc",
+    invited_at: inDays(3),
+    joined_at: inDays(3),
+    qualifies_at: inDays(10),
+    status: "qualified",
+    reason: null,
+    paid_at: null,
+  },
+  {
+    recruit: "Freshface",
+    inviter: "Brannoc",
+    invited_at: inDays(4),
+    joined_at: inDays(4),
+    qualifies_at: inDays(11),
+    status: "counting",
+    reason: null,
+    paid_at: null,
+  },
+  {
+    recruit: "Oldtimer",
+    inviter: "Brannoc",
+    invited_at: inDays(5),
+    joined_at: null,
+    qualifies_at: null,
+    status: "disqualified",
+    reason: "returning",
+    paid_at: null,
+  },
+  {
+    recruit: "Altington",
+    inviter: "Fenwick",
+    invited_at: inDays(6),
+    joined_at: inDays(6),
+    qualifies_at: inDays(13),
+    status: "qualified",
+    reason: null,
+    paid_at: inDays(13),
+  },
+];
+
+export const RECRUITMENT_DRIVE: RecruitmentDrive = {
+  event_id: DRIVE_EVENT.id,
+  title: DRIVE_EVENT.title,
+  starts_at: DRIVE_EVENT.starts_at,
+  ends_at: DRIVE_EVENT.ends_at!,
+  settles_at: inDays(23),
+  reward_copper: 10_000,
+  min_level: 10,
+  stay_days: 7,
+  totals: { invited: 4, joined: 3, counting: 1, qualified: 2, disqualified: 1, paid: 1 },
+  leaders: RECRUITMENT_LEADERS,
+  recruits: RECRUITMENT_RECRUITS,
+};
+
+export const RECRUITMENT_PAYOUTS: RecruitPayout[] = [
+  {
+    event_id: DRIVE_EVENT.id,
+    title: DRIVE_EVENT.title,
+    settles_at: inDays(23),
+    inviter: "Brannoc",
+    member_name: "Brannoc",
+    recruits: ["Newblood"],
+    copper: 10_000,
+    paid_at: null,
+    paid_by: null,
+    paid_via: null,
+  },
+  {
+    event_id: DRIVE_EVENT.id,
+    title: DRIVE_EVENT.title,
+    settles_at: inDays(23),
+    inviter: "Fenwick",
+    member_name: null,
+    recruits: ["Altington"],
+    copper: 10_000,
+    paid_at: inDays(13),
+    paid_by: "Quest Guide",
+    paid_via: "site",
+  },
+];
 
 export const ADDONS: Addon[] = [
   {

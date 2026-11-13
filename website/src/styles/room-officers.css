@@ -578,6 +578,15 @@
   min-width: 0;
 }
 
+/* ——— Recruitment payouts (Recruitment tab) ——— */
+.row-pair > .payout-main {
+  flex: 1;
+  min-width: 0;
+}
+#recruitment-payouts-list {
+  margin-top: 18px;
+}
+
 /* ——— Group voice stats (Groups tab) ——— */
 #groups-window-tabs {
   margin-top: 18px;

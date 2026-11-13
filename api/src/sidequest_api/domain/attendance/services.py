@@ -70,7 +70,12 @@ class _WeekBucket:
 
 
 def _needs_attendance(event: GuildEvent, *, now: datetime) -> bool:
-    return event.starts_at < now and event.status != "cancelled" and event.attendance_taken_at is None
+    return (
+        event.starts_at < now
+        and event.status != "cancelled"
+        and event.attendance_taken_at is None
+        and event.kind != EventKind.RECRUITMENT.value
+    )
 
 
 def _event_summary(event: GuildEvent, *, now: datetime) -> AttendanceEventSummary:
@@ -111,11 +116,18 @@ class AttendanceService:
     async def list_recent_events(
         self, *, kind: EventKind | None = None, limit: int = PAST_EVENT_LIMIT
     ) -> list[AttendanceEventSummary]:
-        """Past, non-cancelled events, most recent first, with a "needs attendance" marker."""
+        """Past, non-cancelled events, most recent first, with a "needs attendance" marker.
+
+        Recruitment drives never need attendance (they span weeks and award no EP) and are excluded.
+        """
         now = datetime.now(UTC)
         statement = (
             select(GuildEvent)
-            .where(GuildEvent.starts_at < now, GuildEvent.status != "cancelled")
+            .where(
+                GuildEvent.starts_at < now,
+                GuildEvent.status != "cancelled",
+                GuildEvent.kind != EventKind.RECRUITMENT.value,
+            )
             .order_by(GuildEvent.starts_at.desc())
             .limit(limit)
         )
@@ -198,8 +210,9 @@ class AttendanceService:
     async def mark_attendance(self, event_id: UUID, data: AttendanceMark) -> AttendanceDetail:
         """Apply Came/No-show marks and create walk-ins, then set ``attendance_taken_at`` to now.
 
-        409 if the event hasn't started yet or is cancelled, or a walk-in duplicates an existing sign-up. 404
-        unknown sign-up/member. 400 if a walk-in for a raid/dungeon event is missing character/class/role.
+        409 if the event hasn't started yet, is cancelled, or is a recruitment drive (drives award no
+        attendance). A walk-in duplicating an existing sign-up is also 409. 404 unknown sign-up/member. 400 if a
+        walk-in for a raid/dungeon event is missing character/class/role.
         """
         event = await self.get_event_or_404(event_id)
         now = datetime.now(UTC)
@@ -208,6 +221,9 @@ class AttendanceService:
             raise HTTPException(status_code=HTTP_409_CONFLICT, detail=msg)
         if event.status == "cancelled":
             msg = "Attendance can't be taken for a cancelled event"
+            raise HTTPException(status_code=HTTP_409_CONFLICT, detail=msg)
+        if event.kind == EventKind.RECRUITMENT.value:
+            msg = "Attendance can't be taken for a recruitment drive"
             raise HTTPException(status_code=HTTP_409_CONFLICT, detail=msg)
         signups_stmt = select(EventSignup).where(EventSignup.event_id == event_id)
         signups = (await self._session.execute(signups_stmt)).scalars().all()

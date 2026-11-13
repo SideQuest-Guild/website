@@ -11,6 +11,8 @@ from sidequest_common.models import (
     EventSignupActivity,
     GuildEvent,
     Member,
+    RecruitmentRecruit,
+    WowCharacter,
 )
 from tests.conftest import GUILD_ID
 
@@ -497,3 +499,201 @@ async def test_stale_threadless_activity_is_marked_posted_not_deleted(
         stored = await session.get(EventSignupActivity, activity_id)
         assert stored is not None
         assert stored.posted_at is not None
+
+
+async def test_recruitment_drive_push_has_tally_and_rules_line(
+    client: AsyncTestClient, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    drive = await _seed_event(
+        db_sessionmaker, title="Spring Recruitment", kind="recruitment", ends_at=datetime.now(UTC) + timedelta(days=14)
+    )
+    async with db_sessionmaker() as session:
+        member = Member(discord_id=424_242, username="oak")
+        session.add(member)
+        await session.flush()
+        character = WowCharacter(name="Oak", realm="Whitemane", key="oak-whitemane", member_id=member.id)
+        session.add(character)
+        await session.flush()
+        session.add_all(
+            [
+                RecruitmentRecruit(
+                    event_id=drive.id,
+                    recruit_name="New1",
+                    inviter_name="Oak",
+                    inviter_character_id=character.id,
+                    invited_at=datetime.now(UTC),
+                    status="counting",
+                ),
+                RecruitmentRecruit(
+                    event_id=drive.id,
+                    recruit_name="New2",
+                    inviter_name="Oak",
+                    inviter_character_id=character.id,
+                    invited_at=datetime.now(UTC),
+                    joined_at=datetime.now(UTC),
+                    status="qualified",
+                    qualified_at=datetime.now(UTC),
+                ),
+            ]
+        )
+        await session.commit()
+
+    push = await _push_for(client, drive.id)
+    assert push["recruitment"] is not None
+    assert push["recruitment"]["invited"] == 2
+    assert push["recruitment"]["qualified"] == 1
+    leader = push["recruitment"]["leaders"][0]
+    assert leader["inviter"] == "Oak"
+    assert leader["discord_id"] == "424242"
+    assert "Invite new players to the guild" in push["description"]
+    assert "Going:" not in push["description"]
+
+
+async def test_qualifying_a_recruit_changes_the_drives_push_hash(
+    client: AsyncTestClient, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    drive = await _seed_event(
+        db_sessionmaker, title="Winter Recruitment", kind="recruitment", ends_at=datetime.now(UTC) + timedelta(days=14)
+    )
+    async with db_sessionmaker() as session:
+        recruit = RecruitmentRecruit(
+            event_id=drive.id,
+            recruit_name="New3",
+            inviter_name="Pine",
+            invited_at=datetime.now(UTC),
+            status="counting",
+        )
+        session.add(recruit)
+        await session.commit()
+        recruit_id = recruit.id
+
+    first_push = await _push_for(client, drive.id)
+    async with db_sessionmaker() as session:
+        event = await session.get(GuildEvent, drive.id)
+        assert event is not None
+        event.discord_pushed_hash = first_push["push_hash"]
+        await session.commit()
+
+    pending = (await client.get(f"{SYNC_PATH}/")).json()
+    assert str(drive.id) not in {p["event_id"] for p in pending["pushes"]}
+
+    async with db_sessionmaker() as session:
+        recruit = await session.get(RecruitmentRecruit, recruit_id)
+        assert recruit is not None
+        recruit.status = "qualified"
+        recruit.qualified_at = datetime.now(UTC)
+        await session.commit()
+
+    second_push = await _push_for(client, drive.id)
+    assert second_push["push_hash"] != first_push["push_hash"]
+    assert second_push["recruitment"]["qualified"] == 1
+
+
+async def test_other_event_push_hash_unaffected_by_recruitment_drives(
+    client: AsyncTestClient, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    raid = await _seed_event(db_sessionmaker, title="Gruul's Lair", kind="raid")
+    await _ack(client, raid.id, 555_100)
+    drive = await _seed_event(
+        db_sessionmaker,
+        title="Autumn Recruitment",
+        kind="recruitment",
+        ends_at=datetime.now(UTC) + timedelta(days=14),
+    )
+    async with db_sessionmaker() as session:
+        session.add(
+            RecruitmentRecruit(
+                event_id=drive.id,
+                recruit_name="New4",
+                inviter_name="Oak",
+                invited_at=datetime.now(UTC),
+                status="qualified",
+                qualified_at=datetime.now(UTC),
+            )
+        )
+        await session.commit()
+
+    pending = (await client.get(f"{SYNC_PATH}/")).json()
+    assert str(raid.id) not in {p["event_id"] for p in pending["pushes"]}
+
+
+async def test_recruit_shoutouts_listed_only_for_threaded_drives(
+    client: AsyncTestClient, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    threaded = await _seed_event(
+        db_sessionmaker,
+        title="Threaded Recruitment",
+        kind="recruitment",
+        ends_at=datetime.now(UTC) + timedelta(days=14),
+        discord_thread_id=777_020,
+    )
+    threadless = await _seed_event(
+        db_sessionmaker,
+        title="Threadless Recruitment",
+        kind="recruitment",
+        ends_at=datetime.now(UTC) + timedelta(days=14),
+    )
+    async with db_sessionmaker() as session:
+        session.add_all(
+            [
+                RecruitmentRecruit(
+                    event_id=threaded.id,
+                    recruit_name="A",
+                    inviter_name="Oak",
+                    invited_at=datetime.now(UTC),
+                    status="qualified",
+                    qualified_at=datetime.now(UTC),
+                ),
+                RecruitmentRecruit(
+                    event_id=threadless.id,
+                    recruit_name="B",
+                    inviter_name="Oak",
+                    invited_at=datetime.now(UTC),
+                    status="qualified",
+                    qualified_at=datetime.now(UTC),
+                ),
+            ]
+        )
+        await session.commit()
+
+    pending = (await client.get(f"{SYNC_PATH}/")).json()
+    shoutouts = pending["recruit_shoutouts"]
+    assert len(shoutouts) == 1
+    assert shoutouts[0]["recruit"] == "A"
+    assert shoutouts[0]["thread_id"] == 777_020
+
+
+async def test_recruit_shoutout_ack_removes_it_and_is_idempotent(
+    client: AsyncTestClient, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    drive = await _seed_event(
+        db_sessionmaker,
+        title="Ack Recruitment",
+        kind="recruitment",
+        ends_at=datetime.now(UTC) + timedelta(days=14),
+        discord_thread_id=777_021,
+    )
+    async with db_sessionmaker() as session:
+        recruit = RecruitmentRecruit(
+            event_id=drive.id,
+            recruit_name="C",
+            inviter_name="Oak",
+            invited_at=datetime.now(UTC),
+            status="qualified",
+            qualified_at=datetime.now(UTC),
+        )
+        session.add(recruit)
+        await session.commit()
+        recruit_id = recruit.id
+
+    pending = (await client.get(f"{SYNC_PATH}/")).json()
+    assert len(pending["recruit_shoutouts"]) == 1
+
+    response = await client.post(f"{SYNC_PATH}/recruit-shoutouts/ack", json={"ids": [str(recruit_id)]})
+    assert response.status_code == 204
+
+    pending = (await client.get(f"{SYNC_PATH}/")).json()
+    assert pending["recruit_shoutouts"] == []
+
+    response = await client.post(f"{SYNC_PATH}/recruit-shoutouts/ack", json={"ids": [str(recruit_id)]})
+    assert response.status_code == 204

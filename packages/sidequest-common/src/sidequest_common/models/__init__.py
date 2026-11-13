@@ -65,6 +65,7 @@ from sidequest_common.models.members import Member
 from sidequest_common.models.moderation import ModCase
 from sidequest_common.models.pvp import BattlegroundMatch, BattlegroundScore
 from sidequest_common.models.recruiting import RecruitingNeeds
+from sidequest_common.models.recruitment import GuildLogEntry, RecruitmentRecruit
 from sidequest_common.models.role_menus import RoleMenu, RoleMenuOption
 from sidequest_common.models.role_resets import MemberRoleReset
 from sidequest_common.models.talents import TalentBuild
@@ -108,6 +109,7 @@ __all__ = (
     "GuildBankLogEntry",
     "GuildConfig",
     "GuildEvent",
+    "GuildLogEntry",
     "GuildNewsEvent",
     "GuildRank",
     "GuildRecruit",
@@ -131,6 +133,7 @@ __all__ = (
     "RaidSession",
     "RecruitVote",
     "RecruitingNeeds",
+    "RecruitmentRecruit",
     "RoleMenu",
     "RoleMenuOption",
     "SessionCharacterPresence",

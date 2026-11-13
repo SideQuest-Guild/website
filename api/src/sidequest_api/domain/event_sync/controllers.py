@@ -23,6 +23,7 @@ from sidequest_common.schemas import (
     DiscordInterestReport,
     DiscordPushAck,
     DiscordSyncPending,
+    RecruitShoutoutAck,
 )
 from sidequest_common.settings import WebSettings
 
@@ -194,6 +195,28 @@ class EventSyncController(Controller):
     ) -> None:
         _require_site_guild(guild_id, web_settings)
         await event_sync_service.ack_activity(data.ids)
+
+    @post(
+        "/recruit-shoutouts/ack",
+        operation_id="AckRecruitShoutouts",
+        status_code=204,
+        summary="Acknowledge posted recruit shout-outs",
+        description=(
+            "Confirms the bot posted these recruit shout-out rows in their drive's forum thread. "
+            "Returns 404 for any guild_id other than the SideQuest server."
+        ),
+        response_description="The shout-out rows were acknowledged.",
+        responses={404: _NOT_SITE_GUILD},
+    )
+    async def ack_recruit_shoutouts(
+        self,
+        guild_id: GuildIdPath,
+        data: JSONBody[RecruitShoutoutAck],
+        event_sync_service: NamedDependency[EventSyncService],
+        web_settings: NamedDependency[WebSettings],
+    ) -> None:
+        _require_site_guild(guild_id, web_settings)
+        await event_sync_service.ack_recruit_shoutouts(data.ids)
 
     @post(
         "/reconcile",

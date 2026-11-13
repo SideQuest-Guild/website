@@ -14,6 +14,7 @@ from pydantic import BaseModel, BeforeValidator, ConfigDict, Field
 
 from sidequest_common.schemas.characters import CHARACTER_SLUG_PATTERN, CharacterSummary
 from sidequest_common.schemas.events import SignupRole, SignupStatus, WowClass
+from sidequest_common.schemas.recruitment import GameImportRecruitPayout
 
 
 def _lower_class(value: object) -> object:
@@ -454,6 +455,8 @@ class GameImportOfficerPart(BaseModel):
     member_notes: list[GameImportOfficerNote]
     inactive: list[GameImportInactiveMember]
     unseen: list[GameImportUnseenMember] = Field(default_factory=list)
+    recruit_payouts: list[GameImportRecruitPayout] = Field(default_factory=list)
+    """Settled recruitment drive payouts still owed, grouped per (event, inviter); additive, older addons ignore it."""
 
 
 # --- ``/api/guild/*`` HTTP API schemas ---------------------------------------------------------------------------

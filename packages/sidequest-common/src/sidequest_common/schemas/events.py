@@ -25,9 +25,12 @@ class EventKind(StrEnum):
     SOCIAL = "social"
     TRANSMOG = "transmog"
     OTHER = "other"
+    RECRUITMENT = "recruitment"
 
 
 ROLE_KINDS = (EventKind.RAID, EventKind.DUNGEON, EventKind.WORLD_BOSS)
+NO_SIGNUP_KINDS = (EventKind.RECRUITMENT,)
+"""Kinds the site refuses sign-ups for (site, Discord, and addon-relayed alike); a recruitment drive has no roster."""
 
 EVENT_KIND_LABELS: dict[EventKind, str] = {
     EventKind.RAID: "Raid",
@@ -38,6 +41,7 @@ EVENT_KIND_LABELS: dict[EventKind, str] = {
     EventKind.SOCIAL: "Social",
     EventKind.TRANSMOG: "Transmog",
     EventKind.OTHER: "Other",
+    EventKind.RECRUITMENT: "Recruitment Drive",
 }
 
 EVENT_KIND_EP: dict[EventKind, int] = {
@@ -49,6 +53,7 @@ EVENT_KIND_EP: dict[EventKind, int] = {
     EventKind.SOCIAL: 2,
     EventKind.TRANSMOG: 2,
     EventKind.OTHER: 2,
+    EventKind.RECRUITMENT: 0,
 }
 """EP (effort points) for attending an event of each kind, unless an officer overrides it on the event.
 
@@ -246,6 +251,9 @@ class EventCreate(BaseModel):
         if self.ends_at is not None and self.ends_at <= self.starts_at:
             msg = "ends_at must be after starts_at"
             raise ValueError(msg)
+        if self.kind == EventKind.RECRUITMENT and self.ends_at is None:
+            msg = "ends_at is required for a recruitment drive"
+            raise ValueError(msg)
         return self
 
 
@@ -255,6 +263,7 @@ class EventUpdate(BaseModel):
     ``ep_override: null`` goes back to the kind's EP preset.
 
     ``ends_at`` vs ``starts_at`` is checked against the stored event by the service when only one of them is sent.
+    The service also 400s if the resulting kind is ``recruitment`` and the resulting ``ends_at`` is ``None``.
     """
 
     kind: EventKind | None = None

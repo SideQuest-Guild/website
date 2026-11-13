@@ -43,6 +43,16 @@ import "../../styles/activity.css";
       <button
         type="button"
         role="tab"
+        id="tab-recruitment"
+        aria-controls="panel-recruitment"
+        aria-selected="false"
+        tabindex="-1"
+      >
+        Recruitment
+      </button>
+      <button
+        type="button"
+        role="tab"
         id="tab-attendance"
         aria-controls="panel-attendance"
         aria-selected="false"
@@ -133,11 +143,13 @@ import "../../styles/activity.css";
                 <label for="e-starts">Start</label>
                 <input id="e-starts" type="datetime-local" required />
               </div>
-              <div class="field">
-                <label for="e-ends">End (optional)</label>
+              <div class="field" id="e-ends-field">
+                <label for="e-ends" id="e-ends-label">
+                  End (optional)
+                </label>
                 <input id="e-ends" type="datetime-local" />
               </div>
-              <div class="field">
+              <div class="field" id="e-size-field">
                 <label for="e-size">Size (optional)</label>
                 <input id="e-size" type="number" min="1" max="40" />
               </div>
@@ -174,6 +186,10 @@ import "../../styles/activity.css";
               <label for="e-notes">Notes</label>
               <textarea id="e-notes" rows="2" maxlength="500"></textarea>
             </div>
+            <p class="aside" id="e-drive-hint" hidden>
+              A recruitment drive has to start in the future, so Discord can post it; the end defaults to 14 days after
+              the start. Invites during that window count toward the drive's payouts, settled a week after it ends.
+            </p>
           </fieldset>
           <div class="form-actions">
             <button type="submit" class="btn" id="event-save">
@@ -297,6 +313,18 @@ import "../../styles/activity.css";
         </div>
         <p class="status" id="recruiting-form-status" role="status" aria-live="polite"></p>
       </form>
+    </section>
+
+    <section id="panel-recruitment" role="tabpanel" aria-labelledby="tab-recruitment" tabindex="0" hidden>
+      <div class="chamber">
+        <h2 class="chamber-title">Recruitment payouts</h2>
+        <p class="aside">
+          Settled drives, unpaid first. You can also mail the gold from the addon's Payouts tab at a mailbox; a sent
+          mail shows as paid here after your next export.
+        </p>
+        <p class="status" id="recruitment-payouts-status" role="status" aria-live="polite"></p>
+        <ul class="quest-log" id="recruitment-payouts-list" aria-label="Recruitment payouts"></ul>
+      </div>
     </section>
 
     <section id="panel-attendance" role="tabpanel" aria-labelledby="tab-attendance" tabindex="0" hidden>
@@ -703,11 +731,13 @@ import "../../styles/activity.css";
     EVENT_KIND_LABELS,
     groupKindLabel,
     MAX_EVENT_EP,
+    DRIVE_DEFAULT_DAYS,
     ROLE_KINDS,
     ADDON_ORIGIN_LABELS,
     ADDON_CATEGORY_LABELS,
     CLASSES,
     ROLES,
+    copperToGoldCompact,
     type Addon,
     type AddonCategory,
     type AddonOrigin,
@@ -756,6 +786,8 @@ import "../../styles/activity.css";
     type StatsLeader,
     type StatsPerson,
     type StatsQuietMember,
+    type RecruitPayout,
+    type RecruitPayoutMarkPaid,
   } from "../../scripts/api";
   import { onPage } from "../../scripts/page";
   import { setupTablist } from "../../scripts/tablist";
@@ -876,6 +908,21 @@ import "../../styles/activity.css";
   function memberStat(label: string, value: string): string {
     return `<div class="member-stat"><span class="member-stat-label">${escapeHtml(label)}</span><span class="member-stat-value">${escapeHtml(value)}</span></div>`;
   }
+  function recruitmentPayoutRow(p: RecruitPayout): string {
+    const paid = p.paid_at !== null;
+    const paidText = paid ? `Paid${p.paid_via === "addon" ? " (addon mail)" : ""}` : "Not yet paid";
+    const action = paid
+      ? ""
+      : `<button type="button" class="btn-quiet btn-small" data-mark-paid-event="${p.event_id}" data-mark-paid-inviter="${escapeHtml(p.inviter)}">Mark paid</button>`;
+    return `
+      <li class="row-pair">
+        <span class="payout-main">
+          <span class="item-title">${escapeHtml(p.title)} \u00b7 ${escapeHtml(p.member_name ?? p.inviter)}</span>
+          <span class="item-meta">${p.recruits.length} recruit${p.recruits.length === 1 ? "" : "s"} \u00b7 ${escapeHtml(copperToGoldCompact(p.copper))} \u00b7 ${escapeHtml(paidText)}</span>
+        </span>
+        ${action}
+      </li>`;
+  }
   function parseHash(): { tab: string; memberId: number | null } {
     const raw = location.hash.slice(1);
     const [tab, query] = raw.split("?");
@@ -898,6 +945,20 @@ import "../../styles/activity.css";
     const [hh, mm] = timeStr.split(":").map(Number);
     const dt = new Date(y ?? 1970, (m ?? 1) - 1, d ?? 1, hh ?? 0, (mm ?? 0) + minutes);
     return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}T${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
+  }
+  function addDaysToLocalDateTime(dateTimeStr: string, days: number): string {
+    const [datePart, timePart] = dateTimeStr.split("T");
+    const [y, m, d] = (datePart ?? "").split("-").map(Number);
+    const [hh, mm] = (timePart ?? "00:00").split(":").map(Number);
+    const dt = new Date(y ?? 1970, (m ?? 1) - 1, (d ?? 1) + days, hh ?? 0, mm ?? 0);
+    return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}T${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
+  }
+  // The site rejects a recruitment drive whose start isn't in the future, so the officer always sees a bookable
+  // default: the next whole hour, strictly after now even if "now" lands exactly on an hour.
+  function nextWholeHourLocalDateTime(): string {
+    const d = new Date();
+    d.setHours(d.getHours() + 1, 0, 0, 0);
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
   }
   function recruitRow(kind: "role" | "class", value: string, label: string, colorClass: string): string {
     return `
@@ -1071,6 +1132,9 @@ import "../../styles/activity.css";
     const eventStarts = requireElement<HTMLInputElement>("e-starts");
     const eventEnds = requireElement<HTMLInputElement>("e-ends");
     const eventSize = requireElement<HTMLInputElement>("e-size");
+    const eventEndsLabel = requireElement("e-ends-label");
+    const eventSizeField = requireElement("e-size-field");
+    const eventDriveHint = requireElement("e-drive-hint");
     const eventEp = requireElement<HTMLInputElement>("e-ep");
     const eventStatusField = requireElement("e-status-field");
     const eventStatusSelect = requireElement<HTMLSelectElement>("e-status");
@@ -1094,7 +1158,42 @@ import "../../styles/activity.css";
     function syncEpPlaceholder(): void {
       eventEp.placeholder = `${EVENT_KIND_EP[eventKind.value as EventKind]} (preset)`;
     }
-    eventKind.addEventListener("change", syncEpPlaceholder);
+    // Recruitment drives have no sign-ups (so no size), need an end date, and get a longer-labeled end field.
+    function applyKindUi(): void {
+      const isDrive = (eventKind.value as EventKind) === "recruitment";
+      eventSizeField.hidden = isDrive;
+      if (isDrive) {
+        eventSize.value = "";
+      }
+      eventEnds.required = isDrive;
+      eventEndsLabel.textContent = isDrive ? "End" : "End (optional)";
+      eventDriveHint.hidden = !isDrive;
+    }
+    // The site requires a drive's start to be in the future; default it forward when it's empty or already past.
+    function defaultDriveStartIfNeeded(): void {
+      const current = eventStarts.value ? new Date(eventStarts.value) : null;
+      if (!current || Number.isNaN(current.getTime()) || current.getTime() <= Date.now()) {
+        eventStarts.value = nextWholeHourLocalDateTime();
+      }
+    }
+    function defaultDriveEnd(): void {
+      if (eventStarts.value) {
+        eventEnds.value = addDaysToLocalDateTime(eventStarts.value, DRIVE_DEFAULT_DAYS);
+      }
+    }
+    eventKind.addEventListener("change", () => {
+      syncEpPlaceholder();
+      applyKindUi();
+      if ((eventKind.value as EventKind) === "recruitment") {
+        defaultDriveStartIfNeeded();
+        if (!endTouched) {
+          defaultDriveEnd();
+        }
+      }
+    });
+    eventEnds.addEventListener("input", () => {
+      endTouched = true;
+    });
 
     eventWeekdayGrid.innerHTML = WEEKDAY_SHORT_LABELS.map(
       (label, i) => `
@@ -1110,6 +1209,7 @@ import "../../styles/activity.css";
     let editingEventId: string | null = null;
     let editingSeriesId: string | null = null;
     let weekdaysTouched = false;
+    let endTouched = false;
 
     function applyDefaultWeekdays(): void {
       const d = eventStarts.value ? new Date(eventStarts.value) : new Date();
@@ -1138,6 +1238,9 @@ import "../../styles/activity.css";
       if (eventRepeats.value !== "" && !weekdaysTouched) {
         applyDefaultWeekdays();
       }
+      if ((eventKind.value as EventKind) === "recruitment" && !endTouched) {
+        defaultDriveEnd();
+      }
     });
 
     function resetEventForm(): void {
@@ -1145,10 +1248,12 @@ import "../../styles/activity.css";
       editingEventId = null;
       editingSeriesId = null;
       weekdaysTouched = false;
+      endTouched = false;
       eventLegend.textContent = "New event";
       eventSeriesAside.hidden = true;
       eventKind.value = "raid";
       syncEpPlaceholder();
+      applyKindUi();
       eventStatusField.hidden = false;
       eventStatusSelect.value = "scheduled";
       eventRepeatsField.hidden = false;
@@ -1163,6 +1268,7 @@ import "../../styles/activity.css";
       editingEventId = event.id;
       editingSeriesId = null;
       weekdaysTouched = false;
+      endTouched = true;
       eventLegend.textContent = event.series ? `Edit · ${event.title} (this night only)` : `Edit · ${event.title}`;
       eventSeriesAside.hidden = !event.series;
       eventStatusField.hidden = false;
@@ -1172,6 +1278,7 @@ import "../../styles/activity.css";
       eventUntilField.hidden = true;
       eventKind.value = event.kind;
       syncEpPlaceholder();
+      applyKindUi();
       eventTitle.value = event.title;
       eventLocation.value = event.location;
       eventStarts.value = localDateTimeInput(event.starts_at);
@@ -1188,6 +1295,7 @@ import "../../styles/activity.css";
       editingEventId = null;
       editingSeriesId = s.id;
       weekdaysTouched = true;
+      endTouched = true;
       eventLegend.textContent = `Edit series · ${s.title}`;
       eventSeriesAside.hidden = true;
       eventStatusField.hidden = true;
@@ -1196,6 +1304,7 @@ import "../../styles/activity.css";
       eventUntilField.hidden = false;
       eventKind.value = s.kind;
       syncEpPlaceholder();
+      applyKindUi();
       eventTitle.value = s.title;
       eventLocation.value = s.location;
       eventStarts.value = `${s.rule.starts_on}T${s.rule.start_time}`;
@@ -1659,6 +1768,46 @@ import "../../styles/activity.css";
         recruitingFormStatus.textContent = statusMessage(err);
       }
     });
+
+    // ——— Recruitment payouts ———
+    const recruitmentPayoutsStatusEl = requireElement("recruitment-payouts-status");
+    const recruitmentPayoutsListEl = requireElement("recruitment-payouts-list");
+
+    async function loadRecruitmentPayouts(): Promise<void> {
+      recruitmentPayoutsStatusEl.textContent = "Loading…";
+      try {
+        const payouts = await apiFetch<RecruitPayout[]>("/api/recruitment/payouts", { signal });
+        recruitmentPayoutsStatusEl.textContent = "";
+        recruitmentPayoutsListEl.innerHTML =
+          payouts.length > 0
+            ? payouts.map(recruitmentPayoutRow).join("")
+            : `<li class="quest-empty">No settled drives yet.</li>`;
+        recruitmentPayoutsListEl.querySelectorAll<HTMLButtonElement>("[data-mark-paid-event]").forEach((btn) => {
+          btn.addEventListener("click", () => void onMarkPaid(btn));
+        });
+      } catch (err) {
+        recruitmentPayoutsStatusEl.textContent = statusMessage(err);
+      }
+    }
+
+    async function onMarkPaid(btn: HTMLButtonElement): Promise<void> {
+      const eventId = btn.dataset.markPaidEvent;
+      const inviter = btn.dataset.markPaidInviter;
+      if (!eventId || !inviter) {
+        return;
+      }
+      btn.disabled = true;
+      recruitmentPayoutsStatusEl.textContent = "Marking paid…";
+      try {
+        const body: RecruitPayoutMarkPaid = { event_id: eventId, inviter };
+        await apiFetch("/api/recruitment/payouts/paid", { method: "POST", body: JSON.stringify(body) });
+        recruitmentPayoutsStatusEl.textContent = "Marked paid.";
+        await loadRecruitmentPayouts();
+      } catch (err) {
+        btn.disabled = false;
+        recruitmentPayoutsStatusEl.textContent = statusMessage(err);
+      }
+    }
 
     // ——— MCP tokens ———
     const mcpTokenForm = requireElement<HTMLFormElement>("mcp-token-form");
@@ -2874,6 +3023,7 @@ import "../../styles/activity.css";
     });
 
     let attendanceLoaded = false;
+    let recruitmentPayoutsLoaded = false;
 
     async function loadAttendance(): Promise<void> {
       const tasks = [loadAttendanceEvents()];
@@ -2889,6 +3039,7 @@ import "../../styles/activity.css";
       "events",
       "addons",
       "recruiting",
+      "recruitment",
       "attendance",
       "mcp",
       "groups",
@@ -2927,6 +3078,9 @@ import "../../styles/activity.css";
       } else if (name === "statistics" && !statsLoaded) {
         statsLoaded = true;
         void loadStats();
+      } else if (name === "recruitment" && !recruitmentPayoutsLoaded) {
+        recruitmentPayoutsLoaded = true;
+        void loadRecruitmentPayouts();
       }
     }
 

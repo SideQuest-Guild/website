@@ -10,12 +10,14 @@ show (``DiscordEventPush``, polled via ``list_pending``) and the bot reports bac
 import hashlib
 import json
 from datetime import UTC, datetime, timedelta
+from typing import TYPE_CHECKING
 from uuid import UUID
 
 from sqlalchemy import delete, select, update
 
 from sidequest_api.domain.event_series.materializer import materialize_all
 from sidequest_api.domain.events.services import EventsService
+from sidequest_api.domain.recruitment.services import build_leaders
 from sidequest_api.domain.weekly_board.services import board_signups_for
 from sidequest_common.models import (
     DiscordEventTombstone,
@@ -24,9 +26,15 @@ from sidequest_common.models import (
     EventSignupActivity,
     GuildConfig,
     GuildEvent,
+    Member,
+    RecruitmentRecruit,
+    WowCharacter,
 )
 from sidequest_common.schemas import (
+    DRIVE_SETTLE_DAYS,
     EVENT_KIND_LABELS,
+    MAX_RECRUITMENT_LEADERS,
+    RECRUIT_REWARD_COPPER,
     ROLE_KINDS,
     BoardSignup,
     DiscordEventPush,
@@ -38,8 +46,13 @@ from sidequest_common.schemas import (
     EventCounts,
     EventKind,
     PushAction,
+    RecruitmentTally,
+    RecruitShoutout,
     SignupActivity,
 )
+
+if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
 
 FOOTER_HEADER = "── SideQuest event ──"
 MAX_DESCRIPTION_LENGTH = 1000
@@ -54,6 +67,11 @@ _WEEKDAY_NAMES = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Satur
 _BIWEEKLY_INTERVAL = 2
 _TWO_WEEKDAYS = 2
 FORUM_SIGNUP_BUTTONS_MARKER = "signup-buttons-v1"
+RECRUIT_SHOUTOUT_LIMIT = 50
+RECRUITMENT_RULES_LINE = (
+    "Invite new players to the guild. You earn 1g for each recruit who stays 7 days and reaches level 10. "
+    "Payouts go out a week after the drive ends."
+)
 
 
 def _truncate(text: str, limit: int) -> str:
@@ -91,7 +109,11 @@ def _build_footer(event: GuildEvent, counts: EventCounts, web_base_url: str) -> 
     if event.series_id is not None and not event.series_detached and event.series is not None:
         parts.append(_series_rule_text(event.series))
     lines.append(" · ".join(parts))
-    if event.kind in _ROLE_KIND_VALUES:
+    link_label = "Details & sign-up"
+    if event.kind == EventKind.RECRUITMENT.value:
+        signed = RECRUITMENT_RULES_LINE
+        link_label = "Details"
+    elif event.kind in _ROLE_KIND_VALUES:
         signed = f"Signed: {counts.tank} tanks · {counts.healer} healers · {counts.dps} dps"
         if counts.tentative > 0:
             signed += f" · {counts.tentative} tentative"
@@ -100,7 +122,7 @@ def _build_footer(event: GuildEvent, counts: EventCounts, web_base_url: str) -> 
         if counts.tentative > 0:
             signed += f" · {counts.tentative} maybe"
     lines.append(signed)
-    lines.append(f"Details & sign-up: {web_base_url}{_SIGN_UP_PATH}{event.id}")
+    lines.append(f"{link_label}: {web_base_url}{_SIGN_UP_PATH}{event.id}")
     return "\n".join(lines)
 
 
@@ -149,6 +171,7 @@ def _push_hash(
     ends_at: datetime,
     needs_thread: bool,
     board: tuple[int, int, list[BoardSignup]] | None,
+    recruitment: RecruitmentTally | None = None,
 ) -> str:
     """Hash of everything a push changes on Discord, plus whether the event still needs its forum post.
 
@@ -161,6 +184,9 @@ def _push_hash(
 
     ``board`` (channel, message, sign-ups) is only hashed for an event with a weekly-board card, so any sign-up
     change re-pushes it and the bot redraws the card; events without one keep the hashes they had before cards.
+
+    ``recruitment`` is only hashed for a recruitment drive, so a changed leaderboard re-pushes it and the bot
+    redraws the forum starter post; non-drive events keep the hashes they had before drives existed.
     """
     fields: list[object] = [
         action,
@@ -175,6 +201,8 @@ def _push_hash(
     if board is not None:
         channel_id, message_id, signups = board
         fields.append([channel_id, message_id, [signup.model_dump(mode="json") for signup in signups]])
+    if recruitment is not None:
+        fields.append(recruitment.model_dump(mode="json"))
     payload = json.dumps(fields, separators=(",", ":"))
     return hashlib.sha256(payload.encode()).hexdigest()
 
@@ -196,6 +224,7 @@ def _desired_state(
     web_base_url: str,
     *,
     forum_configured: bool,
+    recruitment: RecruitmentTally | None = None,
 ) -> DiscordEventPush:
     footer = _build_footer(event, counts, web_base_url)
     description = _build_description(event, footer)
@@ -219,6 +248,7 @@ def _desired_state(
         ends_at=ends_at,
         needs_thread=forum_configured and action == "upsert" and event.discord_thread_id is None,
         board=board,
+        recruitment=recruitment,
     )
     return DiscordEventPush(
         event_id=event.id,
@@ -238,6 +268,7 @@ def _desired_state(
         board_channel_id=board_channel_id if board is not None else None,
         board_message_id=board_message_id if board is not None else None,
         board_signups=board_signups if board is not None else [],
+        recruitment=recruitment,
     )
 
 
@@ -257,6 +288,38 @@ def _apply_discord_fields(event: GuildEvent, state: DiscordEventState, seen_hash
         event.status = "completed"
         event.discord_event_id = None
     event.discord_seen_hash = seen_hash
+
+
+async def _recruitment_tallies_for(session: AsyncSession, events: list[GuildEvent]) -> dict[UUID, RecruitmentTally]:
+    """One ``RecruitmentTally`` per started recruitment drive among ``events``, for the forum starter post."""
+    drives = [event for event in events if event.kind == EventKind.RECRUITMENT.value and event.ends_at is not None]
+    if not drives:
+        return {}
+    drive_ids = [drive.id for drive in drives]
+    rows = list(
+        (await session.execute(select(RecruitmentRecruit).where(RecruitmentRecruit.event_id.in_(drive_ids))))
+        .scalars()
+        .all()
+    )
+    by_event: dict[UUID, list[RecruitmentRecruit]] = {}
+    for row in rows:
+        by_event.setdefault(row.event_id, []).append(row)
+    tallies: dict[UUID, RecruitmentTally] = {}
+    for drive in drives:
+        ends_at = drive.ends_at
+        if ends_at is None:
+            continue
+        group = by_event.get(drive.id, [])
+        leaders = (await build_leaders(session, group))[:MAX_RECRUITMENT_LEADERS]
+        tallies[drive.id] = RecruitmentTally(
+            reward_copper=RECRUIT_REWARD_COPPER,
+            settles_at=ends_at + timedelta(days=DRIVE_SETTLE_DAYS),
+            invited=len(group),
+            joined=sum(1 for row in group if row.joined_at is not None),
+            qualified=sum(1 for row in group if row.status == "qualified"),
+            leaders=leaders,
+        )
+    return tallies
 
 
 class EventSyncService(EventsService):
@@ -279,6 +342,7 @@ class EventSyncService(EventsService):
         board_signups = await board_signups_for(
             session, [event.id for event in events if event.discord_board_message_id is not None]
         )
+        tallies = await _recruitment_tallies_for(session, events)
         pushes = []
         for event in events:
             push = _desired_state(
@@ -287,6 +351,7 @@ class EventSyncService(EventsService):
                 board_signups.get(event.id, []),
                 web_base_url,
                 forum_configured=forum_id is not None,
+                recruitment=tallies.get(event.id),
             )
             if push.push_hash == event.discord_pushed_hash:
                 continue
@@ -300,7 +365,10 @@ class EventSyncService(EventsService):
         tombstone_ids = list((await session.execute(select(DiscordEventTombstone.discord_event_id))).scalars().all())
         await self._drop_stale_unthreaded_activity(now)
         activity = await self._pending_activity()
-        return DiscordSyncPending(pushes=pushes, deletions=tombstone_ids, activity=activity)
+        recruit_shoutouts = await self._pending_recruit_shoutouts()
+        return DiscordSyncPending(
+            pushes=pushes, deletions=tombstone_ids, activity=activity, recruit_shoutouts=recruit_shoutouts
+        )
 
     async def _drop_stale_unthreaded_activity(self, now: datetime) -> None:
         """Mark unposted activity rows older than 24h as posted for events with no Discord thread.
@@ -351,6 +419,53 @@ class EventSyncService(EventsService):
         session = self.repository.session
         await session.execute(
             update(EventSignupActivity).where(EventSignupActivity.id.in_(ids)).values(posted_at=datetime.now(UTC))
+        )
+        await session.commit()
+
+    async def _pending_recruit_shoutouts(self) -> list[RecruitShoutout]:
+        """Qualified recruits awaiting a shout-out, for drives with a Discord thread, oldest first, capped."""
+        session = self.repository.session
+        statement = (
+            select(RecruitmentRecruit, GuildEvent.discord_thread_id)
+            .join(GuildEvent, RecruitmentRecruit.event_id == GuildEvent.id)
+            .where(
+                RecruitmentRecruit.status == "qualified",
+                RecruitmentRecruit.shoutout_posted_at.is_(None),
+                GuildEvent.discord_thread_id.is_not(None),
+            )
+            .order_by(RecruitmentRecruit.qualified_at.asc())
+            .limit(RECRUIT_SHOUTOUT_LIMIT)
+        )
+        rows = (await session.execute(statement)).all()
+        shoutouts = []
+        for recruit, thread_id in rows:
+            inviter_discord_id = None
+            if recruit.inviter_character_id is not None:
+                char = await session.get(WowCharacter, recruit.inviter_character_id)
+                if char is not None and char.member_id is not None:
+                    member = await session.get(Member, char.member_id)
+                    if member is not None:
+                        inviter_discord_id = member.discord_id
+            shoutouts.append(
+                RecruitShoutout(
+                    id=recruit.id,
+                    thread_id=thread_id,
+                    event_id=recruit.event_id,
+                    inviter=recruit.inviter_name,
+                    inviter_discord_id=inviter_discord_id,
+                    recruit=recruit.recruit_name,
+                    reward_copper=recruit.reward_copper,
+                )
+            )
+        return shoutouts
+
+    async def ack_recruit_shoutouts(self, ids: list[UUID]) -> None:
+        """Mark these recruit shout-out rows posted so they aren't sent again."""
+        session = self.repository.session
+        await session.execute(
+            update(RecruitmentRecruit)
+            .where(RecruitmentRecruit.id.in_(ids))
+            .values(shoutout_posted_at=datetime.now(UTC))
         )
         await session.commit()
 

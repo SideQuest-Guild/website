@@ -156,6 +156,10 @@ TAG_GROUPS: dict[str, dict[str, str]] = {
         "Event series management": "Create, edit, and end repeating event series. An officer must be signed in.",
         "Addon catalog": "Add, edit, and remove addons from the list. An officer must be signed in.",
         "Recruiting needs": "Set the guild's recruiting needs. An officer must be signed in.",
+        "Recruitment drives": (
+            "A recruitment drive's leaderboard and recruits. Any guild member may read a drive; only an "
+            "officer may list or mark its payouts."
+        ),
         "Guild hub admin": "Post guild announcements. An officer must be signed in.",
         "EPGP recruits": "Review recruiting candidates and cast votes. An officer must be signed in.",
         "Member notes": "Officer notes about members and characters. An officer must be signed in.",

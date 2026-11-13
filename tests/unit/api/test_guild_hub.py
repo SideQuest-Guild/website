@@ -808,7 +808,7 @@ async def test_game_import_v2_shape_decodes_and_officer_part_present(
     assert decoded["v"] == 2
     for key in ("members", "news", "sheets", "crafters", "recipe_names", "officer"):
         assert key in decoded
-    assert set(decoded["officer"]) == {"recruits", "member_notes", "inactive", "unseen"}
+    assert set(decoded["officer"]) == {"recruits", "member_notes", "inactive", "unseen", "recruit_payouts"}
 
 
 async def test_game_import_inactive_list_uses_battlenet_last_login(

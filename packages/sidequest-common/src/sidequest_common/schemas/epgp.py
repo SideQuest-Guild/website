@@ -46,6 +46,14 @@ from sidequest_common.schemas.guild_hub import (
     SignupImportCounts,
 )
 from sidequest_common.schemas.pvp import MAX_BATTLEGROUNDS, BattlegroundImportCounts, ExportBattleground
+from sidequest_common.schemas.recruitment import (
+    MAX_GUILD_LOG_ENTRIES,
+    MAX_RECRUIT_PAYOUTS_PAID,
+    ExportGuildLogEntry,
+    ExportRecruitPayoutPaid,
+    GuildLogImportCounts,
+    RecruitPayoutImportCounts,
+)
 
 # --- Rules constants (the site owns these numbers; they ship in the SQI1 import string's ``rules`` object) -------
 
@@ -322,6 +330,12 @@ class ExportPayload(BaseModel):
     recipe_names: dict[str, str] = Field(default_factory=dict, max_length=MAX_RECIPE_NAMES)
     battlegrounds: list[ExportBattleground] = Field(default_factory=list, max_length=MAX_BATTLEGROUNDS)
     """Finished battlegrounds' scoreboards (``sidequest_common.schemas.pvp``); additive, older sites ignore it."""
+    guild_log: list[ExportGuildLogEntry] = Field(default_factory=list, max_length=MAX_GUILD_LOG_ENTRIES)
+    """Guild event log rows (``sidequest_common.schemas.recruitment``); additive, older sites ignore it."""
+    recruit_payouts_paid: list[ExportRecruitPayoutPaid] = Field(
+        default_factory=list, max_length=MAX_RECRUIT_PAYOUTS_PAID
+    )
+    """Recruitment drive payouts the addon's mail-send button already sent; additive, older sites ignore it."""
 
 
 # --- Site import (``SQI1:`` + base64 JSON): the outbound payload the game-import endpoint builds ------------------
@@ -345,12 +359,16 @@ class GameImportSignup(BaseModel):
 
 
 class GameImportEvent(BaseModel):
-    """One scheduled event in the game-import payload (upcoming in ``events``, recent in ``past_events``)."""
+    """One scheduled event in the game-import payload (upcoming in ``events``, recent in ``past_events``).
+
+    ``ends_at`` is additive (older addons ignore it); it is always set for a recruitment drive.
+    """
 
     id: UUID
     title: str
     kind: EventKind
     starts_at: int
+    ends_at: int | None = None
     size: int | None
     signups: list[GameImportSignup]
 
@@ -469,6 +487,8 @@ class EpgpImportResult(BaseModel):
     member_notes: MemberNoteImportCounts = Field(default_factory=MemberNoteImportCounts)
     directory: DirectoryImportCounts = Field(default_factory=DirectoryImportCounts)
     battlegrounds: BattlegroundImportCounts = Field(default_factory=BattlegroundImportCounts)
+    guild_log: GuildLogImportCounts = Field(default_factory=GuildLogImportCounts)
+    recruit_payouts_paid: RecruitPayoutImportCounts = Field(default_factory=RecruitPayoutImportCounts)
 
 
 class EpgpRules(BaseModel):

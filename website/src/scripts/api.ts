@@ -15,7 +15,16 @@ export type Me = {
   roster_confirmed: boolean;
 };
 
-export type EventKind = "raid" | "dungeon" | "world_boss" | "leveling" | "pvp" | "social" | "transmog" | "other";
+export type EventKind =
+  | "raid"
+  | "dungeon"
+  | "world_boss"
+  | "leveling"
+  | "pvp"
+  | "social"
+  | "transmog"
+  | "other"
+  | "recruitment";
 
 export const EVENT_KINDS: EventKind[] = [
   "raid",
@@ -26,6 +35,7 @@ export const EVENT_KINDS: EventKind[] = [
   "social",
   "transmog",
   "other",
+  "recruitment",
 ];
 
 export const EVENT_KIND_LABELS: Record<EventKind, string> = {
@@ -37,6 +47,7 @@ export const EVENT_KIND_LABELS: Record<EventKind, string> = {
   social: "Social",
   transmog: "Transmog",
   other: "Other",
+  recruitment: "Recruitment Drive",
 };
 
 /** Attendance EP per kind when an event has no override; mirrors `EVENT_KIND_EP` in sidequest_common. */
@@ -49,6 +60,7 @@ export const EVENT_KIND_EP: Record<EventKind, number> = {
   social: 2,
   transmog: 2,
   other: 2,
+  recruitment: 0,
 };
 
 /** The highest attendance EP an officer can set on one event. */
@@ -56,6 +68,9 @@ export const MAX_EVENT_EP = 50;
 
 /** Kinds whose sign-ups require character, class and role. */
 export const ROLE_KINDS: EventKind[] = ["raid", "dungeon", "world_boss"];
+
+/** Kinds with no sign-ups at all; the API rejects sign-ups to these and every UI hides sign-up controls. */
+export const NO_SIGNUP_KINDS: EventKind[] = ["recruitment"];
 
 export type Role = "tank" | "healer" | "dps";
 export type SignupStatus = "signed" | "tentative" | "absent";
@@ -176,6 +191,86 @@ export type EventDetail = EventSummary & {
   /** Raid gear floor officers set with `PUT /api/raid-readiness`. `null` when none is set. */
   min_item_level?: number | null;
 };
+
+// ——— Recruitment drives: GET /api/events/{id}/recruitment (guild member), GET/POST /api/recruitment/payouts[/paid]
+// (officer). Mirrors `sidequest_common.schemas.recruitment` (local://recruitment-contract.md). A recruitment
+// drive is an `EventSummary`/`EventDetail` with `kind: "recruitment"`; it has no sign-ups.
+
+/** The rules line shown on a drive's page and the officers' events form. */
+export const RECRUITMENT_RULES_LINE =
+  "Invite new players to the guild. You earn 1g for each recruit who stays 7 days and reaches level 10. Payouts go out a week after the drive ends.";
+
+/** Default drive length offered in the officers' events form, mirroring `DRIVE_DEFAULT_DAYS` in sidequest_common. */
+export const DRIVE_DEFAULT_DAYS = 14;
+
+export type DriveRecruitStatus = "invited" | "counting" | "qualified" | "disqualified";
+
+/** Only set when `status` is `"disqualified"`. */
+export type DriveRecruitReason = "returning" | "own_alt" | "left" | "low_level" | "never_joined";
+
+/** One inviter's standing on a drive's leaderboard, highest `qualified` first. */
+export type RecruitLeader = {
+  inviter: string;
+  member_name: string | null;
+  discord_id: string | null;
+  invited: number;
+  joined: number;
+  counting: number;
+  qualified: number;
+};
+
+/** One recruit on a drive's full list. */
+export type DriveRecruit = {
+  recruit: string;
+  inviter: string;
+  invited_at: string;
+  joined_at: string | null;
+  qualifies_at: string | null;
+  status: DriveRecruitStatus;
+  reason: DriveRecruitReason | null;
+  paid_at: string | null;
+};
+
+export type DriveTotals = {
+  invited: number;
+  joined: number;
+  counting: number;
+  qualified: number;
+  disqualified: number;
+  paid: number;
+};
+
+/** `GET /api/events/{event_id}/recruitment` (signed-in guild member). 404 when the event isn't a drive. */
+export type RecruitmentDrive = {
+  event_id: string;
+  title: string;
+  starts_at: string;
+  ends_at: string;
+  settles_at: string;
+  reward_copper: number;
+  min_level: number;
+  stay_days: number;
+  totals: DriveTotals;
+  leaders: RecruitLeader[];
+  recruits: DriveRecruit[];
+};
+
+/** One row of `GET /api/recruitment/payouts` (officer): one inviter's take on one drive. */
+export type RecruitPayout = {
+  event_id: string;
+  title: string;
+  settles_at: string;
+  inviter: string;
+  member_name: string | null;
+  recruits: string[];
+  copper: number;
+  paid_at: string | null;
+  paid_by: string | null;
+  paid_via: "site" | "addon" | null;
+};
+
+/** `POST /api/recruitment/payouts/paid` (officer) body. */
+export type RecruitPayoutMarkPaid = { event_id: string; inviter: string };
 
 export type AddonOrigin = "guild" | "community";
 
@@ -1889,6 +1984,28 @@ export function copperToGold(copper: number): string {
   const silver = Math.floor((abs % 10000) / 100);
   const bronze = abs % 100;
   return `${sign}${gold}g ${silver}s ${bronze}c`;
+}
+
+/** Formats copper the same way as `copperToGold` but leaves out zero silver/copper parts (e.g. "1g" instead of
+ * "1g 0s 0c", or "1g 50s" when silver is non-zero), for amounts that are usually round gold, like recruitment
+ * drive payouts. */
+export function copperToGoldCompact(copper: number): string {
+  const sign = copper < 0 ? "-" : "";
+  const abs = Math.abs(copper);
+  const gold = Math.floor(abs / 10000);
+  const silver = Math.floor((abs % 10000) / 100);
+  const bronze = abs % 100;
+  const parts: string[] = [];
+  if (gold > 0 || (silver === 0 && bronze === 0)) {
+    parts.push(`${gold}g`);
+  }
+  if (silver > 0) {
+    parts.push(`${silver}s`);
+  }
+  if (bronze > 0) {
+    parts.push(`${bronze}c`);
+  }
+  return `${sign}${parts.join(" ")}`;
 }
 
 /** Looks up a required element by id, throwing early with a clear message if the markup drifts. */

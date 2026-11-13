@@ -13,7 +13,7 @@ from advanced_alchemy.types import DateTimeUTC, JsonB
 from sqlalchemy import BigInteger, Boolean, Date, ForeignKey, Integer, String, Text, Time, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-EVENT_KINDS = ("raid", "dungeon", "world_boss", "leveling", "pvp", "social", "transmog", "other")
+EVENT_KINDS = ("raid", "dungeon", "world_boss", "leveling", "pvp", "social", "transmog", "other", "recruitment")
 ROLE_KINDS = ("raid", "dungeon", "world_boss")
 EVENT_STATUSES = ("scheduled", "cancelled", "completed")
 SIGNUP_ROLES = ("tank", "healer", "dps")

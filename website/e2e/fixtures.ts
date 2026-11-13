@@ -24,6 +24,7 @@ import type {
   ItemWishUpdate,
   Me,
   Recruiting,
+  RecruitPayoutMarkPaid,
   TalentBuild,
   TalentBuildCreate,
 } from "../src/scripts/api";
@@ -83,6 +84,8 @@ import {
   QUESTS,
   RECIPES,
   RECRUITING,
+  RECRUITMENT_DRIVE,
+  RECRUITMENT_PAYOUTS,
   SIGNUPS,
   TALENTS_DRUID,
   TALENT_BUILDS,
@@ -211,6 +214,9 @@ export const test = base.extend<{ site: Site }>({
     let addons = ADDONS;
     let recruiting = RECRUITING;
     let officers = GUILD_OFFICERS;
+    // A per-test copy: the payouts "paid" handler mutates this, and a shared RECRUITMENT_PAYOUTS array would leak
+    // that into the next test.
+    const recruitmentPayouts = RECRUITMENT_PAYOUTS.map((p) => Object.assign({}, p));
     let calendarToken = "mock-calendar-token";
     let awayRanges: AwayRange[] = [];
     // A per-test copy: the raid chart's PATCH handler mutates this, and a shared SIGNUPS array would leak those
@@ -351,6 +357,35 @@ export const test = base.extend<{ site: Site }>({
         );
         const detail = { ...eventDetail(event, minItemLevel), signups: liveSignups };
         return json(route, me ? detail : anonymousDetail(detail));
+      }
+      const recruitmentMatch = /^\/api\/events\/([^/]+)\/recruitment$/.exec(path);
+      if (recruitmentMatch && method === "GET") {
+        if (!me?.is_guild_member) {
+          return json(route, { detail: "Not signed in" }, 401);
+        }
+        if (recruitmentMatch[1] !== RECRUITMENT_DRIVE.event_id) {
+          return json(route, { detail: "Not a recruitment drive" }, 404);
+        }
+        return json(route, RECRUITMENT_DRIVE);
+      }
+      if (path === "/api/recruitment/payouts" && method === "GET") {
+        if (!me?.is_officer) {
+          return json(route, { detail: "Officers only" }, 401);
+        }
+        return json(route, recruitmentPayouts);
+      }
+      if (path === "/api/recruitment/payouts/paid" && method === "POST") {
+        if (!me?.is_officer) {
+          return json(route, { detail: "Officers only" }, 401);
+        }
+        const body = JSON.parse(request.postData() ?? "{}") as RecruitPayoutMarkPaid;
+        const target = recruitmentPayouts.find((p) => p.event_id === body.event_id && p.inviter === body.inviter);
+        if (target) {
+          target.paid_at = new Date().toISOString();
+          target.paid_by = me?.display_name ?? "Officer";
+          target.paid_via = "site";
+        }
+        return route.fulfill({ status: 204 });
       }
       if (path === "/api/raid-readiness" && method === "PUT") {
         if (!me) {

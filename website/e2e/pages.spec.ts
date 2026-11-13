@@ -153,7 +153,7 @@ test.describe("events", () => {
   test("signed out, rows carry no sign-up counts", async ({ page, site }) => {
     site.signIn(null);
     await page.goto("/events/");
-    await expect(page.locator("#events-upcoming a.quest")).toHaveCount(2);
+    await expect(page.locator("#events-upcoming a.quest")).toHaveCount(3);
     await expect(page.locator("#events-past a.quest")).toHaveCount(1);
     await expect(page.locator("#events-upcoming")).not.toContainText("2T");
     await expect(page.locator("#signup-hint")).toBeVisible();

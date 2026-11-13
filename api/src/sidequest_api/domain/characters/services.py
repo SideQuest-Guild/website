@@ -7,6 +7,7 @@ logs out: until then a roster member's row holds what the roster says, and a loo
 """
 
 import asyncio
+import logging
 import time
 from collections import Counter
 from datetime import UTC, datetime, timedelta
@@ -21,6 +22,7 @@ from sqlalchemy import delete, func, or_, select
 from wow import NotFoundError, WowError
 
 from sidequest_api.domain.characters.battlenet_recipes import translate_recipe
+from sidequest_api.domain.recruitment.services import RecruitmentService
 from sidequest_api.lib.roster import confirm_roster
 from sidequest_common.models import (
     BattlenetCharacter,
@@ -72,6 +74,8 @@ if TYPE_CHECKING:
         CharacterStatistics,
         GuildMember,
     )
+
+logger = logging.getLogger(__name__)
 
 ROSTER_GUILD_SLUG = "sidequest"
 REFRESH_AFTER = timedelta(hours=6)
@@ -683,6 +687,10 @@ class CharactersService(SQLAlchemyAsyncRepositoryService[BattlenetCharacter]):
         members_linked = await self._link_battlenet_owned_characters()
         members_confirmed = await self._confirm_battlenet_owned_members()
         await session.commit()
+        try:
+            await RecruitmentService(session).evaluate(now)
+        except Exception:
+            logger.exception("Recruitment drive evaluation failed after roster sync; roster sync result is unaffected")
         refreshed = await self._refresh_stalest(game_data, now)
         return RosterSyncReport(
             members=len(roster.members),

@@ -112,7 +112,8 @@ class AttendanceController(Controller):
             409: ResponseSpec(
                 None,
                 description=(
-                    "The event has not started yet, is cancelled, or a walk-in duplicates an existing sign-up."
+                    "The event has not started yet, is cancelled, is a recruitment drive, or a walk-in "
+                    "duplicates an existing sign-up."
                 ),
             ),
             400: ResponseSpec(

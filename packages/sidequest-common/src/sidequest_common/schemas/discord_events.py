@@ -13,6 +13,7 @@ from uuid import UUID  # pydantic needs it at runtime
 from pydantic import BaseModel, Field
 
 from sidequest_common.schemas.events import EventCounts, EventKind
+from sidequest_common.schemas.recruitment import RecruitmentTally, RecruitShoutout
 from sidequest_common.schemas.weekly_board import BoardSignup
 
 
@@ -70,6 +71,9 @@ class DiscordEventPush(BaseModel):
         default_factory=list,
         description="Every sign-up, in sign-up order, for the weekly-board card; empty when there is no card.",
     )
+    recruitment: RecruitmentTally | None = Field(
+        default=None, description="Set only for recruitment drives: the live leaderboard for the forum starter post."
+    )
 
 
 class SignupActivity(BaseModel):
@@ -91,6 +95,9 @@ class DiscordSyncPending(BaseModel):
     deletions: list[int] = Field(description="Discord event ids whose guild event was deleted on the site.")
     activity: list[SignupActivity] = Field(
         default_factory=list, description="Unposted sign-up activity for events with a Discord thread, oldest first."
+    )
+    recruit_shoutouts: list[RecruitShoutout] = Field(
+        default_factory=list, description="Qualified recruits whose shout-out hasn't posted yet, oldest first."
     )
 
 

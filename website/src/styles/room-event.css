@@ -133,6 +133,81 @@ a.char-name:focus-visible {
   color: var(--gold);
 }
 
+/* ——— Recruitment drive chamber: rules, dates, totals, leaderboard and recruit list ——— */
+.drive-dates {
+  display: flex;
+  flex-wrap: wrap;
+  gap: clamp(16px, 2vw, 28px);
+  margin: 18px 0;
+}
+.drive-dates > div {
+  min-width: 140px;
+}
+.drive-dates dt {
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--mist-2);
+}
+.drive-dates dd {
+  margin: 4px 0 0;
+  font-family: var(--serif);
+  font-size: 16px;
+  color: var(--ink);
+}
+.drive-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 14px;
+  margin: 22px 0;
+  padding: 16px 0;
+  border-top: 1px solid var(--stone-2);
+  border-bottom: 1px solid var(--stone-2);
+}
+.drive-stat-label {
+  display: block;
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--mist-2);
+}
+.drive-stat-value {
+  display: block;
+  margin-top: 4px;
+  font-family: var(--serif);
+  font-size: 19px;
+  color: var(--gold);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+.drive-table-wrap {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  overflow-x: auto;
+  margin: 14px 0 22px;
+}
+.drive-table {
+  width: 100%;
+  min-width: 420px;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.drive-table th,
+.drive-table td {
+  padding: 8px 10px;
+  text-align: left;
+  border-bottom: 1px solid var(--stone-2);
+}
+.drive-table th {
+  font-family: var(--display);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--mist-2);
+}
+.drive-table td {
+  color: var(--ink);
+}
+
 /* ——— Raid chart: eight group frames and the bench, drawn like the game's raid frames ——— */
 .chart-toolbar {
   display: flex;
