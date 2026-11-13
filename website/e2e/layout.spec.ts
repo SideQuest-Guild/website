@@ -44,6 +44,7 @@ const PAGES = [
   { name: "recipes", path: "/recipes/" },
   { name: "recipe", path: `/recipes/detail/?id=${RECIPES[0]?.recipe_id}` },
   { name: "talents", path: "/talents/?class=druid" },
+  { name: "beasts", path: "/beasts/" },
   { name: "account", path: "/account/" },
   { name: "account stats", path: "/account/#stats" },
   { name: "account wishlist", path: "/account/#wishlist" },

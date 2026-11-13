@@ -20,6 +20,7 @@ interface Props {
     | "characters"
     | "talents"
     | "recipes"
+    | "beasts"
     | "quests"
     | "achievements"
     | "addons"
@@ -38,6 +39,7 @@ const libraryCurrent =
   current === "characters" ||
   current === "talents" ||
   current === "recipes" ||
+  current === "beasts" ||
   current === "quests" ||
   current === "achievements";
 const accountCurrent = current === "account" || current === "officers";
@@ -141,6 +143,12 @@ const libraryEntries: NavEntry[] = [
     icon: "i-nav-recipes",
     name: "Recipes",
     desc: "Browse every profession's recipes: what they make and the reagents they need.",
+  },
+  {
+    href: "/beasts/",
+    icon: "i-nav-beasts",
+    name: "Tameable beasts",
+    desc: "Browse every tameable beast for hunters: family, portrait and a Wowhead link.",
   },
 ];
 

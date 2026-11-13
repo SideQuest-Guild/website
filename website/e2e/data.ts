@@ -11,6 +11,8 @@ import type {
   AttendanceSignup,
   AttendanceTrends,
   AuctionWatch,
+  Beast,
+  BeastFamily,
   CharacterMilestone,
   CharacterPage,
   CharacterSummary,
@@ -1386,6 +1388,31 @@ export const RECIPES: RecipeDetailInfo[] = [
   },
 ];
 
+// ——— Tameable beasts (GET /api/beasts[?q=&family_id=&limit=], GET /api/beasts/{id}, GET /api/beasts/families):
+// the Tameable beasts page's portrait grid. A handful of beasts across four families, enough to search and filter.
+export const BEASTS: Beast[] = [
+  { id: 416, name: "Ashamane", family_id: 2, family: "Cat", image_url: null, display_id: 2001 },
+  { id: 417, name: "Barkskin Lynx", family_id: 2, family: "Cat", image_url: null, display_id: null },
+  {
+    id: 30,
+    name: "Forest Spider",
+    family_id: 1,
+    family: "Spider",
+    image_url: "https://render.worldofwarcraft.com/forever-us/npcs/zoom/creature-display-382.jpg",
+    display_id: 382,
+  },
+  { id: 250063, name: "Grizzled Timbermaw Bear", family_id: 4, family: "Bear", image_url: null, display_id: 822 },
+  { id: 729, name: "Silverback Patriarch", family_id: 4, family: "Bear", image_url: null, display_id: null },
+  { id: 1234, name: "Winterspring Wolf", family_id: 3, family: "Wolf", image_url: null, display_id: 3003 },
+];
+
+export const BEAST_FAMILIES: BeastFamily[] = [
+  { id: 4, name: "Bear", count: 2 },
+  { id: 2, name: "Cat", count: 2 },
+  { id: 1, name: "Spider", count: 1 },
+  { id: 3, name: "Wolf", count: 1 },
+];
+
 export const GUILD_DIRECTORY: GuildDirectory = {
   characters: [
     {
@@ -2353,6 +2380,7 @@ export const TALENTS_DRUID: ClassTalents = {
           talent_id: 100,
           name: "Starlight Wrath",
           requires: null,
+          icon_url: "https://render.worldofwarcraft.com/forever-us/icons/56/135846.jpg",
           ranks: [1, 2, 3, 4, 5].map((rank) => ({
             spell_id: 9100 + rank,
             description: `Reduces the cast time of Wrath and Starfire by ${rank}%.`,
@@ -2366,6 +2394,7 @@ export const TALENTS_DRUID: ClassTalents = {
           talent_id: 101,
           name: "Nature's Grace",
           requires: null,
+          icon_url: null,
           ranks: [
             { spell_id: 9110, description: "Your spell critical strikes reduce the cast time of your next spell." },
           ],
@@ -2378,6 +2407,7 @@ export const TALENTS_DRUID: ClassTalents = {
           talent_id: 102,
           name: "Genesis",
           requires: 1,
+          icon_url: null,
           ranks: [{ spell_id: 9120, description: "Increases the damage of your damage over time spells." }],
         },
         {
@@ -2388,6 +2418,7 @@ export const TALENTS_DRUID: ClassTalents = {
           talent_id: 103,
           name: "Moonglow",
           requires: null,
+          icon_url: null,
           ranks: [{ spell_id: 9130, description: "Reduces the mana cost of your Moonfire, Starfire and Wrath." }],
         },
       ],
@@ -2405,6 +2436,7 @@ export const TALENTS_DRUID: ClassTalents = {
           talent_id: 110,
           name: "Ferocity",
           requires: null,
+          icon_url: null,
           ranks: [1, 2, 3, 4, 5].map((rank) => ({
             spell_id: 9210 + rank,
             description: `Reduces the cost of most Cat and Bear Form abilities by ${rank * 2}%.`,
@@ -2418,6 +2450,7 @@ export const TALENTS_DRUID: ClassTalents = {
           talent_id: 111,
           name: "Feral Aggression",
           requires: null,
+          icon_url: null,
           ranks: [{ spell_id: 9220, description: "Increases the attack power bonus of your Tiger's Fury." }],
         },
       ],

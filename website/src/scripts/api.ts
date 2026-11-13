@@ -1300,6 +1300,22 @@ export type GameSpec = { id: number; name: string; icon_url: string | null };
 /** `GET /api/game/classes` (public): one playable class, its specs and small art. */
 export type GameClass = { class: CharClass; name: string; icon_url: string | null; specs: GameSpec[] };
 
+// ——— Tameable beasts: GET /api/beasts[?q=&family_id=&limit=], GET /api/beasts/{id}, GET /api/beasts/families.
+// Read-only Battle.net game data for the Tameable beasts page; mirrors `sidequest_common.schemas.beasts`.
+
+/** One tameable beast, from `GET /api/beasts[?...]` or `GET /api/beasts/{id}`. */
+export type Beast = {
+  id: number;
+  name: string;
+  family_id: number | null;
+  family: string | null;
+  image_url: string | null;
+  display_id: number | null;
+};
+
+/** One beast family and how many tameable beasts belong to it, from `GET /api/beasts/families`. */
+export type BeastFamily = { id: number; name: string; count: number };
+
 // ——— Characters: GET /api/characters/[?q=], GET /api/characters/{slug}, GET /api/characters/boards. A
 // Battle.net-backed roster + public character sheet; mirrors `sidequest_common.schemas.characters` (once it
 // exists there). A 503 means Battle.net itself is down and the character was never stored; a 404 means Battle.net
@@ -1661,6 +1677,7 @@ export type TalentNode = {
   max_rank: number;
   talent_id: number;
   name: string;
+  icon_url: string | null;
   ranks: TalentRank[];
   requires: number | null;
 };

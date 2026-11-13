@@ -1,0 +1,135 @@
+---
+import Room from "../../layouts/Room.astro";
+import musterYard from "../../../assets/rooms/muster-yard.webp";
+import "../../styles/room-beasts.css";
+---
+
+<Room
+  title="Tameable beasts · SideQuest"
+  description="Browse every tameable beast in World of Warcraft: Forever for hunters: its family, a look at its portrait, and a link to Wowhead."
+  heading="TAMEABLE BEASTS"
+  lede="Every beast a hunter can tame, straight from Battle.net: its family and a look at its portrait."
+  art={musterYard}
+  artPosition="50% 42%"
+  current="beasts"
+>
+  <section class="chamber" aria-labelledby="h-beasts">
+    <h2 class="chamber-title" id="h-beasts">
+      Beasts
+    </h2>
+    <div class="form-row">
+      <div class="field">
+        <label for="beast-query">Beast name</label>
+        <input id="beast-query" type="search" placeholder="e.g. Ashamane" autocomplete="off" />
+      </div>
+      <div class="field">
+        <label for="beast-family">Family</label>
+        <select id="beast-family">
+          <option value="">Any family</option>
+        </select>
+      </div>
+    </div>
+    <p class="status" id="beast-status" role="status" aria-live="polite">
+      Loading&hellip;
+    </p>
+    <ul class="beast-grid" id="beast-grid" aria-label="Tameable beasts"></ul>
+  </section>
+
+  <noscript>
+    <p class="aside">Enable JavaScript to browse tameable beasts.</p>
+  </noscript>
+</Room>
+
+<script>
+  import {
+    apiFetch,
+    ApiError,
+    escapeHtml,
+    requireElement,
+    statusMessage,
+    type Beast,
+    type BeastFamily,
+  } from "../../scripts/api";
+  import { loadWowheadTooltips, refreshWowheadLinks } from "../../scripts/items";
+  import { onPage } from "../../scripts/page";
+
+  function beastCard(beast: Beast): string {
+    const portrait = beast.image_url
+      ? `<img class="beast-portrait" src="${escapeHtml(beast.image_url)}" alt="" width="96" height="96" loading="lazy" />`
+      : `<span class="beast-portrait beast-portrait-empty" aria-hidden="true"></span>`;
+    const family = beast.family ? `<span class="beast-family">${escapeHtml(beast.family)}</span>` : "";
+    return `
+      <li>
+        <a
+          class="beast-card"
+          href="https://www.wowhead.com/forever/npc=${beast.id}"
+          target="_blank"
+          rel="noreferrer"
+          data-astro-reload
+          data-wowhead="npc=${beast.id}&domain=forever"
+        >
+          ${portrait}
+          <span class="beast-name">${escapeHtml(beast.name)}</span>
+          ${family}
+        </a>
+      </li>`;
+  }
+
+  onPage("#beast-status", (signal) => {
+    const statusEl = requireElement("beast-status");
+    const gridEl = requireElement("beast-grid");
+    const queryEl = requireElement<HTMLInputElement>("beast-query");
+    const familyEl = requireElement<HTMLSelectElement>("beast-family");
+    let queryDebounce: ReturnType<typeof setTimeout> | undefined;
+
+    async function search(): Promise<void> {
+      const params = new URLSearchParams();
+      const q = queryEl.value.trim();
+      if (q) {
+        params.set("q", q);
+      }
+      if (familyEl.value) {
+        params.set("family_id", familyEl.value);
+      }
+      statusEl.textContent = "Loading\u2026";
+      gridEl.innerHTML = "";
+      try {
+        const beasts = await apiFetch<Beast[]>(`/api/beasts/?${params}`, { signal });
+        statusEl.textContent =
+          beasts.length > 0 ? `${beasts.length} beast${beasts.length === 1 ? "" : "s"}` : "No beasts matched.";
+        gridEl.innerHTML = beasts.map(beastCard).join("");
+        refreshWowheadLinks();
+      } catch (err) {
+        statusEl.textContent =
+          err instanceof ApiError && err.status === 503
+            ? "Battle.net isn't answering right now, so beasts can't be shown. Try again soon."
+            : statusMessage(err);
+      }
+    }
+
+    async function init(): Promise<void> {
+      void loadWowheadTooltips();
+      try {
+        const families = await apiFetch<BeastFamily[]>("/api/beasts/families", { signal });
+        familyEl.innerHTML =
+          `<option value="">Any family</option>` +
+          families.map((f) => `<option value="${f.id}">${escapeHtml(f.name)} (${f.count})</option>`).join("");
+      } catch {
+        // The family list is a filter convenience; the beast grid still loads without it.
+      }
+      void search();
+    }
+
+    queryEl.addEventListener(
+      "input",
+      () => {
+        clearTimeout(queryDebounce);
+        queryDebounce = setTimeout(() => void search(), 300);
+      },
+      { signal },
+    );
+    familyEl.addEventListener("change", () => void search(), { signal });
+
+    void init();
+  });
+</script>
