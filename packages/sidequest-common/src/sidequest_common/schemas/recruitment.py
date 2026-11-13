@@ -2,8 +2,8 @@
 
 ``local://recruitment-contract.md`` is the source of truth. A drive is a ``GuildEvent`` of kind ``recruitment``
 (``sidequest_common.schemas.events.EventKind.RECRUITMENT``) running 14 days by default; the inviter with the most
-recruits who stay ``RECRUIT_STAY_DAYS`` days and reach ``RECRUIT_MIN_LEVEL`` wins ``DRIVE_PRIZE_COPPER``, and ties
-split (each tied inviter wins it), settled ``DRIVE_SETTLE_DAYS`` after the drive ends. Who invited whom comes from
+recruits who stay ``RECRUIT_STAY_DAYS`` days and reach ``RECRUIT_MIN_LEVEL`` wins ``DRIVE_PRIZE_COPPER``, ties each
+win it, settled ``DRIVE_SETTLE_DAYS`` after the drive ends. Who invited whom comes from
 the in-game guild log (``ExportGuildLogEntry``), not the addon.
 """
 
@@ -14,7 +14,7 @@ from uuid import UUID  # pydantic needs it at runtime
 from pydantic import BaseModel, Field
 
 DRIVE_PRIZE_COPPER = 10_000
-"""1g, paid to the inviter(s) with the most qualifying recruits in a drive. Ties split: each tied inviter wins it."""
+"""1g, paid to the inviter(s) with the most qualifying recruits in a drive. Ties each win it."""
 RECRUIT_MIN_LEVEL = 10
 RECRUIT_STAY_DAYS = 7
 DRIVE_SETTLE_DAYS = 7
@@ -122,6 +122,40 @@ class GameImportRecruitPayout(BaseModel):
     copper: int = Field(description="The flat prize this inviter won (not a per-recruit sum).")
     recruits: list[str] = Field(description="The winning inviter's qualifying recruits in this drive.")
     settles_at: int
+
+
+MAX_IMPORT_DRIVE_RECRUITS = 50
+"""Cap on ``GameImportDrive.recruits``, the most relevant recruit rows for the addon's Events tab."""
+
+
+class GameImportDriveLeader(BaseModel):
+    """One inviter on a drive's leaderboard in the ``SQI1:`` import."""
+
+    inviter: str
+    invited: int
+    counting: int = Field(description='"Potential": joined and still inside their 7 days.')
+    qualified: int
+
+
+class GameImportDriveRecruit(BaseModel):
+    """One recruit's state in the ``SQI1:`` import."""
+
+    recruit: str
+    inviter: str
+    status: DriveRecruitStatus
+    reason: DriveRecruitReason | None = None
+    qualifies_at: int | None = Field(default=None, description="Unix seconds, set once joined.")
+
+
+class GameImportDrive(BaseModel):
+    """``GameImportEvent.recruitment``: a drive's leaderboard and recruits for the addon's Events tab.
+
+    ``recruits`` is ordered counting first (soonest ``qualifies_at`` first), then invited (newest invite first),
+    then qualified (newest first), then disqualified (newest first), truncated to ``MAX_IMPORT_DRIVE_RECRUITS``.
+    """
+
+    leaders: list[GameImportDriveLeader] = Field(default_factory=list, max_length=MAX_RECRUITMENT_LEADERS)
+    recruits: list[GameImportDriveRecruit] = Field(default_factory=list, max_length=MAX_IMPORT_DRIVE_RECRUITS)
 
 
 # --- Site HTTP API (tag "Recruitment drives") -------------------------------------------------------------------

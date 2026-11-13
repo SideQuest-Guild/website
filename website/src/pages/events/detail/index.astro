@@ -73,7 +73,9 @@ import "../../../styles/room-event.css";
         <dl class="drive-dates" id="drive-dates"></dl>
         <div class="drive-stats" id="drive-stats"></div>
         <h3 class="sub-title">Leaderboard</h3>
-        <p class="aside">Most qualified recruits wins 1g; ties each win 1g.</p>
+        <p class="aside">
+          Most qualified recruits wins 1g; ties each win 1g. Potential recruits joined and still have days left to stay.
+        </p>
         <div class="drive-table-wrap">
           <table class="drive-table" id="drive-leaders-table" aria-label="Recruitment drive leaderboard">
             <thead>
@@ -81,7 +83,7 @@ import "../../../styles/room-event.css";
                 <th scope="col">Inviter</th>
                 <th scope="col">Invited</th>
                 <th scope="col">Joined</th>
-                <th scope="col">Counting</th>
+                <th scope="col">Potential</th>
                 <th scope="col">Qualified</th>
               </tr>
             </thead>
@@ -815,10 +817,10 @@ import "../../../styles/room-event.css";
       }
       if (r.status === "counting") {
         if (!r.qualifies_at) {
-          return "Counting";
+          return "Potential";
         }
         const daysLeft = Math.max(0, Math.ceil((new Date(r.qualifies_at).getTime() - Date.now()) / 86_400_000));
-        return `Counting, ${daysLeft} day${daysLeft === 1 ? "" : "s"} left`;
+        return `Potential, ${daysLeft} day${daysLeft === 1 ? "" : "s"} left`;
       }
       return "Invited, not joined yet";
     }
@@ -841,7 +843,7 @@ import "../../../styles/room-event.css";
         [
           ["Invited", drive.totals.invited],
           ["Joined", drive.totals.joined],
-          ["Counting", drive.totals.counting],
+          ["Potential", drive.totals.counting],
           ["Qualified", drive.totals.qualified],
           ["Disqualified", drive.totals.disqualified],
           ["Paid", drive.totals.paid],

@@ -51,6 +51,7 @@ from sidequest_common.schemas.recruitment import (
     MAX_RECRUIT_PAYOUTS_PAID,
     ExportGuildLogEntry,
     ExportRecruitPayoutPaid,
+    GameImportDrive,
     GuildLogImportCounts,
     RecruitPayoutImportCounts,
 )
@@ -361,7 +362,8 @@ class GameImportSignup(BaseModel):
 class GameImportEvent(BaseModel):
     """One scheduled event in the game-import payload (upcoming in ``events``, recent in ``past_events``).
 
-    ``ends_at`` is additive (older addons ignore it); it is always set for a recruitment drive.
+    ``ends_at`` is additive (older addons ignore it); it is always set for a recruitment drive. ``recruitment`` is
+    set only for a recruitment-kind drive in ``events`` (upcoming and running), never in ``past_events``.
     """
 
     id: UUID
@@ -371,6 +373,7 @@ class GameImportEvent(BaseModel):
     ends_at: int | None = None
     size: int | None
     signups: list[GameImportSignup]
+    recruitment: GameImportDrive | None = None
 
 
 class GameImportPrice(BaseModel):

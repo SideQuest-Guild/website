@@ -57,6 +57,8 @@ async def _seed_recruit(
     inviter_name: str = "Thrall",
     status: str = "qualified",
     invited_at: datetime | None = None,
+    joined_at: datetime | None = None,
+    qualifies_at: datetime | None = None,
     qualified_at: datetime | None = None,
     paid_at: datetime | None = None,
     paid_by: str | None = None,
@@ -69,6 +71,8 @@ async def _seed_recruit(
             inviter_name=inviter_name,
             invited_at=invited_at or (NOW - timedelta(days=20)),
             status=status,
+            joined_at=joined_at,
+            qualifies_at=qualifies_at,
             qualified_at=qualified_at,
             paid_at=paid_at,
             paid_by=paid_by,
@@ -340,3 +344,151 @@ async def test_sqi1_recruit_payouts_lists_winners_only(
     assert [p["inviter"] for p in drive_payouts] == ["Jaina"]
     assert sorted(drive_payouts[0]["recruits"]) == ["WinnerRecruitOne", "WinnerRecruitTwo"]
     assert drive_payouts[0]["copper"] == DRIVE_PRIZE_COPPER
+
+
+async def test_sqi1_drive_event_carries_leaders_and_recruits_in_contract_order(
+    member_client: AsyncTestClient, discord_state: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    event_id = await _seed_drive(db_sessionmaker, starts_at=NOW - timedelta(days=1), ends_at=NOW + timedelta(days=13))
+    await _seed_recruit(
+        db_sessionmaker,
+        event_id=event_id,
+        recruit_name="SoonCounter",
+        inviter_name="Jaina",
+        status="counting",
+        invited_at=NOW - timedelta(days=5),
+        joined_at=NOW - timedelta(days=5),
+        qualifies_at=NOW + timedelta(days=1),
+    )
+    await _seed_recruit(
+        db_sessionmaker,
+        event_id=event_id,
+        recruit_name="LaterCounter",
+        inviter_name="Thrall",
+        status="counting",
+        invited_at=NOW - timedelta(days=4),
+        joined_at=NOW - timedelta(days=4),
+        qualifies_at=NOW + timedelta(days=3),
+    )
+    await _seed_recruit(
+        db_sessionmaker,
+        event_id=event_id,
+        recruit_name="OlderInvite",
+        inviter_name="Jaina",
+        status="invited",
+        invited_at=NOW - timedelta(days=2),
+    )
+    await _seed_recruit(
+        db_sessionmaker,
+        event_id=event_id,
+        recruit_name="NewerInvite",
+        inviter_name="Jaina",
+        status="invited",
+        invited_at=NOW - timedelta(hours=1),
+    )
+    await _seed_recruit(
+        db_sessionmaker,
+        event_id=event_id,
+        recruit_name="OlderQualified",
+        inviter_name="Thrall",
+        status="qualified",
+        invited_at=NOW - timedelta(days=10),
+        qualified_at=NOW - timedelta(days=3),
+    )
+    await _seed_recruit(
+        db_sessionmaker,
+        event_id=event_id,
+        recruit_name="NewerQualified",
+        inviter_name="Thrall",
+        status="qualified",
+        invited_at=NOW - timedelta(days=9),
+        qualified_at=NOW - timedelta(days=1),
+    )
+    await _seed_recruit(
+        db_sessionmaker,
+        event_id=event_id,
+        recruit_name="Disqualified",
+        inviter_name="Jaina",
+        status="disqualified",
+        invited_at=NOW - timedelta(days=15),
+    )
+
+    await _login_officer(member_client, discord_state, discord_id=7711)
+    response = await member_client.get("/api/epgp/game-import")
+    assert response.status_code == 200, response.text
+    decoded = json.loads(base64.b64decode(response.json()["payload"][len("SQI1:") :]))
+    events_by_id = {e["id"]: e for e in decoded["events"]}
+    recruitment = events_by_id[event_id]["recruitment"]
+    assert recruitment is not None
+
+    leaders_by_inviter = {leader["inviter"]: leader for leader in recruitment["leaders"]}
+    assert leaders_by_inviter["Thrall"]["qualified"] == 2
+    assert leaders_by_inviter["Jaina"]["qualified"] == 0
+    # Thrall has more qualified recruits than Jaina, so ranks first despite fewer total invites.
+    assert recruitment["leaders"][0]["inviter"] == "Thrall"
+
+    recruit_names = [row["recruit"] for row in recruitment["recruits"]]
+    assert recruit_names == [
+        "SoonCounter",  # counting, soonest qualifies_at first
+        "LaterCounter",
+        "NewerInvite",  # invited, newest invite first
+        "OlderInvite",
+        "NewerQualified",  # qualified, newest first
+        "OlderQualified",
+        "Disqualified",  # disqualified
+    ]
+
+
+async def test_sqi1_non_drive_event_has_no_recruitment(
+    member_client: AsyncTestClient, discord_state: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    async with db_sessionmaker() as session:
+        event = GuildEvent(
+            kind="other",
+            title="Game Night",
+            location="",
+            starts_at=NOW + timedelta(days=1),
+            ends_at=None,
+            status="scheduled",
+            notes=None,
+        )
+        session.add(event)
+        await session.commit()
+        await session.refresh(event)
+        event_id = str(event.id)
+
+    await _login_officer(member_client, discord_state, discord_id=7712)
+    response = await member_client.get("/api/epgp/game-import")
+    assert response.status_code == 200, response.text
+    decoded = json.loads(base64.b64decode(response.json()["payload"][len("SQI1:") :]))
+    events_by_id = {e["id"]: e for e in decoded["events"]}
+    assert events_by_id[event_id]["recruitment"] is None
+
+
+async def test_leaders_sorted_by_counting_when_qualified_joined_invited_tie(
+    member_client: AsyncTestClient, discord_state: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    """``build_leaders`` breaks a qualified/joined/invited tie by ``counting`` desc, per the new sort key."""
+    event_id = await _seed_drive(db_sessionmaker, starts_at=NOW - timedelta(days=1), ends_at=NOW + timedelta(days=13))
+    # Both inviters: 1 invited, 0 joined, 0 qualified; only Jaina's recruit is still counting.
+    await _seed_recruit(
+        db_sessionmaker,
+        event_id=event_id,
+        recruit_name="JainaRecruit",
+        inviter_name="Jaina",
+        status="counting",
+        qualifies_at=NOW + timedelta(days=2),
+    )
+    await _seed_recruit(
+        db_sessionmaker,
+        event_id=event_id,
+        recruit_name="AnduinRecruit",
+        inviter_name="Anduin",
+        status="invited",
+    )
+
+    await _login_officer(member_client, discord_state, discord_id=7713)
+    response = await member_client.get(f"/api/events/{event_id}/recruitment")
+    assert response.status_code == 200, response.text
+    leaders = response.json()["leaders"]
+    assert [leader["inviter"] for leader in leaders] == ["Jaina", "Anduin"]

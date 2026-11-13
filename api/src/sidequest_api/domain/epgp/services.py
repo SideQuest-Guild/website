@@ -12,6 +12,7 @@ import base64
 import binascii
 import hashlib
 import json
+import logging
 import re
 import secrets
 import string
@@ -24,7 +25,7 @@ from pydantic import ValidationError
 from sqlalchemy import delete, func, or_, select, union
 
 from sidequest_api.domain.characters.services import character_display_name, upsert_character_profession
-from sidequest_api.domain.recruitment.services import RecruitmentService, winning_groups
+from sidequest_api.domain.recruitment.services import RecruitmentService, build_leaders, winning_groups
 from sidequest_api.lib.discord import avatar_url
 from sidequest_api.lib.member_auth import is_officer
 from sidequest_common.models import (
@@ -82,6 +83,8 @@ from sidequest_common.schemas import (
     LEVEL_MILESTONE_STEP,
     MAX_DEVICE_NAME_LENGTH,
     MAX_IMPORT_BYTES,
+    MAX_IMPORT_DRIVE_RECRUITS,
+    MAX_RECRUITMENT_LEADERS,
     MIN_GP,
     NO_SIGNUP_KINDS,
     OS_PERCENT,
@@ -108,6 +111,8 @@ from sidequest_common.schemas import (
     DirMarketSection,
     DirProfSection,
     DirStockSection,
+    DriveRecruitReason,
+    DriveRecruitStatus,
     EpgpAdjustmentCreate,
     EpgpCharacter,
     EpgpCharacterList,
@@ -147,6 +152,9 @@ from sidequest_common.schemas import (
     GameImportBadgeRef,
     GameImportCharacter,
     GameImportCrafter,
+    GameImportDrive,
+    GameImportDriveLeader,
+    GameImportDriveRecruit,
     GameImportEvent,
     GameImportInactiveMember,
     GameImportLedgerEntry,
@@ -223,6 +231,8 @@ _DEVICE_AUTH_POLL_INTERVAL = 5
 _DEVICE_AUTH_PENDING_CAP = 500
 _DEVICE_AUTH_USER_CODE_ATTEMPTS = 50
 
+logger = logging.getLogger(__name__)
+
 
 def _reset_boundary_on_or_before(moment: datetime) -> datetime:
     """The most recent weekly reset instant (Tuesday 15:00 UTC) at or before ``moment``."""
@@ -233,6 +243,38 @@ def _reset_boundary_on_or_before(moment: datetime) -> datetime:
     if candidate > moment:
         candidate -= timedelta(days=7)
     return candidate
+
+
+def _order_game_import_drive_recruits(rows: Sequence[RecruitmentRecruit]) -> list[GameImportDriveRecruit]:
+    """``rows`` as ``GameImportDriveRecruit``, in contract order.
+
+    Counting (soonest ``qualifies_at`` first), then invited (newest invite first), then qualified (newest first),
+    then disqualified (newest first).
+    """
+    counting = sorted(
+        (row for row in rows if row.status == "counting"),
+        key=lambda row: row.qualifies_at or datetime.max.replace(tzinfo=UTC),
+    )
+    invited = sorted((row for row in rows if row.status == "invited"), key=lambda row: row.invited_at, reverse=True)
+    qualified = sorted(
+        (row for row in rows if row.status == "qualified"),
+        key=lambda row: row.qualified_at or row.invited_at,
+        reverse=True,
+    )
+    disqualified = sorted(
+        (row for row in rows if row.status == "disqualified"), key=lambda row: row.updated_at, reverse=True
+    )
+    ordered = [*counting, *invited, *qualified, *disqualified]
+    return [
+        GameImportDriveRecruit(
+            recruit=row.recruit_name,
+            inviter=row.inviter_name,
+            status=DriveRecruitStatus(row.status),
+            reason=DriveRecruitReason(row.reason) if row.reason else None,
+            qualifies_at=int(row.qualifies_at.timestamp()) if row.qualifies_at else None,
+        )
+        for row in ordered
+    ]
 
 
 def resets_since(at: datetime, now: datetime) -> int:
@@ -1504,7 +1546,7 @@ class EpgpService:
         """Mark a drive winner's prize paid via the addon's mail-send button; idempotent per (event, inviter).
 
         The mail only covers a recruit if the inviter was still the drive's winner (most qualifying recruits, ties
-        split) and that recruit had already qualified by ``entry.at``. A winner already paid (any of their
+        each win) and that recruit had already qualified by ``entry.at``. A winner already paid (any of their
         qualified rows marked paid) stays paid, even if another of their recruits qualifies later; an inviter who
         isn't currently a winner is ignored.
         """
@@ -1914,7 +1956,11 @@ class EpgpService:
     # --- Game-import string -----------------------------------------------------------------------------------
 
     async def build_game_import(self, *, now: datetime | None = None) -> EpgpGameImport:
-        """Build the ``SQI1:`` string: rules, standings, killed encounters, upcoming and recent past events."""
+        """Build the ``SQI1:`` string: rules, standings, killed encounters, upcoming and recent past events.
+
+        Upcoming events (including running drives) carry ``GameImportEvent.recruitment`` for recruitment-kind
+        drives; past events never do.
+        """
         reference = now or datetime.now(UTC)
         standings = await self.get_standings(now=reference)
         killed_rows = (
@@ -1979,7 +2025,8 @@ class EpgpService:
             .scalars()
             .all()
         )
-        game_events = await self._game_import_events(upcoming)
+        drives_by_id = await self._game_import_drives(upcoming)
+        game_events = await self._game_import_events(upcoming, drives_by_id)
         past_events = await self._game_import_events(past)
 
         members, news, sheets, crafters, recipe_names = await self._build_members_news_sheets_crafters(
@@ -2006,7 +2053,54 @@ class EpgpService:
         encoded = base64.b64encode(json.dumps(payload.model_dump(mode="json", by_alias=True)).encode()).decode()
         return EpgpGameImport(payload=f"{IMPORT_PREFIX}{encoded}", generated_at=reference)
 
-    async def _game_import_events(self, events: Sequence[GuildEvent]) -> list[GameImportEvent]:
+    async def _game_import_drives(self, events: Sequence[GuildEvent]) -> dict[UUID, GameImportDrive]:
+        """``GameImportDrive`` per recruitment-kind drive among ``events``, for the addon's Events tab.
+
+        Wrapped so a failure evaluating drives can't break the whole game-import build; a failure just omits
+        ``recruitment`` from this build's events (same try/except style as ``CharactersService.sync_roster``).
+        """
+        drives = [event for event in events if event.kind == EventKind.RECRUITMENT.value and event.ends_at is not None]
+        if not drives:
+            return {}
+        try:
+            await RecruitmentService(self._session).evaluate()
+            drive_ids = [drive.id for drive in drives]
+            rows = list(
+                (
+                    await self._session.execute(
+                        select(RecruitmentRecruit).where(RecruitmentRecruit.event_id.in_(drive_ids))
+                    )
+                )
+                .scalars()
+                .all()
+            )
+            by_event: dict[UUID, list[RecruitmentRecruit]] = {}
+            for row in rows:
+                by_event.setdefault(row.event_id, []).append(row)
+            result: dict[UUID, GameImportDrive] = {}
+            for drive in drives:
+                group = by_event.get(drive.id, [])
+                leaders = (await build_leaders(self._session, group))[:MAX_RECRUITMENT_LEADERS]
+                result[drive.id] = GameImportDrive(
+                    leaders=[
+                        GameImportDriveLeader(
+                            inviter=leader.inviter,
+                            invited=leader.invited,
+                            counting=leader.counting,
+                            qualified=leader.qualified,
+                        )
+                        for leader in leaders
+                    ],
+                    recruits=_order_game_import_drive_recruits(group)[:MAX_IMPORT_DRIVE_RECRUITS],
+                )
+        except Exception:
+            logger.exception("Recruitment drive evaluation failed during game-import build; recruitment omitted")
+            return {}
+        return result
+
+    async def _game_import_events(
+        self, events: Sequence[GuildEvent], drives_by_id: dict[UUID, GameImportDrive] | None = None
+    ) -> list[GameImportEvent]:
         """Game-import rows for ``events``, in the given order, with the sign-ups the game can use."""
         signups_by_event: dict[UUID, list[EventSignup]] = {}
         event_ids = [event.id for event in events]
@@ -2049,6 +2143,7 @@ class EpgpService:
                     ends_at=int(event.ends_at.timestamp()) if event.ends_at is not None else None,
                     size=event.size,
                     signups=signups,
+                    recruitment=(drives_by_id or {}).get(event.id),
                 )
             )
         return game_events

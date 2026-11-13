@@ -78,9 +78,10 @@ def _name_variants(name: str) -> set[str]:
 
 
 async def build_leaders(session: AsyncSession, rows: Sequence[RecruitmentRecruit]) -> list[RecruitLeader]:
-    """``RecruitLeader`` rows for one drive's recruits, sorted qualified desc, joined desc, invited desc, inviter asc.
+    """``RecruitLeader`` rows for one drive's recruits.
 
-    Shared by ``RecruitmentService.get_drive`` and the event-sync forum-thread tally so both leaderboards agree.
+    Sorted qualified desc, counting desc, joined desc, invited desc, inviter asc. Shared by
+    ``RecruitmentService.get_drive`` and the event-sync forum-thread tally so both leaderboards agree.
     """
     by_inviter: dict[str, list[RecruitmentRecruit]] = {}
     for row in rows:
@@ -107,7 +108,9 @@ async def build_leaders(session: AsyncSession, rows: Sequence[RecruitmentRecruit
                 qualified=sum(1 for row in group if row.status == "qualified"),
             )
         )
-    leaders.sort(key=lambda leader: (-leader.qualified, -leader.joined, -leader.invited, leader.inviter))
+    leaders.sort(
+        key=lambda leader: (-leader.qualified, -leader.counting, -leader.joined, -leader.invited, leader.inviter)
+    )
     return leaders
 
 
