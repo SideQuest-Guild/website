@@ -38,6 +38,8 @@ import {
   ATTENDANCE_TRENDS,
   AUCTION_PRICES,
   AUCTION_WATCHES,
+  BEASTS,
+  BEAST_FAMILIES,
   CHARACTER_MILESTONES,
   CHARACTER_PAGES,
   CHARACTERS,
@@ -671,6 +673,37 @@ export const test = base.extend<{ site: Site }>({
       }
       if (path === "/api/game/classes" && method === "GET") {
         return json(route, GAME_CLASSES);
+      }
+      if (path === "/api/beasts/families" && method === "GET") {
+        return json(route, BEAST_FAMILIES);
+      }
+      if (path === "/api/beasts/" && method === "GET") {
+        const familyId = url.searchParams.get("family_id");
+        const q = url.searchParams.get("q");
+        const limit = url.searchParams.get("limit");
+        let beasts = BEASTS;
+        if (familyId) {
+          beasts = beasts.filter((beast) => beast.family_id === Number(familyId));
+        }
+        if (q) {
+          const folded = q.toLowerCase();
+          beasts = beasts
+            .filter((beast) => beast.name.toLowerCase().includes(folded))
+            .toSorted((a, b) => {
+              const aPrefix = a.name.toLowerCase().startsWith(folded);
+              const bPrefix = b.name.toLowerCase().startsWith(folded);
+              return aPrefix === bPrefix ? a.name.localeCompare(b.name) : aPrefix ? -1 : 1;
+            });
+        }
+        if (limit) {
+          beasts = beasts.slice(0, Number(limit));
+        }
+        return json(route, beasts);
+      }
+      const beastMatch = /^\/api\/beasts\/(\d+)$/.exec(path);
+      if (beastMatch && method === "GET") {
+        const beast = BEASTS.find((b) => b.id === Number(beastMatch[1]));
+        return beast ? json(route, beast) : json(route, { detail: "No such tameable beast" }, 404);
       }
       if (path === "/api/epgp/progression" && method === "GET") {
         return json(route, { instances: EPGP_PROGRESSION });
