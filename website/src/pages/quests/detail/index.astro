@@ -59,9 +59,56 @@ import "../../../styles/room-quests.css";
     requireElement,
     statusMessage,
     type Quest,
+    type QuestRequirementRef,
   } from "../../../scripts/api";
   import { itemLink, loadWowheadTooltips, refreshWowheadLinks } from "../../../scripts/items";
   import { onPage } from "../../../scripts/page";
+  import { questLink } from "../../../scripts/reference";
+
+  function groupedRequirements(requires: QuestRequirementRef[]): string {
+    const rendered = new Set<number>();
+    const rows: string[] = [];
+    for (const req of requires) {
+      if (rendered.has(req.id)) {
+        continue;
+      }
+      if (req.group === null) {
+        rendered.add(req.id);
+        rows.push(`<li>${questLink(req.id, req.title)}</li>`);
+        continue;
+      }
+      const alternatives = requires.filter((r) => r.group === req.group);
+      for (const alt of alternatives) {
+        rendered.add(alt.id);
+      }
+      rows.push(`<li>One of: ${alternatives.map((r) => questLink(r.id, r.title)).join(", ")}</li>`);
+    }
+    return rows.join("");
+  }
+
+  function renderChain(quest: Quest): string {
+    if (quest.chain.length === 0 && quest.leads_to.length === 0) {
+      return "";
+    }
+    const before = quest.chain.map((q) => questLink(q.id, q.title)).join(" \u2192 ");
+    const after = quest.leads_to.map((q) => questLink(q.id, q.title)).join(", ");
+    return `
+      <h3>Part of a chain</h3>
+      <p class="quest-chain">${before ? `${before} \u2192 ` : ""}<strong>${escapeHtml(quest.title)}</strong>${after ? ` \u2192 ${after}` : ""}</p>`;
+  }
+
+  function renderRequirements(quest: Quest): string {
+    if (quest.requires.length === 0 && quest.excludes.length === 0) {
+      return "";
+    }
+    const requires = quest.requires.length
+      ? `<h3>Requires</h3><ul class="quest-requirements-list">${groupedRequirements(quest.requires)}</ul>`
+      : "";
+    const excludes = quest.excludes.length
+      ? `<h3>Not available if you've done</h3><ul class="quest-requirements-list">${quest.excludes.map((q) => `<li>${questLink(q.id, q.title)}</li>`).join("")}</ul>`
+      : "";
+    return requires + excludes;
+  }
 
   function renderQuest(quest: Quest): void {
     const meta = [quest.area, quest.category, quest.type].filter(Boolean).join(" \u00b7 ");
@@ -90,7 +137,9 @@ import "../../../styles/room-quests.css";
       <p class="quest-detail-name">${escapeHtml(quest.title)}</p>
       ${meta ? `<p class="quest-detail-meta">${escapeHtml(meta)}${levels ? ` \u00b7 ${levels}` : ""}</p>` : levels ? `<p class="quest-detail-meta">${levels}</p>` : ""}
       ${flags ? `<div class="quest-flags">${flags}</div>` : ""}
+      ${renderChain(quest)}
       ${quest.description ? `<p class="quest-detail-description">${escapeHtml(quest.description)}</p>` : ""}
+      ${renderRequirements(quest)}
       ${rewardLines ? `<h3>Rewards</h3><ul class="quest-rewards-list">${rewardLines}</ul>` : ""}`;
     requireElement<HTMLAnchorElement>("quest-wowhead-link").href = `https://www.wowhead.com/forever/quest=${quest.id}`;
     refreshWowheadLinks();

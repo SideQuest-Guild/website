@@ -82,6 +82,7 @@ import {
   QUEST_AREA_SUMMARIES,
   QUEST_AREAS,
   QUESTS,
+  QUEST_SEARCH_RESULTS,
   RECIPES,
   RECRUITING,
   RECRUITMENT_DRIVE,
@@ -604,6 +605,12 @@ export const test = base.extend<{ site: Site }>({
       if (questAreaMatch && method === "GET") {
         const area = QUEST_AREAS.find((a) => a.id === Number(questAreaMatch[1]));
         return area ? json(route, area) : json(route, { detail: "No such quest area" }, 404);
+      }
+      if (path === "/api/quests/search" && method === "GET") {
+        const q = (url.searchParams.get("q") ?? "").trim().toLowerCase();
+        const limit = Number(url.searchParams.get("limit") ?? "10");
+        const matches = q ? QUEST_SEARCH_RESULTS.filter((r) => r.title.toLowerCase().includes(q)) : [];
+        return json(route, matches.slice(0, limit));
       }
       const questMatch = /^\/api\/quests\/(\d+)$/.exec(path);
       if (questMatch && method === "GET") {

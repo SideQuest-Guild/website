@@ -1,7 +1,9 @@
 """Quest and achievement endpoints: public reference lookups from Battle.net's Quest and Achievement APIs.
 
-Every route here has no query string, so Cloudflare keeps it at the edge (``EDGE_REFERENCE_CACHE``); the API also
-caches each lookup in-process (``services.py``), since this reference data only changes with a game patch.
+Every route but quest search has no query string, so Cloudflare keeps those at the edge (``EDGE_REFERENCE_CACHE``);
+the API also caches each lookup in-process (``services.py``), since this reference data only changes with a game
+patch. Search answers differ by query string, which Cloudflare's cache rule ignores, so it is never edge-cached;
+its in-process title index is built once and reused instead.
 """
 
 from typing import Annotated
@@ -19,16 +21,20 @@ from sidequest_api.domain.reference.services import (
     quest,
     quest_area,
     quest_areas,
+    quest_search,
 )
 from sidequest_api.lib.game_data import provide_game_data
 from sidequest_api.lib.website import EDGE_CACHE_HEADER, SKIP_SESSION
 from sidequest_common.schemas import (
+    QUEST_SEARCH_LIMIT,
+    QUEST_SEARCH_MIN_LENGTH,
     AchievementCategorySchema,
     AchievementCategoryTree,
     AchievementSchema,
     QuestAreaSchema,
     QuestAreaSummary,
     QuestSchema,
+    QuestSearchResult,
 )
 
 _QUEST_ID = Annotated[int, Parameter(description="The quest's game ID.", gt=0)]
@@ -79,6 +85,30 @@ class QuestsController(Controller):
         return await quest_area(game_data, area_id)
 
     @get(
+        "/search",
+        operation_id="SearchQuests",
+        opt=SKIP_SESSION,
+        summary="Search quests",
+        description=(
+            "Finds quests with `q` in their title, case-insensitive, best matches first (an exact or prefix match "
+            "before any other substring match). Battle.net has no quest name search, so this is built from every "
+            "quest zone's quest list and kept in memory for the process. Answers 503 if Battle.net is not "
+            "configured or did not answer."
+        ),
+        response_description="Matching quests, best match first.",
+    )
+    async def search(
+        self,
+        game_data: NamedDependency[AsyncClient],
+        q: Annotated[
+            str,
+            Parameter(description="Text to find in quest titles.", min_length=QUEST_SEARCH_MIN_LENGTH, max_length=80),
+        ],
+        limit: Annotated[int, Parameter(description="The most results to return.", ge=1, le=QUEST_SEARCH_LIMIT)] = 10,
+    ) -> list[QuestSearchResult]:
+        return await quest_search(game_data, q, limit)
+
+    @get(
         "/{quest_id:int}",
         operation_id="GetQuest",
         response_headers=[EDGE_REFERENCE_CACHE],
@@ -86,8 +116,9 @@ class QuestsController(Controller):
         summary="Get a quest",
         description=(
             "Returns one quest by its game ID: its description, zone, category, type, level requirements and "
-            "rewards. Description placeholders like `{class}` appear as Battle.net sends them. Answers 404 if "
-            "Battle.net has no such quest, 503 if Battle.net is not configured or did not answer."
+            "rewards, plus the other quests it requires, excludes, leads to and the chain leading up to it. "
+            "Description placeholders like `{class}` appear as Battle.net sends them. Answers 404 if Battle.net "
+            "has no such quest, 503 if Battle.net is not configured or did not answer."
         ),
         response_description="The quest.",
     )

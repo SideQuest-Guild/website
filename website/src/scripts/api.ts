@@ -1442,16 +1442,18 @@ export function relativeTime(iso: string): string {
   return `${years} year${years === 1 ? "" : "s"} ago`;
 }
 
-// ——— Quests: GET /api/quests/areas[/{id}], GET /api/quests/{id}. Public, Battle.net-backed reference data;
-// mirrors `sidequest_common.schemas.reference`. A 503 means Battle.net itself is down/unconfigured; a 404 means
-// Battle.net has no such zone or quest.
-
+// ——— Quests: GET /api/quests/areas[/{id}], GET /api/quests/search, GET /api/quests/{id}. Public, Battle.net-backed
+// reference data; mirrors `sidequest_common.schemas.reference`. A 503 means Battle.net itself is down/unconfigured;
+// a 404 means Battle.net has no such zone or quest.
 export type QuestAreaSummary = { id: number; name: string };
 
 export type QuestSummary = { id: number; title: string };
 
 /** `GET /api/quests/areas/{id}` (public): a quest zone and the quests that take place there. 404 unknown zone. */
 export type QuestArea = { id: number; name: string; quests: QuestSummary[] };
+
+/** One match from `GET /api/quests/search`, best matches first. */
+export type QuestSearchResult = { id: number; title: string; area: string | null };
 
 export type QuestRewardItem = { item_id: number; name: string };
 
@@ -1464,6 +1466,13 @@ export type QuestRewards = {
   items: QuestRewardItem[];
   reputations: QuestReputationReward[];
 };
+
+/** A quest's id and title, as referenced from another quest's chain, exclusions or follow-ups. */
+export type QuestRef = { id: number; title: string };
+
+/** A quest required to start another. Items sharing a non-`null` `group` are alternatives: completing any one of
+ * them satisfies that group. Items with `group` `null` must each be completed. */
+export type QuestRequirementRef = QuestRef & { group: number | null };
 
 /** `GET /api/quests/{id}` (public): a single quest. Description placeholders like `{class}` appear as Battle.net
  * sends them. 404 unknown quest. */
@@ -1480,6 +1489,10 @@ export type Quest = {
   is_daily: boolean;
   is_weekly: boolean;
   rewards: QuestRewards;
+  requires: QuestRequirementRef[];
+  excludes: QuestRef[];
+  chain: QuestRef[];
+  leads_to: QuestRef[];
 };
 
 // ——— Achievements: GET /api/achievements/categories[/{id}], GET /api/achievements/{id}. Public, Battle.net-backed

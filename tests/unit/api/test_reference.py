@@ -33,6 +33,10 @@ def _forget_reference_caches() -> None:
     reference_services._quest_area_index = None
     reference_services._quest_areas.clear()
     reference_services._quests.clear()
+    reference_services._raw_quests.clear()
+    reference_services._quest_chains.clear()
+    reference_services._quest_leads_to_cache.clear()
+    reference_services._quest_title_index = None
     reference_services._achievement_category_tree = None
     reference_services._achievement_categories.clear()
     reference_services._achievements.clear()
@@ -76,6 +80,113 @@ async def reference_client(database_url: str, battlenet: dict) -> AsyncIterator[
                 },
                 "is_repeatable": True,
                 "is_daily": False,
+            },
+            "/data/wow/quest/area/1": {
+                **_links("/data/wow/quest/area/1"),
+                "id": 1,
+                "area": "Dun Morogh",
+                "quests": [
+                    _ref("quest", 50, "Rage Scar Hold"),
+                    _ref("quest", 60, "Call of Water"),
+                    _ref("quest", 61, "Call of Water II"),
+                    _ref("quest", 62, "The Call"),
+                ],
+            },
+            "/data/wow/quest/area/99": {
+                **_links("/data/wow/quest/area/99"),
+                "id": 99,
+                "area": "Follow-up Zone",
+                "quests": [_ref("quest", 201, "Starting Point"), _ref("quest", 202, "The Sequel")],
+            },
+            "/data/wow/quest/category/index": {
+                **_links("/data/wow/quest/category/index"),
+                "categories": [_ref("quest/category", 82, "Shaman"), _ref("quest/category", 83, "Gone")],
+            },
+            "/data/wow/quest/category/82": {
+                **_links("/data/wow/quest/category/82"),
+                "id": 82,
+                "category": "Shaman",
+                "quests": [_ref("quest", 60, "Call of Water"), _ref("quest", 400, "Call of the Earth")],
+            },
+            "/data/wow/quest/201": {
+                **_links("/data/wow/quest/201"),
+                "id": 201,
+                "title": "Starting Point",
+                "area": _ref("quest/area", 99, "Follow-up Zone"),
+                "requirements": {},
+                "rewards": {},
+            },
+            "/data/wow/quest/202": {
+                **_links("/data/wow/quest/202"),
+                "id": 202,
+                "title": "The Sequel",
+                "area": _ref("quest/area", 99, "Follow-up Zone"),
+                "requirements": {"quests": {"target": _ref("quest", 201, "Starting Point")}},
+                "rewards": {},
+            },
+            "/data/wow/quest/301": {
+                **_links("/data/wow/quest/301"),
+                "id": 301,
+                "title": "Gear Up",
+                "requirements": {},
+                "rewards": {},
+            },
+            "/data/wow/quest/310": {
+                **_links("/data/wow/quest/310"),
+                "id": 310,
+                "title": "Final Stand",
+                "requirements": {
+                    "quests": {
+                        "operator": {"type": "AND", "name": "And"},
+                        "conditions": [
+                            {
+                                "operator": {"type": "OR", "name": "Or"},
+                                "conditions": [
+                                    {"target": _ref("quest", 311, "Path A"), "must_be_incomplete": True},
+                                    {"target": _ref("quest", 312, "Path B"), "must_be_incomplete": True},
+                                ],
+                            },
+                            {"target": _ref("quest", 301, "Gear Up")},
+                        ],
+                    }
+                },
+                "rewards": {},
+            },
+            "/data/wow/quest/321": {
+                **_links("/data/wow/quest/321"),
+                "id": 321,
+                "title": "Scout the Camp",
+                "requirements": {},
+                "rewards": {},
+            },
+            "/data/wow/quest/320": {
+                **_links("/data/wow/quest/320"),
+                "id": 320,
+                "title": "Either Path",
+                "requirements": {
+                    "quests": {
+                        "operator": {"type": "OR", "name": "Or"},
+                        "conditions": [
+                            {"target": _ref("quest", 321, "Scout the Camp")},
+                            {"target": _ref("quest", 322, "Storm the Gate")},
+                        ],
+                    }
+                },
+                "rewards": {},
+            },
+            "/data/wow/quest/330": {
+                **_links("/data/wow/quest/330"),
+                "id": 330,
+                "title": "Loop A",
+                "requirements": {"quests": {"target": _ref("quest", 331, "Loop B")}},
+                "rewards": {},
+            },
+            "/data/wow/quest/331": {
+                **_links("/data/wow/quest/331"),
+                "id": 331,
+                "title": "Loop B",
+                "requirements": {"quests": {"target": _ref("quest", 330, "Loop A")}},
+                "rewards": {},
             },
             "/data/wow/achievement-category/index": {
                 **_links("/data/wow/achievement-category/index"),
@@ -242,6 +353,106 @@ async def test_quests_answer_503_when_battlenet_is_not_configured(client: AsyncT
     assert (await client.get("/api/quests/areas")).status_code == 503
     assert (await client.get("/api/quests/areas/15")).status_code == 503
     assert (await client.get("/api/quests/1")).status_code == 503
+    assert (await client.get("/api/quests/search", params={"q": "call"})).status_code == 503
+
+
+async def test_a_quests_requirements_flatten_nested_and_and_an_or_lockout(
+    reference_client: AsyncTestClient,
+) -> None:
+    response = await reference_client.get("/api/quests/310")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["requires"] == [{"id": 301, "title": "Gear Up", "group": None}]
+    assert body["excludes"] == [{"id": 311, "title": "Path A"}, {"id": 312, "title": "Path B"}]
+    assert body["chain"] == [{"id": 301, "title": "Gear Up"}]
+
+
+async def test_an_or_requirement_groups_its_alternatives(reference_client: AsyncTestClient) -> None:
+    response = await reference_client.get("/api/quests/320")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["requires"] == [
+        {"id": 321, "title": "Scout the Camp", "group": 0},
+        {"id": 322, "title": "Storm the Gate", "group": 0},
+    ]
+    assert body["excludes"] == []
+
+
+async def test_a_quest_chain_walks_back_through_its_first_required_prerequisite(
+    reference_client: AsyncTestClient,
+) -> None:
+    response = await reference_client.get("/api/quests/202")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["chain"] == [{"id": 201, "title": "Starting Point"}]
+    assert body["requires"] == [{"id": 201, "title": "Starting Point", "group": None}]
+
+
+async def test_a_quest_chain_stops_at_a_cycle_instead_of_looping_forever(
+    reference_client: AsyncTestClient,
+) -> None:
+    response = await reference_client.get("/api/quests/330")
+
+    assert response.status_code == 200
+    assert response.json()["chain"] == [{"id": 331, "title": "Loop B"}]
+
+
+async def test_leads_to_finds_a_follow_up_quest_in_the_same_zone(reference_client: AsyncTestClient) -> None:
+    response = await reference_client.get("/api/quests/201")
+
+    assert response.status_code == 200
+    assert response.json()["leads_to"] == [{"id": 202, "title": "The Sequel"}]
+
+
+async def test_quest_search_ranks_exact_and_prefix_matches_before_other_substrings(
+    reference_client: AsyncTestClient,
+) -> None:
+    response = await reference_client.get("/api/quests/search", params={"q": "call of water"})
+
+    assert response.status_code == 200
+    assert response.json() == [
+        {"id": 60, "title": "Call of Water", "area": "Dun Morogh"},
+        {"id": 61, "title": "Call of Water II", "area": "Dun Morogh"},
+    ]
+
+
+async def test_quest_search_is_case_insensitive(reference_client: AsyncTestClient) -> None:
+    response = await reference_client.get("/api/quests/search", params={"q": "DIPLOMAT"})
+
+    assert response.status_code == 200
+    assert response.json() == [{"id": 1, "title": "The Missing Diplomat", "area": "Dustwallow Marsh"}]
+
+
+async def test_quest_search_respects_the_limit(reference_client: AsyncTestClient) -> None:
+    response = await reference_client.get("/api/quests/search", params={"q": "call", "limit": 2})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert [item["id"] for item in body] == [60, 61]
+
+
+async def test_quest_search_finds_nothing_for_an_unmatched_query(reference_client: AsyncTestClient) -> None:
+    response = await reference_client.get("/api/quests/search", params={"q": "nonexistent"})
+
+    assert response.status_code == 200
+    assert response.json() == []
+
+
+async def test_quest_search_finds_quests_only_a_category_lists_and_keeps_a_zone_over_a_category(
+    reference_client: AsyncTestClient,
+) -> None:
+    """Class quests have no zone; the category (Shaman) stands in, and a quest a zone also lists keeps its zone."""
+    response = await reference_client.get("/api/quests/search", params={"q": "call of"})
+
+    assert response.status_code == 200
+    assert response.json() == [
+        {"id": 60, "title": "Call of Water", "area": "Dun Morogh"},
+        {"id": 61, "title": "Call of Water II", "area": "Dun Morogh"},
+        {"id": 400, "title": "Call of the Earth", "area": "Shaman"},
+    ]
 
 
 async def test_achievement_categories_lists_root_categories_with_their_children_but_not_blizzards_hidden_one(

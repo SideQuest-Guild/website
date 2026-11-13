@@ -43,6 +43,10 @@
 .quest-list li {
   padding: 10px 0;
 }
+.quest-row-meta {
+  color: var(--mist-2);
+  font-size: var(--caps);
+}
 
 /* ——— Quest detail ——— */
 .quest-detail-name {
@@ -88,6 +92,18 @@
 }
 .quest-wowhead-link {
   margin-top: 18px;
+}
+.quest-chain {
+  margin: 10px 0 0;
+  line-height: 1.6;
+}
+.quest-requirements-list {
+  margin: 10px 0 0;
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 @media (max-width: 560px) {
