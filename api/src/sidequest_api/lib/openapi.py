@@ -109,7 +109,10 @@ TAG_GROUPS: dict[str, dict[str, str]] = {
             "Characters from Battle.net: the guild roster, a lookup by exact name, character pages and the hero "
             "boards. Anyone may read them."
         ),
-        "Quests": "Quests from Battle.net: zones, and one quest's description and rewards. Anyone may read them.",
+        "Quests": (
+            "Quests from Battle.net: zones, name search, and one quest's description, rewards, requirements and "
+            "chain. Anyone may read them."
+        ),
         "Achievements": (
             "Achievements from Battle.net: categories, and one achievement's points and criteria. Anyone may read them."
         ),

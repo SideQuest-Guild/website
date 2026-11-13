@@ -69,6 +69,7 @@ import type {
   PvpMatchPage,
   Quest,
   QuestArea,
+  QuestSearchResult,
   RecipeDetailInfo,
   Recruiting,
   RecruitLeader,
@@ -2007,8 +2008,34 @@ export const QUESTS: Quest[] = [
       items: [{ item_id: 159, name: "Refreshing Spring Water" }],
       reputations: [{ faction: "Argent Dawn", value: 75 }],
     },
+    requires: [],
+    excludes: [],
+    chain: [],
+    leads_to: [{ id: 2, title: "Brackenwall Village" }],
+  },
+  {
+    id: 2,
+    title: "Brackenwall Village",
+    description: null,
+    area: "Dustwallow Marsh",
+    category: null,
+    type: null,
+    min_level: null,
+    max_level: null,
+    is_repeatable: false,
+    is_daily: false,
+    is_weekly: false,
+    rewards: { experience: null, money: null, items: [], reputations: [] },
+    requires: [{ id: 1, title: "The Missing Diplomat", group: null }],
+    excludes: [],
+    chain: [{ id: 1, title: "The Missing Diplomat" }],
+    leads_to: [],
   },
 ];
+
+export const QUEST_SEARCH_RESULTS: QuestSearchResult[] = QUEST_AREAS.flatMap((area) =>
+  area.quests.map((quest) => ({ id: quest.id, title: quest.title, area: area.name })),
+);
 
 // ——— Achievements (GET /api/achievements/categories[/{id}], GET /api/achievements/{id}) ———
 export const ACHIEVEMENT_CATEGORIES: AchievementCategoryTree[] = [

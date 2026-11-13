@@ -13,6 +13,31 @@ import "../../styles/room-quests.css";
   artPosition="50% 42%"
   current="quests"
 >
+  <section class="chamber" aria-labelledby="h-search">
+    <h2 class="chamber-title" id="h-search">
+      Search
+    </h2>
+    <form id="quest-search-form">
+      <div class="form-row">
+        <div class="field">
+          <label for="quest-search-query">Quest name</label>
+          <input
+            id="quest-search-query"
+            type="search"
+            placeholder="e.g. Call of Water"
+            maxlength="80"
+            autocomplete="off"
+          />
+        </div>
+      </div>
+      <button type="submit" class="btn">
+        Search
+      </button>
+    </form>
+    <p class="status" id="quest-search-status" role="status" aria-live="polite"></p>
+    <ul class="quest-list" id="quest-search-results" aria-label="Search results"></ul>
+  </section>
+
   <section class="chamber" aria-labelledby="h-areas">
     <h2 class="chamber-title" id="h-areas">
       Zones
@@ -51,6 +76,7 @@ import "../../styles/room-quests.css";
     statusMessage,
     type QuestArea,
     type QuestAreaSummary,
+    type QuestSearchResult,
   } from "../../scripts/api";
   import { loadWowheadTooltips, refreshWowheadLinks } from "../../scripts/items";
   import { onPage } from "../../scripts/page";
@@ -58,6 +84,11 @@ import "../../styles/room-quests.css";
 
   function questRow(quest: { id: number; title: string }): string {
     return `<li>${questLink(quest.id, quest.title)}</li>`;
+  }
+
+  function searchResultRow(result: QuestSearchResult): string {
+    const area = result.area ? ` <span class="quest-row-meta">${escapeHtml(result.area)}</span>` : "";
+    return `<li>${questLink(result.id, result.title)}${area}</li>`;
   }
 
   onPage("#quest-areas-status", (signal) => {
@@ -69,6 +100,10 @@ import "../../styles/room-quests.css";
     const questListEl = requireElement("quest-list");
     let areas: QuestAreaSummary[] = [];
     let activeAreaId: number | null = null;
+    const searchForm = requireElement<HTMLFormElement>("quest-search-form");
+    const searchQueryEl = requireElement<HTMLInputElement>("quest-search-query");
+    const searchStatusEl = requireElement("quest-search-status");
+    const searchResultsEl = requireElement("quest-search-results");
 
     function areaRow(area: QuestAreaSummary): string {
       return `<li><button type="button" class="quest-area-row" data-area-id="${area.id}" aria-current="${area.id === activeAreaId}">${escapeHtml(area.name)}</button></li>`;
@@ -111,6 +146,39 @@ import "../../styles/room-quests.css";
     });
 
     filterInput.addEventListener("input", renderAreas);
+
+    async function search(): Promise<void> {
+      const q = searchQueryEl.value.trim();
+      if (q.length === 0) {
+        searchStatusEl.textContent = "";
+        searchResultsEl.innerHTML = "";
+        return;
+      }
+      if (q.length < 2) {
+        searchStatusEl.textContent = "Keep typing \u2014 search needs at least 2 letters.";
+        return;
+      }
+      searchStatusEl.textContent = "Searching\u2026";
+      try {
+        const results = await apiFetch<QuestSearchResult[]>(`/api/quests/search?q=${encodeURIComponent(q)}`, {
+          signal,
+        });
+        searchStatusEl.textContent = results.length > 0 ? "" : "No quest matches that.";
+        searchResultsEl.innerHTML = results.map(searchResultRow).join("");
+        refreshWowheadLinks();
+      } catch (err) {
+        searchStatusEl.textContent = statusMessage(err);
+      }
+    }
+
+    searchForm.addEventListener(
+      "submit",
+      (event) => {
+        event.preventDefault();
+        void search();
+      },
+      { signal },
+    );
 
     async function init(): Promise<void> {
       void loadWowheadTooltips();

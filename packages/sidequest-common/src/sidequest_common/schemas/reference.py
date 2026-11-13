@@ -2,6 +2,11 @@
 
 from pydantic import BaseModel, Field
 
+QUEST_SEARCH_MIN_LENGTH = 2
+"""The fewest letters `GET /api/quests/search`'s `q` will accept."""
+QUEST_SEARCH_LIMIT = 25
+"""The most results `GET /api/quests/search` will ever return."""
+
 
 class QuestAreaSummary(BaseModel):
     """One quest zone, as listed on `GET /api/quests/areas`."""
@@ -23,6 +28,14 @@ class QuestAreaSchema(BaseModel):
     id: int
     name: str
     quests: list[QuestSummary]
+
+
+class QuestSearchResult(BaseModel):
+    """One match from `GET /api/quests/search`, best matches first."""
+
+    id: int
+    title: str
+    area: str | None = None
 
 
 class QuestRewardItem(BaseModel):
@@ -48,6 +61,23 @@ class QuestRewardsSchema(BaseModel):
     reputations: list[QuestReputationReward] = Field(default_factory=list)
 
 
+class QuestRef(BaseModel):
+    """A quest's id and title, as referenced from another quest's chain, exclusions or follow-ups."""
+
+    id: int
+    title: str
+
+
+class QuestRequirementRef(QuestRef):
+    """A quest required to start another.
+
+    Items sharing a non-`null` `group` are alternatives: completing any one of them satisfies that group. Items
+    with `group` `null` must each be completed.
+    """
+
+    group: int | None = None
+
+
 class QuestSchema(BaseModel):
     """A single quest. Description placeholders like `{class}` appear as Battle.net sends them."""
 
@@ -63,6 +93,29 @@ class QuestSchema(BaseModel):
     is_daily: bool = False
     is_weekly: bool = False
     rewards: QuestRewardsSchema
+    requires: list[QuestRequirementRef] = Field(
+        default_factory=list,
+        description="Quests you must have completed first, flattened from Battle.net's condition tree.",
+    )
+    excludes: list[QuestRef] = Field(
+        default_factory=list,
+        description="Quests that, once completed, lock this one out (Battle.net's `must_be_incomplete` targets).",
+    )
+    chain: list[QuestRef] = Field(
+        default_factory=list,
+        description=(
+            "Earlier quests leading up to this one, earliest first; does not include this quest. Found by "
+            "following the first required prerequisite back at each step, capped at 25 steps."
+        ),
+    )
+    leads_to: list[QuestRef] = Field(
+        default_factory=list,
+        description=(
+            "Quests whose prerequisites include this one, found by scanning this quest's zone and the zones of "
+            "any direct follow-ups found there. A follow-up quest that starts in a different, undiscovered zone "
+            "may be missed."
+        ),
+    )
 
 
 class AchievementCategorySummary(BaseModel):
