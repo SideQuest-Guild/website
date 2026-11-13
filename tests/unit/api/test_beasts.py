@@ -94,12 +94,15 @@ def _display_media(display_id: int) -> dict:
 
 # Forest Spider (Spider, family 1), Grizzled Timbermaw Bear and Silverback Patriarch (Bear, family 4), Ashamane and
 # Barkskin Lynx (Cat, family 2); Barkskin Lynx has no display render recorded, to exercise the missing-image path.
+# The last two are Blizzard placeholders Battle.net still flags tameable; no list or count may include them.
 BEAST_HITS = [
     _search_hit(30, "Forest Spider", family_id=1, family="Spider", display_id=382),
     _search_hit(250063, "Grizzled Timbermaw Bear", family_id=4, family="Bear", display_id=822),
     _search_hit(729, "Silverback Patriarch", family_id=4, family="Bear", display_id=823),
     _search_hit(416, "Ashamane", family_id=2, family="Cat", display_id=2001),
     _search_hit(417, "Barkskin Lynx", family_id=2, family="Cat", display_id=None),
+    _search_hit(11364, "[UNUSED] Zulian Tigress", family_id=2, family="Cat", display_id=None),
+    _search_hit(1979, "TEST WOLF (ALPHA FIRST)", family_id=3, family="Wolf", display_id=None),
 ]
 
 
@@ -107,6 +110,9 @@ def _seed_beasts(battlenet: dict) -> None:
     battlenet["documents"]["/data/wow/search/creature"] = _search_page(BEAST_HITS)
     battlenet["documents"]["/data/wow/creature/30"] = _creature_document(
         30, "Forest Spider", family_id=1, family="Spider", display_id=382
+    )
+    battlenet["documents"]["/data/wow/creature/1979"] = _creature_document(
+        1979, "TEST WOLF (ALPHA FIRST)", family_id=3, family="Wolf"
     )
     for display_id in (382, 822, 823, 2001):
         battlenet["documents"][f"/data/wow/media/creature-display/{display_id}"] = _display_media(display_id)
@@ -143,6 +149,14 @@ async def test_list_beasts_with_no_display_has_a_null_image(beasts_client: Async
     lynx = next(beast for beast in response.json() if beast["name"] == "Barkskin Lynx")
     assert lynx["display_id"] is None
     assert lynx["image_url"] is None
+
+
+async def test_blizzard_placeholder_creatures_are_left_out_of_the_list_and_lookup(
+    beasts_client: AsyncTestClient,
+) -> None:
+    names = {beast["name"] for beast in (await beasts_client.get("/api/beasts/")).json()}
+    assert names == {"Forest Spider", "Grizzled Timbermaw Bear", "Silverback Patriarch", "Ashamane", "Barkskin Lynx"}
+    assert (await beasts_client.get("/api/beasts/1979")).status_code == 404
 
 
 async def test_list_beasts_q_filters_by_substring_and_ranks_prefix_matches_first(

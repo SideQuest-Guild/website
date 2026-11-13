@@ -81,8 +81,13 @@ import "../../styles/room-beasts.css";
     const queryEl = requireElement<HTMLInputElement>("beast-query");
     const familyEl = requireElement<HTMLSelectElement>("beast-family");
     let queryDebounce: ReturnType<typeof setTimeout> | undefined;
+    // Only the latest search may paint: the first, unfiltered load can answer after a search typed while it was still
+    // loading, and must not cover that search's results.
+    let latestSearch = 0;
 
     async function search(): Promise<void> {
+      latestSearch += 1;
+      const ticket = latestSearch;
       const params = new URLSearchParams();
       const q = queryEl.value.trim();
       if (q) {
@@ -95,11 +100,17 @@ import "../../styles/room-beasts.css";
       gridEl.innerHTML = "";
       try {
         const beasts = await apiFetch<Beast[]>(`/api/beasts/?${params}`, { signal });
+        if (ticket !== latestSearch) {
+          return;
+        }
         statusEl.textContent =
           beasts.length > 0 ? `${beasts.length} beast${beasts.length === 1 ? "" : "s"}` : "No beasts matched.";
         gridEl.innerHTML = beasts.map(beastCard).join("");
         refreshWowheadLinks();
       } catch (err) {
+        if (ticket !== latestSearch) {
+          return;
+        }
         statusEl.textContent =
           err instanceof ApiError && err.status === 503
             ? "Battle.net isn't answering right now, so beasts can't be shown. Try again soon."

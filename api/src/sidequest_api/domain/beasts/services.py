@@ -13,6 +13,7 @@ outside a game patch).
 from __future__ import annotations
 
 import asyncio
+import re
 from typing import TYPE_CHECKING
 
 from litestar.exceptions import HTTPException, NotFoundException
@@ -27,6 +28,9 @@ if TYPE_CHECKING:
     from wow.models import Creature
 
 BATTLENET_UNREACHABLE = "Battle.net did not answer; try again in a minute"
+_PLACEHOLDER_NAME = re.compile(r"^\[|\b(?:DNT|test)\b", re.IGNORECASE)
+"""Blizzard's own unused and test creatures still flagged tameable: "[UNUSED] Zulian Tigress", "TEST WOLF (ALPHA
+FIRST)", "Aidan's Test Creature DNT". No player can find them, so the catalog and lookup leave them out."""
 _DISPLAY_MEDIA_CONCURRENCY = 8
 
 _beasts: tuple[BeastSchema, ...] | None = None
@@ -51,6 +55,10 @@ async def _display_image_url(display_id: int, game_data: AsyncClient, semaphore:
     return url
 
 
+def _is_placeholder(name: str) -> bool:
+    return _PLACEHOLDER_NAME.search(name) is not None
+
+
 async def _build_beasts(game_data: AsyncClient) -> tuple[BeastSchema, ...]:
     """Every tameable beast from one search call, sorted by name, with bounded-concurrency display images."""
     try:
@@ -58,7 +66,12 @@ async def _build_beasts(game_data: AsyncClient) -> tuple[BeastSchema, ...]:
     except WowError as exc:
         raise HTTPException(status_code=HTTP_503_SERVICE_UNAVAILABLE, detail=BATTLENET_UNREACHABLE) from exc
     locale = game_data.locale
-    display_ids = [hit.data.creature_displays[0].id if hit.data.creature_displays else None for hit in page.results]
+    hits = [
+        hit
+        for hit in page.results
+        if not _is_placeholder(hit.data.name.get(locale) or next(iter(hit.data.name.values()), ""))
+    ]
+    display_ids = [hit.data.creature_displays[0].id if hit.data.creature_displays else None for hit in hits]
     image_urls = await asyncio.gather(
         *(
             _display_image_url(display_id, game_data, _display_semaphore)
@@ -80,7 +93,7 @@ async def _build_beasts(game_data: AsyncClient) -> tuple[BeastSchema, ...]:
             display_id=display_id,
             image_url=image_url,
         )
-        for hit, display_id, image_url in zip(page.results, display_ids, image_urls, strict=True)
+        for hit, display_id, image_url in zip(hits, display_ids, image_urls, strict=True)
     ]
     return tuple(sorted(beasts, key=lambda beast: beast.name.casefold()))
 
@@ -141,8 +154,8 @@ async def get_beast(game_data: AsyncClient, creature_id: int) -> BeastSchema:
         raise NotFoundException(msg) from exc
     except WowError as exc:
         raise HTTPException(status_code=HTTP_503_SERVICE_UNAVAILABLE, detail=BATTLENET_UNREACHABLE) from exc
-    if not creature.is_tameable:
-        msg = f"Creature {creature_id} isn't tameable"
+    if not creature.is_tameable or _is_placeholder(creature.name):
+        msg = f"Creature {creature_id} isn't a tameable beast"
         raise NotFoundException(msg)
     display_id = creature.creature_displays[0].id if creature.creature_displays else None
     image_url = await _display_image_url(display_id, game_data, _display_semaphore) if display_id is not None else None
