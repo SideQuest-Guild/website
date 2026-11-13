@@ -104,6 +104,11 @@
   text-align: center;
   cursor: pointer;
 }
+.talent-node-icon {
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--stone-2);
+}
 .talent-node:hover:not([disabled]),
 .talent-node:focus-visible:not([disabled]) {
   border-color: var(--gold-2);

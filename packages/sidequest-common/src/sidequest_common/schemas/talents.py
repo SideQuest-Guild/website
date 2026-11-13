@@ -40,6 +40,7 @@ class TalentNode(BaseModel):
     max_rank: int
     talent_id: int
     name: str
+    icon_url: str | None = Field(default=None, description="The spell icon of the node's first rank, or null.")
     ranks: list[TalentRank]
     requires: int | None = Field(description="The node id that must be at max rank before this one, or null.")
 

@@ -45,7 +45,8 @@ class TalentsController(Controller):
         summary="Get a class's talent trees",
         description=(
             "Returns the class's three specialization talent trees from Battle.net: every node's position, ranks, "
-            "the spell each rank grants and its prerequisite, plus the calculator's point cap and first level. "
+            "the spell each rank grants and its prerequisite, its first rank's spell icon, plus the calculator's "
+            "point cap and first level. "
             "Answers 503 if Battle.net is not configured or did not answer."
         ),
         response_description="The class's talent trees.",
