@@ -24,10 +24,10 @@ from sidequest_common.models import (
     WowCharacter,
 )
 from sidequest_common.schemas import (
+    DRIVE_PRIZE_COPPER,
     DRIVE_SETTLE_DAYS,
     RECRUIT_JOIN_WINDOW,
     RECRUIT_MIN_LEVEL,
-    RECRUIT_REWARD_COPPER,
     RECRUIT_STAY_DAYS,
     DriveRecruit,
     DriveRecruitReason,
@@ -40,6 +40,22 @@ from sidequest_common.schemas import (
     RecruitPayout,
     character_key,
 )
+
+
+def winning_groups(rows: Sequence[RecruitmentRecruit]) -> dict[str, list[RecruitmentRecruit]]:
+    """Qualified recruit rows grouped by inviter, kept only for the inviter(s) tied for the most.
+
+    The drive's prize goes to whoever has the most qualifying recruits; ties each win, each winner getting the full
+    prize. Empty if ``rows`` is empty (no qualified recruits: no winner).
+    """
+    by_inviter: dict[str, list[RecruitmentRecruit]] = {}
+    for row in rows:
+        by_inviter.setdefault(row.inviter_name, []).append(row)
+    if not by_inviter:
+        return {}
+    max_count = max(len(group) for group in by_inviter.values())
+    return {inviter: group for inviter, group in by_inviter.items() if len(group) == max_count}
+
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -276,7 +292,6 @@ class RecruitmentService:
         elif level >= RECRUIT_MIN_LEVEL:
             row.status, row.reason = "qualified", None
             row.qualified_at = row.qualified_at or now
-            row.reward_copper = RECRUIT_REWARD_COPPER
         else:
             row.status, row.reason = "disqualified", "low_level"
 
@@ -452,7 +467,7 @@ class RecruitmentService:
             starts_at=drive.starts_at,
             ends_at=drive.ends_at,
             settles_at=settles_at,
-            reward_copper=RECRUIT_REWARD_COPPER,
+            reward_copper=DRIVE_PRIZE_COPPER,
             min_level=RECRUIT_MIN_LEVEL,
             stay_days=RECRUIT_STAY_DAYS,
             totals=totals,
@@ -461,7 +476,12 @@ class RecruitmentService:
         )
 
     async def list_payouts(self, now: datetime | None = None) -> list[RecruitPayout]:
-        """Settled drives' owed/paid totals per inviter, unpaid first."""
+        """Settled drives' winner(s) (most qualifying recruits, ties each win), unpaid first.
+
+        A winner is "paid" once any of their qualified rows in the drive is paid (``mark_paid``/the addon import
+        stamp every qualified unpaid row for a winner at once), so a recruit who qualifies later never produces a
+        second payout for an already-paid winner.
+        """
         await self.evaluate(now)
         now = now or datetime.now(UTC)
         drives = (
@@ -493,19 +513,14 @@ class RecruitmentService:
                 .scalars()
                 .all()
             )
-            if not rows:
-                continue
-            by_inviter: dict[str, list[RecruitmentRecruit]] = {}
-            for row in rows:
-                by_inviter.setdefault(row.inviter_name, []).append(row)
-            for inviter, group in by_inviter.items():
-                unpaid = [row for row in group if row.paid_at is None]
-                if unpaid:
-                    chosen, paid_at, paid_by, paid_via = unpaid, None, None, None
-                else:
-                    last = max(group, key=lambda row: row.paid_at)  # type: ignore[arg-type,return-value]
-                    chosen, paid_at, paid_by = group, last.paid_at, last.paid_by
+            for inviter, group in winning_groups(rows).items():
+                paid_group = [row for row in group if row.paid_at is not None]
+                if paid_group:
+                    last = max(paid_group, key=lambda row: row.paid_at)  # type: ignore[arg-type,return-value]
+                    paid_at, paid_by = last.paid_at, last.paid_by
                     paid_via = PaidVia(last.paid_via) if last.paid_via else None
+                else:
+                    paid_at = paid_by = paid_via = None
                 character_id = next(
                     (row.inviter_character_id for row in group if row.inviter_character_id is not None), None
                 )
@@ -523,8 +538,8 @@ class RecruitmentService:
                         settles_at=settles_at,
                         inviter=inviter,
                         member_name=member_name,
-                        recruits=[row.recruit_name for row in chosen],
-                        copper=RECRUIT_REWARD_COPPER * len(chosen),
+                        recruits=[row.recruit_name for row in group],
+                        copper=DRIVE_PRIZE_COPPER,
                         paid_at=paid_at,
                         paid_by=paid_by,
                         paid_via=paid_via,
@@ -534,7 +549,7 @@ class RecruitmentService:
         return payouts
 
     async def mark_paid(self, event_id: UUID, inviter: str, officer_name: str, *, now: datetime | None = None) -> None:
-        """Mark this inviter's qualified unpaid recruits in this drive paid via the site. Idempotent."""
+        """Mark this inviter's qualified unpaid recruits in this drive paid (their drive-winner prize). Idempotent."""
         now = now or datetime.now(UTC)
         rows = (
             (

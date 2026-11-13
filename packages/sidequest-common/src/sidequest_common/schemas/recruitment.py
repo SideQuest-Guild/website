@@ -1,10 +1,10 @@
 """Recruitment drive schemas: constants, enums, the addon export/import additions, and the site HTTP API.
 
 ``local://recruitment-contract.md`` is the source of truth. A drive is a ``GuildEvent`` of kind ``recruitment``
-(``sidequest_common.schemas.events.EventKind.RECRUITMENT``) running 14 days by default; inviters earn
-``RECRUIT_REWARD_COPPER`` per recruit who stays ``RECRUIT_STAY_DAYS`` days and reaches ``RECRUIT_MIN_LEVEL``, paid
-out ``DRIVE_SETTLE_DAYS`` after the drive ends. Who invited whom comes from the in-game guild log
-(``ExportGuildLogEntry``), not the addon.
+(``sidequest_common.schemas.events.EventKind.RECRUITMENT``) running 14 days by default; the inviter with the most
+recruits who stay ``RECRUIT_STAY_DAYS`` days and reach ``RECRUIT_MIN_LEVEL`` wins ``DRIVE_PRIZE_COPPER``, and ties
+split (each tied inviter wins it), settled ``DRIVE_SETTLE_DAYS`` after the drive ends. Who invited whom comes from
+the in-game guild log (``ExportGuildLogEntry``), not the addon.
 """
 
 from datetime import datetime, timedelta  # pydantic needs datetime at runtime
@@ -13,8 +13,8 @@ from uuid import UUID  # pydantic needs it at runtime
 
 from pydantic import BaseModel, Field
 
-RECRUIT_REWARD_COPPER = 10_000
-"""1g, paid to the inviter per qualifying recruit."""
+DRIVE_PRIZE_COPPER = 10_000
+"""1g, paid to the inviter(s) with the most qualifying recruits in a drive. Ties split: each tied inviter wins it."""
 RECRUIT_MIN_LEVEL = 10
 RECRUIT_STAY_DAYS = 7
 DRIVE_SETTLE_DAYS = 7
@@ -91,7 +91,7 @@ class ExportRecruitPayoutPaid(BaseModel):
 
     event_id: UUID
     inviter: str = Field(max_length=RECRUIT_NAME_MAX_LENGTH)
-    copper: int = Field(ge=0)
+    copper: int = Field(ge=0, description="The flat prize mailed; the site keys this on event + inviter, not amount.")
     at: int
     officer: str = Field(max_length=RECRUIT_NAME_MAX_LENGTH)
 
@@ -114,13 +114,13 @@ class RecruitPayoutImportCounts(BaseModel):
 
 
 class GameImportRecruitPayout(BaseModel):
-    """One ``SQI1:`` officer payout row: one inviter's qualified, unpaid recruits for one settled drive."""
+    """One ``SQI1:`` officer payout row: a drive's winning inviter (most qualifying recruits, ties each win)."""
 
     event_id: UUID
     title: str
     inviter: str
-    copper: int
-    recruits: list[str]
+    copper: int = Field(description="The flat prize this inviter won (not a per-recruit sum).")
+    recruits: list[str] = Field(description="The winning inviter's qualifying recruits in this drive.")
     settles_at: int
 
 
@@ -171,7 +171,9 @@ class RecruitmentDrive(BaseModel):
     starts_at: datetime
     ends_at: datetime
     settles_at: datetime
-    reward_copper: int
+    reward_copper: int = Field(
+        description="The flat prize for winning the drive (most qualifying recruits, ties each win); not per recruit."
+    )
     min_level: int
     stay_days: int
     totals: RecruitmentDriveTotals
@@ -180,15 +182,15 @@ class RecruitmentDrive(BaseModel):
 
 
 class RecruitPayout(BaseModel):
-    """``GET /api/recruitment/payouts``: one inviter's owed (or already-paid) total for one settled drive."""
+    """``GET /api/recruitment/payouts``: one winning inviter's owed (or already-paid) prize for one settled drive."""
 
     event_id: UUID
     title: str
     settles_at: datetime
     inviter: str
     member_name: str | None
-    recruits: list[str]
-    copper: int
+    recruits: list[str] = Field(description="This winner's qualifying recruits in the drive.")
+    copper: int = Field(description="The flat prize this inviter won (not a per-recruit sum).")
     paid_at: datetime | None
     paid_by: str | None
     paid_via: PaidVia | None
@@ -207,7 +209,7 @@ class RecruitPayoutMarkPaid(BaseModel):
 class RecruitmentTally(BaseModel):
     """``DiscordEventPush.recruitment``: a drive's live leaderboard, for the forum starter post."""
 
-    reward_copper: int
+    reward_copper: int = Field(description="The flat prize for winning the drive, not a per-recruit amount.")
     settles_at: datetime
     invited: int
     joined: int
@@ -224,7 +226,9 @@ class RecruitShoutout(BaseModel):
     inviter: str
     inviter_discord_id: int | None
     recruit: str
-    reward_copper: int
+    reward_copper: int = Field(
+        description="The drive's flat prize amount, kept for older bots; the shout-out no longer names a gold amount."
+    )
 
 
 class RecruitShoutoutAck(BaseModel):

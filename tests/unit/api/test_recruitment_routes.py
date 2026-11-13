@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING
 from sqlalchemy import select
 
 from sidequest_common.models import GuildEvent, RecruitmentRecruit
-from sidequest_common.schemas import DRIVE_SETTLE_DAYS, RECRUIT_REWARD_COPPER
+from sidequest_common.schemas import DRIVE_PRIZE_COPPER, DRIVE_SETTLE_DAYS
 from tests.unit.api.conftest import OFFICER_ROLE_ID, login_as
 
 if TYPE_CHECKING:
@@ -70,7 +70,6 @@ async def _seed_recruit(
             invited_at=invited_at or (NOW - timedelta(days=20)),
             status=status,
             qualified_at=qualified_at,
-            reward_copper=RECRUIT_REWARD_COPPER,
             paid_at=paid_at,
             paid_by=paid_by,
             paid_via=paid_via,
@@ -117,7 +116,7 @@ async def test_member_can_read_a_drive(
     assert response.status_code == 200, response.text
     body = response.json()
     assert body["event_id"] == event_id
-    assert body["reward_copper"] == RECRUIT_REWARD_COPPER
+    assert body["reward_copper"] == DRIVE_PRIZE_COPPER
     assert body["totals"] == {"invited": 0, "joined": 0, "counting": 0, "qualified": 0, "disqualified": 0, "paid": 0}
     assert body["leaders"] == []
     assert body["recruits"] == []
@@ -191,7 +190,7 @@ async def test_officer_lists_and_marks_a_payout_paid(
     assert listed.status_code == 200, listed.text
     rows = listed.json()
     row = next(r for r in rows if r["event_id"] == event_id and r["inviter"] == "Thrall")
-    assert row["copper"] == RECRUIT_REWARD_COPPER
+    assert row["copper"] == DRIVE_PRIZE_COPPER
     assert row["recruits"] == ["Newbie"]
     assert row["paid_at"] is None
 
@@ -313,9 +312,31 @@ async def test_sqi1_recruit_payouts_only_settled_and_unpaid(
     unpaid_payout = payouts_by_event[settled_unpaid]
     assert unpaid_payout["inviter"] == "Jaina"
     assert unpaid_payout["recruits"] == ["Unpaid"]
-    assert unpaid_payout["copper"] == RECRUIT_REWARD_COPPER
+    assert unpaid_payout["copper"] == DRIVE_PRIZE_COPPER
 
     assert settled_paid not in payouts_by_event
     assert not_settled not in payouts_by_event
 
     assert DRIVE_SETTLE_DAYS == 7  # sanity: the fixture's "not yet settled" window assumes a 7-day settle delay
+
+
+async def test_sqi1_recruit_payouts_lists_winners_only(
+    member_client: AsyncTestClient, discord_state: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    """Within one settled drive, only the inviter(s) tied for the most qualifying recruits appear."""
+    event_id = await _seed_drive(
+        db_sessionmaker, title="Tied drive", starts_at=NOW - timedelta(days=30), ends_at=NOW - timedelta(days=16)
+    )
+    await _seed_recruit(db_sessionmaker, event_id=event_id, recruit_name="WinnerRecruitOne", inviter_name="Jaina")
+    await _seed_recruit(db_sessionmaker, event_id=event_id, recruit_name="WinnerRecruitTwo", inviter_name="Jaina")
+    await _seed_recruit(db_sessionmaker, event_id=event_id, recruit_name="LoserRecruit", inviter_name="Anduin")
+
+    await _login_officer(member_client, discord_state, discord_id=7710)
+    response = await member_client.get("/api/epgp/game-import")
+    assert response.status_code == 200, response.text
+    decoded = json.loads(base64.b64decode(response.json()["payload"][len("SQI1:") :]))
+    payouts = decoded["officer"]["recruit_payouts"]
+    drive_payouts = [p for p in payouts if p["event_id"] == event_id]
+    assert [p["inviter"] for p in drive_payouts] == ["Jaina"]
+    assert sorted(drive_payouts[0]["recruits"]) == ["WinnerRecruitOne", "WinnerRecruitTwo"]
+    assert drive_payouts[0]["copper"] == DRIVE_PRIZE_COPPER

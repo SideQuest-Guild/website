@@ -486,6 +486,7 @@ from sidequest_common.schemas.recruiting import (
 )
 from sidequest_common.schemas.recruitment import (
     DRIVE_DEFAULT_DAYS,
+    DRIVE_PRIZE_COPPER,
     DRIVE_SETTLE_DAYS,
     GUILD_LOG_DEDUPE_WINDOW,
     MAX_GUILD_LOG_ENTRIES,
@@ -494,7 +495,6 @@ from sidequest_common.schemas.recruitment import (
     RECRUIT_JOIN_WINDOW,
     RECRUIT_MIN_LEVEL,
     RECRUIT_NAME_MAX_LENGTH,
-    RECRUIT_REWARD_COPPER,
     RECRUIT_STAY_DAYS,
     DriveRecruit,
     DriveRecruitReason,
@@ -597,6 +597,7 @@ __all__ = (
     "DECAY_PERCENT",
     "DEFAULT_REALM",
     "DRIVE_DEFAULT_DAYS",
+    "DRIVE_PRIZE_COPPER",
     "DRIVE_SETTLE_DAYS",
     "EMPTY_GRACE_SECONDS",
     "EPGP_RULES",
@@ -685,7 +686,6 @@ __all__ = (
     "RECRUIT_MIN_LEVEL",
     "RECRUIT_NAME_MAX_LENGTH",
     "RECRUIT_NOTE_MAX",
-    "RECRUIT_REWARD_COPPER",
     "RECRUIT_STAY_DAYS",
     "ROLE_KINDS",
     "SAME_MATCH_SECONDS",

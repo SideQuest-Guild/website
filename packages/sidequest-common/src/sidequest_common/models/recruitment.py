@@ -46,9 +46,9 @@ class RecruitmentRecruit(UUIDAuditBase):
     """One recruit's qualification state for one drive, upserted by ``RecruitmentService.evaluate``.
 
     ``recruit_character_id``/``inviter_character_id`` link to ``WowCharacter`` when the name matches exactly one;
-    the "own alt" disqualification compares their ``member_id``. ``reward_copper`` snapshots
-    ``RECRUIT_REWARD_COPPER`` at qualification time, so a later constant change never alters an amount already
-    computed. ``status``/``reason`` are ``DriveRecruitStatus``/``DriveRecruitReason`` values; ``paid_via`` is
+    the "own alt" disqualification compares their ``member_id``. ``reward_copper`` is unused (the drive's prize goes
+    to whichever inviter has the most qualifying recruits, not per recruit); it keeps its column and default for
+    rolling deploys. ``status``/``reason`` are ``DriveRecruitStatus``/``DriveRecruitReason`` values; ``paid_via`` is
     ``PaidVia``.
     """
 
@@ -76,7 +76,7 @@ class RecruitmentRecruit(UUIDAuditBase):
     qualified_at: Mapped[datetime | None] = mapped_column(DateTimeUTC(timezone=True), index=True, default=None)
     shoutout_posted_at: Mapped[datetime | None] = mapped_column(DateTimeUTC(timezone=True), default=None)
     reward_copper: Mapped[int] = mapped_column(Integer, default=10_000)
-    """Snapshot of ``sidequest_common.schemas.recruitment.RECRUIT_REWARD_COPPER`` at qualification time."""
+    """Unused: the prize is per-inviter (most qualifying recruits), not per recruit. Kept for rolling deploys."""
     paid_at: Mapped[datetime | None] = mapped_column(DateTimeUTC(timezone=True), index=True, default=None)
     paid_by: Mapped[str | None] = mapped_column(Text, default=None)
     paid_via: Mapped[str | None] = mapped_column(String(10), default=None)

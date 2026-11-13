@@ -24,7 +24,7 @@ from pydantic import ValidationError
 from sqlalchemy import delete, func, or_, select, union
 
 from sidequest_api.domain.characters.services import character_display_name, upsert_character_profession
-from sidequest_api.domain.recruitment.services import RecruitmentService
+from sidequest_api.domain.recruitment.services import RecruitmentService, winning_groups
 from sidequest_api.lib.discord import avatar_url
 from sidequest_api.lib.member_auth import is_officer
 from sidequest_common.models import (
@@ -85,7 +85,6 @@ from sidequest_common.schemas import (
     MIN_GP,
     NO_SIGNUP_KINDS,
     OS_PERCENT,
-    RECRUIT_REWARD_COPPER,
     ROLE_KINDS,
     SAME_MATCH_SECONDS,
     TRIAL_DAYS,
@@ -1502,45 +1501,42 @@ class EpgpService:
         return counts
 
     async def _import_recruit_payouts_paid(self, entries: list[ExportRecruitPayoutPaid]) -> RecruitPayoutImportCounts:
-        """Mark qualified recruits paid via the addon's mail-send button; idempotent per (event, inviter).
+        """Mark a drive winner's prize paid via the addon's mail-send button; idempotent per (event, inviter).
 
-        The mail only covers what was qualified, unpaid, and mailed by the time it was sent: mark at most as many
-        rows as the mailed copper buys, oldest ``qualified_at`` first, and only rows that had already qualified by
-        ``entry.at``. A recruit who qualifies later (or who qualified after the mail was already sent) stays
-        unpaid for the next payout.
+        The mail only covers a recruit if the inviter was still the drive's winner (most qualifying recruits, ties
+        split) and that recruit had already qualified by ``entry.at``. A winner already paid (any of their
+        qualified rows marked paid) stays paid, even if another of their recruits qualifies later; an inviter who
+        isn't currently a winner is ignored.
         """
         counts = RecruitPayoutImportCounts()
         for entry in entries:
             at = datetime.fromtimestamp(entry.at, tz=UTC)
-            rows = (
+            qualified_rows = (
                 (
                     await self._session.execute(
-                        select(RecruitmentRecruit)
-                        .where(
+                        select(RecruitmentRecruit).where(
                             RecruitmentRecruit.event_id == entry.event_id,
-                            RecruitmentRecruit.inviter_name == entry.inviter,
                             RecruitmentRecruit.status == "qualified",
-                            RecruitmentRecruit.paid_at.is_(None),
-                            RecruitmentRecruit.qualified_at <= at,
                         )
-                        .order_by(RecruitmentRecruit.qualified_at.asc())
                     )
                 )
                 .scalars()
                 .all()
             )
-            remaining = entry.copper
-            paid_rows = []
-            for row in rows:
-                reward = row.reward_copper or RECRUIT_REWARD_COPPER
-                if reward <= 0 or remaining < reward:
-                    break
-                remaining -= reward
-                paid_rows.append(row)
-            if not paid_rows:
+            winner_group = winning_groups(qualified_rows).get(entry.inviter)
+            unpaid = (
+                [
+                    row
+                    for row in winner_group
+                    if row.paid_at is None and row.qualified_at is not None and row.qualified_at <= at
+                ]
+                if winner_group is not None
+                else []
+            )
+            if not unpaid:
                 counts.already_paid += 1
                 continue
-            for row in paid_rows:
+            for row in unpaid:
                 row.paid_at = at
                 row.paid_by = entry.officer
                 row.paid_via = "addon"

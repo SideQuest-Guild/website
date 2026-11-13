@@ -31,10 +31,10 @@ from sidequest_common.models import (
     WowCharacter,
 )
 from sidequest_common.schemas import (
+    DRIVE_PRIZE_COPPER,
     DRIVE_SETTLE_DAYS,
     EVENT_KIND_LABELS,
     MAX_RECRUITMENT_LEADERS,
-    RECRUIT_REWARD_COPPER,
     ROLE_KINDS,
     BoardSignup,
     DiscordEventPush,
@@ -69,8 +69,8 @@ _TWO_WEEKDAYS = 2
 FORUM_SIGNUP_BUTTONS_MARKER = "signup-buttons-v1"
 RECRUIT_SHOUTOUT_LIMIT = 50
 RECRUITMENT_RULES_LINE = (
-    "Invite new players to the guild. You earn 1g for each recruit who stays 7 days and reaches level 10. "
-    "Payouts go out a week after the drive ends."
+    "Invite new players to the guild. Whoever brings in the most recruits who stay 7 days and reach level 10 "
+    "wins 1g, and ties each win 1g. Payouts go out a week after the drive ends."
 )
 
 
@@ -312,7 +312,7 @@ async def _recruitment_tallies_for(session: AsyncSession, events: list[GuildEven
         group = by_event.get(drive.id, [])
         leaders = (await build_leaders(session, group))[:MAX_RECRUITMENT_LEADERS]
         tallies[drive.id] = RecruitmentTally(
-            reward_copper=RECRUIT_REWARD_COPPER,
+            reward_copper=DRIVE_PRIZE_COPPER,
             settles_at=ends_at + timedelta(days=DRIVE_SETTLE_DAYS),
             invited=len(group),
             joined=sum(1 for row in group if row.joined_at is not None),
@@ -454,7 +454,7 @@ class EventSyncService(EventsService):
                     inviter=recruit.inviter_name,
                     inviter_discord_id=inviter_discord_id,
                     recruit=recruit.recruit_name,
-                    reward_copper=recruit.reward_copper,
+                    reward_copper=DRIVE_PRIZE_COPPER,
                 )
             )
         return shoutouts

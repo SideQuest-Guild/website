@@ -125,7 +125,8 @@ in-game guild log, which officers' addons read on their roster sweep and send in
 the addon. The thread's starter post shows a live
 leaderboard instead of Going/Maybe/Can't buttons, and the bot shouts out a recruit once they qualify. A recruit
 qualifies after staying 7 days, reaching level 10, being new to the guild, and not being the inviter's own alt;
-payouts (1g per recruit) settle 7 days after the drive ends and show on the Officers page's Recruitment tab with a
+whoever invites the most qualifying recruits wins 1g (ties each win 1g), settled 7 days after
+the drive ends and shown on the Officers page's Recruitment tab with a
 "Mark paid" button, or via the addon's mail-send button. The qualification engine is
 `RecruitmentService.evaluate()` in `api/src/sidequest_api/domain/recruitment/services.py`; it reruns after every
 addon import, after the roster sync, and before serving a drive or the payouts list, so it's always safe to call.

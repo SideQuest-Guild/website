@@ -19,7 +19,7 @@ from sidequest_common.models import (
     RecruitmentRecruit,
     WowCharacter,
 )
-from sidequest_common.schemas import RECRUIT_REWARD_COPPER, character_key
+from sidequest_common.schemas import DRIVE_PRIZE_COPPER, character_key
 from tests.unit.api.conftest import OFFICER_ROLE_ID, login_as
 
 if TYPE_CHECKING:
@@ -513,7 +513,6 @@ async def test_qualifies_at_minimum_level_on_day_seven(db_sessionmaker: async_se
     row = await _row(db_sessionmaker, event_id)
     assert row.status == "qualified"
     assert row.reason is None
-    assert row.reward_copper == RECRUIT_REWARD_COPPER
     assert row.qualified_at == NOW
 
 
@@ -624,10 +623,10 @@ async def test_mark_paid_is_idempotent(db_sessionmaker: async_sessionmaker[Async
     assert row.paid_at == NOW
 
 
-# --- payouts: grouping per inviter, mixed paid/unpaid -------------------------------------------------------------
+# --- payouts: winner-takes-all (most qualifying recruits wins 1g; ties split) -------------------------------------
 
 
-async def test_list_payouts_groups_per_inviter_and_excludes_already_paid_recruits(
+async def test_list_payouts_sole_inviter_wins_and_shows_paid_once_any_row_is_paid(
     db_sessionmaker: async_sessionmaker[AsyncSession],
 ) -> None:
     starts_at = NOW - timedelta(days=30)
@@ -644,7 +643,6 @@ async def test_list_payouts_groups_per_inviter_and_excludes_already_paid_recruit
             qualifies_at=NOW - timedelta(days=22),
             status="qualified",
             qualified_at=NOW - timedelta(days=22),
-            reward_copper=RECRUIT_REWARD_COPPER,
             paid_at=NOW - timedelta(days=20),
             paid_by="OldOfficer",
             paid_via="site",
@@ -658,7 +656,6 @@ async def test_list_payouts_groups_per_inviter_and_excludes_already_paid_recruit
             qualifies_at=NOW - timedelta(days=21),
             status="qualified",
             qualified_at=NOW - timedelta(days=21),
-            reward_copper=RECRUIT_REWARD_COPPER,
         ),
     )
     async with db_sessionmaker() as session:
@@ -668,9 +665,156 @@ async def test_list_payouts_groups_per_inviter_and_excludes_already_paid_recruit
     assert len(matching) == 1
     payout = matching[0]
     assert payout.inviter == INVITER
-    assert payout.recruits == ["UnpaidRecruit-Whitemane"]
-    assert payout.copper == RECRUIT_REWARD_COPPER
-    assert payout.paid_at is None
+    assert sorted(payout.recruits) == ["PaidRecruit-Whitemane", "UnpaidRecruit-Whitemane"]
+    assert payout.copper == DRIVE_PRIZE_COPPER
+    assert payout.paid_at is not None  # one qualified row already paid: the whole prize counts as paid
+    assert payout.paid_by == "OldOfficer"
+
+
+async def test_list_payouts_winner_gets_prize_non_winner_gets_nothing(
+    db_sessionmaker: async_sessionmaker[AsyncSession],
+) -> None:
+    starts_at, ends_at = NOW - timedelta(days=30), NOW - timedelta(days=16)
+    event_id = await _make_event(db_sessionmaker, starts_at=starts_at, ends_at=ends_at)
+    await _add_rows(
+        db_sessionmaker,
+        RecruitmentRecruit(
+            event_id=event_id,
+            recruit_name="WinnerRecruitOne-Whitemane",
+            inviter_name="Winner-Whitemane",
+            invited_at=NOW - timedelta(days=29),
+            joined_at=NOW - timedelta(days=29),
+            qualifies_at=NOW - timedelta(days=22),
+            status="qualified",
+            qualified_at=NOW - timedelta(days=22),
+        ),
+        RecruitmentRecruit(
+            event_id=event_id,
+            recruit_name="WinnerRecruitTwo-Whitemane",
+            inviter_name="Winner-Whitemane",
+            invited_at=NOW - timedelta(days=28),
+            joined_at=NOW - timedelta(days=28),
+            qualifies_at=NOW - timedelta(days=21),
+            status="qualified",
+            qualified_at=NOW - timedelta(days=21),
+        ),
+        RecruitmentRecruit(
+            event_id=event_id,
+            recruit_name="LoserRecruit-Whitemane",
+            inviter_name="Loser-Whitemane",
+            invited_at=NOW - timedelta(days=27),
+            joined_at=NOW - timedelta(days=27),
+            qualifies_at=NOW - timedelta(days=20),
+            status="qualified",
+            qualified_at=NOW - timedelta(days=20),
+        ),
+    )
+    async with db_sessionmaker() as session:
+        payouts = await RecruitmentService(session).list_payouts(now=NOW)
+
+    matching = [payout for payout in payouts if payout.event_id == event_id]
+    assert [payout.inviter for payout in matching] == ["Winner-Whitemane"]
+    assert matching[0].copper == DRIVE_PRIZE_COPPER
+
+
+async def test_list_payouts_tie_each_winner_gets_a_payout(
+    db_sessionmaker: async_sessionmaker[AsyncSession],
+) -> None:
+    starts_at, ends_at = NOW - timedelta(days=30), NOW - timedelta(days=16)
+    event_id = await _make_event(db_sessionmaker, starts_at=starts_at, ends_at=ends_at)
+    await _add_rows(
+        db_sessionmaker,
+        RecruitmentRecruit(
+            event_id=event_id,
+            recruit_name="TiedOneRecruit-Whitemane",
+            inviter_name="TiedOne-Whitemane",
+            invited_at=NOW - timedelta(days=29),
+            joined_at=NOW - timedelta(days=29),
+            qualifies_at=NOW - timedelta(days=22),
+            status="qualified",
+            qualified_at=NOW - timedelta(days=22),
+        ),
+        RecruitmentRecruit(
+            event_id=event_id,
+            recruit_name="TiedTwoRecruit-Whitemane",
+            inviter_name="TiedTwo-Whitemane",
+            invited_at=NOW - timedelta(days=28),
+            joined_at=NOW - timedelta(days=28),
+            qualifies_at=NOW - timedelta(days=21),
+            status="qualified",
+            qualified_at=NOW - timedelta(days=21),
+        ),
+    )
+    async with db_sessionmaker() as session:
+        payouts = await RecruitmentService(session).list_payouts(now=NOW)
+
+    matching = {payout.inviter: payout for payout in payouts if payout.event_id == event_id}
+    assert set(matching) == {"TiedOne-Whitemane", "TiedTwo-Whitemane"}
+    assert all(payout.copper == DRIVE_PRIZE_COPPER for payout in matching.values())
+
+
+async def test_list_payouts_no_qualified_recruits_gives_no_payouts(
+    db_sessionmaker: async_sessionmaker[AsyncSession],
+) -> None:
+    starts_at, ends_at = NOW - timedelta(days=30), NOW - timedelta(days=16)
+    event_id = await _make_event(db_sessionmaker, starts_at=starts_at, ends_at=ends_at)
+    await _add_rows(
+        db_sessionmaker,
+        RecruitmentRecruit(
+            event_id=event_id,
+            recruit_name="NeverQualified-Whitemane",
+            inviter_name=INVITER,
+            invited_at=NOW - timedelta(days=29),
+            status="disqualified",
+            reason="low_level",
+        ),
+    )
+    async with db_sessionmaker() as session:
+        payouts = await RecruitmentService(session).list_payouts(now=NOW)
+
+    assert [payout for payout in payouts if payout.event_id == event_id] == []
+
+
+async def test_list_payouts_already_paid_winner_not_paid_again_when_a_later_recruit_qualifies(
+    db_sessionmaker: async_sessionmaker[AsyncSession],
+) -> None:
+    """Once any of a winner's qualified rows is paid, a later-qualifying recruit must not create a second payout."""
+    starts_at, ends_at = NOW - timedelta(days=30), NOW - timedelta(days=16)
+    event_id = await _make_event(db_sessionmaker, starts_at=starts_at, ends_at=ends_at)
+    await _add_rows(
+        db_sessionmaker,
+        RecruitmentRecruit(
+            event_id=event_id,
+            recruit_name="EarlyWinnerRecruit-Whitemane",
+            inviter_name=INVITER,
+            invited_at=NOW - timedelta(days=29),
+            joined_at=NOW - timedelta(days=29),
+            qualifies_at=NOW - timedelta(days=22),
+            status="qualified",
+            qualified_at=NOW - timedelta(days=22),
+            paid_at=NOW - timedelta(days=20),
+            paid_by="FirstOfficer",
+            paid_via="site",
+        ),
+        RecruitmentRecruit(
+            event_id=event_id,
+            recruit_name="LateWinnerRecruit-Whitemane",
+            inviter_name=INVITER,
+            invited_at=NOW - timedelta(days=28),
+            joined_at=NOW - timedelta(days=28),
+            qualifies_at=NOW - timedelta(days=21),
+            status="qualified",
+            qualified_at=NOW - timedelta(hours=1),  # qualified long after the prize was already paid
+        ),
+    )
+    async with db_sessionmaker() as session:
+        payouts = await RecruitmentService(session).list_payouts(now=NOW)
+
+    matching = [payout for payout in payouts if payout.event_id == event_id]
+    assert len(matching) == 1  # still one payout row for the winner, not a second one
+    assert matching[0].paid_at == NOW - timedelta(days=20)
+    assert matching[0].paid_by == "FirstOfficer"
+    assert matching[0].copper == DRIVE_PRIZE_COPPER
 
 
 # --- import: guild_log dedupe, recruit_payouts_paid idempotency --------------------------------------------------
@@ -711,7 +855,6 @@ async def test_recruit_payouts_paid_import_is_idempotent(
             qualifies_at=NOW - timedelta(days=12),
             status="qualified",
             qualified_at=NOW - timedelta(days=12),
-            reward_copper=RECRUIT_REWARD_COPPER,
         ),
     )
     await _login_officer(member_client, discord_state)
@@ -721,7 +864,7 @@ async def test_recruit_payouts_paid_import_is_idempotent(
             {
                 "event_id": str(event_id),
                 "inviter": INVITER,
-                "copper": RECRUIT_REWARD_COPPER,
+                "copper": DRIVE_PRIZE_COPPER,
                 "at": at,
                 "officer": "Officer-Whitemane",
             }
@@ -784,7 +927,6 @@ async def test_addon_payout_only_marks_recruits_qualified_by_the_time_it_was_mai
             qualifies_at=NOW - timedelta(days=12),
             status="qualified",
             qualified_at=NOW - timedelta(days=10),  # qualified before the mail was sent
-            reward_copper=RECRUIT_REWARD_COPPER,
         ),
         RecruitmentRecruit(
             event_id=event_id,
@@ -795,7 +937,6 @@ async def test_addon_payout_only_marks_recruits_qualified_by_the_time_it_was_mai
             qualifies_at=NOW - timedelta(days=11),
             status="qualified",
             qualified_at=NOW - timedelta(days=1),  # qualified after the mail was already sent
-            reward_copper=RECRUIT_REWARD_COPPER,
         ),
     )
     await _login_officer(member_client, discord_state)
@@ -804,7 +945,7 @@ async def test_addon_payout_only_marks_recruits_qualified_by_the_time_it_was_mai
             {
                 "event_id": str(event_id),
                 "inviter": INVITER,
-                "copper": RECRUIT_REWARD_COPPER,  # 1g: the mail covered exactly one recruit
+                "copper": DRIVE_PRIZE_COPPER,
                 "at": int(mailed_at.timestamp()),
                 "officer": "Officer-Whitemane",
             }
@@ -823,6 +964,94 @@ async def test_addon_payout_only_marks_recruits_qualified_by_the_time_it_was_mai
     by_name = {row.recruit_name: row for row in rows}
     assert by_name["EarlyRecruit-Whitemane"].paid_at is not None
     assert by_name["LateRecruit-Whitemane"].paid_at is None
+
+
+async def test_addon_import_ignores_a_non_winner_and_marks_the_winner_paid_once(
+    member_client: AsyncTestClient, discord_state: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    """The addon's mail only pays the drive's winner; a non-winner's mail entry is a no-op, and a winner already
+    paid doesn't get paid again by a later mail for the same event/inviter."""
+    event_id = await _make_event(db_sessionmaker, starts_at=NOW - timedelta(days=20), ends_at=NOW - timedelta(days=5))
+    winner = "Winner-Whitemane"
+    loser = "Loser-Whitemane"
+    await _add_rows(
+        db_sessionmaker,
+        RecruitmentRecruit(
+            event_id=event_id,
+            recruit_name="WinnerRecruitOne-Whitemane",
+            inviter_name=winner,
+            invited_at=NOW - timedelta(days=19),
+            joined_at=NOW - timedelta(days=19),
+            qualifies_at=NOW - timedelta(days=12),
+            status="qualified",
+            qualified_at=NOW - timedelta(days=12),
+        ),
+        RecruitmentRecruit(
+            event_id=event_id,
+            recruit_name="WinnerRecruitTwo-Whitemane",
+            inviter_name=winner,
+            invited_at=NOW - timedelta(days=18),
+            joined_at=NOW - timedelta(days=18),
+            qualifies_at=NOW - timedelta(days=11),
+            status="qualified",
+            qualified_at=NOW - timedelta(days=11),
+        ),
+        RecruitmentRecruit(
+            event_id=event_id,
+            recruit_name="LoserRecruit-Whitemane",
+            inviter_name=loser,
+            invited_at=NOW - timedelta(days=17),
+            joined_at=NOW - timedelta(days=17),
+            qualifies_at=NOW - timedelta(days=10),
+            status="qualified",
+            qualified_at=NOW - timedelta(days=10),
+        ),
+    )
+    await _login_officer(member_client, discord_state)
+    at = int(NOW.timestamp())
+
+    # The non-winner's mail is ignored: counted as the idempotent no-op, no row marked paid.
+    loser_payload = _v2_payload(
+        recruit_payouts_paid=[
+            {
+                "event_id": str(event_id),
+                "inviter": loser,
+                "copper": DRIVE_PRIZE_COPPER,
+                "at": at,
+                "officer": "Officer-Whitemane",
+            }
+        ]
+    )
+    response = await member_client.post("/api/epgp/imports", json={"payload": _export_string(loser_payload)})
+    assert response.status_code == 200, response.text
+    assert response.json()["recruit_payouts_paid"] == {"new": 0, "already_paid": 1}
+    loser_row = await _row(db_sessionmaker, event_id, recruit_name="LoserRecruit-Whitemane")
+    assert loser_row.paid_at is None
+
+    # The winner's mail marks both their qualified rows paid at once.
+    winner_payload = _v2_payload(
+        recruit_payouts_paid=[
+            {
+                "event_id": str(event_id),
+                "inviter": winner,
+                "copper": DRIVE_PRIZE_COPPER,
+                "at": at,
+                "officer": "Officer-Whitemane",
+            }
+        ]
+    )
+    response = await member_client.post("/api/epgp/imports", json={"payload": _export_string(winner_payload)})
+    assert response.status_code == 200, response.text
+    assert response.json()["recruit_payouts_paid"] == {"new": 1, "already_paid": 0}
+    first_row = await _row(db_sessionmaker, event_id, recruit_name="WinnerRecruitOne-Whitemane")
+    second_row = await _row(db_sessionmaker, event_id, recruit_name="WinnerRecruitTwo-Whitemane")
+    assert first_row.paid_at is not None
+    assert second_row.paid_at is not None
+
+    # A later mail for the same already-paid winner is a no-op, not a second prize.
+    response = await member_client.post("/api/epgp/imports", json={"payload": _export_string(winner_payload)})
+    assert response.status_code == 200, response.text
+    assert response.json()["recruit_payouts_paid"] == {"new": 0, "already_paid": 1}
 
 
 # --- follow-up: surname-less guild-log names (GetGuildEventInfo may omit the surname) ----------------------------
