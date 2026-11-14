@@ -1744,6 +1744,26 @@ export type GuildBankRow = {
 
 export type GuildBank = { rows: GuildBankRow[]; totals: { deposits_30d: number; withdrawals_30d: number } };
 
+/** One item a player has put into or taken out of the guild bank. */
+export type GuildBankContributorItem = { item_id: number; item_name: string | null; given: number; taken: number };
+
+/** One player in `GET /api/guild/bank/contributors`: a member's characters together, or one unclaimed character. */
+export type GuildBankContributor = {
+  member_name: string | null;
+  characters: string[];
+  gold_in: number;
+  gold_out: number;
+  repairs: number;
+  items_in: number;
+  items_out: number;
+  item_value: number;
+  last_at: string;
+  items: GuildBankContributorItem[];
+};
+
+/** `GET /api/guild/bank/contributors` (member): biggest giver first. */
+export type GuildBankContributors = { since: string | null; rows: GuildBankContributor[] };
+
 /** One row of `GET /api/guild/announcements`, newest first (last 20). */
 export type GuildAnnouncement = {
   id: string;

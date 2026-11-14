@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 from sqlalchemy import select
 
 from sidequest_common.models import (
+    AuctionHousePriceRow,
     BattlenetCharacter,
     CharacterProfession,
     GuildAnnouncement,
@@ -601,6 +602,179 @@ async def test_bank_import_is_insert_only_deduped_by_id(
     bank_page = await member_client.get("/api/guild/bank")
     assert bank_page.status_code == 200, bank_page.text
     assert len(bank_page.json()["rows"]) == 1
+
+
+def _bank_row(row_id: str, at: int, **fields: object) -> dict:
+    row: dict[str, object] = {
+        "id": row_id,
+        "at": at,
+        "character": "Banker-Whitemane",
+        "kind": "deposit",
+        "item_id": 2589,
+        "item_name": "|cffffffff|Hitem:2589::::::::60:::::|h[Linen Cloth]|h|r",
+        "count": 20,
+        "money": 0,
+        "tab": 1,
+    }
+    row.update(fields)
+    return row
+
+
+async def _import_bank(client: AsyncTestClient, rows: list[dict], *, recorder: str = RECORDER) -> dict:
+    response = await client.post(
+        "/api/epgp/imports", json={"payload": _export_string(_base_payload(bank=rows, recorder=recorder))}
+    )
+    assert response.status_code == 200, response.text
+    return response.json()["bank"]
+
+
+async def test_bank_import_merges_the_same_game_row_sent_by_another_officer(
+    member_client: AsyncTestClient, discord_state: dict
+) -> None:
+    await _login_officer(member_client, discord_state, discord_id=7211)
+    # Officer A read two identical deposits made in the same hour; officer B read both 40 minutes later, so B's
+    # addon estimated each row's time 40 minutes later and gave them different ids.
+    a_rows = [_bank_row("bank-a1", EXPORTED_AT), _bank_row("bank-a2", EXPORTED_AT)]
+    b_rows = [_bank_row("bank-b1", EXPORTED_AT + 2400), _bank_row("bank-b2", EXPORTED_AT + 2400)]
+    assert await _import_bank(member_client, a_rows, recorder="Officera-Whitemane") == {"new": 2, "merged": 0}
+    assert await _import_bank(member_client, b_rows, recorder="Officerb-Whitemane") == {"new": 0, "merged": 2}
+
+    # B's third read: one more identical row three hours later is a new deposit, outside the two-hour match.
+    later = [_bank_row("bank-b3", EXPORTED_AT + 3 * 3600)]
+    assert await _import_bank(member_client, later, recorder="Officerb-Whitemane") == {"new": 1, "merged": 0}
+
+    rows = (await member_client.get("/api/guild/bank")).json()["rows"]
+    assert len(rows) == 3
+
+
+async def test_bank_import_never_merges_one_officers_own_identical_rows(
+    member_client: AsyncTestClient, discord_state: dict
+) -> None:
+    await _login_officer(member_client, discord_state, discord_id=7212)
+    # The addon dedupes its own repeat captures, so a second identical deposit an hour later from the same officer
+    # (a new id, sent in a later sync) is a real second deposit.
+    assert await _import_bank(member_client, [_bank_row("bank-1", EXPORTED_AT)]) == {"new": 1, "merged": 0}
+    assert await _import_bank(member_client, [_bank_row("bank-2", EXPORTED_AT + 3600)]) == {"new": 1, "merged": 0}
+
+
+async def test_bank_contributors_add_up_each_players_characters_and_rank_by_value(
+    member_client: AsyncTestClient, discord_state: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    async with db_sessionmaker() as session:
+        member = Member(discord_id=7221, username="Hoarder", is_guild_member=True)
+        session.add(member)
+        await session.flush()
+        session.add_all(
+            [
+                WowCharacter(
+                    name="Mainy", realm="Whitemane", key="mainy-whitemane", member_id=member.id, source="claim"
+                ),
+                WowCharacter(name="Alty", realm="Whitemane", key="alty-whitemane", member_id=member.id, source="claim"),
+                AuctionHousePriceRow(
+                    house_id=110,
+                    item_id=14047,
+                    house_name="Alliance Auction House",
+                    unit_price=1000,
+                    quantity=50,
+                    listings=1,
+                    updated_at=datetime.now(UTC),
+                ),
+            ]
+        )
+        await session.commit()
+        member_name = member.display_name
+
+    await _login_officer(member_client, discord_state, discord_id=7222)
+    runecloth = "|cffffffff|Hitem:14047::::::::60:::::|h[Runecloth]|h|r"
+    await _import_bank(
+        member_client,
+        [
+            # Hoarder, across two characters: 30 Runecloth (3g at AH) and 1g, minus a withdrawal and a repair.
+            _bank_row("c1", EXPORTED_AT, character="Mainy-Whitemane", item_id=14047, item_name=runecloth, count=20),
+            _bank_row(
+                "c2", EXPORTED_AT - 86400, character="Alty-Whitemane", item_id=14047, item_name=runecloth, count=10
+            ),
+            _bank_row(
+                "c3",
+                EXPORTED_AT,
+                character="Alty-Whitemane",
+                kind="deposit_money",
+                item_id=None,
+                item_name=None,
+                count=0,
+                money=10000,
+                tab=None,
+            ),
+            _bank_row(
+                "c4",
+                EXPORTED_AT,
+                character="Mainy-Whitemane",
+                kind="withdraw",
+                item_id=14047,
+                item_name=runecloth,
+                count=4,
+            ),
+            _bank_row(
+                "c5",
+                EXPORTED_AT,
+                character="Mainy-Whitemane",
+                kind="repair",
+                item_id=None,
+                item_name=None,
+                count=0,
+                money=700,
+                tab=None,
+            ),
+            # Unclaimed character: 3g of gold, no items. Ranks below Hoarder's 1g + 3g of cloth.
+            _bank_row(
+                "c6",
+                EXPORTED_AT,
+                character="Goldy-Whitemane",
+                kind="deposit_money",
+                item_id=None,
+                item_name=None,
+                count=0,
+                money=30000,
+                tab=None,
+            ),
+            # Lots of unpriced Linen: ranks last.
+            _bank_row("c7", EXPORTED_AT, character="Linen-Whitemane", count=200),
+            # Neither a tab move nor a tab purchase counts for anyone.
+            _bank_row("c8", EXPORTED_AT, character="Mover-Whitemane", kind="move"),
+            _bank_row(
+                "c9",
+                EXPORTED_AT,
+                character="Buyer-Whitemane",
+                kind="buy_tab",
+                item_id=None,
+                item_name=None,
+                count=0,
+                money=100000,
+                tab=None,
+            ),
+        ],
+    )
+
+    response = await member_client.get("/api/guild/bank/contributors")
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert [row["characters"] for row in body["rows"]] == [
+        ["alty-whitemane", "mainy-whitemane"],
+        ["goldy-whitemane"],
+        ["linen-whitemane"],
+    ]
+    hoarder = body["rows"][0]
+    assert hoarder["member_name"] == member_name
+    assert (hoarder["gold_in"], hoarder["gold_out"], hoarder["repairs"]) == (10000, 0, 700)
+    assert (hoarder["items_in"], hoarder["items_out"], hoarder["item_value"]) == (30, 4, 30000)
+    assert hoarder["items"] == [{"item_id": 14047, "item_name": "Runecloth", "given": 30, "taken": 4}]
+    assert body["rows"][1]["member_name"] is None
+    assert body["since"] == datetime.fromtimestamp(EXPORTED_AT - 86400, tz=UTC).isoformat().replace("+00:00", "Z")
+
+
+async def test_bank_contributors_is_members_only(client: AsyncTestClient) -> None:
+    response = await client.get("/api/guild/bank/contributors")
+    assert response.status_code == 401
 
 
 # --- announcements: queue -> pending -> posted ----------------------------------------------------------------------

@@ -9,6 +9,7 @@ of the ``SQX1:`` import. See ``local://addon-contract-v2.md``.
 
 from __future__ import annotations
 
+import re
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
 
@@ -18,6 +19,7 @@ from sqlalchemy import func, or_, select
 from sidequest_api.domain.characters.services import character_display_name, to_summary
 from sidequest_api.domain.game_reference.services import recipe_id_for
 from sidequest_common.models import (
+    AuctionHousePriceRow,
     BattlenetCharacter,
     CharacterDirectoryChar,
     CharacterDirectoryCooldowns,
@@ -52,6 +54,9 @@ from sidequest_common.schemas import (
     GuildAnnouncementCreate,
     GuildAnnouncementRow,
     GuildAnnouncementsPage,
+    GuildBankContributor,
+    GuildBankContributorItem,
+    GuildBankContributors,
     GuildBankPage,
     GuildBankRow,
     GuildBankTotals,
@@ -95,8 +100,31 @@ if TYPE_CHECKING:
 ANNOUNCEMENTS_PAGE_SIZE = 20
 BANK_TOTALS_WINDOW_DAYS = 30
 MAX_CRAFTER_RESULTS = 50
+# Bank log kinds that count toward someone's contributions; tab moves and tab purchases count for no one.
+CONTRIBUTION_KINDS = ("deposit", "withdraw", "deposit_money", "withdraw_money", "repair")
+# The addon stores an item log row's name as the game's item link ("|cff…|Hitem:…|h[Linen Cloth]|h|r").
+_LINK_NAME = re.compile(r"\[([^\]]+)\]")
 
 _character_key = character_key
+
+
+def _link_name(link: str | None) -> str | None:
+    """The item name inside a game item link, or the text itself when it isn't a link."""
+    if not link:
+        return None
+    match = _LINK_NAME.search(link)
+    return match.group(1) if match else link
+
+
+class _Contribution:
+    """A player's running bank totals while ``get_bank_contributors`` adds up their characters' rows."""
+
+    def __init__(self, member_name: str | None) -> None:
+        self.member_name = member_name
+        self.characters: set[str] = set()
+        self.gold_in = self.gold_out = self.repairs = self.items_in = self.items_out = 0
+        self.last_at: datetime | None = None
+        self.items: dict[int, list[int]] = {}  # item_id -> [given, taken]
 
 
 class GuildHubService:
@@ -619,6 +647,134 @@ class GuildHubService:
         deposits = sum(count for kind, count in totals_rows if kind == "deposit")
         withdrawals = sum(count for kind, count in totals_rows if kind == "withdraw")
         return GuildBankPage(rows=page_rows, totals=GuildBankTotals(deposits_30d=deposits, withdrawals_30d=withdrawals))
+
+    async def get_bank_contributors(self) -> GuildBankContributors:
+        """Every player who has used the guild bank, with what they put in and took out, biggest giver first.
+
+        A site member's characters count together; a character no one has claimed counts on its own. Rows with no
+        character (the game named no one) count for no one.
+        """
+        grouped = (
+            await self._session.execute(
+                select(
+                    GuildBankLogEntry.character_id,
+                    GuildBankLogEntry.kind,
+                    GuildBankLogEntry.item_id,
+                    func.sum(GuildBankLogEntry.count),
+                    func.sum(GuildBankLogEntry.money),
+                    func.max(GuildBankLogEntry.at),
+                    func.min(GuildBankLogEntry.at),
+                    func.max(GuildBankLogEntry.item_name),
+                )
+                .where(GuildBankLogEntry.kind.in_(CONTRIBUTION_KINDS), GuildBankLogEntry.character_id.is_not(None))
+                .group_by(GuildBankLogEntry.character_id, GuildBankLogEntry.kind, GuildBankLogEntry.item_id)
+            )
+        ).all()
+        if not grouped:
+            return GuildBankContributors(since=None, rows=[])
+        character_ids = {row[0] for row in grouped}
+        characters = {
+            character.id: character
+            for character in (
+                await self._session.execute(select(WowCharacter).where(WowCharacter.id.in_(character_ids)))
+            )
+            .scalars()
+            .all()
+        }
+        member_ids = {character.member_id for character in characters.values() if character.member_id is not None}
+        members = (
+            {
+                member.id: member
+                for member in (await self._session.execute(select(Member).where(Member.id.in_(member_ids))))
+                .scalars()
+                .all()
+            }
+            if member_ids
+            else {}
+        )
+        item_ids = {row[2] for row in grouped if row[2] is not None}
+        known_names: dict[int, str] = {}
+        unit_prices: dict[int, int] = {}
+        if item_ids:
+            known_names = {
+                name.item_id: name.name
+                for name in (await self._session.execute(select(ItemName).where(ItemName.item_id.in_(item_ids))))
+                .scalars()
+                .all()
+            }
+            price_rows = (
+                await self._session.execute(
+                    select(AuctionHousePriceRow.item_id, func.min(AuctionHousePriceRow.unit_price))
+                    .where(AuctionHousePriceRow.item_id.in_(item_ids))
+                    .group_by(AuctionHousePriceRow.item_id)
+                )
+            ).all()
+            unit_prices = {item_id: price for item_id, price in price_rows}  # noqa: C416 - dict() fails pyrefly here
+
+        # A member's characters share one entry; an unclaimed character gets its own.
+        players: dict[str, _Contribution] = {}
+        link_names: dict[int, str | None] = {}
+        since: datetime | None = None
+        for character_id, kind, item_id, count, money, last_at, first_at, item_link in grouped:
+            character = characters[character_id]
+            member = members.get(character.member_id) if character.member_id is not None else None
+            key = f"member:{member.id}" if member else f"character:{character.id}"
+            player = players.get(key)
+            if player is None:
+                player = players[key] = _Contribution(member.display_name if member else None)
+            player.characters.add(character.key)
+            if player.last_at is None or last_at > player.last_at:
+                player.last_at = last_at
+            if since is None or first_at < since:
+                since = first_at
+            if kind == "deposit_money":
+                player.gold_in += money
+            elif kind == "withdraw_money":
+                player.gold_out += money
+            elif kind == "repair":
+                player.repairs += money
+            else:
+                given, taken = (count, 0) if kind == "deposit" else (0, count)
+                player.items_in += given
+                player.items_out += taken
+                if item_id is not None:
+                    totals = player.items.setdefault(item_id, [0, 0])
+                    totals[0] += given
+                    totals[1] += taken
+                    link_names.setdefault(item_id, _link_name(item_link))
+
+        rows = []
+        for player in players.values():
+            items = sorted(
+                (
+                    GuildBankContributorItem(
+                        item_id=item_id,
+                        item_name=known_names.get(item_id) or link_names.get(item_id),
+                        given=given,
+                        taken=taken,
+                    )
+                    for item_id, (given, taken) in player.items.items()
+                ),
+                key=lambda item: (-item.given, -item.taken, item.item_id),
+            )
+            rows.append(
+                GuildBankContributor(
+                    member_name=player.member_name,
+                    characters=sorted(player.characters),
+                    gold_in=player.gold_in,
+                    gold_out=player.gold_out,
+                    repairs=player.repairs,
+                    items_in=player.items_in,
+                    items_out=player.items_out,
+                    item_value=sum(unit_prices.get(item.item_id, 0) * item.given for item in items),
+                    last_at=player.last_at or since or datetime.now(UTC),
+                    items=items,
+                )
+            )
+        rows.sort(
+            key=lambda r: (-(r.gold_in + r.item_value), -r.items_in, (r.member_name or r.characters[0]).casefold())
+        )
+        return GuildBankContributors(since=since, rows=rows)
 
     # --- Announcements ------------------------------------------------------------------------------------------
 

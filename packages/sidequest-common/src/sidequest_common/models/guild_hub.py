@@ -96,7 +96,11 @@ class CharacterRecipeLink(UUIDAuditBase):
 
 
 class GuildBankLogEntry(UUIDAuditBase):
-    """One guild bank log row. ``external_id`` is the addon's deterministic hash (the game's log has no ids)."""
+    """One guild bank log row. ``external_id`` is the addon's deterministic hash (the game's log has no ids).
+
+    ``recorder`` is the addon account whose export first brought the row in, or ``None`` for rows from before it was
+    kept. The import matches a row against a different recorder's copy of it, never against the same recorder's.
+    """
 
     __tablename__ = "guild_bank_log_entry"
     __table_args__ = {"comment": "Insert-only guild bank activity log, addon-sourced."}
@@ -112,6 +116,7 @@ class GuildBankLogEntry(UUIDAuditBase):
     count: Mapped[int] = mapped_column(Integer, default=0)
     money: Mapped[int] = mapped_column(Integer, default=0)
     tab: Mapped[int | None] = mapped_column(Integer, default=None)
+    recorder: Mapped[str | None] = mapped_column(Text, default=None)
 
 
 class GuildAnnouncement(UUIDAuditBase):

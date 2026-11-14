@@ -309,6 +309,86 @@ a.guild-profession-member-link:focus-visible {
   white-space: nowrap;
 }
 
+/* ——— Bank contributors: one row per player, opening onto what they gave ——— */
+.guild-contrib-list {
+  display: grid;
+  gap: 0;
+  margin: 0 0 28px;
+  padding: 0;
+  list-style: none;
+}
+.guild-contrib-list > li + li {
+  border-top: 1px solid var(--stone-2);
+}
+.guild-contrib-head {
+  display: grid;
+  grid-template-columns: minmax(0, 13rem) minmax(0, 1.2fr) minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 4px 14px;
+  padding: 12px 4px;
+  font-size: 14px;
+  cursor: pointer;
+  list-style: none;
+}
+.guild-contrib-head::-webkit-details-marker {
+  display: none;
+}
+.guild-contrib-head:hover .guild-contrib-name,
+.guild-contrib details[open] .guild-contrib-name {
+  color: var(--gold);
+}
+.guild-contrib-name {
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  overflow-wrap: anywhere;
+}
+.guild-contrib-name::before {
+  content: "\25B8";
+  display: inline-block;
+  width: 1em;
+  color: var(--mist-2);
+  transition: transform 120ms ease;
+}
+.guild-contrib details[open] .guild-contrib-name::before {
+  transform: rotate(90deg);
+}
+@media (prefers-reduced-motion: reduce) {
+  .guild-contrib-name::before {
+    transition: none;
+  }
+}
+.guild-contrib-gave {
+  color: var(--ink);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+.guild-contrib-took {
+  color: var(--mist-2);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+.guild-contrib-chars {
+  margin: 0 4px 8px;
+  font-size: 13px;
+  color: var(--mist-2);
+}
+.guild-contrib-items {
+  display: grid;
+  gap: 4px;
+  margin: 0 4px 14px;
+  padding: 0;
+  list-style: none;
+  font-size: 14px;
+}
+.guild-contrib-items li {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+}
+.guild-contrib-count {
+  color: var(--mist-2);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
 /* ——— News: a quiet feed, one line per item ——— */
 .guild-news-list {
   display: grid;
@@ -347,6 +427,7 @@ a.guild-profession-member-link:focus-visible {
 /* ——— Narrow screens ——— */
 @media (max-width: 560px) {
   .guild-bank-row,
+  .guild-contrib-head,
   .guild-news-row {
     grid-template-columns: minmax(0, 1fr);
   }

@@ -31,6 +31,7 @@ const PAGES = [
   { name: "guild", path: "/guild/" },
   { name: "guild market", path: "/guild/#market" },
   { name: "guild professions", path: "/guild/#professions" },
+  { name: "guild bank", path: "/guild/#bank" },
   { name: "pvp", path: "/pvp/" },
   { name: "pvp match", path: `/pvp/match/?id=${PVP_MATCHES[0]?.id}` },
   { name: "items", path: "/items/" },

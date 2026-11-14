@@ -219,6 +219,10 @@ _GAME_IMPORT_WINDOW_BEFORE = timedelta(hours=6)
 _GAME_IMPORT_WINDOW_AFTER = timedelta(days=14)
 _GAME_IMPORT_PAST_WINDOW = timedelta(days=30)
 _GAME_IMPORT_PAST_LIMIT = 20
+# Two officers who read the same guild bank log row export it with different ids: the game gives a row's age, not
+# its time, so each addon estimates `at` from when it looked. The addon matches its own repeat captures within two
+# hours (Bank.lua SEEN_TOLERANCE); the site does the same across officers.
+_BANK_SAME_ROW_TOLERANCE = timedelta(hours=2)
 _ROLE_KINDS = tuple(kind.value for kind in ROLE_KINDS)
 _TOKEN_ALPHABET = string.ascii_letters + string.digits + "-_"
 _TOKEN_PREFIX = "sqs_"  # noqa: S105 - not a password, a public token format prefix
@@ -691,7 +695,7 @@ class EpgpService:
         roster_counts = await self._import_roster(payload.roster, character_cache)
         profession_counts = await self._import_professions(payload.professions, character_cache)
         signup_counts = await self._import_signups_v2(payload.signups, character_cache)
-        bank_counts = await self._import_bank(payload.bank, character_cache)
+        bank_counts = await self._import_bank(payload.bank, character_cache, payload.recorder)
         announcement_counts = await self._import_announcements(payload.announcements)
         recruit_counts = await self._import_recruits(payload.recruits, character_cache)
         note_counts = await self._import_member_notes(payload.member_notes, character_cache)
@@ -1039,10 +1043,19 @@ class EpgpService:
         return counts
 
     async def _import_bank(
-        self, entries: list[ExportBankEntry], character_cache: dict[str, WowCharacter]
+        self, entries: list[ExportBankEntry], character_cache: dict[str, WowCharacter], recorder: str
     ) -> BankImportCounts:
-        """Insert-only guild bank log rows, deduplicated by the addon's deterministic ``id``."""
+        """Insert-only guild bank log rows.
+
+        A row the site already has by id changes nothing. A row with the same content (kind, character, item, count,
+        money, tab) as one a *different* recorder already sent, within ``_BANK_SAME_ROW_TOLERANCE``, is that officer's
+        copy of the same game row: it counts as ``merged`` and stores nothing. Each stored row absorbs at most one
+        row per import, so two identical deposits read by two officers stay two rows. The same recorder's rows are
+        never matched this way: its addon already dedupes its own captures, so a second identical deposit an hour
+        later is a real one.
+        """
         counts = BankImportCounts()
+        claimed: set[UUID] = set()
         for entry in entries:
             existing = (
                 await self._session.execute(
@@ -1057,17 +1070,37 @@ class EpgpService:
                 if entry.character
                 else None
             )
+            character_id = character.id if character else None
+            same_row = select(GuildBankLogEntry.id).where(
+                GuildBankLogEntry.recorder.is_not(None),
+                GuildBankLogEntry.recorder != recorder,
+                GuildBankLogEntry.kind == entry.kind,
+                GuildBankLogEntry.character_id.is_not_distinct_from(character_id),
+                GuildBankLogEntry.item_id.is_not_distinct_from(entry.item_id),
+                GuildBankLogEntry.count == entry.count,
+                GuildBankLogEntry.money == entry.money,
+                GuildBankLogEntry.tab.is_not_distinct_from(entry.tab),
+                GuildBankLogEntry.at.between(at - _BANK_SAME_ROW_TOLERANCE, at + _BANK_SAME_ROW_TOLERANCE),
+            )
+            if claimed:
+                same_row = same_row.where(GuildBankLogEntry.id.not_in(claimed))
+            duplicate = (await self._session.execute(same_row.order_by(GuildBankLogEntry.at).limit(1))).scalar()
+            if duplicate is not None:
+                claimed.add(duplicate)
+                counts.merged += 1
+                continue
             self._session.add(
                 GuildBankLogEntry(
                     external_id=entry.id,
                     at=at,
-                    character_id=character.id if character else None,
+                    character_id=character_id,
                     kind=entry.kind,
                     item_id=entry.item_id,
                     item_name=entry.item_name,
                     count=entry.count,
                     money=entry.money,
                     tab=entry.tab,
+                    recorder=recorder,
                 )
             )
             counts.new += 1

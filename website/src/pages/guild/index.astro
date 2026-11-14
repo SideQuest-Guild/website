@@ -153,6 +153,13 @@ import "../../styles/room-guild.css";
       <div class="chamber">
         <h2 class="chamber-title">Guild bank</h2>
         <dl class="guild-bank-totals" id="bank-totals"></dl>
+        <h3 class="sub-title">Contributors</h3>
+        <p class="aside">
+          Everyone who has put gold or items into the bank or taken them out, biggest giver first. Items count at
+          today's auction house price. Open a name for what they gave.
+        </p>
+        <ul class="guild-contrib-list" id="bank-contributors" aria-label="Bank contributors"></ul>
+        <h3 class="sub-title">Bank log</h3>
         <ul class="guild-bank-list" id="bank-list" aria-label="Bank log"></ul>
       </div>
     </section>
@@ -218,6 +225,8 @@ import "../../styles/room-guild.css";
     statusMessage,
     CLASSES,
     type GuildBank,
+    type GuildBankContributor,
+    type GuildBankContributors,
     type GuildBankKind,
     type GuildBankRow,
     type GuildCrafterResult,
@@ -364,6 +373,49 @@ import "../../styles/room-guild.css";
           <span class="guild-bank-detail">${amount}${row.tab !== null ? ` \u00b7 Tab ${row.tab}` : ""}</span>
           <span class="guild-bank-who">${escapeHtml(who)}</span>
           <span class="guild-bank-when">${new Date(row.at).toLocaleDateString()}</span>
+        </li>`;
+  }
+  /** A character key ("goldy-whitemane") as a name ("Goldy-Whitemane"). */
+  function characterName(key: string): string {
+    return key.split("-").map(capitalize).join("-");
+  }
+  function plural(count: number, word: string): string {
+    return `${count} ${word}${count === 1 ? "" : "s"}`;
+  }
+  function contributorRow(c: GuildBankContributor): string {
+    const gave = [
+      c.gold_in > 0 ? copperToGold(c.gold_in) : null,
+      c.items_in > 0
+        ? `${plural(c.items_in, "item")}${c.item_value > 0 ? ` (~${copperToGold(c.item_value)})` : ""}`
+        : null,
+    ].filter(Boolean);
+    const took = [
+      c.gold_out > 0 ? copperToGold(c.gold_out) : null,
+      c.repairs > 0 ? `${copperToGold(c.repairs)} in repairs` : null,
+      c.items_out > 0 ? plural(c.items_out, "item") : null,
+    ].filter(Boolean);
+    const names = c.characters.map(characterName);
+    const items = c.items
+      .map((item) => {
+        const name = item.item_name ?? `Item ${item.item_id}`;
+        const counts = [item.given > 0 ? `gave ${item.given}` : null, item.taken > 0 ? `took ${item.taken}` : null]
+          .filter(Boolean)
+          .join(" \u00b7 ");
+        return `<li><span>${itemLink(item.item_id, name)}</span><span class="guild-contrib-count">${counts}</span></li>`;
+      })
+      .join("");
+    return `
+        <li class="guild-contrib">
+          <details>
+            <summary class="guild-contrib-head">
+              <span class="guild-contrib-name">${escapeHtml(c.member_name ?? names[0] ?? "")}</span>
+              <span class="guild-contrib-gave">Gave ${escapeHtml(gave.length > 0 ? gave.join(" and ") : "nothing")}</span>
+              <span class="guild-contrib-took">Took ${escapeHtml(took.length > 0 ? took.join(", ") : "nothing")}</span>
+              <span class="guild-bank-when">${new Date(c.last_at).toLocaleDateString()}</span>
+            </summary>
+            <p class="guild-contrib-chars">${escapeHtml(names.join(", "))}</p>
+            ${items ? `<ul class="guild-contrib-items">${items}</ul>` : ""}
+          </details>
         </li>`;
   }
   function newsRow(item: GuildNewsItem): string {
@@ -767,22 +819,32 @@ import "../../styles/room-guild.css";
     // ——— Bank ———
     const bankTotalsEl = requireElement("bank-totals");
     const bankListEl = requireElement("bank-list");
+    const bankContributorsEl = requireElement("bank-contributors");
 
     let bankLoaded = false;
 
     async function loadBank(): Promise<void> {
       try {
-        const data = await apiFetch<GuildBank>("/api/guild/bank", { signal });
+        const [data, contributors] = await Promise.all([
+          apiFetch<GuildBank>("/api/guild/bank", { signal }),
+          apiFetch<GuildBankContributors>("/api/guild/bank/contributors", { signal }),
+        ]);
         bankTotalsEl.innerHTML = `
           <div><dt>Deposits, last 30 days</dt><dd>${data.totals.deposits_30d}</dd></div>
           <div><dt>Withdrawals, last 30 days</dt><dd>${data.totals.withdrawals_30d}</dd></div>`;
+        bankContributorsEl.innerHTML =
+          contributors.rows.length > 0
+            ? contributors.rows.map(contributorRow).join("")
+            : `<li class="ledger-empty">No one has used the bank yet, as far as the addon has seen.</li>`;
         bankListEl.innerHTML =
           data.rows.length > 0
             ? data.rows.map(bankRow).join("")
             : `<li class="ledger-empty">No bank activity recorded yet.</li>`;
         refreshWowheadLinks();
       } catch (err) {
-        bankListEl.innerHTML = `<li class="ledger-empty">${escapeHtml(statusMessage(err))}</li>`;
+        const message = `<li class="ledger-empty">${escapeHtml(statusMessage(err))}</li>`;
+        bankContributorsEl.innerHTML = message;
+        bankListEl.innerHTML = message;
       }
     }
 
