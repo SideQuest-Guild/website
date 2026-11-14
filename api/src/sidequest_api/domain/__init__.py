@@ -21,6 +21,7 @@ from sidequest_api.domain.calendar.controllers import CalendarFeedController, Ca
 from sidequest_api.domain.cases.controllers import CasesController
 from sidequest_api.domain.characters.controllers import (
     CharactersController,
+    ModelViewerController,
     RaidReadinessController,
     RosterSyncController,
 )
@@ -124,6 +125,7 @@ public_routes = [
     MyWishlistController,
     ItemWishersController,
     CharactersController,
+    ModelViewerController,
     RaidReadinessController,
     QuestsController,
     AchievementsController,

@@ -8,6 +8,7 @@ import {
   ATTENDANCE_EVENTS,
   AUCTION_WATCHES,
   CHARACTER_MILESTONES,
+  CHARACTER_MODEL,
   CHARACTER_PAGES,
   CHARACTERS,
   DEVICE_AUTH_USER_CODE,
@@ -1320,6 +1321,51 @@ test.describe("characters", () => {
     await page.goto(`/characters/detail/?slug=${noProfile.slug}`);
     await expect(page.locator("#char-no-profile")).toContainText("hasn't published");
     await expect(page.locator("#char-gear-section")).toBeHidden();
+    await expect(page.locator("#char-model-controls")).toBeHidden();
+  });
+
+  test("View in 3D hands the character's model to Wowhead's viewer, reading files through the site", async ({
+    page,
+    site,
+  }) => {
+    site.signIn(null);
+    // Stands in for Wowhead's viewer script, keeping what the page asked it to draw.
+    await page.route("https://wow.zamimg.com/modelviewer/live/viewer/viewer.min.js", (route) =>
+      route.fulfill({
+        contentType: "text/javascript",
+        body: "window.ZamModelViewer = class { constructor(o) { window.__viewerOptions = { ...o, container: null }; } destroy() {} };",
+      }),
+    );
+    await page.goto(`/characters/detail/?slug=${CHARACTER_PAGES[0]!.slug}`);
+    await page.locator("#char-model-button").click();
+    await expect(page.locator("#char-model-status")).toHaveText("Drag to turn the character.");
+    await expect(page.locator("#char-model")).toBeVisible();
+    await expect(page.locator("#char-model-controls")).toBeHidden();
+    const options: unknown = await page.evaluate(() => Reflect.get(window, "__viewerOptions"));
+    expect(options).toMatchObject({
+      contentPath: "/api/modelviewer/",
+      models: { id: CHARACTER_MODEL.model_id, type: 16 },
+      charCustomization: {
+        options: [
+          { optionId: 58, choiceId: 918 },
+          { optionId: 60, choiceId: 944 },
+        ],
+      },
+      items: CHARACTER_MODEL.items.map((item) => [item.slot, item.display_id]),
+    });
+  });
+
+  test("View in 3D says so plainly when Wowhead's viewer can't load, and can be tried again", async ({
+    page,
+    site,
+  }) => {
+    site.signIn(null);
+    await page.goto(`/characters/detail/?slug=${CHARACTER_PAGES[0]!.slug}`);
+    await page.locator("#char-model-button").click();
+    // The fixtures answer every outside request empty, so Wowhead's viewer script never defines the viewer.
+    await expect(page.locator("#char-model-status")).toHaveText("Wowhead's 3D viewer didn't load. Try again later.");
+    await expect(page.locator("#char-model")).toBeHidden();
+    await expect(page.locator("#char-model-button")).toBeEnabled();
   });
 
   test("an unknown character shows a clear not-found message", async ({ page, site }) => {

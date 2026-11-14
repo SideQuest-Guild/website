@@ -86,6 +86,24 @@
 .char-armory-link {
   margin-top: 18px;
 }
+.char-model-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  margin: 12px 0 0;
+}
+/* Wowhead's viewer draws a canvas the size of this box when it starts; a portrait box fits a standing character. */
+.char-model {
+  position: relative;
+  width: min(100%, 420px);
+  aspect-ratio: 3 / 4;
+  margin-top: 8px;
+  border: 1px solid var(--stone-2);
+  border-radius: 6px;
+  overflow: hidden;
+  touch-action: none;
+}
 
 /* ——— Gear: item-linked rows, same quality coloring as the item lookup ——— */
 .char-gear-list {

@@ -14,6 +14,7 @@ import type {
   Beast,
   BeastFamily,
   CharacterMilestone,
+  CharacterModel,
   CharacterPage,
   CharacterSummary,
   ClassTalents,
@@ -2250,6 +2251,21 @@ export const CHARACTER_PAGES: CharacterPage[] = [
     }),
   },
 ];
+
+// ——— 3D model (GET /api/characters/{slug}/model) ———
+// An Undead male in leather with a dagger in each hand: the viewer's slots 21/22 hold the daggers.
+export const CHARACTER_MODEL: CharacterModel = {
+  model_id: 9,
+  customizations: [
+    { option_id: 58, choice_id: 918 },
+    { option_id: 60, choice_id: 944 },
+  ],
+  items: [
+    { slot: 5, display_id: 8071 },
+    { slot: 21, display_id: 20326 },
+    { slot: 22, display_id: 20595 },
+  ],
+};
 
 // Honorable kills, PvP rank and the collection boards are left empty on purpose, to exercise a board's "No one
 // yet" state.

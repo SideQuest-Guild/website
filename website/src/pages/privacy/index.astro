@@ -103,7 +103,8 @@ const articles = [
       still show up as crafters. The officer's addon import also carries a character's spec, professions and tracked
       reputations from this stored data, so the Guild tab can show them for a guild member who doesn't run the addon;
       live data an addon reports always takes priority over it. Nothing private is stored; it's the same data the Armory
-      already shows.
+      already shows. <strong>View in 3D</strong> draws the character from Battle.net's public appearance data (race,
+      barber choices and worn items), read when you ask for it and not stored.
     </p>
     <p>
       The <a href="/heroes/">Hall of Heroes</a> page's hero boards are public, no sign-in needed: top-10 lists of roster
@@ -472,7 +473,10 @@ const articles = [
       </li>
       <li>
         <strong>Wowhead</strong> (wow.zamimg.com) sees your browser's request — your IP address and the page you're on —
-        whenever a page shows an item, so it can show that item's tooltip when you hover it.
+        whenever a page shows an item, so it can show that item's tooltip when you hover it, and when you choose View in
+        3D on a character page, which loads Wowhead's 3D viewer. The viewer's model files come through our server, so
+        Wowhead doesn't see those requests from you; our server asks Wowhead about the character's worn items, which
+        carries nothing about you.
       </li>
     </ul>
     <p>That's everyone. Nothing else is shared.</p>

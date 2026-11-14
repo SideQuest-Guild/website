@@ -41,6 +41,7 @@ import {
   BEASTS,
   BEAST_FAMILIES,
   CHARACTER_MILESTONES,
+  CHARACTER_MODEL,
   CHARACTER_PAGES,
   CHARACTERS,
   EPGP_CHARACTERS,
@@ -583,6 +584,13 @@ export const test = base.extend<{ site: Site }>({
           (a, b) => (a.guild_rank ?? 99) - (b.guild_rank ?? 99),
         );
         return json(route, roster);
+      }
+      const characterModelMatch = /^\/api\/characters\/([^/]+)\/model$/.exec(path);
+      if (characterModelMatch && method === "GET") {
+        const found = CHARACTER_PAGES.find((c) => c.slug === characterModelMatch[1] && c.sheet !== null);
+        return found
+          ? json(route, CHARACTER_MODEL)
+          : json(route, { detail: `Battle.net has no appearance for ${characterModelMatch[1]}` }, 404);
       }
       const characterMatch = /^\/api\/characters\/([^/]+)$/.exec(path);
       if (characterMatch && method === "GET") {
