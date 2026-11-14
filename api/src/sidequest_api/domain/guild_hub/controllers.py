@@ -49,6 +49,7 @@ from sidequest_common.schemas import (
     GuildAnnouncementCreate,
     GuildAnnouncementRow,
     GuildAnnouncementsPage,
+    GuildBankContributors,
     GuildBankPage,
     GuildCrafters,
     GuildDirectory,
@@ -239,6 +240,25 @@ class GuildHubController(Controller):
     ) -> GuildBankPage:
         del current_member
         return await guild_hub_service.get_bank(limit=limit, before=before)
+
+    @get(
+        "/bank/contributors",
+        operation_id="GetGuildBankContributors",
+        tags=["Guild hub"],
+        security=SECURITY_SESSION,
+        summary="Get guild bank contributions per player",
+        description="Returns what each player has put into and taken out of the guild bank, biggest giver first. "
+        "A site member's characters count together.",
+        response_description="Each player's guild bank totals.",
+        responses={401: NOT_SIGNED_IN, 403: NOT_A_MEMBER},
+    )
+    async def get_bank_contributors(
+        self,
+        current_member: NamedDependency[Member],
+        guild_hub_service: NamedDependency[GuildHubService],
+    ) -> GuildBankContributors:
+        del current_member
+        return await guild_hub_service.get_bank_contributors()
 
     @get(
         "/announcements",

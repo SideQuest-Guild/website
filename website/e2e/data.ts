@@ -43,6 +43,7 @@ import type {
   GroupSessionSummary,
   GroupStats,
   GuildAnnouncement,
+  GuildBankContributors,
   GuildBankRow,
   GuildCrafterProfession,
   GuildCrafterResult,
@@ -1673,6 +1674,39 @@ export const GUILD_BANK: GuildBankRow[] = [
     tab: null,
   },
 ];
+
+export const GUILD_BANK_CONTRIBUTORS: GuildBankContributors = {
+  since: inDays(-21),
+  rows: [
+    {
+      member_name: "Quest Guide",
+      characters: ["guideline-whitemane", "guidealt-whitemane"],
+      gold_in: 250000,
+      gold_out: 0,
+      repairs: 4550,
+      items_in: 60,
+      items_out: 0,
+      item_value: 74000,
+      last_at: inDays(-1),
+      items: [
+        { item_id: 14047, item_name: "Runecloth", given: 40, taken: 0 },
+        { item_id: 2589, item_name: "Linen Cloth", given: 20, taken: 0 },
+      ],
+    },
+    {
+      member_name: null,
+      characters: ["wanderer-whitemane"],
+      gold_in: 0,
+      gold_out: 50000,
+      repairs: 0,
+      items_in: 0,
+      items_out: 12,
+      item_value: 0,
+      last_at: inDays(-3),
+      items: [{ item_id: 2589, item_name: "Linen Cloth", given: 0, taken: 12 }],
+    },
+  ],
+};
 
 export const GUILD_ANNOUNCEMENTS: GuildAnnouncement[] = [
   {

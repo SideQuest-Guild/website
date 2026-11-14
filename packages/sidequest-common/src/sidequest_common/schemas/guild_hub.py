@@ -257,9 +257,13 @@ class SignupImportCounts(BaseModel):
 
 
 class BankImportCounts(BaseModel):
-    """Count of new bank log rows inserted by one import."""
+    """Counts for the ``bank`` section of one import.
+
+    ``merged`` counts rows another officer had already sent (the same game row, matched within two hours).
+    """
 
     new: int = 0
+    merged: int = 0
 
 
 class AnnouncementImportCounts(BaseModel):
@@ -610,6 +614,46 @@ class GuildBankPage(BaseModel):
     totals: GuildBankTotals
 
 
+class GuildBankContributorItem(BaseModel):
+    """One item a player has put into or taken out of the guild bank."""
+
+    item_id: int = Field(description="The item's game ID.")
+    item_name: str | None = Field(description="The item's name, when the site knows it.")
+    given: int = Field(description="How many of it the player deposited.")
+    taken: int = Field(description="How many of it the player withdrew.")
+
+
+class GuildBankContributor(BaseModel):
+    """One player's guild bank totals: every character of a site member together, otherwise one character."""
+
+    member_name: str | None = Field(description="The site member's name, or null for a character no one has claimed.")
+    characters: list[str] = Field(description="The characters whose bank use is counted here, by character key.")
+    gold_in: int = Field(description="Gold deposited, in copper.")
+    gold_out: int = Field(description="Gold withdrawn, in copper, not counting repairs.")
+    repairs: int = Field(description="Repairs paid for by the guild bank, in copper.")
+    items_in: int = Field(description="Items deposited.")
+    items_out: int = Field(description="Items withdrawn.")
+    item_value: int = Field(
+        description="What the deposited items would fetch at the guild's faction auction houses now, in copper. "
+        "Items with no current auction price add nothing."
+    )
+    last_at: datetime = Field(description="When this player last used the guild bank.")
+    items: list[GuildBankContributorItem] = Field(
+        description="Every item this player has deposited or withdrawn, most deposited first."
+    )
+
+
+class GuildBankContributors(BaseModel):
+    """Response for ``GET /api/guild/bank/contributors`` (member): biggest giver first.
+
+    Ranked by gold deposited plus ``item_value``, then items deposited. Moving items between tabs and buying a tab
+    count for no one.
+    """
+
+    since: datetime | None = Field(description="The earliest bank log row counted, or null before any were synced.")
+    rows: list[GuildBankContributor]
+
+
 class GuildAnnouncementRow(BaseModel):
     """One row of ``GET /api/guild/announcements`` (public)."""
 
@@ -789,6 +833,9 @@ __all__ = (
     "GuildAnnouncementCreate",
     "GuildAnnouncementRow",
     "GuildAnnouncementsPage",
+    "GuildBankContributor",
+    "GuildBankContributorItem",
+    "GuildBankContributors",
     "GuildBankPage",
     "GuildBankRow",
     "GuildBankTotals",

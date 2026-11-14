@@ -63,6 +63,7 @@ import {
   GROUP_STATS,
   GUILD_ANNOUNCEMENTS,
   GUILD_BANK,
+  GUILD_BANK_CONTRIBUTORS,
   GUILD_CRAFTERS,
   GUILD_DIRECTORY,
   GUILD_MARKET,
@@ -961,6 +962,12 @@ export const test = base.extend<{ site: Site }>({
           return json(route, { detail: "Not signed in" }, 401);
         }
         return json(route, { rows: GUILD_BANK, totals: { deposits_30d: 4, withdrawals_30d: 1 } });
+      }
+      if (path === "/api/guild/bank/contributors" && method === "GET") {
+        if (!me?.is_guild_member) {
+          return json(route, { detail: "Not signed in" }, 401);
+        }
+        return json(route, GUILD_BANK_CONTRIBUTORS);
       }
       if (path === "/api/guild/announcements" && method === "GET") {
         return json(route, { items: guildAnnouncements });
