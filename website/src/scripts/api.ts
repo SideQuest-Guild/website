@@ -1389,6 +1389,14 @@ export type CharacterSheet = {
  * Battle.net hasn't published this character's profile yet. */
 export type CharacterPage = CharacterSummary & { sheet: CharacterSheet | null };
 
+/** `GET /api/characters/{slug}/model` (public): what Wowhead's model viewer needs to draw the character. `model_id`
+ * is the race and body; `items` pairs the viewer's slot with each worn item's display id. */
+export type CharacterModel = {
+  model_id: number;
+  customizations: { option_id: number; choice_id: number }[];
+  items: { slot: number; display_id: number }[];
+};
+
 /** One name on a `HeroBoards` top-10 list. */
 export type HeroBoardEntry = { slug: string; name: string; surname: string; class: CharClass | null; value: number };
 

@@ -28,6 +28,14 @@ import "../../../styles/room-characters.css";
           View on the Armory
         </a>
       </p>
+      <p class="char-model-controls" id="char-model-controls" hidden>
+        <button type="button" class="btn-quiet btn-small" id="char-model-button">
+          View in 3D
+        </button>
+        <span class="aside">Wowhead's 3D viewer, about 30 MB the first time.</span>
+      </p>
+      <p class="status" id="char-model-status" role="status" aria-live="polite"></p>
+      <div class="char-model" id="char-model" hidden></div>
     </section>
 
     <section class="chamber" id="char-gear-section" aria-labelledby="h-gear" hidden>
@@ -105,6 +113,7 @@ import "../../../styles/room-characters.css";
     type CharacterAchievement,
     type CharacterGearSlot,
     type CharacterHunterPet,
+    type CharacterModel,
     type CharacterPage,
     type CharacterProfession,
     type CharacterReputation,
@@ -112,6 +121,7 @@ import "../../../styles/room-characters.css";
     type CharacterTalent,
   } from "../../../scripts/api";
   import { itemLink, loadWowheadTooltips, refreshWowheadLinks } from "../../../scripts/items";
+  import { showCharacterModel } from "../../../scripts/model-viewer";
   import { onPage } from "../../../scripts/page";
   import { achievementLink } from "../../../scripts/reference";
   import { classIconHtml, loadGameArt, specIconHtml } from "../../../scripts/art";
@@ -202,6 +212,49 @@ import "../../../styles/room-characters.css";
     const headEl = requireElement("char-detail-head");
     const noProfileEl = requireElement("char-no-profile");
     const armoryLinkEl = requireElement<HTMLAnchorElement>("char-armory-link");
+    const modelControlsEl = requireElement("char-model-controls");
+    const modelButton = requireElement<HTMLButtonElement>("char-model-button");
+    const modelStatusEl = requireElement("char-model-status");
+    const modelEl = requireElement("char-model");
+    const slug = (new URLSearchParams(location.search).get("slug") ?? "").toLowerCase();
+    let viewer: { destroy: () => void } | null = null;
+    signal.addEventListener("abort", () => viewer?.destroy(), { once: true });
+
+    async function showModel(): Promise<void> {
+      modelButton.disabled = true;
+      // The viewer sizes its canvas from the box, so the box shows before the model loads.
+      modelEl.hidden = false;
+      modelStatusEl.textContent = "Loading the 3D model\u2026";
+      try {
+        const model = await apiFetch<CharacterModel>(`/api/characters/${slug}/model`, { signal });
+        viewer = await showCharacterModel(modelEl, model);
+      } catch (err) {
+        if (signal.aborted) {
+          return;
+        }
+        modelEl.hidden = true;
+        modelButton.disabled = false;
+        modelStatusEl.textContent =
+          err instanceof ApiError && err.status === 404
+            ? "Battle.net hasn't published how this character looks."
+            : "The 3D model didn't load. Try again in a minute.";
+        return;
+      }
+      if (signal.aborted) {
+        viewer?.destroy();
+        return;
+      }
+      if (!viewer) {
+        modelEl.hidden = true;
+        modelButton.disabled = false;
+        modelStatusEl.textContent = "Wowhead's 3D viewer didn't load. Try again later.";
+        return;
+      }
+      modelControlsEl.hidden = true;
+      modelStatusEl.textContent = "Drag to turn the character.";
+    }
+
+    modelButton.addEventListener("click", () => void showModel());
 
     const sections: Record<string, { section: HTMLElement; list: HTMLElement }> = {
       gear: { section: requireElement("char-gear-section"), list: requireElement("char-gear-list") },
@@ -245,6 +298,7 @@ import "../../../styles/room-characters.css";
         return;
       }
       noProfileEl.hidden = true;
+      modelControlsEl.hidden = false;
 
       sections.gear.section.hidden = false;
       sections.gear.list.innerHTML =
@@ -292,7 +346,6 @@ import "../../../styles/room-characters.css";
     }
 
     async function init(): Promise<void> {
-      const slug = (new URLSearchParams(location.search).get("slug") ?? "").toLowerCase();
       if (!slug) {
         statusEl.textContent = "Enter a name and surname.";
         return;

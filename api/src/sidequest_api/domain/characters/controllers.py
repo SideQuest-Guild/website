@@ -8,28 +8,35 @@ Cloudflare's cache rule ignores, so search is never edge-cached; it reads only P
 from typing import Annotated
 from uuid import UUID
 
+import httpx
 from litestar import Controller, get, post, put
+from litestar.background_tasks import BackgroundTask
 from litestar.datastructures import ResponseHeader
 from litestar.di import NamedDependency, Provide
-from litestar.exceptions import NotFoundException
+from litestar.exceptions import HTTPException, NotFoundException
 from litestar.openapi.datastructures import ResponseSpec
-from litestar.params import JSONBody, Parameter
-from wow import AsyncClient
+from litestar.params import JSONBody, Parameter, PathParameter
+from litestar.response import Stream
+from litestar.status_codes import HTTP_502_BAD_GATEWAY, HTTP_503_SERVICE_UNAVAILABLE
+from wow import AsyncClient, NotFoundError, WowError
 
 from sidequest_api.domain.characters.dependencies import provide_characters_service
-from sidequest_api.domain.characters.services import CharactersService, to_page, to_summary
+from sidequest_api.domain.characters.model_viewer import build_character_model
+from sidequest_api.domain.characters.services import BATTLENET_UNREACHABLE, CharactersService, to_page, to_summary
 from sidequest_api.domain.guilds.dependencies import provide_guild_config_service
 from sidequest_api.domain.guilds.services import GuildConfigService
 from sidequest_api.lib.game_data import provide_game_data
 from sidequest_api.lib.officer_audit import record_officer_audit
 from sidequest_api.lib.openapi import NOT_AN_OFFICER, NOT_SIGNED_IN, SECURITY_SESSION, GuildIdPath
 from sidequest_api.lib.website import EDGE_CACHE_HEADER, SKIP_SESSION
+from sidequest_api.lib.wowhead import MODEL_FILE_PATH, open_model_file, provide_wowhead
 from sidequest_common.models import Member
 from sidequest_common.schemas import (
     CHARACTER_SEARCH_MIN_LENGTH,
     CHARACTER_SLUG_MAX_LENGTH,
     CHARACTER_SLUG_PATTERN,
     CharacterMilestoneSchema,
+    CharacterModel,
     CharacterPage,
     CharacterSummary,
     HeroBoards,
@@ -41,6 +48,13 @@ from sidequest_common.settings import WebSettings
 
 # A character changes as it is played: ten minutes at the edge, then stale for an hour while one fetch refreshes it.
 EDGE_CHARACTER_CACHE = ResponseHeader(name=EDGE_CACHE_HEADER, value="max-age=600, stale-while-revalidate=3600")
+# The viewer's files only change with a game patch: a week in the browser, and a month at the edge once Cloudflare's
+# cache rule lists /api/modelviewer/ (it doesn't yet, so for now every first view is relayed from Wowhead).
+MODEL_FILE_BROWSER_CACHE = "public, max-age=604800"
+MODEL_FILE_EDGE_CACHE = "max-age=2592000"
+# The body is relayed as Wowhead sent it, so its encoding and length headers travel with it.
+_MODEL_FILE_HEADERS = ("content-encoding", "content-length", "etag", "last-modified")
+WOWHEAD_UNREACHABLE = "Wowhead did not answer; try again in a minute"
 _NOT_SITE_GUILD = ResponseSpec(None, description="This guild_id is not the SideQuest server.")
 
 
@@ -146,6 +160,98 @@ class CharactersController(Controller):
     ) -> CharacterPage:
         character = await characters_service.get_character(slug.casefold(), game_data)
         return to_page(character, await characters_service.rank_names())
+
+    @get(
+        "/{slug:str}/model",
+        operation_id="GetCharacterModel",
+        dependencies={"wowhead": Provide(provide_wowhead)},
+        response_headers=[EDGE_CHARACTER_CACHE],
+        opt=SKIP_SESSION,
+        summary="Get a character's 3D model",
+        description=(
+            "Returns what Wowhead's model viewer needs to draw the character as Battle.net last published it: its "
+            "race and body model, barber choices, and worn items by display id. The character page's View in 3D "
+            "button draws it, with the model files from Get a 3D model file. Items Wowhead has no look for are left "
+            "out. Answers 404 if Battle.net has no such character, or none of a race the viewer covers, and 503 if "
+            "Battle.net is not configured or did not answer."
+        ),
+        response_description="The model viewer's options for the character.",
+    )
+    async def get_character_model(
+        self,
+        game_data: NamedDependency[AsyncClient],
+        wowhead: NamedDependency[httpx.AsyncClient],
+        slug: Annotated[
+            str,
+            Parameter(
+                description="The character's name and surname joined by a hyphen, such as `nox-zul`.",
+                max_length=CHARACTER_SLUG_MAX_LENGTH,
+                pattern=CHARACTER_SLUG_PATTERN,
+            ),
+        ],
+    ) -> CharacterModel:
+        try:
+            appearance = await game_data.characters.appearance(slug.casefold())
+        except NotFoundError as exc:
+            msg = f"Battle.net has no appearance for {slug}"
+            raise NotFoundException(msg) from exc
+        except WowError as exc:
+            raise HTTPException(status_code=HTTP_503_SERVICE_UNAVAILABLE, detail=BATTLENET_UNREACHABLE) from exc
+        model = await build_character_model(appearance, wowhead)
+        if model is None:
+            msg = f"The model viewer can't draw {slug}'s race"
+            raise NotFoundException(msg)
+        return model
+
+
+class ModelViewerController(Controller):
+    """``/api/modelviewer``: Wowhead's model viewer files, relayed for the character page's 3D model."""
+
+    path = "/api/modelviewer"
+    tags = ["Characters"]
+    dependencies = {"wowhead": Provide(provide_wowhead)}
+
+    @get(
+        "/{file_path:path}",
+        operation_id="GetModelViewerFile",
+        opt=SKIP_SESSION,
+        summary="Get a 3D model file",
+        description=(
+            "Relays one of Wowhead's WoW: Forever model viewer files (models, textures and their descriptions, such "
+            "as `meta/armor/5/8071.json` or `m2/959310.m2`). Wowhead serves them only to its own pages, so the "
+            "character page's viewer reads them from here. Answers 404 for a path that isn't a viewer file or that "
+            "Wowhead doesn't have, and 502 if Wowhead did not answer."
+        ),
+        response_description="The file, as Wowhead serves it.",
+    )
+    async def get_file(
+        self,
+        wowhead: NamedDependency[httpx.AsyncClient],
+        file_path: Annotated[str, PathParameter(description="The file's path under the viewer's files.")],
+    ) -> Stream:
+        path = file_path.removeprefix("/")
+        if MODEL_FILE_PATH.fullmatch(path) is None:
+            msg = "Not a model viewer file"
+            raise NotFoundException(msg)
+        try:
+            upstream = await open_model_file(wowhead, path)
+        except httpx.HTTPError as exc:
+            raise HTTPException(status_code=HTTP_502_BAD_GATEWAY, detail=WOWHEAD_UNREACHABLE) from exc
+        if upstream.status_code != httpx.codes.OK:
+            await upstream.aclose()
+            if upstream.status_code == httpx.codes.NOT_FOUND:
+                msg = "Wowhead has no such model viewer file"
+                raise NotFoundException(msg)
+            raise HTTPException(status_code=HTTP_502_BAD_GATEWAY, detail=WOWHEAD_UNREACHABLE)
+        headers = {name: upstream.headers[name] for name in _MODEL_FILE_HEADERS if name in upstream.headers}
+        headers["cache-control"] = MODEL_FILE_BROWSER_CACHE
+        headers[EDGE_CACHE_HEADER] = MODEL_FILE_EDGE_CACHE
+        return Stream(
+            upstream.aiter_raw(),
+            media_type=upstream.headers.get("content-type", "application/octet-stream"),
+            headers=headers,
+            background=BackgroundTask(upstream.aclose),
+        )
 
 
 class RosterSyncController(Controller):

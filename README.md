@@ -32,7 +32,7 @@ flowchart LR
 | `/pvp/` | members | Battleground match history and PvP boards, recorded by members' addons. |
 | `/addons/` | everyone | The addons the guild uses, with download links, grouped into required for raids and suggested for raids, everyone, leveling and PvP. |
 | `/items/` | everyone | Find an item, see its tooltip, its auction house prices across every Alliance house, and who in the guild has already looted it. Members can keep a wishlist with a note and watch an item's price, with a DM alert when it drops to their target; officers see who wants it next to their loot points. |
-| `/characters/` | everyone | The SideQuest roster's gear, item level, spec and last login, straight from Battle.net, each row marked with a small class icon. Search finds any stored character; an exact name and surname looks anyone else up directly, since Battle.net has no name search. A Milestones row shows the latest characters to reach level 40 or 60. |
+| `/characters/` | everyone | The SideQuest roster's gear, item level, spec and last login, straight from Battle.net, each row marked with a small class icon. Search finds any stored character; an exact name and surname looks anyone else up directly, since Battle.net has no name search. A Milestones row shows the latest characters to reach level 40 or 60. A character's page can show them in 3D: Wowhead's model viewer draws their race, barber choices and worn gear from Battle.net. |
 | `/talents/` | everyone | A classic talent calculator: pick a class, spend points across its three trees (each node shows its spell icon), and copy a share link. Members can save builds with a note; officers can pin a build as a raid recommendation. |
 | `/recipes/` | everyone | Browse every profession and its recipes, straight from Battle.net: what each one makes and the reagents it needs, plus a crafting cost and profit when every reagent is priced. A recipe's page also lists the guild characters who know it, linked from the Guild Hall's crafter search. |
 | `/quests/` | everyone | Browse every quest zone from Battle.net, search a quest by name, and see one quest's description, rewards, requirements and chain: the earlier quests leading up to it, which of them it requires or must not have been done, and what it leads to next. |
@@ -265,6 +265,7 @@ Cloudflare answers almost every request itself, so the server rarely sees a visi
 | `/_astro/*` (scripts, fonts, pictures) | a year. The file names change with every build. |
 | Pages | a minute. After that it shows the copy it has while it fetches a new one. |
 | `/api/discord/live` | 15 seconds. Everyone sees the same counts. |
+| `/api/modelviewer/*` (the 3D viewer's model files, relayed from Wowhead) | never kept yet: the route asks for a month, but the cache rule doesn't list it. Browsers keep them a week. |
 | Everything else in `/api/` and `/auth/` | never kept |
 
 A route is kept only if it sends a `Cloudflare-CDN-Cache-Control` header and skips the session, so it can never hand

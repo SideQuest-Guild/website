@@ -168,6 +168,31 @@ class CharacterPage(CharacterSummary):
     sheet: CharacterSheet | None
 
 
+class CharacterModelChoice(BaseModel):
+    """One customization a character made in the barber's chair, by Battle.net's option and choice ids."""
+
+    option_id: int = Field(description="The customization option, such as Hair Style.")
+    choice_id: int = Field(description="The choice made in that option.")
+
+
+class CharacterModelItem(BaseModel):
+    """One worn item as Wowhead's model viewer draws it."""
+
+    slot: int = Field(description="The model viewer's slot: the item's inventory type, or 21/22 for a weapon in hand.")
+    display_id: int = Field(description="The item's display id, which picks its model and textures.")
+
+
+class CharacterModel(BaseModel):
+    """What Wowhead's model viewer needs to draw a character as Battle.net last published it."""
+
+    model_id: int = Field(description="The race and body model: race id times two, less one, plus one if female.")
+    customizations: list[CharacterModelChoice]
+    items: list[CharacterModelItem] = Field(
+        description="Worn items the viewer can draw. Necks, rings and trinkets are left out, and so is a ranged "
+        "weapon while a hand holds something."
+    )
+
+
 class RosterSyncReport(BaseModel):
     """What one roster sync changed. ``joined`` and ``left`` hold full names (``Name Surname``)."""
 
