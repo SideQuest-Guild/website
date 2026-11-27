@@ -93,6 +93,28 @@ _ITEM_TYPE_TRINKET = 12
 _ITEM_TYPE_WEAPON = 13
 # HandType: off hand, one hand (either hand); anything else (main hand only, two hand) goes in the main hand.
 _WEAPON_SLOTS_BY_HAND_TYPE: dict[int, tuple[SimSlot, ...]] = {3: ("off_hand",), 2: ("main_hand", "off_hand")}
+# WeaponType: held in off hand, shield; every spec can use these in the off hand without dual-wielding.
+_OFF_HAND_ANYONE_WEAPON_TYPES = frozenset({5, 7})
+# Mirrors wowsims' SpecCanDualWieldCapabilities: only these specs may put a weapon in the off hand.
+DUAL_WIELD_SPECS: frozenset[tuple[str, str]] = frozenset(
+    {
+        ("warrior", "dps"),
+        ("warrior", "protection"),
+        ("rogue", "dps"),
+        ("hunter", "dps"),
+    }
+)
+
+
+def _weapon_slots(item: dict, *, dual_wield: bool) -> tuple[SimSlot, ...]:
+    """A weapon's hand slot(s); only dual-wielders put weapons (not shields or held items) in the off hand."""
+    hand_type = item.get("handType")
+    default: tuple[SimSlot, ...] = ("main_hand",)
+    slots = _WEAPON_SLOTS_BY_HAND_TYPE.get(hand_type, default) if isinstance(hand_type, int) else default
+    if dual_wield or item.get("weaponType") in _OFF_HAND_ANYONE_WEAPON_TYPES:
+        return slots
+    return tuple(slot for slot in slots if slot != "off_hand")
+
 
 # (class, spec) -> the SIML `spec` line value, which is the proto's Player.spec oneof field name.
 SPEC_LINE: dict[tuple[str, str], str] = {
@@ -332,8 +354,11 @@ class ItemDB:
                 self._name_by_id.setdefault(candidate_id, name)
         return self._name_by_id.get(item_id)
 
-    def item_slots(self, item_id: int) -> tuple[SimSlot, ...]:
-        """The sim slot(s) ``item_id`` can go in, from its ``ItemType``/``HandType`` proto enum numbers."""
+    def item_slots(self, item_id: int, *, dual_wield: bool) -> tuple[SimSlot, ...]:
+        """The sim slot(s) ``item_id`` can go in, from its ``ItemType``/``HandType``/``WeaponType`` proto enum numbers.
+
+        Without ``dual_wield``, weapons stay out of the off hand; shields and held-in-off-hand items still go there.
+        """
         item = self.db().get(item_id)
         if not item:
             return ()
@@ -343,9 +368,7 @@ class ItemDB:
         if item_type == _ITEM_TYPE_TRINKET:
             return AMBIGUOUS_SLOT_PAIRS["trinket"]
         if item_type == _ITEM_TYPE_WEAPON:
-            hand_type = item.get("handType")
-            default = ("main_hand",)
-            return _WEAPON_SLOTS_BY_HAND_TYPE.get(hand_type, default) if isinstance(hand_type, int) else default
+            return _weapon_slots(item, dual_wield=dual_wield)
         if isinstance(item_type, int):
             return _ITEM_TYPE_SLOT.get(item_type, ())
         return ()
@@ -435,8 +458,8 @@ def _gear_entry_from_api(piece: CharacterGear, db: ItemDB, notes: list[str]) -> 
     return GearEntry(name=name, item_id=piece.item_id, suffix=suffix, enchant=enchant, display_name=piece.name)
 
 
-def resolve_sim_item(item: SimItem, db: ItemDB) -> ResolvedSwap:
-    """A requested :class:`SimItem` resolved to a :class:`GearEntry` and its valid slot(s)."""
+def resolve_sim_item(item: SimItem, db: ItemDB, *, dual_wield: bool) -> ResolvedSwap:
+    """A requested :class:`SimItem` resolved to a :class:`GearEntry` and the slot(s) it can go in for this spec."""
     item_id, name = db.resolve_item(item.item)
     notes: list[str] = []
     suffix = None
@@ -449,14 +472,18 @@ def resolve_sim_item(item: SimItem, db: ItemDB) -> ResolvedSwap:
             notes.append(f"{item.item}: couldn't map enchant {item.enchant!r}; simmed without it")
     display_name = db.db().get(item_id, {}).get("name", name)
     entry = GearEntry(name=name, item_id=item_id, suffix=suffix, enchant=enchant, display_name=display_name)
+    valid = db.item_slots(item_id, dual_wield=dual_wield)
+    wanted_off_hand = item.slot == "off_hand" or (not item.slot and not valid)
+    if wanted_off_hand and "off_hand" in db.item_slots(item_id, dual_wield=True) and "off_hand" not in valid:
+        msg = f"{item.item} is a weapon for the off hand, and only warriors, rogues and hunters can dual-wield"
+        raise SimEngineError(msg)
     if item.slot:
-        valid = db.item_slots(item_id)
         if valid and item.slot not in valid:
             msg = f"{item.item} doesn't fit in {item.slot} (fits: {', '.join(valid)})"
             raise SimEngineError(msg)
         candidates: tuple[SimSlot, ...] = (item.slot,)
     else:
-        candidates = db.item_slots(item_id)
+        candidates = valid
         if not candidates:
             msg = f"{item.item} needs a slot (couldn't tell which slot it fits)"
             raise SimEngineError(msg)

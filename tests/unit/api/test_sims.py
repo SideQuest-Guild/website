@@ -52,6 +52,9 @@ def wowsims_dir(tmp_path: Path) -> Path:
             "old_sword": 2001,
             "new_sword": 2002,
             "test_ring": 3001,
+            "test_mace": 2003,
+            "test_shield": 2004,
+            "test_off_hand_dagger": 2005,
         },
         "suffixes": {"of_the_bear": "of_the_bear"},
         "enchants": {"minor_spell_power": "minor_spell_power"},
@@ -64,6 +67,9 @@ def wowsims_dir(tmp_path: Path) -> Path:
             {"id": 2001, "name": "Old Sword", "type": 13, "handType": 1},
             {"id": 2002, "name": "New Sword", "type": 13, "handType": 1},
             {"id": 3001, "name": "Test Ring", "type": 11},
+            {"id": 2003, "name": "Test Mace", "type": 13, "handType": 2, "weaponType": 4},
+            {"id": 2004, "name": "Test Shield", "type": 13, "handType": 3, "weaponType": 7},
+            {"id": 2005, "name": "Test Off Hand Dagger", "type": 13, "handType": 3, "weaponType": 2},
         ]
     }
     (root / "assets" / "database" / "db.json").write_text(json.dumps(db))
@@ -177,17 +183,32 @@ def test_unknown_item_raises_with_suggestions(wowsims_dir: Path) -> None:
 
 def test_ambiguous_slot_item_needs_a_slot_unless_single_slot(wowsims_dir: Path) -> None:
     db = engine.ItemDB(wowsims_dir)
-    resolved = engine.resolve_sim_item(SimItem(item="test_ring"), db)
+    resolved = engine.resolve_sim_item(SimItem(item="test_ring"), db, dual_wield=False)
     assert resolved.candidate_slots == ("finger1", "finger2")
     # A weapon with one candidate slot resolves without needing one.
-    resolved = engine.resolve_sim_item(SimItem(item="new_sword"), db)
+    resolved = engine.resolve_sim_item(SimItem(item="new_sword"), db, dual_wield=False)
     assert resolved.candidate_slots == ("main_hand",)
 
 
 def test_item_that_does_not_fit_requested_slot_errors(wowsims_dir: Path) -> None:
     db = engine.ItemDB(wowsims_dir)
     with pytest.raises(engine.SimEngineError, match="doesn't fit"):
-        engine.resolve_sim_item(SimItem(item="new_sword", slot="head"), db)
+        engine.resolve_sim_item(SimItem(item="new_sword", slot="head"), db, dual_wield=False)
+
+
+def test_one_hand_weapon_goes_in_the_off_hand_only_for_dual_wielders(wowsims_dir: Path) -> None:
+    db = engine.ItemDB(wowsims_dir)
+    assert engine.resolve_sim_item(SimItem(item="test_mace"), db, dual_wield=False).candidate_slots == ("main_hand",)
+    assert engine.resolve_sim_item(SimItem(item="test_mace"), db, dual_wield=True).candidate_slots == (
+        "main_hand",
+        "off_hand",
+    )
+    with pytest.raises(engine.SimEngineError, match="can dual-wield"):
+        engine.resolve_sim_item(SimItem(item="test_mace", slot="off_hand"), db, dual_wield=False)
+    with pytest.raises(engine.SimEngineError, match="can dual-wield"):
+        engine.resolve_sim_item(SimItem(item="test_off_hand_dagger"), db, dual_wield=False)
+    # Shields go in the off hand for everyone.
+    assert engine.resolve_sim_item(SimItem(item="test_shield"), db, dual_wield=False).candidate_slots == ("off_hand",)
 
 
 # ---------- SIML generation ----------

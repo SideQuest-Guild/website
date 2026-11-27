@@ -91,11 +91,15 @@ async def _fetch_character_sheet(
 
 
 def _apply_wearing(
-    baseline: dict[SimSlot, engine.GearEntry], wearing: Sequence[SimItem], item_db: engine.ItemDB
+    baseline: dict[SimSlot, engine.GearEntry],
+    wearing: Sequence[SimItem],
+    item_db: engine.ItemDB,
+    *,
+    dual_wield: bool,
 ) -> list[str]:
     notes: list[str] = []
     for item in wearing:
-        resolved = engine.resolve_sim_item(item, item_db)
+        resolved = engine.resolve_sim_item(item, item_db, dual_wield=dual_wield)
         notes.extend(resolved.notes)
         slot = resolved.candidate_slots[0]
         if not item.slot and len(resolved.candidate_slots) > 1:
@@ -174,9 +178,10 @@ async def prepare_sim(
     engine.check_simmable(class_name, spec, level)
 
     item_db = engine.item_db(wowsims_dir)
+    dual_wield = (class_name, spec) in engine.DUAL_WIELD_SPECS
     baseline, notes = engine.gear_from_sheet(sheet, item_db)
-    notes = [*notes, *_apply_wearing(baseline, request.wearing, item_db)]
-    resolved_swaps = [engine.resolve_sim_item(item, item_db) for item in request.swaps]
+    notes = [*notes, *_apply_wearing(baseline, request.wearing, item_db, dual_wield=dual_wield)]
+    resolved_swaps = [engine.resolve_sim_item(item, item_db, dual_wield=dual_wield) for item in request.swaps]
     for swap in resolved_swaps:
         notes.extend(swap.notes)
     comparisons = _build_comparisons(baseline, resolved_swaps)
