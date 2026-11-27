@@ -28,7 +28,9 @@ class AddonCategory(StrEnum):
 
     RAID_REQUIRED = "raid_required"
     RAID = "raid"
+    TANK_HEAL = "tank_heal"
     GENERAL = "general"
+    GOLDMAKING = "goldmaking"
     LEVELING = "leveling"
     PVP = "pvp"
 
@@ -36,7 +38,9 @@ class AddonCategory(StrEnum):
 ADDON_CATEGORY_LABELS: dict[AddonCategory, str] = {
     AddonCategory.RAID_REQUIRED: "Required for raids",
     AddonCategory.RAID: "Suggested for raids",
+    AddonCategory.TANK_HEAL: "Suggested for tanks and healers",
     AddonCategory.GENERAL: "Suggested for everyone",
+    AddonCategory.GOLDMAKING: "Suggested for gold making",
     AddonCategory.LEVELING: "Suggested for leveling",
     AddonCategory.PVP: "Suggested for PvP",
 }

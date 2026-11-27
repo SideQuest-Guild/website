@@ -282,16 +282,26 @@ export const ADDON_ORIGIN_LABELS: Record<AddonOrigin, string> = {
   community: "Community pick",
 };
 
-export type AddonCategory = "raid_required" | "raid" | "general" | "leveling" | "pvp";
+export type AddonCategory = "raid_required" | "raid" | "tank_heal" | "general" | "goldmaking" | "leveling" | "pvp";
 
 /** Contract (display) order: matches `AddonCategory` in sidequest_common. */
-export const ADDON_CATEGORIES: AddonCategory[] = ["raid_required", "raid", "general", "leveling", "pvp"];
+export const ADDON_CATEGORIES: AddonCategory[] = [
+  "raid_required",
+  "raid",
+  "tank_heal",
+  "general",
+  "goldmaking",
+  "leveling",
+  "pvp",
+];
 
 /** Mirrors `ADDON_CATEGORY_LABELS` in sidequest_common. */
 export const ADDON_CATEGORY_LABELS: Record<AddonCategory, string> = {
   raid_required: "Required for raids",
   raid: "Suggested for raids",
+  tank_heal: "Suggested for tanks and healers",
   general: "Suggested for everyone",
+  goldmaking: "Suggested for gold making",
   leveling: "Suggested for leveling",
   pvp: "Suggested for PvP",
 };
