@@ -17,3 +17,8 @@ class MemberLink(BaseModel):
     # Defaulted so a bot newer than the API still parses (same reasoning as GuildConfigSchema's role ids).
     roster_confirmed: bool = False
     signed_in: bool = True
+    # In-game guild rank names held by the member's characters on the Battle.net guild roster, best rank first
+    # (several when their characters hold different ranks). ``guild_ranks`` counts every character linked to them;
+    # ``battlenet_guild_ranks`` only those their linked Battle.net account owns. Empty when none is on the roster.
+    guild_ranks: list[str] = []
+    battlenet_guild_ranks: list[str] = []

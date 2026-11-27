@@ -1,8 +1,9 @@
 """Member link status, bot-key only. ``/api/guilds/{guild_id}/member-links``.
 
 Most ``Member`` rows are someone who has signed in on the site; one exists without signing in when a Quest Master
-confirms them from Discord (``signed_in`` is false for those). The bot uses this to grant/revoke the signed-in and
-Battle.net-linked roles. 404s for any ``guild_id`` other than ``WebSettings.GUILD_ID`` (same rule as
+confirms them from Discord (``signed_in`` is false for those). The bot uses this to grant/revoke the signed-in,
+Battle.net-linked and roster roles, and the guild rank roles (from ``guild_ranks``/``battlenet_guild_ranks``).
+404s for any ``guild_id`` other than ``WebSettings.GUILD_ID`` (same rule as
 ``event_sync``/``discord_live``).
 """
 
@@ -12,7 +13,7 @@ from litestar.exceptions import NotFoundException
 from litestar.openapi.datastructures import ResponseSpec
 
 from sidequest_api.domain.member_links.dependencies import provide_member_links_service
-from sidequest_api.domain.member_links.services import MemberLinksService
+from sidequest_api.domain.member_links.services import MemberLinksService, MemberRanks
 from sidequest_api.lib.openapi import GuildIdPath
 from sidequest_common.schemas import MemberLink
 from sidequest_common.settings import WebSettings
@@ -37,8 +38,9 @@ class MemberLinksController(Controller):
         summary="List member link status",
         description=(
             "Returns every known member's Discord ID, whether they have signed in on the site, whether they have "
-            "linked Battle.net, and whether a Game Master confirmed their roster status. Returns 404 for any "
-            "guild_id other than the SideQuest server."
+            "linked Battle.net, whether a Game Master confirmed their roster status, and the in-game guild ranks "
+            "their characters hold on the Battle.net guild roster. Returns 404 for any guild_id other than the "
+            "SideQuest server."
         ),
         response_description="The guild's member link statuses.",
         responses={404: ResponseSpec(None, description="This guild_id is not the SideQuest server.")},
@@ -50,12 +52,17 @@ class MemberLinksController(Controller):
         web_settings: NamedDependency[WebSettings],
     ) -> list[MemberLink]:
         _require_site_guild(guild_id, web_settings)
+        members = await member_links_service.list_links()
+        ranks = await member_links_service.member_ranks(members)
+        no_ranks = MemberRanks()
         return [
             MemberLink(
                 discord_id=member.discord_id,
                 battlenet_linked=member.battlenet_id is not None,
                 roster_confirmed=member.roster_confirmed_at is not None,
                 signed_in=member.last_login_at is not None,
+                guild_ranks=ranks.get(member.id, no_ranks).all,
+                battlenet_guild_ranks=ranks.get(member.id, no_ranks).battlenet,
             )
-            for member in await member_links_service.list_links()
+            for member in members
         ]
