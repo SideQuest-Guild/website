@@ -189,8 +189,9 @@ groups with their chat (kept 30 days for moderation, then deleted). Everyone see
 Host* and *Caravan Master* badges for hosting PUG groups outside players join. The Discord side is
 `plugins/group_finder.py` in the bot repo; the API side is `api/src/sidequest_api/domain/groups/`.
 
-**Sims.** In the Discord `sim` forum, a member starts a post naming a character and up to 6 items to try (a Wowhead
-link, item id, or item name; `slot:` in front picks the slot, `+enchant` after adds an enchant). The bot queues it
+**Sims.** In the Discord **Gear sims** post in `#class-halls`, a member writes a message naming a character and up
+to 6 items to try (a Wowhead link, item id, or item name; `slot:` in front picks the slot, `+enchant` after adds an
+enchant). The bot queues it
 through the API, which takes the character's gear from its Battle.net sheet, runs
 [wowsims/forever](https://github.com/wowsims/forever)'s CLI in the web process (one sim at a time per pod, 5,000
 runs per scenario), and the bot replies with threat and damage-taken changes for tanks or DPS changes for everyone
