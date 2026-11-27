@@ -13,8 +13,8 @@ from uuid import UUID  # pydantic needs it at runtime
 
 from pydantic import BaseModel, Field
 
-DRIVE_PRIZE_COPPER = 10_000
-"""1g, paid to the inviter(s) with the most qualifying recruits in a drive. Ties each win it."""
+DRIVE_PRIZE_COPPER = 100_000
+"""10g, paid to the inviter(s) with the most qualifying recruits in a drive. Ties each win it."""
 RECRUIT_MIN_LEVEL = 10
 RECRUIT_STAY_DAYS = 7
 DRIVE_SETTLE_DAYS = 7

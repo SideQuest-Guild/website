@@ -198,7 +198,7 @@ export type EventDetail = EventSummary & {
 
 /** The rules line shown on a drive's page and the officers' events form. */
 export const RECRUITMENT_RULES_LINE =
-  "Invite new players to the guild. Whoever brings in the most recruits who stay 7 days and reach level 10 wins 1g, and ties each win 1g. Payouts go out a week after the drive ends.";
+  "Invite new players to the guild. Whoever brings in the most recruits who stay 7 days and reach level 10 wins 10g, and ties each win 10g. Payouts go out a week after the drive ends.";
 
 /** Default drive length offered in the officers' events form, mirroring `DRIVE_DEFAULT_DAYS` in sidequest_common. */
 export const DRIVE_DEFAULT_DAYS = 14;

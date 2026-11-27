@@ -623,7 +623,7 @@ async def test_mark_paid_is_idempotent(db_sessionmaker: async_sessionmaker[Async
     assert row.paid_at == NOW
 
 
-# --- payouts: winner-takes-all (most qualifying recruits wins 1g; ties split) -------------------------------------
+# --- payouts: winner-takes-all (most qualifying recruits wins 10g; ties split) -------------------------------------
 
 
 async def test_list_payouts_sole_inviter_wins_and_shows_paid_once_any_row_is_paid(
