@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy import select
 
-from sidequest_common.models import Member, OfficerAudit
+from sidequest_common.models import BattlenetCharacter, Member, OfficerAudit
 from tests.conftest import GUILD_ID
 
 if TYPE_CHECKING:
@@ -55,6 +55,28 @@ async def test_pending_includes_new_unposted_member(
     assert response.status_code == 200
     pending_ids = {row["member_id"] for row in response.json()["pending"]}
     assert member_id in pending_ids
+
+
+async def test_notices_name_the_members_guild_characters(
+    client: AsyncTestClient, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    """Officers see who someone is in game; the resolved list carries them too, since a guest's characters are often
+    only known once the roster confirms them."""
+    pending_id = await _seed_member(db_sessionmaker, discord_id=8101, username="newbie")
+    resolved_id = await _seed_member(db_sessionmaker, discord_id=8102, confirmed=True, posted=True, message_posted=True)
+    async with db_sessionmaker() as session:
+        for member_id, blizzard_id, name in ((pending_id, 41, "Nox"), (resolved_id, 42, "Brista")):
+            member = await session.get_one(Member, member_id)
+            member.battlenet_character_ids = [blizzard_id]
+            session.add(
+                BattlenetCharacter(
+                    slug=f"c-{blizzard_id}", blizzard_id=blizzard_id, name=name, surname="Zul", level=60, in_roster=True
+                )
+            )
+        await session.commit()
+    page = (await client.get(NOTICES_PATH)).json()
+    assert {row["member_id"]: row["guild_characters"] for row in page["pending"]}[pending_id] == ["Nox Zul"]
+    assert {row["member_id"]: row["guild_characters"] for row in page["resolved"]}[resolved_id] == ["Brista Zul"]
 
 
 async def test_pending_excludes_a_member_who_has_never_signed_in(

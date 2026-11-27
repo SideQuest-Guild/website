@@ -22,3 +22,8 @@ class MemberLink(BaseModel):
     # ``battlenet_guild_ranks`` only those their linked Battle.net account owns. Empty when none is on the roster.
     guild_ranks: list[str] = []
     battlenet_guild_ranks: list[str] = []
+    # Their characters on the Battle.net guild roster ("Name Surname"), the one that joined the guild first leading.
+    guild_characters: list[str] = []
+    # Whether the bot has made its one nickname call (set it to guild_characters[0], or left an existing one). True
+    # by default, so a bot newer than the API never renames anyone.
+    character_nick_done: bool = True

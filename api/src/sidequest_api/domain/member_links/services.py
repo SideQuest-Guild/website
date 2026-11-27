@@ -1,12 +1,59 @@
-"""Member link status reporting for the bot's role sync."""
+"""Member link status reporting for the bot's role and nickname sync."""
 
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
+from typing import TYPE_CHECKING
 
 from advanced_alchemy.repository import SQLAlchemyAsyncRepository
 from advanced_alchemy.service import SQLAlchemyAsyncRepositoryService
 from sqlalchemy import select
 
 from sidequest_common.models import BattlenetCharacter, GuildRank, GuildRosterSnapshot, Member, WowCharacter
+
+if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
+
+
+async def _site_linked(session: AsyncSession) -> dict[int, set[int]]:
+    """Blizzard character ids linked to each member on the site (self-claimed, by an officer, or from the addon)."""
+    out: dict[int, set[int]] = {}
+    statement = select(WowCharacter.member_id, WowCharacter.blizzard_id).where(
+        WowCharacter.member_id.is_not(None), WowCharacter.blizzard_id.is_not(None)
+    )
+    for member_id, blizzard_id in (await session.execute(statement)).tuples():
+        if member_id is not None and blizzard_id is not None:  # the WHERE guarantees it; the column types don't
+            out.setdefault(member_id, set()).add(blizzard_id)
+    return out
+
+
+async def guild_characters(session: AsyncSession, members: list[Member]) -> dict[int, list[str]]:
+    """Each member's roster characters as "Name Surname" (by ``Member.id``), the one that joined first leading.
+
+    Characters on the Battle.net guild roster that their Battle.net account owns or that are linked to them on the
+    site, ordered by ``joined_roster_at``. Members with none on the roster are left out.
+    """
+    rows = (
+        await session.execute(
+            select(
+                BattlenetCharacter.blizzard_id,
+                BattlenetCharacter.name,
+                BattlenetCharacter.surname,
+                BattlenetCharacter.joined_roster_at,
+            ).where(BattlenetCharacter.in_roster.is_(True))
+        )
+    ).tuples()
+    roster = {cid: (joined, f"{name} {surname}".strip()) for cid, name, surname, joined in rows}
+    if not roster:
+        return {}
+    site_linked = await _site_linked(session)
+    never = datetime.max.replace(tzinfo=UTC)
+    out: dict[int, list[str]] = {}
+    for member in members:
+        ids = set(member.battlenet_character_ids or ()) | site_linked.get(member.id, set())
+        found = sorted((roster[cid] for cid in ids if cid in roster), key=lambda c: (c[0] or never, c[1]))
+        if found:
+            out[member.id] = [name for _, name in found]
+    return out
 
 
 @dataclass(frozen=True)
@@ -29,7 +76,7 @@ class MemberLinksRepository(SQLAlchemyAsyncRepository[Member]):
 
 
 class MemberLinksService(SQLAlchemyAsyncRepositoryService[Member]):
-    """Reports every known member's sign-in and Battle.net link status, and their in-game guild ranks."""
+    """Reports every known member's sign-in and Battle.net link status, in-game guild ranks and roster characters."""
 
     repository_type = MemberLinksRepository
 
@@ -76,12 +123,7 @@ class MemberLinksService(SQLAlchemyAsyncRepositoryService[Member]):
         if not roster:
             return {}
         names = await self.rank_names()
-        site_linked: dict[int, set[int]] = {}
-        statement = select(WowCharacter.member_id, WowCharacter.blizzard_id).where(
-            WowCharacter.member_id.is_not(None), WowCharacter.blizzard_id.is_not(None)
-        )
-        for member_id, blizzard_id in (await session.execute(statement)).tuples():
-            site_linked.setdefault(member_id, set()).add(blizzard_id)
+        site_linked = await _site_linked(session)
 
         def ranks(character_ids: set[int]) -> list[str]:
             indices = sorted({roster[cid] for cid in character_ids if cid in roster})
@@ -94,3 +136,17 @@ class MemberLinksService(SQLAlchemyAsyncRepositoryService[Member]):
             if found.all:
                 out[member.id] = found
         return out
+
+    async def guild_characters(self, members: list[Member]) -> dict[int, list[str]]:
+        """``guild_characters`` for ``members`` (module function), on this service's session."""
+        return await guild_characters(self.repository.session, members)
+
+    async def mark_character_nick(self, discord_id: int) -> Member | None:
+        """Record the bot's one nickname call for the member with ``discord_id`` (idempotent); None if unknown."""
+        member = await self.get_one_or_none(discord_id=discord_id)
+        if member is None:
+            return None
+        if member.character_nick_at is None:
+            member.character_nick_at = datetime.now(UTC)
+            member = await self.update(member, auto_commit=True)
+        return member

@@ -23,6 +23,7 @@ from litestar.openapi.datastructures import ResponseSpec
 from litestar.params import JSONBody, Parameter
 from sqlalchemy import select
 
+from sidequest_api.domain.member_links.services import guild_characters
 from sidequest_api.domain.members.services import MembersService
 from sidequest_api.domain.signup_notices.dependencies import provide_members_service
 from sidequest_api.lib.discord import avatar_url
@@ -48,7 +49,7 @@ def _require_site_guild(guild_id: int, web_settings: WebSettings) -> None:
         raise NotFoundException(msg)
 
 
-def _to_candidate(member: Member) -> SignupNoticeCandidate:
+def _to_candidate(member: Member, characters: list[str]) -> SignupNoticeCandidate:
     return SignupNoticeCandidate(
         member_id=member.id,
         discord_id=str(member.discord_id),
@@ -58,6 +59,7 @@ def _to_candidate(member: Member) -> SignupNoticeCandidate:
         battletag=member.battletag,
         roster_confirmed=member.roster_confirmed_at is not None,
         confirmed_from_roster=member.roster_confirmed_via == "battlenet",
+        guild_characters=characters,
         created_at=member.created_at,
     )
 
@@ -130,8 +132,9 @@ class SignupNoticesController(Controller):
         pending = await members_service.list_unnoticed()
         resolved_members = await members_service.list_unresolved_confirmations()
         confirmed_by = await _confirmed_by_names(members_service, [member.id for member in resolved_members])
+        characters = await guild_characters(members_service.repository.session, [*pending, *resolved_members])
         return SignupNoticesPage(
-            pending=[_to_candidate(member) for member in pending],
+            pending=[_to_candidate(member, characters.get(member.id, [])) for member in pending],
             resolved=[
                 SignupNoticeResolution(
                     member_id=member.id,
@@ -141,6 +144,7 @@ class SignupNoticesController(Controller):
                     message_id=str(member.officer_notice_message_id),
                     confirmed_by=confirmed_by.get(member.id),
                     confirmed_from_roster=member.roster_confirmed_via == "battlenet",
+                    guild_characters=characters.get(member.id, []),
                 )
                 for member in resolved_members
             ],

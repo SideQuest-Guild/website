@@ -63,6 +63,10 @@ class Member(BigIntAuditBase):
     officer_notice_resolved_at: Mapped[datetime | None] = mapped_column(DateTimeUTC(timezone=True), default=None)
     officer_notice_channel_id: Mapped[int | None] = mapped_column(BigInteger, default=None)
     officer_notice_message_id: Mapped[int | None] = mapped_column(BigInteger, default=None)
+    character_nick_at: Mapped[datetime | None] = mapped_column(DateTimeUTC(timezone=True), default=None)
+    """When the bot made its one Discord nickname call for this member: it set their nickname to the guild character
+    they joined on, or found they already had one and left it. ``null`` until then; the bot never renames them again,
+    so they're free to change it. Members from before this existed are backfilled non-null, so none is renamed."""
     calendar_token: Mapped[str | None] = mapped_column(Text, unique=True, default=None)
     """Secret token for the member's private calendar feed (``GET /api/calendar/{token}.ics``); generated lazily."""
     raid_status: Mapped[str | None] = mapped_column(Text, default=None)

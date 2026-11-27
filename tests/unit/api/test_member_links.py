@@ -146,3 +146,66 @@ async def test_list_reports_each_members_in_game_ranks_from_the_battlenet_roster
         222: (["Quest Master"], []),
         333: ([], []),
     }
+
+
+async def test_list_reports_each_members_roster_characters_the_one_that_joined_first_leading(
+    client: AsyncTestClient, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    """The bot names a new member after the character they joined the guild on, so it must come first; an alt linked
+    on the site counts, a character that left the roster doesn't."""
+
+    def character(
+        blizzard_id: int, name: str, joined: datetime | None, *, in_roster: bool = True
+    ) -> BattlenetCharacter:
+        return BattlenetCharacter(
+            slug=f"char-{blizzard_id}",
+            blizzard_id=blizzard_id,
+            name=name,
+            surname="Behindhead",
+            level=60,
+            in_roster=in_roster,
+            joined_roster_at=joined,
+        )
+
+    async with db_sessionmaker() as session:
+        legs = Member(discord_id=111, username="legs", is_guild_member=True, battlenet_character_ids=[1, 2, 3])
+        nobody = Member(discord_id=222, username="nobody", is_guild_member=True)
+        session.add_all([legs, nobody])
+        await session.flush()
+        session.add_all(
+            [
+                character(1, "Alt", datetime(2026, 11, 20, tzinfo=UTC)),
+                character(2, "Legs", datetime(2026, 11, 5, tzinfo=UTC)),
+                character(3, "Gone", datetime(2026, 11, 1, tzinfo=UTC), in_roster=False),
+                character(4, "Unknown", None),  # joined before the roster sync noted joins: last
+                WowCharacter(name="Unknown", realm="r", key="unknown-r", member_id=legs.id, blizzard_id=4),
+            ]
+        )
+        await session.commit()
+
+    response = await client.get(LINKS_PATH)
+    assert response.status_code == 200
+    links = {link["discord_id"]: link for link in response.json()}
+    assert links[111]["guild_characters"] == ["Legs Behindhead", "Alt Behindhead", "Unknown Behindhead"]
+    assert links[222]["guild_characters"] == []
+    assert links[111]["character_nick_done"] is False
+
+
+async def test_character_nick_is_recorded_once_and_unknown_members_404(
+    client: AsyncTestClient, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    async with db_sessionmaker() as session:
+        session.add(Member(discord_id=111, username="legs", is_guild_member=True))
+        await session.commit()
+
+    assert (await client.post(f"{LINKS_PATH}/111/character-nick")).status_code == 204
+    async with db_sessionmaker() as session:
+        first = (await session.execute(select(Member.character_nick_at))).scalar_one()
+    assert first is not None
+    assert (await client.post(f"{LINKS_PATH}/111/character-nick")).status_code == 204
+    async with db_sessionmaker() as session:
+        assert (await session.execute(select(Member.character_nick_at))).scalar_one() == first
+    links = {link["discord_id"]: link for link in (await client.get(LINKS_PATH)).json()}
+    assert links[111]["character_nick_done"] is True
+    assert (await client.post(f"{LINKS_PATH}/999/character-nick")).status_code == 404
+    assert (await client.post(f"/api/guilds/{GUILD_ID + 1}/member-links/111/character-nick")).status_code == 404

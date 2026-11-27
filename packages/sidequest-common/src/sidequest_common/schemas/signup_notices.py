@@ -25,6 +25,8 @@ class SignupNoticeCandidate(BaseModel):
     roster_confirmed: bool
     confirmed_from_roster: bool = False
     """Confirmed automatically: one of the member's Battle.net characters is in the in-game guild."""
+    guild_characters: list[str] = []
+    """Their characters on the Battle.net guild roster ("Name Surname"), the one that joined the guild first leading."""
     created_at: datetime
 
 
@@ -42,6 +44,8 @@ class SignupNoticeResolution(BaseModel):
     )
     confirmed_from_roster: bool = False
     """Confirmed automatically from the Battle.net guild roster, not by a Quest Master (``confirmed_by`` is null)."""
+    guild_characters: list[str] = []
+    """As on the candidate: by now the roster may know characters it didn't when the notice was posted."""
 
 
 class SignupNoticesPage(BaseModel):
