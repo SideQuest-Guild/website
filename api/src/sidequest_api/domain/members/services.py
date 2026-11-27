@@ -29,6 +29,7 @@ from sidequest_common.models import (
     MemberLevel,
     MemberRoleReset,
     OfficerAudit,
+    SimJob,
     TalentBuild,
     WowCharacter,
     XPGrant,
@@ -150,6 +151,9 @@ class MembersService(SQLAlchemyAsyncRepositoryService[Member]):
 
         Also deletes the ``BattlegroundScore`` rows linked to the member's characters: their own battleground
         scoreboard rows go with their account, though the match itself (and other players' rows in it) stays.
+
+        Also deletes the gear sims they asked for in the Discord ``sim`` forum (``SimJob``, keyed by Discord ID as
+        text, otherwise purged after 7 days).
         """
         session = self.repository.session
         await session.execute(
@@ -182,6 +186,7 @@ class MembersService(SQLAlchemyAsyncRepositoryService[Member]):
         )
         await session.execute(delete(AuctionWatch).where(AuctionWatch.member_id == member.id))
         await session.execute(delete(TalentBuild).where(TalentBuild.member_id == member.id))
+        await session.execute(delete(SimJob).where(SimJob.requested_by == str(member.discord_id)))
         await session.execute(
             update(OfficerAudit).where(OfficerAudit.actor_member_id == member.id).values(actor_member_id=None)
         )

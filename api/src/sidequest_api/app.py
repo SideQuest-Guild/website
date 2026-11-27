@@ -10,7 +10,7 @@ from litestar.openapi.plugins import ScalarRenderPlugin
 from litestar.openapi.spec import Components
 from litestar.plugins.pydantic import PydanticPlugin
 
-from sidequest_common.settings import APISettings, DatabaseSettings, WebSettings
+from sidequest_common.settings import APISettings, DatabaseSettings, WebSettings, WowSimsSettings
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -22,6 +22,7 @@ def create_app(
     db_settings: DatabaseSettings | None = None,
     api_settings: APISettings | None = None,
     web_settings: WebSettings | None = None,
+    wowsims_settings: WowSimsSettings | None = None,
     *,
     website_dist: Path | None = None,
     discord_transport: httpx.BaseTransport | None = None,
@@ -42,6 +43,7 @@ def create_app(
 
     from sidequest_api.domain import GUILD_API_PATH, guild_controllers, public_routes
     from sidequest_api.domain.mcp.server import MCP_MOUNT_PATH, build_mcp_mount
+    from sidequest_api.domain.sims.runner import sim_runner_lifespan
     from sidequest_api.lib.auth import API_KEY_HEADER, api_key_guard
     from sidequest_api.lib.battlenet import BATTLENET_TRANSPORT_STATE_KEY
     from sidequest_api.lib.db import build_alchemy_config
@@ -66,12 +68,16 @@ def create_app(
     )
     from sidequest_api.lib.website import DEFAULT_WEBSITE_DIST, is_vite_dev_mode, website_routes, website_vite_plugin
     from sidequest_api.lib.wowhead import wowhead_lifespan
+    from sidequest_api.lib.wowsims import wowsims_dir as resolve_wowsims_dir
     from sidequest_common.settings import DiscordSettings
 
     install_calendar_log_redaction()
     db_settings = db_settings or DatabaseSettings()
     api_settings = api_settings or APISettings()
     web_settings = web_settings or WebSettings()
+    wowsims_settings = wowsims_settings or WowSimsSettings()
+    wowsims_dir = resolve_wowsims_dir(wowsims_settings)
+    db_dialect = "sqlite" if db_settings.URL.startswith("sqlite") else "postgresql"
     try:
         bot_token = DiscordSettings().TOKEN.get_secret_value()
     except ValidationError:  # DISCORD_TOKEN unset: the MCP Discord tools say so instead of the app failing to boot
@@ -105,10 +111,17 @@ def create_app(
             mcp_lifespan,
             game_data_lifespan(web_settings, game_data_transport),
             wowhead_lifespan(wowhead_transport),
+            sim_runner_lifespan(
+                alchemy_config.create_session_maker(),
+                wowsims_dir=wowsims_dir,
+                dialect=db_dialect,
+                enabled=wowsims_settings.RUNNER,
+            ),
         ],
         middleware=[build_session_config(web_settings).middleware],
         dependencies={
             "web_settings": Provide(lambda: web_settings, sync_to_thread=False),
+            "wowsims_dir": Provide(lambda: wowsims_dir, sync_to_thread=False),
             "authenticated_member": Provide(provide_authenticated_member),
             "current_member": Provide(provide_current_member),
             "member_or_sync_token": Provide(provide_member_or_sync_token),

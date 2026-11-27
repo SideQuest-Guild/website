@@ -39,6 +39,21 @@ class APISettings(BaseSettings):
     DEBUG: bool = False
 
 
+class WowSimsSettings(BaseSettings):
+    """wowsims/forever CLI location (``WOWSIMS_*``).
+
+    ``DIR`` holds ``bin/wowsimcli``, ``sim/siml/names.json``, ``assets/database/db.json`` and ``ui/specs/**``, the
+    same layout the Dockerfile's Go build stage produces under ``/opt/wowsims`` and ``~/.cache/wowsims-forever``
+    has locally after the wow-forever-sim skill's ``setup`` command. ``RUNNER`` starts the background loop that runs
+    queued sims in this process (it also needs the binary to exist); tests that only queue jobs turn it off.
+    """
+
+    model_config = SettingsConfigDict(env_prefix="WOWSIMS_", **_BASE_CONFIG)
+
+    DIR: str = "/opt/wowsims"
+    RUNNER: bool = True
+
+
 class DiscordSettings(BaseSettings):
     """Discord bot settings (``DISCORD_*``).
 

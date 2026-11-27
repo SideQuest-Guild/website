@@ -189,6 +189,18 @@ groups with their chat (kept 30 days for moderation, then deleted). Everyone see
 Host* and *Caravan Master* badges for hosting PUG groups outside players join. The Discord side is
 `plugins/group_finder.py` in the bot repo; the API side is `api/src/sidequest_api/domain/groups/`.
 
+**Sims.** In the Discord `sim` forum, a member starts a post naming a character and up to 6 items to try (a Wowhead
+link, item id, or item name; `slot:` in front picks the slot, `+enchant` after adds an enchant). The bot queues it
+through the API, which takes the character's gear from its Battle.net sheet, runs
+[wowsims/forever](https://github.com/wowsims/forever)'s CLI in the web process (one sim at a time per pod, 5,000
+runs per scenario), and the bot replies with threat and damage-taken changes for tanks or DPS changes for everyone
+else, per target count and mob type, with differences inside two standard errors marked as noise. The sim models
+level 60 against generic mobs, not real encounters, so only characters level 55 and up can be simmed. Healers,
+enhancement shamans and warlocks can't be simmed yet: wowsims has no healing rotation, and the other two rotations
+are only built by the wowsims website. Battle.net doesn't publish talent ranks, so a sim uses the spec's default
+talents unless the post gives a talent string. The CLI and its data come from a pinned wowsims/forever commit in the
+Dockerfile (`WOWSIMS_DIR`, default `/opt/wowsims`); the API side is `api/src/sidequest_api/domain/sims/`.
+
 **Your data.** If you start keeping something new about members, add it to `/privacy/` and make `delete_account` in
 `api/src/sidequest_api/domain/members/services.py` remove it.
 

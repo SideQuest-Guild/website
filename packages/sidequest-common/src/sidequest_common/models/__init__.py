@@ -68,6 +68,7 @@ from sidequest_common.models.recruiting import RecruitingNeeds
 from sidequest_common.models.recruitment import GuildLogEntry, RecruitmentRecruit
 from sidequest_common.models.role_menus import RoleMenu, RoleMenuOption
 from sidequest_common.models.role_resets import MemberRoleReset
+from sidequest_common.models.sims import SimJob
 from sidequest_common.models.talents import TalentBuild
 
 __all__ = (
@@ -137,6 +138,7 @@ __all__ = (
     "RoleMenu",
     "RoleMenuOption",
     "SessionCharacterPresence",
+    "SimJob",
     "TalentBuild",
     "WowCharacter",
     "XPGrant",

@@ -62,6 +62,7 @@ from sidequest_api.domain.reference.controllers import AchievementsController, Q
 from sidequest_api.domain.role_menus.controllers import RoleMenusController
 from sidequest_api.domain.role_resets.controllers import RoleResetsController
 from sidequest_api.domain.signup_notices.controllers import SignupNoticesController
+from sidequest_api.domain.sims.controllers import SimsController
 from sidequest_api.domain.stats.controllers import StatsController
 from sidequest_api.domain.system.controllers import HealthController
 from sidequest_api.domain.talents.controllers import MyTalentBuildsController, TalentBuildsController, TalentsController
@@ -93,6 +94,7 @@ guild_controllers = [
     AuctionsSyncController,
     AuctionBotWatchesController,
     LootCouncilController,
+    SimsController,
 ]
 
 public_routes = [

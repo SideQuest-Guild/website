@@ -221,6 +221,10 @@ TAG_GROUPS: dict[str, dict[str, str]] = {
             "The bot's council loot-log poll and post ack: pending decisions and voids, and marking them posted "
             "to #loot-log. Called by the bot with its shared key."
         ),
+        "Sims": (
+            "Queues a character gear-swap sim through the wowsims/forever CLI and reports its status and result. "
+            "Called by the bot with its shared key."
+        ),
     },
 }
 

@@ -19,6 +19,7 @@ from sidequest_common.models import (
     MemberRoleReset,
     ModCase,
     OfficerAudit,
+    SimJob,
     WowCharacter,
 )
 from tests.unit.api.conftest import link_battlenet, login_as
@@ -341,3 +342,19 @@ async def test_delete_account_removes_auction_watches_and_alerts(
     async with db_sessionmaker() as session:
         assert (await session.execute(select(AuctionWatch))).scalars().all() == []
         assert (await session.execute(select(AuctionAlert))).scalars().all() == []
+
+
+async def test_delete_account_removes_own_sim_requests_only(
+    member_client: AsyncTestClient, discord_state: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    await login_as(member_client, discord_state, discord_id=9013, username="simmer")
+    async with db_sessionmaker() as session:
+        for requester in ("9013", "9014"):
+            session.add(SimJob(request={"character": "Nox Zul"}, status="done", requested_by=requester))
+        await session.commit()
+
+    assert (await member_client.delete("/api/me")).status_code == 204
+
+    async with db_sessionmaker() as session:
+        remaining = (await session.execute(select(SimJob))).scalars().all()
+        assert [job.requested_by for job in remaining] == ["9014"]
