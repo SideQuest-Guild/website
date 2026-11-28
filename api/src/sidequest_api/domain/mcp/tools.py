@@ -56,6 +56,8 @@ AUDIT_SUMMARY_MAX = 300
 ITEM_LOOT_LIMIT = 50
 MAX_ITEM_SEARCH_PAGE = 20
 TEXT_CHANNEL_TYPE = 0
+TEXT_LIKE_CHANNEL_TYPES = frozenset({0, 5, 15, 16})
+"""Text, announcement, forum and media channels: Discord orders these together in a category, voice apart."""
 
 
 async def _role_names(ctx: Any, role_ids: list[int]) -> dict[int, str]:
@@ -642,7 +644,7 @@ async def create_text_channel(
     )
     if after is not None:
         siblings = sorted(
-            (c for c in channels if c.get("parent_id") == parent_id and c.get("type") == TEXT_CHANNEL_TYPE),
+            (c for c in channels if c.get("parent_id") == parent_id and c.get("type") in TEXT_LIKE_CHANNEL_TYPES),
             key=lambda c: c.get("position", 0),
         )
         order = [c["id"] for c in siblings]

@@ -38,8 +38,9 @@ MESSAGE_ENDPOINT_HEADERS = {"Accept": "application/json, text/event-stream"}
 CHANNELS = [
     {"id": "777", "name": "general", "type": 0, "parent_id": None, "position": 0},
     {"id": "800", "name": "Other", "type": 4, "parent_id": None, "position": 1},
-    {"id": "801", "name": "choose-your-class", "type": 0, "parent_id": "800", "position": 0},
-    {"id": "802", "name": "everything-else", "type": 0, "parent_id": "800", "position": 1},
+    {"id": "801", "name": "everything-else", "type": 0, "parent_id": "800", "position": 0},
+    {"id": "802", "name": "class-halls", "type": 15, "parent_id": "800", "position": 1},
+    {"id": "804", "name": "Lounge", "type": 2, "parent_id": "800", "position": 0},
     {
         "id": "803",
         "name": "guild-chat",
@@ -273,7 +274,8 @@ async def test_gm_creates_a_channel_with_copied_access_right_below_another(
     create = next(r for r in discord_calls if r.method == "POST" and r.url.path.endswith("/channels"))
     payload = json.loads(create.content)
     assert payload["parent_id"] == "800"
-    assert payload["permission_overwrites"] == CHANNELS[4]["permission_overwrites"]
+    guild_chat = next(c for c in CHANNELS if c["id"] == "803")
+    assert payload["permission_overwrites"] == guild_chat["permission_overwrites"]
     move = next(r for r in discord_calls if r.method == "PATCH")
     assert [p["id"] for p in json.loads(move.content)] == ["801", "900", "802"]
 
