@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import json
 import threading
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
@@ -34,10 +35,36 @@ DANGEROUS_ROLE_ID = 999_333
 MESSAGE_ENDPOINT_HEADERS = {"Accept": "application/json, text/event-stream"}
 
 
-def _bot_discord_transport() -> httpx.MockTransport:
+CHANNELS = [
+    {"id": "777", "name": "general", "type": 0, "parent_id": None, "position": 0},
+    {"id": "800", "name": "Other", "type": 4, "parent_id": None, "position": 1},
+    {"id": "801", "name": "choose-your-class", "type": 0, "parent_id": "800", "position": 0},
+    {"id": "802", "name": "everything-else", "type": 0, "parent_id": "800", "position": 1},
+    {
+        "id": "803",
+        "name": "guild-chat",
+        "type": 0,
+        "parent_id": None,
+        "position": 2,
+        "permission_overwrites": [{"id": str(GUILD_ID), "type": 0, "allow": "0", "deny": "1024"}],
+    },
+]
+
+
+def _channels_response(method: str) -> httpx.Response:
+    """The guild channels route: list them (GET), create one (POST), or reorder them (PATCH)."""
+    if method == "POST":
+        return httpx.Response(201, json={"id": "900", "name": "auction-house", "type": 0, "parent_id": "800"})
+    if method == "PATCH":
+        return httpx.Response(204)
+    return httpx.Response(200, json=CHANNELS)
+
+
+def _bot_discord_transport(calls: list[httpx.Request]) -> httpx.MockTransport:
     """Fakes the Discord bot REST calls MCP tools make: roles, channels, members, messages, audit log."""
 
     def handler(request: httpx.Request) -> httpx.Response:
+        calls.append(request)
         path = request.url.path
         if path.endswith("/roles"):
             return httpx.Response(
@@ -63,7 +90,7 @@ def _bot_discord_transport() -> httpx.MockTransport:
         if path.endswith("/members/4242"):
             return httpx.Response(200, json={"roles": ["999"]})
         if path.endswith("/channels"):
-            return httpx.Response(200, json=[{"id": "777", "name": "general", "type": 0, "parent_id": None}])
+            return _channels_response(request.method)
         if path.endswith("/messages") and request.method == "GET":
             return httpx.Response(200, json=[])
         if path.endswith("/messages") and request.method == "POST":
@@ -87,14 +114,25 @@ def mcp_web_settings() -> WebSettings:
 
 
 @pytest.fixture
-def mcp_app(database_url: str, mcp_web_settings: WebSettings, monkeypatch: pytest.MonkeyPatch) -> Litestar:
+def discord_calls() -> list[httpx.Request]:
+    """Every request the fake Discord transport answered, in order."""
+    return []
+
+
+@pytest.fixture
+def mcp_app(
+    database_url: str,
+    mcp_web_settings: WebSettings,
+    discord_calls: list[httpx.Request],
+    monkeypatch: pytest.MonkeyPatch,
+) -> Litestar:
     """App with the bot token configured, behind a mocked Discord transport."""
     monkeypatch.setenv("DISCORD_TOKEN", "fake-bot-token")
     return create_app(
         DatabaseSettings(URL=database_url),
         APISettings(KEY=TEST_API_KEY),
         mcp_web_settings,
-        discord_transport=_bot_discord_transport(),
+        discord_transport=_bot_discord_transport(discord_calls),
     )
 
 
@@ -223,6 +261,41 @@ async def test_gm_only_tool_works_for_gm(
     assert body["result"]["isError"] is False
 
 
+async def test_gm_creates_a_channel_with_copied_access_right_below_another(
+    mcp_client: AsyncTestClient,
+    db_sessionmaker: async_sessionmaker[AsyncSession],
+    discord_calls: list[httpx.Request],
+) -> None:
+    _member_id, token = await _seed_member(db_sessionmaker, roles=[OFFICER_ROLE_ID, GM_ROLE_ID])
+    arguments = {"name": "auction-house", "copy_access_from": "803", "after_channel_id": "801", "topic": "AH talk"}
+    response = await _call_tool(mcp_client, token, "create_text_channel", arguments)
+    assert response.json()["result"]["isError"] is False
+    create = next(r for r in discord_calls if r.method == "POST" and r.url.path.endswith("/channels"))
+    payload = json.loads(create.content)
+    assert payload["parent_id"] == "800"
+    assert payload["permission_overwrites"] == CHANNELS[4]["permission_overwrites"]
+    move = next(r for r in discord_calls if r.method == "PATCH")
+    assert [p["id"] for p in json.loads(move.content)] == ["801", "900", "802"]
+
+
+async def test_a_plain_officer_cannot_create_a_channel(
+    mcp_client: AsyncTestClient, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    _member_id, token = await _seed_member(db_sessionmaker, roles=[OFFICER_ROLE_ID])
+    response = await _call_tool(mcp_client, token, "create_text_channel", {"name": "x", "copy_access_from": "803"})
+    assert response.json()["result"]["isError"] is True
+
+
+async def test_creating_a_channel_needs_an_existing_channel_to_copy(
+    mcp_client: AsyncTestClient, db_sessionmaker: async_sessionmaker[AsyncSession], discord_calls: list[httpx.Request]
+) -> None:
+    _member_id, token = await _seed_member(db_sessionmaker, roles=[OFFICER_ROLE_ID, GM_ROLE_ID])
+    response = await _call_tool(mcp_client, token, "create_text_channel", {"name": "x", "copy_access_from": "123"})
+    assert response.json()["result"]["isError"] is True
+    assert "No channel 123" in response.json()["result"]["content"][0]["text"]
+    assert not any(r.method == "POST" and r.url.path.endswith("/channels") for r in discord_calls)
+
+
 # --- Role guard ----------------------------------------------------------------------------------------------------
 
 
@@ -325,7 +398,7 @@ async def test_real_mcp_client_lists_tools_and_calls_a_read_tool_and_create_even
         DatabaseSettings(URL=database_url),
         APISettings(KEY=TEST_API_KEY),
         mcp_web_settings,
-        discord_transport=_bot_discord_transport(),
+        discord_transport=_bot_discord_transport([]),
     )
     port = 18732
     config = uvicorn.Config(app, host="127.0.0.1", port=port, log_level="error")

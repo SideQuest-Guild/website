@@ -163,6 +163,22 @@ async def bot_list_guild_channels(client: httpx.AsyncClient, bot_token: str, gui
     return result
 
 
+async def bot_create_guild_channel(
+    client: httpx.AsyncClient, bot_token: str, guild_id: int, payload: dict[str, Any]
+) -> dict[str, Any]:
+    """``POST /guilds/{guild_id}/channels`` (bot auth): create a channel from ``payload``; returns the new channel."""
+    response = await _bot_request(client, bot_token, "POST", f"/guilds/{guild_id}/channels", json=payload)
+    result: dict[str, Any] = response.json()
+    return result
+
+
+async def bot_set_channel_positions(
+    client: httpx.AsyncClient, bot_token: str, guild_id: int, positions: list[dict[str, Any]]
+) -> None:
+    """``PATCH /guilds/{guild_id}/channels`` (bot auth): set ``[{"id", "position"}, ...]`` for channels."""
+    await _bot_request(client, bot_token, "PATCH", f"/guilds/{guild_id}/channels", json=positions)
+
+
 async def bot_get_channel_messages(
     client: httpx.AsyncClient, bot_token: str, channel_id: int, *, limit: int
 ) -> list[dict[str, Any]]:

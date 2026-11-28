@@ -55,6 +55,7 @@ MAX_AUDIT_LIMIT = 50
 AUDIT_SUMMARY_MAX = 300
 ITEM_LOOT_LIMIT = 50
 MAX_ITEM_SEARCH_PAGE = 20
+TEXT_CHANNEL_TYPE = 0
 
 
 async def _role_names(ctx: Any, role_ids: list[int]) -> dict[int, str]:
@@ -607,6 +608,62 @@ async def attendance_report(attendance_range: str = "last_30", *, raids_only: bo
     return report.model_dump(mode="json")
 
 
+async def create_text_channel(
+    name: str, copy_access_from: str, *, topic: str | None = None, after_channel_id: str | None = None
+) -> dict[str, Any]:
+    """Create a Discord text channel with the access of ``copy_access_from`` (GM only).
+
+    It goes in the category of ``after_channel_id`` (placed right below it) when given, else in the category of
+    ``copy_access_from``. Access is always copied from an existing channel, so it is never wider than one.
+    """
+    ctx = get_context()
+    require_gm(ctx.actor, ctx.web_settings)
+    token = require_bot_token(ctx)
+    channels = await discord_lib.bot_list_guild_channels(ctx.discord_client, token, ctx.guild_id)
+    by_id = {channel["id"]: channel for channel in channels}
+    source = by_id.get(copy_access_from)
+    after = by_id.get(after_channel_id) if after_channel_id else None
+    if source is None or (after_channel_id and after is None):
+        missing = copy_access_from if source is None else after_channel_id
+        msg = f"No channel {missing} on this server"
+        raise ToolError(msg)
+    parent_id = (after or source).get("parent_id")
+    created = await discord_lib.bot_create_guild_channel(
+        ctx.discord_client,
+        token,
+        ctx.guild_id,
+        {
+            "name": name,
+            "type": TEXT_CHANNEL_TYPE,
+            "topic": topic or "",
+            "parent_id": parent_id,
+            "permission_overwrites": source.get("permission_overwrites", []),
+        },
+    )
+    if after is not None:
+        siblings = sorted(
+            (c for c in channels if c.get("parent_id") == parent_id and c.get("type") == TEXT_CHANNEL_TYPE),
+            key=lambda c: c.get("position", 0),
+        )
+        order = [c["id"] for c in siblings]
+        order.insert(order.index(after["id"]) + 1, created["id"])
+        await discord_lib.bot_set_channel_positions(
+            ctx.discord_client,
+            token,
+            ctx.guild_id,
+            [{"id": channel_id, "position": position} for position, channel_id in enumerate(order)],
+        )
+    await record_officer_audit(
+        ctx.session,
+        actor=ctx.actor,
+        action="mcp.create_text_channel",
+        subject_type="discord_channel",
+        subject_id=created["id"],
+        summary=f"Created #{created['name']} with the access of #{source.get('name')} via MCP"[:AUDIT_SUMMARY_MAX],
+    )
+    return {"id": created["id"], "name": created["name"], "parent_id": created.get("parent_id")}
+
+
 _READ_TOOLS = (
     whoami,
     find_member,
@@ -634,7 +691,7 @@ _OFFICER_WRITE_TOOLS = (
     post_announcement,
     set_recruit_character,
 )
-_GM_TOOLS = (confirm_member_on_roster, attendance_report)
+_GM_TOOLS = (confirm_member_on_roster, attendance_report, create_text_channel)
 
 
 def _surface_discord_errors(fn: Any) -> Any:

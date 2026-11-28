@@ -209,7 +209,8 @@ Dockerfile (`WOWSIMS_DIR`, default `/opt/wowsims`); the API side is `api/src/sid
 
 Officers can let Claude Code, omp or any other MCP client work on the guild for them: look up members, read and
 post in channels, post announcements, make, change or cancel events, and look up game items and who in the guild
-looted them. Make a token on `/officers/` under
+looted them. Game Masters can also make a Discord text channel, with its access copied from an existing channel and
+placed right below another one. Make a token on `/officers/` under
 **Claude / MCP access**, then run:
 
 ```sh
@@ -217,7 +218,8 @@ claude mcp add --transport http sidequest https://sidequest-guild.com/api/mcp --
 ```
 
 - The site shows the token once and keeps only a scrambled copy. Revoke it on the same page.
-- It works only while you are an officer. A few tools, such as the attendance report, need a Game Master.
+- It works only while you are an officer. A few tools, such as the attendance report and making a channel, need a
+  Game Master.
 - No tool can hand out or take away a role with moderator powers, a role another app manages, or a role above the
   bot's own.
 - Everything a token does shows in the log on `/officers/#log`, under your name.
