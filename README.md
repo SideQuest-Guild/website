@@ -35,6 +35,7 @@ flowchart LR
 | `/characters/` | everyone | The SideQuest roster's gear, item level, spec and last login, straight from Battle.net, each row marked with a small class icon. Search finds any stored character; an exact name and surname looks anyone else up directly, since Battle.net has no name search. A Milestones row shows the latest characters to reach level 40 or 60. A character's page can show them in 3D: Wowhead's model viewer draws their race, barber choices and worn gear from Battle.net. |
 | `/talents/` | everyone | A classic talent calculator: pick a class, spend points across its three trees (each node shows its spell icon), and copy a share link. Members can save builds with a note; officers can pin a build as a raid recommendation. |
 | `/recipes/` | everyone | Browse every profession and its recipes, straight from Battle.net: what each one makes and the reagents it needs, plus a crafting cost and profit when every reagent is priced. A recipe's page also lists the guild characters who know it, linked from the Guild Hall's crafter search. |
+| `/market/` | members | What sells on our auction house. For each gathering profession: the best materials by level, where to find them, and the skill you need. For each crafting profession: the crafts that make a profit when you buy the materials. Today and this week. |
 | `/quests/` | everyone | Browse every quest zone from Battle.net, search a quest by name, and see one quest's description, rewards, requirements and chain: the earlier quests leading up to it, which of them it requires or must not have been done, and what it leads to next. |
 | `/beasts/` | everyone | Browse every tameable beast in Forever, straight from Battle.net: its family and a look at its portrait, searchable by name and filterable by family. Each card links out to its Wowhead page. |
 | `/account/` | anyone signed in | Link Battle.net, get a calendar link, mark away dates, manage your auction price alerts, or delete your account. |
@@ -201,6 +202,13 @@ enhancement shamans and warlocks can't be simmed yet: wowsims has no healing rot
 are only built by the wowsims website. Battle.net doesn't publish talent ranks, so a sim uses the spec's default
 talents unless the post gives a talent string. The CLI and its data come from a pinned wowsims/forever commit in the
 Dockerfile (`WOWSIMS_DIR`, default `/opt/wowsims`); the API side is `api/src/sidequest_api/domain/sims/`.
+
+**Market report.** A price tracker sends one auction house's numbers to `POST /api/market/feed` about twice an
+hour, with its own key (`WEB_MARKET_FEED_KEY`). The feed has each material and crafted item's price, what it sold for
+and how many sold a day, plus the recipes. The site keeps only the latest feed and builds the report from it, in
+`api/src/sidequest_api/domain/market/`. `gathering.py` says which profession gathers each material, at what skill,
+and in which zones. Members read the report on `/market/`. At 10:00 Central the bot posts the day's report to the
+channel set with `/marketreport channel`. It skips the post while the data is more than 36 hours old.
 
 **Your data.** If you start keeping something new about members, add it to `/privacy/` and make `delete_account` in
 `api/src/sidequest_api/domain/members/services.py` remove it.

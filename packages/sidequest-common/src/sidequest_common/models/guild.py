@@ -62,6 +62,11 @@ class GuildConfig(UUIDAuditBase):
     weekly_board_last_week: Mapped[str | None] = mapped_column(String(10), default=None)
     """ISO date (``YYYY-MM-DD``) of the Monday whose board was last posted; prevents double-posting."""
 
+    # Market report
+    market_report_channel_id: Mapped[int | None] = mapped_column(BigInteger, default=None)
+    market_report_last_day: Mapped[str | None] = mapped_column(String(10), default=None)
+    """ISO date (``YYYY-MM-DD``, Central) of the last day the market report was posted; prevents double-posting."""
+
     # Away
     away_role_id: Mapped[int | None] = mapped_column(BigInteger, default=None)
 

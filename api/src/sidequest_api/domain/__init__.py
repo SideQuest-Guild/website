@@ -51,6 +51,11 @@ from sidequest_api.domain.guilds.controllers import GuildConfigController
 from sidequest_api.domain.heroes.controllers import HeroesController
 from sidequest_api.domain.items.controllers import ItemsController, ItemWishersController, MyWishlistController
 from sidequest_api.domain.levels.controllers import LevelsController
+from sidequest_api.domain.market.controllers import (
+    MarketFeedController,
+    MarketReportBotController,
+    MarketReportController,
+)
 from sidequest_api.domain.mcp.controllers import McpTokensController
 from sidequest_api.domain.member_links.controllers import MemberLinksController
 from sidequest_api.domain.member_profiles.controllers import MemberProfilesController
@@ -95,6 +100,7 @@ guild_controllers = [
     AuctionBotWatchesController,
     LootCouncilController,
     SimsController,
+    MarketReportBotController,
 ]
 
 public_routes = [
@@ -141,4 +147,6 @@ public_routes = [
     GameClassesController,
     AuctionPricesController,
     AuctionWatchesController,
+    MarketFeedController,
+    MarketReportController,
 ]

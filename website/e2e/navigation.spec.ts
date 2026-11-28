@@ -86,6 +86,9 @@ test("every destination is reachable from the bar", async ({ page, site }) => {
   // The guild page names its open tab in the hash (#roster by default).
   await expect(page).toHaveURL(/\/guild\/(#[\w-]+)?$/);
 
+  await navToGroup(page, "guild", "Market");
+  await expect(page).toHaveURL("/market/");
+
   await navToGroup(page, "library", "Item lookup");
   await expect(page).toHaveURL("/items/");
 

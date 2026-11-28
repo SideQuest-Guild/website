@@ -23,6 +23,7 @@ interface Props {
     | "beasts"
     | "quests"
     | "achievements"
+    | "market"
     | "addons"
     | "officers"
     | "account"
@@ -33,7 +34,8 @@ interface Props {
 
 const { current, hero = false } = Astro.props;
 const raidsCurrent = current === "raids" || current === "ledger";
-const guildCurrent = current === "guild" || current === "heroes" || current === "rules" || current === "pvp";
+const guildCurrent =
+  current === "guild" || current === "heroes" || current === "rules" || current === "pvp" || current === "market";
 const libraryCurrent =
   current === "items" ||
   current === "characters" ||
@@ -75,6 +77,13 @@ const guildEntries: NavEntry[] = [
     icon: "i-nav-roster",
     name: "Roster and crafters",
     desc: "The roster, crafters directory, bank log and news.",
+    members: true,
+  },
+  {
+    href: "/market/",
+    icon: "i-nav-market",
+    name: "Market",
+    desc: "What sells on our auction house, and what to gather or craft for it.",
     members: true,
   },
   {

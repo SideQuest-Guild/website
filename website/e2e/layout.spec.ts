@@ -34,6 +34,8 @@ const PAGES = [
   { name: "guild bank", path: "/guild/#bank" },
   { name: "pvp", path: "/pvp/" },
   { name: "pvp match", path: `/pvp/match/?id=${PVP_MATCHES[0]?.id}` },
+  { name: "market", path: "/market/" },
+  { name: "market week", path: "/market/?view=week" },
   { name: "items", path: "/items/" },
   { name: "item", path: `/items/detail/?id=${ITEMS[0]?.item_id}` },
   { name: "characters", path: "/characters/" },

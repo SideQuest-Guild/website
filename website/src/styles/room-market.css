@@ -1,0 +1,348 @@
+/* The Ledger Chamber's market report: what to gather and what to craft for gold, from the guild's auction house.
+   Gather and Craft are real tables on desktop (citadel.css's chamber/tabs/aside primitives for the frame); under
+   720px each row becomes a compact card via a `tr { display: grid }` rework of the same cells, so there is no
+   second copy of the markup to keep in sync. */
+
+/* ——— Shared with other rooms' pages, which don't share a stylesheet with this one ——— */
+.ledger-empty {
+  padding: 10px 0;
+  color: var(--mist-2);
+}
+.vendor-tag {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 6px;
+  border: 1px solid var(--gold-2);
+  color: var(--gold-2);
+  font-family: var(--serif);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* ——— Head: view switch, data freshness line, stale warning — all centered under the room title ——— */
+.market-head {
+  margin-bottom: clamp(40px, 4vw, 64px);
+  text-align: center;
+}
+.market-data-line {
+  margin: 14px 0 0;
+  color: var(--mist-2);
+}
+#market-stale-warning {
+  margin-top: 6px;
+}
+
+/* ——— Section controls: intro text above, tabs and the level filter sharing one left-aligned row ——— */
+.market-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 24px;
+  margin-top: 14px;
+}
+.market-controls .tabs {
+  justify-content: flex-start;
+  margin: 0;
+}
+.market-level-filter {
+  margin: 0;
+}
+
+/* ——— Gather/craft tables ——— */
+.market-table-wrap {
+  margin-top: 20px;
+  overflow-x: auto;
+}
+.market-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.market-table th {
+  padding: 10px;
+  border-bottom: 1px solid var(--gold-2);
+  color: var(--mist-2);
+  font-family: var(--serif);
+  font-weight: 500;
+  font-size: var(--caps);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-align: left;
+  white-space: nowrap;
+}
+.market-table th.num {
+  text-align: right;
+}
+.market-table td {
+  height: 56px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--stone-2);
+  color: var(--ink);
+  vertical-align: middle;
+  font-variant-numeric: tabular-nums;
+}
+.market-table td.num {
+  text-align: right;
+}
+.market-table tbody tr.is-hero {
+  border-left: 2px solid var(--gold);
+}
+.market-table tbody tr.is-hero td:first-child {
+  padding-left: 8px;
+}
+.market-table tbody tr.is-hero .market-figure {
+  font-size: 1.15em;
+}
+.market-figure {
+  display: block;
+}
+.market-row-stack {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.85em;
+}
+.market-table .market-profit {
+  color: #8fe0a0;
+}
+.market-cooldown-chip {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.85em;
+}
+.market-sparkline {
+  width: 140px;
+  height: 32px;
+}
+.c-zone {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  color: var(--mist-2);
+}
+.c-meta-mobile {
+  display: none;
+}
+.market-empty {
+  padding: 16px 2px;
+}
+
+/* ——— Change arrow: an icon plus signed text, never color alone ——— */
+.market-change {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+.market-change--up {
+  color: #8fe0a0;
+}
+.market-change--down {
+  color: #f0a58a;
+}
+.market-change--flat {
+  color: var(--mist-2);
+}
+
+/* ——— Craft materials disclosure: a full-width sub-row under the craft's main row ——— */
+.market-reagents-toggle {
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--ink);
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  text-decoration: underline;
+  text-decoration-color: var(--gold-2);
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.market-reagents-toggle:hover,
+.market-reagents-toggle:focus-visible {
+  color: var(--gold);
+  text-decoration-color: var(--gold);
+}
+.market-reagent-row td {
+  height: auto;
+  padding: 10px 10px 14px;
+  background: rgba(10, 16, 29, 0.4);
+}
+.market-reagents {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--mist);
+}
+.market-reagents li + li {
+  margin-top: 6px;
+}
+
+/* ——— Loading skeleton: quiet pulsing bars, no shimmer gradient (no box-shadow in this system) ——— */
+.market-skeleton-row td {
+  height: 56px;
+}
+.market-skeleton-row td::before {
+  content: "";
+  display: block;
+  height: 24px;
+  background: var(--stone-2);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .market-skeleton-row td::before {
+    animation: market-skeleton-pulse 1.6s ease-in-out infinite;
+  }
+}
+@keyframes market-skeleton-pulse {
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 0.9;
+  }
+}
+
+/* ——— Movers strip: two compact top-5 lists side by side, secondary to Gather and Craft ——— */
+.market-movers .chamber-title {
+  font-size: calc(var(--caps) + 2px);
+}
+.market-movers-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(20px, 2.4vw, 40px);
+}
+.market-movers .sub-title {
+  margin-bottom: 4px;
+}
+.market-mover-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.market-mover-list > li + li {
+  border-top: 1px solid var(--stone-2);
+}
+.market-mover-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 2px;
+  font-variant-numeric: tabular-nums;
+}
+.market-row-item {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ——— Narrow screens: each table row becomes a card. The same cells are regrouped with CSS grid-area, so the
+   markup never needs a second, phone-only copy. c-meta-mobile (hidden on desktop) carries the combined muted
+   line; the columns it replaces (sold a day, where, skill / sells for, materials, margin) are hidden here instead
+   of also being crammed into the card. */
+@media (max-width: 720px) {
+  .market-controls {
+    justify-content: flex-start;
+  }
+  .market-table thead {
+    display: none;
+  }
+  .market-table,
+  .market-table tbody {
+    display: block;
+    width: 100%;
+  }
+  .market-table td {
+    display: block;
+    height: auto;
+    padding: 2px 0;
+    border-bottom: none;
+  }
+
+  #gather-rows tr:has(td.c-item) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "item price"
+      "change trend"
+      "meta meta";
+    column-gap: 10px;
+    padding: 14px 2px;
+    border-bottom: 1px solid var(--stone-2);
+  }
+  #gather-rows td.c-item {
+    grid-area: item;
+  }
+  #gather-rows td.c-price {
+    grid-area: price;
+    text-align: right;
+  }
+  #gather-rows td.c-change {
+    grid-area: change;
+  }
+  #gather-rows td.c-trend {
+    grid-area: trend;
+    justify-self: end;
+  }
+  #gather-rows td.c-sold,
+  #gather-rows td.c-zone,
+  #gather-rows td.c-skill {
+    display: none;
+  }
+  #gather-rows td.c-meta-mobile {
+    grid-area: meta;
+    display: block;
+    margin-top: 2px;
+    color: var(--mist-2);
+    font-size: 0.9em;
+  }
+
+  #craft-rows tr:has(td.c-item) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "item profit"
+      "meta meta"
+      "toggle toggle";
+    column-gap: 10px;
+    padding: 14px 2px;
+    border-bottom: 1px solid var(--stone-2);
+  }
+  #craft-rows td.c-item {
+    grid-area: item;
+  }
+  #craft-rows td.c-profit {
+    grid-area: profit;
+    text-align: right;
+  }
+  #craft-rows td.c-sells,
+  #craft-rows td.c-margin,
+  #craft-rows td.c-sold,
+  #craft-rows td.c-trend {
+    display: none;
+  }
+  #craft-rows td.c-materials {
+    grid-area: toggle;
+  }
+  #craft-rows td.c-meta-mobile {
+    grid-area: meta;
+    display: block;
+    margin-top: 2px;
+    color: var(--mist-2);
+    font-size: 0.9em;
+  }
+  .market-reagent-row td {
+    padding: 10px 0 14px;
+  }
+  .market-skeleton-row td {
+    border-bottom: 1px solid var(--stone-2);
+  }
+
+  .market-movers-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

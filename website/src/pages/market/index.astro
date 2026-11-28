@@ -1,0 +1,521 @@
+---
+import Room from "../../layouts/Room.astro";
+import ledgerChamber from "../../../assets/rooms/ledger-chamber.webp";
+import { MARKET_LEVEL_BANDS } from "../../scripts/market";
+import "../../styles/room-market.css";
+---
+
+<Room
+  title="Market · SideQuest"
+  description="What sells on SideQuest's auction house, and what to gather or craft for gold."
+  heading="MARKET"
+  lede="What sells on our auction house, and what to make or gather for it."
+  art={ledgerChamber}
+  artPosition="50% 55%"
+  current="market"
+>
+  <p class="status" id="market-status" role="status" aria-live="polite"></p>
+
+  <div id="market-gate" hidden>
+    <section class="chamber" aria-labelledby="h-market-gate">
+      <h2 class="chamber-title" id="h-market-gate">
+        Market
+      </h2>
+      <p class="chamber-intro" id="market-gate-message"></p>
+    </section>
+  </div>
+
+  <div id="market-retry" hidden>
+    <button type="button" class="btn-quiet" id="market-retry-btn">
+      Try again
+    </button>
+  </div>
+
+  <div id="market-body" hidden>
+    <div class="market-head">
+      <div class="tabs" role="tablist" aria-label="Report period" id="view-tabs">
+        <button
+          type="button"
+          role="tab"
+          id="view-tab-daily"
+          aria-controls="market-sections"
+          aria-selected="true"
+          tabindex="0"
+        >
+          Today
+        </button>
+        <button
+          type="button"
+          role="tab"
+          id="view-tab-weekly"
+          aria-controls="market-sections"
+          aria-selected="false"
+          tabindex="-1"
+        >
+          This week
+        </button>
+      </div>
+      <p class="market-data-line" id="market-data-line"></p>
+      <p class="status" data-tone="error" id="market-stale-warning" role="status" aria-live="polite" hidden>
+        These numbers are more than a day old.
+      </p>
+    </div>
+
+    <div id="market-sections">
+      <section class="chamber" aria-labelledby="h-gather">
+        <h2 class="chamber-title" id="h-gather">
+          Gather
+        </h2>
+        <p class="aside">Herbalism, mining, skinning, fishing and cloth from monsters, best first.</p>
+        <div class="market-controls">
+          <div class="tabs tabs-scroll" role="tablist" aria-label="Gathering profession" id="gather-tabs"></div>
+          <div class="tabs market-level-filter" role="group" aria-label="Level" id="gather-level-filter">
+            {MARKET_LEVEL_BANDS.map((band, i) => (
+              <button type="button" aria-pressed={i === 0 ? "true" : "false"} data-band={band.id}>
+                {band.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div class="market-table-wrap" role="tabpanel" id="gather-panel" aria-labelledby="h-gather">
+          <table class="market-table">
+            <thead>
+              <tr>
+                <th scope="col">Item</th>
+                <th scope="col" class="num">
+                  Sells for
+                </th>
+                <th scope="col" class="num">
+                  Sold a day
+                </th>
+                <th scope="col" class="num">
+                  Change
+                </th>
+                <th scope="col">14 days</th>
+                <th scope="col">Where</th>
+                <th scope="col" class="num">
+                  Skill
+                </th>
+              </tr>
+            </thead>
+            <tbody id="gather-rows"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chamber" aria-labelledby="h-craft">
+        <h2 class="chamber-title" id="h-craft">
+          Craft
+        </h2>
+        <p class="aside">
+          What to make for profit right now, buying the materials at the cheaper of vendor and auction house.
+        </p>
+        <div class="market-controls">
+          <div class="tabs tabs-scroll" role="tablist" aria-label="Crafting profession" id="craft-tabs"></div>
+        </div>
+        <div class="market-table-wrap" role="tabpanel" id="craft-panel" aria-labelledby="h-craft">
+          <table class="market-table">
+            <thead>
+              <tr>
+                <th scope="col">Item</th>
+                <th scope="col" class="num">
+                  Profit a craft
+                </th>
+                <th scope="col" class="num">
+                  Sells for
+                </th>
+                <th scope="col" class="num">
+                  Materials
+                </th>
+                <th scope="col" class="num">
+                  Margin
+                </th>
+                <th scope="col" class="num">
+                  Sold a day
+                </th>
+                <th scope="col">14 days</th>
+              </tr>
+            </thead>
+            <tbody id="craft-rows"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chamber market-movers" aria-labelledby="h-movers">
+        <h2 class="chamber-title" id="h-movers">
+          Movers
+        </h2>
+        <div class="market-movers-grid">
+          <div>
+            <h3 class="sub-title">Risers</h3>
+            <ul class="market-mover-list" id="movers-risers" aria-label="Biggest price rises"></ul>
+          </div>
+          <div>
+            <h3 class="sub-title">Fallers</h3>
+            <ul class="market-mover-list" id="movers-fallers" aria-label="Biggest price drops"></ul>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <noscript>
+    <p class="aside">Enable JavaScript to see the market report.</p>
+  </noscript>
+</Room>
+
+<script>
+  import {
+    apiFetch,
+    ApiError,
+    escapeHtml,
+    qualityClass,
+    relativeTime,
+    requireElement,
+    statusMessage,
+    type MarketCraftPick,
+    type MarketCraftSection,
+    type MarketGatherPick,
+    type MarketGatherSection,
+    type MarketMover,
+    type MarketReagentLine,
+    type MarketReport,
+    type MarketReportKind,
+  } from "../../scripts/api";
+  import {
+    changeArrow,
+    cooldownLabel,
+    formatCount,
+    formatMarketMoney,
+    levelBandOverlaps,
+    MARKET_LEVEL_BAND_KEY,
+    marketSparkline,
+    zoneLine,
+  } from "../../scripts/market";
+  import { itemLink, loadWowheadTooltips, refreshWowheadLinks } from "../../scripts/items";
+  import { onPage } from "../../scripts/page";
+  import { setupTablist } from "../../scripts/tablist";
+
+  /** A profession name turned into an id-safe slug, e.g. "World of Warcraft" -> "world-of-warcraft". */
+  function professionSlug(name: string): string {
+    return name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+  }
+
+  function itemLinkFor(item: { item_id: number; name: string; quality: string | null }): string {
+    return itemLink(item.item_id, item.name, item.quality ? qualityClass(item.quality) : undefined);
+  }
+
+  function changeCell(changePct: number | null): string {
+    const change = changeArrow(changePct);
+    return `<span class="market-change market-change--${change.direction}"><span aria-hidden="true">${change.symbol}</span> ${escapeHtml(change.text)}</span>`;
+  }
+
+  function moverRow(mover: MarketMover): string {
+    return `
+      <li class="market-mover-row">
+        <span class="market-row-item">${itemLinkFor(mover.item)}</span>
+        <span class="market-row-price">${formatMarketMoney(mover.price)}</span>
+        ${changeCell(mover.change_pct)}
+      </li>`;
+  }
+
+  function gatherRow(pick: MarketGatherPick, isHero: boolean): string {
+    const stack = pick.stack_size > 1 ? `\u00d7${pick.stack_size} = ${formatMarketMoney(pick.stack_price)}` : "";
+    const skillLabel = pick.skill > 0 ? `Skill ${pick.skill}` : "Any character";
+    const zoneFull = escapeHtml(zoneLine(pick.zones));
+    const zoneDisplay = escapeHtml(zoneLine(pick.zones.slice(0, 2)));
+    const metaMobile = `${formatCount(pick.sold_per_day)} sold a day \u00b7 ${zoneDisplay} \u00b7 ${escapeHtml(skillLabel)}`;
+    return `
+      <tr class="${isHero ? "is-hero" : ""}">
+        <td class="c-item">${itemLinkFor(pick.item)}</td>
+        <td class="c-price num">
+          <span class="market-figure">${formatMarketMoney(pick.price)}</span>
+          ${stack ? `<span class="market-row-stack aside">${escapeHtml(stack)}</span>` : ""}
+        </td>
+        <td class="c-sold num">${formatCount(pick.sold_per_day)}</td>
+        <td class="c-change num">${changeCell(pick.change_pct)}</td>
+        <td class="c-trend">${marketSparkline(pick.trend)}</td>
+        <td class="c-zone" title="${zoneFull}">${zoneDisplay}</td>
+        <td class="c-skill num">${escapeHtml(skillLabel)}</td>
+        <td class="c-meta-mobile">${metaMobile}</td>
+      </tr>`;
+  }
+
+  function reagentLine(line: MarketReagentLine): string {
+    const vendorTag = line.from_vendor ? `<span class="vendor-tag">vendor</span>` : "";
+    return `
+      <li>
+        ${line.quantity} \u00d7 ${itemLinkFor(line.item)}
+        ${formatMarketMoney(line.unit_price)} each ${vendorTag}
+      </li>`;
+  }
+
+  function craftRow(pick: MarketCraftPick, isHero: boolean): string {
+    const reagentsId = `craft-reagents-${pick.recipe_id}`;
+    const cooldown = cooldownLabel(pick.cooldown_hours);
+    const metaMobile = `Sells for ${formatMarketMoney(pick.price)} \u00b7 ${pick.margin_pct.toFixed(0)}% margin`;
+    return `
+      <tr class="${isHero ? "is-hero" : ""}">
+        <td class="c-item">
+          ${itemLinkFor(pick.item)}
+          ${cooldown ? `<span class="market-cooldown-chip aside">${escapeHtml(cooldown)}</span>` : ""}
+        </td>
+        <td class="c-profit num"><span class="market-figure market-profit">${formatMarketMoney(pick.profit)}</span></td>
+        <td class="c-sells num">${formatMarketMoney(pick.price)}</td>
+        <td class="c-materials num">
+          <button type="button" class="market-reagents-toggle" aria-expanded="false" aria-controls="${reagentsId}">
+            ${formatMarketMoney(pick.mats_cost)}
+          </button>
+        </td>
+        <td class="c-margin num">${pick.margin_pct.toFixed(0)}%</td>
+        <td class="c-sold num">${formatCount(pick.sold_per_day)}</td>
+        <td class="c-trend">${marketSparkline(pick.trend)}</td>
+        <td class="c-meta-mobile">${metaMobile}</td>
+      </tr>
+      <tr class="market-reagent-row" id="${reagentsId}" hidden>
+        <td colspan="7">
+          <ul class="market-reagents">${pick.reagents.map(reagentLine).join("")}</ul>
+        </td>
+      </tr>`;
+  }
+
+  function skeletonRows(count: number): string {
+    return Array.from(
+      { length: count },
+      () => `<tr class="market-skeleton-row" aria-hidden="true"><td colspan="7"></td></tr>`,
+    ).join("");
+  }
+
+  onPage("#market-status", (signal) => {
+    const statusEl = requireElement("market-status");
+    const gateEl = requireElement("market-gate");
+    const gateMessageEl = requireElement("market-gate-message");
+    const retryEl = requireElement("market-retry");
+    const retryBtn = requireElement<HTMLButtonElement>("market-retry-btn");
+    const bodyEl = requireElement("market-body");
+    const dataLineEl = requireElement("market-data-line");
+    const staleWarningEl = requireElement("market-stale-warning");
+    const riserListEl = requireElement("movers-risers");
+    const fallerListEl = requireElement("movers-fallers");
+    const gatherTabsEl = requireElement("gather-tabs");
+    const gatherRowsEl = requireElement("gather-rows");
+    const gatherLevelFilterEl = requireElement("gather-level-filter");
+    const craftTabsEl = requireElement("craft-tabs");
+    const craftRowsEl = requireElement("craft-rows");
+
+    let report: MarketReport | null = null;
+    let activeView: MarketReportKind = new URLSearchParams(location.search).get("view") === "week" ? "weekly" : "daily";
+    let gatherSections: MarketGatherSection[] = [];
+    let craftSections: MarketCraftSection[] = [];
+    let activeGatherProfession = "";
+    let activeCraftProfession = "";
+    let levelBand = localStorage.getItem(MARKET_LEVEL_BAND_KEY) ?? "all";
+
+    function showGatherProfession(profession: string): void {
+      activeGatherProfession = profession;
+      const section = gatherSections.find((candidate) => candidate.profession === profession);
+      const picks = section
+        ? section.picks.filter((pick) => levelBandOverlaps(levelBand, pick.min_level, pick.max_level))
+        : [];
+      gatherRowsEl.innerHTML =
+        picks.length > 0
+          ? picks.map((pick, i) => gatherRow(pick, i === 0)).join("")
+          : `<tr><td colspan="7" class="aside market-empty">Nothing worth it today.</td></tr>`;
+      refreshWowheadLinks();
+    }
+
+    function renderGatherTabs(sections: MarketGatherSection[]): void {
+      gatherSections = sections;
+      if (sections.length === 0) {
+        gatherTabsEl.innerHTML = "";
+        gatherRowsEl.innerHTML = `<tr><td colspan="7" class="aside market-empty">Nothing worth it today.</td></tr>`;
+        return;
+      }
+      gatherTabsEl.innerHTML = sections
+        .map(
+          (section, i) => `
+        <button
+          type="button"
+          role="tab"
+          id="gather-tab-${professionSlug(section.profession)}"
+          aria-controls="gather-panel"
+          aria-selected="${i === 0 ? "true" : "false"}"
+          tabindex="${i === 0 ? "0" : "-1"}"
+          data-profession="${escapeHtml(section.profession)}"
+        >
+          ${escapeHtml(section.profession)}
+        </button>`,
+        )
+        .join("");
+      const tablist = setupTablist(gatherTabsEl, (tab) => showGatherProfession(tab.dataset.profession ?? ""));
+      const keep = sections.find((section) => section.profession === activeGatherProfession)
+        ? activeGatherProfession
+        : sections[0]!.profession;
+      tablist.select(requireElement<HTMLButtonElement>(`gather-tab-${professionSlug(keep)}`));
+    }
+
+    function showCraftProfession(profession: string): void {
+      activeCraftProfession = profession;
+      const section = craftSections.find((candidate) => candidate.profession === profession);
+      const picks = section?.picks ?? [];
+      craftRowsEl.innerHTML =
+        picks.length > 0
+          ? picks.map((pick, i) => craftRow(pick, i === 0)).join("")
+          : `<tr><td colspan="7" class="aside market-empty">Nothing worth it today.</td></tr>`;
+      refreshWowheadLinks();
+    }
+
+    function renderCraftTabs(sections: MarketCraftSection[]): void {
+      craftSections = sections;
+      if (sections.length === 0) {
+        craftTabsEl.innerHTML = "";
+        craftRowsEl.innerHTML = `<tr><td colspan="7" class="aside market-empty">Nothing worth it today.</td></tr>`;
+        return;
+      }
+      craftTabsEl.innerHTML = sections
+        .map(
+          (section, i) => `
+        <button
+          type="button"
+          role="tab"
+          id="craft-tab-${professionSlug(section.profession)}"
+          aria-controls="craft-panel"
+          aria-selected="${i === 0 ? "true" : "false"}"
+          tabindex="${i === 0 ? "0" : "-1"}"
+          data-profession="${escapeHtml(section.profession)}"
+        >
+          ${escapeHtml(section.profession)}
+        </button>`,
+        )
+        .join("");
+      const tablist = setupTablist(craftTabsEl, (tab) => showCraftProfession(tab.dataset.profession ?? ""));
+      const keep = sections.find((section) => section.profession === activeCraftProfession)
+        ? activeCraftProfession
+        : sections[0]!.profession;
+      tablist.select(requireElement<HTMLButtonElement>(`craft-tab-${professionSlug(keep)}`));
+    }
+
+    function renderMovers(risers: MarketMover[], fallers: MarketMover[]): void {
+      riserListEl.innerHTML =
+        risers.length > 0
+          ? risers.slice(0, 5).map(moverRow).join("")
+          : `<li class="ledger-empty">No big risers right now.</li>`;
+      fallerListEl.innerHTML =
+        fallers.length > 0
+          ? fallers.slice(0, 5).map(moverRow).join("")
+          : `<li class="ledger-empty">No big fallers right now.</li>`;
+      refreshWowheadLinks();
+    }
+
+    function renderReport(): void {
+      if (!report) {
+        return;
+      }
+      dataLineEl.textContent = `${report.house_name}. Data from ${relativeTime(report.data_at)}.`;
+      staleWarningEl.hidden = !report.stale;
+      renderGatherTabs(report.gathering);
+      renderCraftTabs(report.crafting);
+      renderMovers(report.risers, report.fallers);
+    }
+
+    function showSkeleton(): void {
+      riserListEl.innerHTML = skeletonRows(3);
+      fallerListEl.innerHTML = skeletonRows(3);
+      gatherRowsEl.innerHTML = skeletonRows(4);
+      craftRowsEl.innerHTML = skeletonRows(4);
+    }
+
+    async function loadReport(kind: MarketReportKind): Promise<void> {
+      const firstLoad = bodyEl.hidden;
+      if (firstLoad) {
+        statusEl.dataset.tone = "";
+        statusEl.textContent = "Loading\u2026";
+        gateEl.hidden = true;
+        retryEl.hidden = true;
+      } else {
+        showSkeleton();
+      }
+      try {
+        report = await apiFetch<MarketReport>(`/api/market/report?kind=${kind}`, { signal });
+        renderReport();
+        bodyEl.hidden = false;
+        statusEl.textContent = "";
+        retryEl.hidden = true;
+      } catch (err) {
+        report = null;
+        bodyEl.hidden = true;
+        if (err instanceof ApiError && err.status === 401) {
+          gateEl.hidden = false;
+          const next = encodeURIComponent(location.pathname + location.search);
+          gateMessageEl.innerHTML = `The market report is for guild members. <a href="/auth/discord/login?next=${next}">Sign in with Discord</a> to see it.`;
+          statusEl.textContent = "";
+        } else if (err instanceof ApiError && err.status === 403) {
+          gateEl.hidden = false;
+          gateMessageEl.textContent = "This page is for guild members.";
+          statusEl.textContent = "";
+        } else if (err instanceof ApiError && err.status === 404) {
+          statusEl.dataset.tone = "";
+          statusEl.textContent = "No market data yet. Check back soon.";
+        } else {
+          statusEl.dataset.tone = "error";
+          statusEl.textContent = statusMessage(err);
+          retryEl.hidden = false;
+        }
+      }
+    }
+
+    function selectView(kind: MarketReportKind): void {
+      activeView = kind;
+      const query = kind === "weekly" ? "?view=week" : "";
+      if (location.search !== query) {
+        history.replaceState(null, "", `${location.pathname}${query}${location.hash}`);
+      }
+      void loadReport(kind);
+    }
+
+    const viewTabsEl = requireElement("view-tabs");
+    const viewTablist = setupTablist(viewTabsEl, (tab) =>
+      selectView(tab.id === "view-tab-weekly" ? "weekly" : "daily"),
+    );
+
+    for (const button of gatherLevelFilterEl.querySelectorAll<HTMLButtonElement>("button[data-band]")) {
+      button.setAttribute("aria-pressed", String(button.dataset.band === levelBand));
+      button.addEventListener(
+        "click",
+        () => {
+          levelBand = button.dataset.band ?? "all";
+          localStorage.setItem(MARKET_LEVEL_BAND_KEY, levelBand);
+          for (const other of gatherLevelFilterEl.querySelectorAll<HTMLButtonElement>("button[data-band]")) {
+            other.setAttribute("aria-pressed", String(other === button));
+          }
+          showGatherProfession(activeGatherProfession);
+        },
+        { signal },
+      );
+    }
+
+    craftRowsEl.addEventListener(
+      "click",
+      (event) => {
+        const toggle = (event.target as HTMLElement).closest<HTMLButtonElement>(".market-reagents-toggle");
+        if (!toggle) {
+          return;
+        }
+        const expanded = toggle.getAttribute("aria-expanded") === "true";
+        toggle.setAttribute("aria-expanded", String(!expanded));
+        const target = document.getElementById(toggle.getAttribute("aria-controls") ?? "");
+        if (target) {
+          target.hidden = expanded;
+        }
+      },
+      { signal },
+    );
+
+    retryBtn.addEventListener("click", () => void loadReport(activeView), { signal });
+
+    void loadWowheadTooltips();
+    viewTablist.select(
+      requireElement<HTMLButtonElement>(activeView === "weekly" ? "view-tab-weekly" : "view-tab-daily"),
+    );
+  });
+</script>

@@ -60,6 +60,7 @@ from sidequest_common.models.guild_hub import (
 from sidequest_common.models.guild_roles import GuildRole
 from sidequest_common.models.items import BattlenetItem, ItemWish
 from sidequest_common.models.levels import LevelRole, MemberLevel, XPGrant
+from sidequest_common.models.market import MarketFeedState, MarketItem, MarketRecipe
 from sidequest_common.models.mcp import McpToken
 from sidequest_common.models.members import Member
 from sidequest_common.models.moderation import ModCase
@@ -120,6 +121,9 @@ __all__ = (
     "ItemWish",
     "LevelRole",
     "LootAward",
+    "MarketFeedState",
+    "MarketItem",
+    "MarketRecipe",
     "McpToken",
     "Member",
     "MemberActivityHour",

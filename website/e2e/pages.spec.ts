@@ -32,6 +32,7 @@ import {
   QUEST_AREAS,
   QUESTS,
   RECIPES,
+  marketReport,
 } from "./data";
 import { expect, test } from "./fixtures";
 import { DISCORD_INVITE } from "../src/config";
@@ -1533,5 +1534,110 @@ test.describe("talents", () => {
     await page.locator("#save-build-btn").click();
     await expect(page.locator("#save-build-status")).toContainText("Build saved.");
     await expect(page.locator("#my-builds-list")).toContainText("My Balance build");
+  });
+});
+
+test.describe("market", () => {
+  test("a signed-out visitor sees a short gate with a sign-in link", async ({ page, site }) => {
+    site.signIn(null);
+    await page.goto("/market/");
+    await expect(page.locator("#market-gate-message")).toContainText("Sign in with Discord");
+    await expect(page.locator("#market-body")).toBeHidden();
+  });
+
+  test("a signed-in non-member sees the members-only message", async ({ page, site }) => {
+    site.signIn({ ...MEMBER, is_guild_member: false });
+    await page.goto("/market/");
+    await expect(page.locator("#market-gate-message")).toContainText("This page is for guild members.");
+    await expect(page.locator("#market-body")).toBeHidden();
+  });
+
+  test("no feed yet says so plainly", async ({ page, site }) => {
+    site.signIn(MEMBER);
+    site.marketReport(null);
+    await page.goto("/market/");
+    await expect(page.locator("#market-status")).toContainText("No market data yet. Check back soon.");
+    await expect(page.locator("#market-body")).toBeHidden();
+  });
+
+  test("a member sees the house, movers, best gathering pick and a stale warning", async ({ page, site }) => {
+    site.signIn(MEMBER);
+    site.marketReport({ ...marketReport("daily"), stale: true });
+    await page.goto("/market/");
+    await expect(page.locator("#market-data-line")).toContainText("Alliance Auction House 111");
+    await expect(page.locator("#market-stale-warning")).toContainText("more than a day old");
+    await expect(page.locator("#movers-risers")).toContainText("Loom");
+    await expect(page.locator("#movers-fallers")).toContainText("Blazing Rapier");
+    const firstGatherRow = page.locator("#gather-rows tr").first();
+    await expect(firstGatherRow).toContainText("Black Lotus");
+    await expect(firstGatherRow).toContainText("7g 54s");
+    await expect(firstGatherRow).toHaveClass(/is-hero/);
+  });
+
+  test("the stack line shows a full stack's price for a stackable material", async ({ page, site }) => {
+    site.signIn(MEMBER);
+    site.marketReport(marketReport("daily"));
+    await page.goto("/market/");
+    await page.locator("#gather-tabs").getByRole("tab", { name: "Cloth" }).click();
+    const runecloth = page.locator("#gather-rows tr", { hasText: "Runecloth" });
+    await expect(runecloth).toContainText("\u00d720 =");
+  });
+
+  test("switching the level filter hides picks outside the band", async ({ page, site }) => {
+    site.signIn(MEMBER);
+    site.marketReport(marketReport("daily"));
+    await page.goto("/market/");
+    await expect(page.locator("#gather-rows")).toContainText("Black Lotus");
+    await page.locator('#gather-level-filter button[data-band="1-24"]').click();
+    await expect(page.locator("#gather-rows")).not.toContainText("Black Lotus");
+    await expect(page.locator("#gather-rows")).toContainText("Gromsblood");
+  });
+
+  test("an empty gathering profession says nothing is worth it today", async ({ page, site }) => {
+    site.signIn(MEMBER);
+    const report = marketReport("daily");
+    const gathering = report.gathering.map((section) =>
+      section.profession === "Fishing" ? Object.assign({}, section, { picks: [] }) : section,
+    );
+    site.marketReport(Object.assign({}, report, { gathering }));
+    await page.goto("/market/");
+    await page.locator("#gather-tabs").getByRole("tab", { name: "Fishing" }).click();
+    await expect(page.locator("#gather-rows")).toContainText("Nothing worth it today.");
+  });
+
+  test("switching craft profession tabs and opening the materials disclosure shows a vendor reagent", async ({
+    page,
+    site,
+  }) => {
+    site.signIn(MEMBER);
+    site.marketReport(marketReport("daily"));
+    await page.goto("/market/");
+    const heroCraftRow = page.locator("#craft-rows tr").first();
+    await expect(heroCraftRow).toContainText("Arcanite Bar");
+    await expect(heroCraftRow).toContainText("Once every 2 days");
+
+    await page.locator("#craft-tabs").getByRole("tab", { name: "Blacksmithing" }).click();
+    await expect(page.locator("#craft-rows")).toContainText("Stalwart Helm");
+
+    await page.locator("#craft-tabs").getByRole("tab", { name: "Alchemy" }).click();
+    const flaskRow = page.locator("#craft-rows tr", { hasText: "Flask of the Titans" }).first();
+    const toggle = flaskRow.locator(".market-reagents-toggle");
+    await expect(toggle).toHaveAttribute("aria-expanded", "false");
+    await toggle.click();
+    await expect(toggle).toHaveAttribute("aria-expanded", "true");
+    const reagents = page.locator("#craft-rows .market-reagent-row:not([hidden]) .market-reagents").first();
+    await expect(reagents).toBeVisible();
+    await expect(reagents).toContainText("Crystal Vial");
+    await expect(reagents).toContainText("vendor");
+  });
+
+  test("the view switch keeps the URL in sync", async ({ page, site }) => {
+    site.signIn(MEMBER);
+    site.marketReport(marketReport("daily"));
+    await page.goto("/market/");
+    await page.getByRole("tab", { name: "This week" }).click();
+    await expect(page).toHaveURL("/market/?view=week");
+    await page.getByRole("tab", { name: "Today" }).click();
+    await expect(page).toHaveURL("/market/");
   });
 });

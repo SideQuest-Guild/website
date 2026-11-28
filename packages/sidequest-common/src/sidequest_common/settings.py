@@ -105,6 +105,8 @@ class WebSettings(BaseSettings):
     OFFICER_ROLE_IDS: Annotated[list[int], NoDecode] = [1564678042381586532, 1564678035117178960]
     GM_ROLE_IDS: Annotated[list[int], NoDecode] = [1564678042381586532]
     COOKIE_SECURE: bool = False
+    MARKET_FEED_KEY: SecretStr | None = None
+    """Shared secret the market report feed sends as ``X-Market-Key``; unset, ``POST /api/market/feed`` is 503."""
 
     @property
     def oauth_configured(self) -> bool:

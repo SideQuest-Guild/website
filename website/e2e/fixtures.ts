@@ -22,6 +22,7 @@ import type {
   Item,
   ItemWish,
   ItemWishUpdate,
+  MarketReport,
   Me,
   Recruiting,
   RecruitPayoutMarkPaid,
@@ -104,6 +105,7 @@ import {
   heroLeaderboard,
   heroProfile,
   itemSearch,
+  marketReport as marketReportFixture,
   pvpMatchPage,
 } from "./data";
 
@@ -114,6 +116,8 @@ type Site = {
   addons(list: Addon[]): void;
   /** What `/api/recruiting` reports; `RECRUITING` (nothing wanted) by default. */
   recruiting(data: Recruiting): void;
+  /** What `/api/market/report` returns; `marketReport(kind)` by default, `null` for "no feed yet" (404). */
+  marketReport(data: MarketReport | null): void;
   /** What `/api/guild/officers` lists; `GUILD_OFFICERS` by default. */
   officers(list: GuildOfficer[]): void;
   /** API calls that reached the mock without a handler. */
@@ -218,6 +222,7 @@ export const test = base.extend<{ site: Site }>({
     let me: Me | null = null;
     let addons = ADDONS;
     let recruiting = RECRUITING;
+    let marketReportOverride: MarketReport | null | "default" = "default";
     let officers = GUILD_OFFICERS;
     // A per-test copy: the payouts "paid" handler mutates this, and a shared RECRUITMENT_PAYOUTS array would leak
     // that into the next test.
@@ -945,6 +950,22 @@ export const test = base.extend<{ site: Site }>({
         }
         return json(route, GUILD_MARKET);
       }
+      if (path === "/api/market/report" && method === "GET") {
+        if (!me) {
+          return json(route, { detail: "Not signed in" }, 401);
+        }
+        if (!me.is_guild_member) {
+          return json(route, { detail: "Not a guild member" }, 403);
+        }
+        const kind = url.searchParams.get("kind") === "weekly" ? "weekly" : "daily";
+        if (marketReportOverride !== "default") {
+          if (marketReportOverride === null) {
+            return json(route, { detail: "No market data yet" }, 404);
+          }
+          return json(route, marketReportOverride);
+        }
+        return json(route, marketReportFixture(kind));
+      }
       if (path === "/api/guild/stock" && method === "GET") {
         if (!me?.is_guild_member) {
           return json(route, { detail: "Not signed in" }, 401);
@@ -1303,6 +1324,7 @@ export const test = base.extend<{ site: Site }>({
       signIn: (who) => (me = who),
       addons: (list) => (addons = list),
       recruiting: (data) => (recruiting = data),
+      marketReport: (data) => (marketReportOverride = data),
       officers: (list) => (officers = list),
       unmocked,
       errors,
@@ -1325,8 +1347,9 @@ function watchErrors(page: Page, origin: string, errors: string[]): void {
   });
   page.on("console", (message) => {
     const text = message.text();
-    // A 401 from /api/me is how a signed-out visitor looks; the browser logs every non-2xx fetch as an error.
-    if (onSite() && message.type() === "error" && !/status of 40[14]/.test(text) && !offSiteUrl(text)) {
+    // A 401 from /api/me is how a signed-out visitor looks, and the market report's 403 is how a signed-in
+    // non-member looks; the browser logs every non-2xx fetch as an error.
+    if (onSite() && message.type() === "error" && !/status of 40[134]/.test(text) && !offSiteUrl(text)) {
       errors.push(`${page.url()}: ${text}`);
     }
   });

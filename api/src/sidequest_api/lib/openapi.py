@@ -33,6 +33,7 @@ SECURITY_SCHEME_SESSION = "SessionAuth"
 SECURITY_SCHEME_API_KEY = "ApiKeyAuth"
 SECURITY_SCHEME_SYNC_TOKEN = "SyncTokenAuth"  # noqa: S105 - an OpenAPI security scheme name, not a secret
 SECURITY_SCHEME_MCP_TOKEN = "McpTokenAuth"  # noqa: S105 - an OpenAPI security scheme name, not a secret
+SECURITY_SCHEME_MARKET_FEED = "MarketFeedKeyAuth"
 
 SESSION_COOKIE_NAME = "sq_session"
 
@@ -61,6 +62,12 @@ SECURITY_SCHEMES: dict[str, Reference | SecurityScheme] = {
         bearer_format="MCP token",
         description="An MCP token from `/api/me/mcp-tokens`, sent by an MCP client.",
     ),
+    SECURITY_SCHEME_MARKET_FEED: SecurityScheme(
+        type="apiKey",
+        security_scheme_in="header",
+        name="X-Market-Key",
+        description="The market report feed's shared key. Only the feed sends this header.",
+    ),
 }
 
 SECURITY_SESSION: list[dict[str, list[str]]] = [{SECURITY_SCHEME_SESSION: []}]
@@ -74,6 +81,7 @@ SECURITY_SESSION_OR_SYNC_TOKEN: list[dict[str, list[str]]] = [
 ]
 # SideQuest Companion's own routes take only its Bearer sync token.
 SECURITY_SYNC_TOKEN: list[dict[str, list[str]]] = [{SECURITY_SCHEME_SYNC_TOKEN: []}]
+SECURITY_MARKET_FEED: list[dict[str, list[str]]] = [{SECURITY_SCHEME_MARKET_FEED: []}]
 
 # ---------------------------------------------------------------------------------------------------------------
 # Shared response descriptions. Compose into a handler's ``responses={...}`` mapping, e.g.
@@ -146,6 +154,10 @@ TAG_GROUPS: dict[str, dict[str, str]] = {
         "My characters": "A signed-in member's own claimed characters. A member must be signed in.",
         "My wishlist": "The items a signed-in member wants from raids. A member must be signed in.",
         "Discord presence": "Who is online in the guild's Discord right now. A member must be signed in.",
+        "Market report": (
+            "What to gather and craft for gold on the guild's auction house, daily and weekly. A member must be "
+            "signed in; the bot reads it with its key, and the price feed posts with its own key."
+        ),
         "Hall of Heroes": "The guild's season leaderboard and member profiles. A member must be signed in.",
         "Guild hub": "Roster, crafters, and bank browsing for signed-in members. A member must be signed in.",
         "PvP": "Battleground match history and PvP boards from members' addon-recorded scoreboards. A member "

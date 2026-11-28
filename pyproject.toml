@@ -26,7 +26,7 @@ dev = [
 [tool.codespell]
 quiet-level = 3
 skip = "uv.lock,./website,./.venv"
-ignore-words-list = "selectin"
+ignore-words-list = "selectin,ore"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

@@ -47,6 +47,9 @@ class GuildConfigSchema(BaseModel):
     weekly_board_channel_id: int | None = None
     weekly_board_last_week: str | None = None
 
+    market_report_channel_id: int | None = None
+    market_report_last_day: str | None = None
+
     away_role_id: int | None = None
 
     badge_channel_id: int | None = None
@@ -112,6 +115,9 @@ class GuildConfigUpdate(BaseModel):
 
     weekly_board_channel_id: int | None = None
     weekly_board_last_week: str | None = None
+
+    market_report_channel_id: int | None = None
+    market_report_last_day: str | None = Field(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$")
 
     away_role_id: int | None = None
 

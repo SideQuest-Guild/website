@@ -1678,6 +1678,87 @@ export function parseGoldInput(input: string): number | null {
   return copper > 0 ? copper : null;
 }
 
+// ——— Guild market report: GET /api/market/report?kind=daily|weekly (member). Mirrors
+// sidequest_common.schemas.market (local://market-contract.md): what to gather and what to craft for gold on the
+// guild's one tracked auction house. Money is copper; format it with copperToGold.
+
+export type MarketReportKind = "daily" | "weekly";
+
+/** An item named in the report. */
+export type MarketItemRef = { item_id: number; name: string; quality: string | null };
+
+/** One day of an item's price, for a small chart, oldest first. */
+export type MarketPoint = { day: string; price: number };
+
+/** A zone where a gathering pick can be gathered. */
+export type MarketZone = { name: string; min_level: number; max_level: number };
+
+/** A material worth gathering: what it sells for, how fast it sells, and where to get it. */
+export type MarketGatherPick = {
+  item: MarketItemRef;
+  price: number;
+  stack_size: number;
+  stack_price: number;
+  sold_per_day: number;
+  change_pct: number | null;
+  skill: number;
+  min_level: number;
+  max_level: number;
+  zones: MarketZone[];
+  trend: MarketPoint[];
+};
+
+/** The best materials for one gathering profession, best first. */
+export type MarketGatherSection = { profession: string; picks: MarketGatherPick[] };
+
+/** One reagent of a craft, with its cost. */
+export type MarketReagentLine = {
+  item: MarketItemRef;
+  quantity: number;
+  unit_price: number;
+  from_vendor: boolean;
+};
+
+/** A craft worth making: what it sells for, what its materials cost, and how fast it sells. */
+export type MarketCraftPick = {
+  recipe_id: number;
+  recipe_name: string;
+  item: MarketItemRef;
+  makes: number;
+  price: number;
+  mats_cost: number;
+  profit: number;
+  margin_pct: number;
+  sold_per_day: number;
+  cooldown_hours: number | null;
+  change_pct: number | null;
+  reagents: MarketReagentLine[];
+  trend: MarketPoint[];
+};
+
+/** The best crafts for one crafting profession, best first. */
+export type MarketCraftSection = { profession: string; picks: MarketCraftPick[] };
+
+/** A material or craft whose price moved a lot, on the risers/fallers strip. */
+export type MarketMover = { item: MarketItemRef; price: number; change_pct: number; profession: string };
+
+/** Hours a market feed can age before the site calls it stale; mirrors `MARKET_STALE_HOURS` in sidequest_common. */
+export const MARKET_STALE_HOURS = 36;
+
+/** `GET /api/market/report?kind=daily|weekly` (member). 404 before the first feed; 403 signed in but not a member. */
+export type MarketReport = {
+  kind: MarketReportKind;
+  house_name: string;
+  data_at: string;
+  stale: boolean;
+  period_start: string;
+  period_end: string;
+  gathering: MarketGatherSection[];
+  crafting: MarketCraftSection[];
+  risers: MarketMover[];
+  fallers: MarketMover[];
+};
+
 // ——— Talent calculator: GET /api/talents/{class}, GET/POST/DELETE /api/me/talent-builds[/{id}], GET
 // /api/talent-builds?class=, PUT /api/talent-builds/{id}/pin (officer). A build's `code` holds one digit per
 // talent node (its spent rank), node order sorted by (row, col) within each tree, the three trees joined by `-`.
