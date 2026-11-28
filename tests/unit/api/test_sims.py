@@ -114,7 +114,7 @@ async def _store_character(
                 "name": "Test Helm",
                 "quality": "RARE",
                 "item_level": 50,
-                "enchantments": [],
+                "enchantments": ["Enchanted: Mystery Glow"],
             },
             {
                 "slot": "MAIN_HAND",
@@ -427,6 +427,26 @@ async def test_prepare_sim_builds_one_comparison_for_a_single_slot_swap(
         assert prepared.role == "tank"
         assert prepared.comparisons[0].gear["main_hand"].name == "new_sword"
         assert prepared.baseline["main_hand"].name == "old_sword"
+
+
+async def test_wearing_drops_notes_about_the_sheet_piece_it_replaces(
+    wowsims_dir: Path, battlenet: dict, db_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    async with db_sessionmaker() as session:
+        await _store_character(session)
+        swap = SimItem(item="new_sword", slot="main_hand")
+
+        async def notes(*wearing: SimItem) -> list[str]:
+            prepared = await prepare_sim(
+                SimRequest(character="Legs Behindhead", swaps=[swap], wearing=list(wearing)),
+                characters_service=CharactersService(session=session),
+                game_data=_fake_game_data(battlenet),
+                wowsims_dir=wowsims_dir,
+            )
+            return prepared.notes
+
+        assert any("Mystery Glow" in note for note in await notes())
+        assert not any("Mystery Glow" in note for note in await notes(SimItem(item="test_helm", slot="head")))
 
 
 async def test_runner_runs_a_queued_job_end_to_end(

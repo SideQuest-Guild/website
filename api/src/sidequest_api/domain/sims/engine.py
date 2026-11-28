@@ -424,15 +424,21 @@ def item_db(wowsims_dir: Path) -> ItemDB:
     return ItemDB(wowsims_dir)
 
 
-def gear_from_sheet(sheet: CharacterSheet, db: ItemDB) -> tuple[dict[SimSlot, GearEntry], list[str]]:
-    """The character's baseline gear from its Battle.net sheet, and notes for anything skipped."""
+def gear_from_sheet(sheet: CharacterSheet, db: ItemDB) -> tuple[dict[SimSlot, GearEntry], dict[SimSlot, list[str]]]:
+    """The character's baseline gear from its Battle.net sheet, and per-slot notes for anything skipped.
+
+    Notes are per slot so a ``wearing`` override can drop the notes of the piece it replaces.
+    """
     gear: dict[SimSlot, GearEntry] = {}
-    notes: list[str] = []
+    notes: dict[SimSlot, list[str]] = {}
     for piece in sheet.gear:
         slot = API_SLOTS.get(piece.slot)
         if not slot:
             continue
-        gear[slot] = _gear_entry_from_api(piece, db, notes)
+        slot_notes: list[str] = []
+        gear[slot] = _gear_entry_from_api(piece, db, slot_notes)
+        if slot_notes:
+            notes[slot] = slot_notes
     return gear, notes
 
 

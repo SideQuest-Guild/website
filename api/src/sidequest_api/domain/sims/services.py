@@ -92,11 +92,13 @@ async def _fetch_character_sheet(
 
 def _apply_wearing(
     baseline: dict[SimSlot, engine.GearEntry],
+    sheet_notes: dict[SimSlot, list[str]],
     wearing: Sequence[SimItem],
     item_db: engine.ItemDB,
     *,
     dual_wield: bool,
 ) -> list[str]:
+    """Put the ``wearing`` overrides on ``baseline``; the notes left, minus those about pieces they replaced."""
     notes: list[str] = []
     for item in wearing:
         resolved = engine.resolve_sim_item(item, item_db, dual_wield=dual_wield)
@@ -106,7 +108,8 @@ def _apply_wearing(
             msg = f"{item.item} (in wearing) needs a slot: it fits {' or '.join(resolved.candidate_slots)}"
             raise engine.SimEngineError(msg)
         baseline[slot] = resolved.entry
-    return notes
+        sheet_notes.pop(slot, None)
+    return [*(note for slot_notes in sheet_notes.values() for note in slot_notes), *notes]
 
 
 def _item_ref(entry: engine.GearEntry) -> ItemRef:
@@ -179,8 +182,8 @@ async def prepare_sim(
 
     item_db = engine.item_db(wowsims_dir)
     dual_wield = (class_name, spec) in engine.DUAL_WIELD_SPECS
-    baseline, notes = engine.gear_from_sheet(sheet, item_db)
-    notes = [*notes, *_apply_wearing(baseline, request.wearing, item_db, dual_wield=dual_wield)]
+    baseline, sheet_notes = engine.gear_from_sheet(sheet, item_db)
+    notes = _apply_wearing(baseline, sheet_notes, request.wearing, item_db, dual_wield=dual_wield)
     resolved_swaps = [engine.resolve_sim_item(item, item_db, dual_wield=dual_wield) for item in request.swaps]
     for swap in resolved_swaps:
         notes.extend(swap.notes)
